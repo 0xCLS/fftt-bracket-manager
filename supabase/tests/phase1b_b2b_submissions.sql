@@ -140,32 +140,23 @@ call pg_temp.fftt_attempt('outsider','00000000-0000-4000-8000-000000000022',
   '55555555-0000-4000-8000-000000000009',
   '22222222-0000-4000-8000-000000000021','');
 
-select like((select result from fftt_b2b_outcomes where label='bad_score'),
- 'error:fftt_validation_error%', '11-10 game rejected');
-select like((select result from fftt_b2b_outcomes where label='bad_winner'),
- 'error:fftt_validation_error%', 'nonparticipant winner rejected');
-select like((select result from fftt_b2b_outcomes where label='stale_generation'),
- 'error:fftt_stale_generation%', 'generation checked before write');
-select like((select result from fftt_b2b_outcomes where label='missing_link'),
- 'error:fftt_conflict%', 'missing advancement link cannot finish bracket prematurely');
+select ok((select result from fftt_b2b_outcomes where label='bad_score') like 'error:fftt_validation_error%', '11-10 game rejected');
+select ok((select result from fftt_b2b_outcomes where label='bad_winner') like 'error:fftt_validation_error%', 'nonparticipant winner rejected');
+select ok((select result from fftt_b2b_outcomes where label='stale_generation') like 'error:fftt_stale_generation%', 'generation checked before write');
+select ok((select result from fftt_b2b_outcomes where label='missing_link') like 'error:fftt_conflict%', 'missing advancement link cannot finish bracket prematurely');
 select is((select result::jsonb->>'status' from fftt_b2b_outcomes where label='first'),
  'accepted', 'first match accepted');
 select is((select result from fftt_b2b_outcomes where label='retry'),
  (select result from fftt_b2b_outcomes where label='first'), 'identical retry returns prior receipt');
-select like((select result from fftt_b2b_outcomes where label='tampered_retry'),
- 'error:fftt_submission_id_reused%', 'tampered retry denied');
-select like((select result from fftt_b2b_outcomes where label='stale_version'),
- 'error:fftt_conflict%', 'second submitted result rejected');
+select ok((select result from fftt_b2b_outcomes where label='tampered_retry') like 'error:fftt_submission_id_reused%', 'tampered retry denied');
+select ok((select result from fftt_b2b_outcomes where label='stale_version') like 'error:fftt_conflict%', 'second submitted result rejected');
 select is((select result::jsonb->>'status' from fftt_b2b_outcomes where label='second'),
  'accepted', 'second match accepted without score string');
-select like((select result from fftt_b2b_outcomes where label='final_short'),
- 'error:fftt_validation_error%', 'best-of-five final needs 3 game wins');
+select ok((select result from fftt_b2b_outcomes where label='final_short') like 'error:fftt_validation_error%', 'best-of-five final needs 3 game wins');
 select is((select result::jsonb->>'status' from fftt_b2b_outcomes where label='final'),
  'accepted', 'four-game best-of-five final accepted');
-select like((select result from fftt_b2b_outcomes where label='revoked_retry'),
- 'error:forbidden%', 'revocation checked before receipt replay');
-select like((select result from fftt_b2b_outcomes where label='outsider'),
- 'error:forbidden%', 'unaffiliated caller denied');
+select ok((select result from fftt_b2b_outcomes where label='revoked_retry') like 'error:forbidden%', 'revocation checked before receipt replay');
+select ok((select result from fftt_b2b_outcomes where label='outsider') like 'error:forbidden%', 'unaffiliated caller denied');
 select is((select revision from fftt_private.events
  where id='11111111-0000-4000-8000-000000000021'), 3::bigint,
  'only three accepted score writes increment revision');
