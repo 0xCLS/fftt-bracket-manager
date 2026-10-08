@@ -204,6 +204,17 @@ begin
      where id=v_match.next_match_id and event_id=p_event_id
        and (case when v_match.next_match_slot=1 then player_1_id else player_2_id end) is null;
   else
+    -- A missing successor link must not prematurely finish a malformed bracket.
+    if v_match.round_number <> (
+         select pg_catalog.max(round_number) from fftt_private.matches
+          where event_id=p_event_id and bracket_id=v_match.bracket_id
+       ) or exists (
+         select 1 from fftt_private.matches
+          where event_id=p_event_id and bracket_id=v_match.bracket_id
+            and id<>v_match.id and status='pending'
+       ) then
+      raise exception 'fftt_conflict' using errcode = 'P0001';
+    end if;
     update fftt_private.brackets set status='complete' where id=v_match.bracket_id;
   end if;
 
