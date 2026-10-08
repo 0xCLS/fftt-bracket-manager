@@ -30,13 +30,13 @@ The application remains self-contained in `index.html`, with no external UI fram
 | Caution | `--warning` | Amber |
 | Destructive action | `--negative` | Red |
 
-A minimal design should use generous white space between separate card tiles, consistent 8–10px corners (except true pill controls), soft low-contrast shadows and mostly white content surfaces. Avoid visually heavy box-within-box treatments. Colors are semantic and may evolve with visual review.
+A minimal design should use generous white space between separate card tiles, consistent 5–6px corners (except true pill controls), soft low-contrast shadows and mostly white content surfaces. Avoid visually heavy box-within-box treatments. Colors are semantic and may evolve with visual review.
 
 ## Component guidelines
 
 - **Brand:** Keep the currently embedded FFTT emblem as the sidebar logo and favicon, and preserve **Developed by Chris Smith** in the organizer view on desktop and mobile. The credit stays off printed brackets.
-- **Navigation:** A simple, pale sidebar with distinct active state. On narrow screens it becomes horizontally scrollable.
-- **Cards / KPIs:** Standalone white tiles with **10px corner radius**, barely visible borders, and one restrained soft shadow. No gradients or decorative top bars. Four summary KPI tiles lead the Overview screen.
+- **Navigation:** A dark plum sidebar with a consistent 18px stroke-icon beside each of the seven text labels and a clear active state. On narrow screens it becomes horizontally scrollable.
+- **Cards / KPIs:** Standalone white tiles with **6px corner radius** (5px on compact controls), barely visible borders and one restrained soft shadow. No decorative top bars. The compact 2×2 KPI snapshot stays beside the setup workspace.
 - **Surface hierarchy:** Follow the Figma reference's **floating-card** language. Outer panels and match cards are independent white rectangles with restrained elevation. Do **not** enclose brackets or match queues in additional rounded lavender trays. Tables use flat white backgrounds, subtle row separators, and minimal chrome. Muted lavender is for background canvas and occasional semantic notices, not every nested container.
 - **Headings:** Use the approved screenshot's purple for major page headings and section headings, with a small gold dot in the EVENT OPERATIONS eyebrow.
 - **Buttons:** Indigo-blue for primary actions, unobtrusive white secondary controls, neutral ghost actions, and clear red destructive controls.
@@ -52,8 +52,8 @@ The previous iterations changed colors, shadows and radii but retained essential
 
 The new Overview introduces:
 
-- A **distinct plum navigation rail** that retains the FFTT emblem and `Developed by Chris Smith`.
-- A wide purple **tournament workspace hero** with clear actions for Players and Match Desk, plus restrained ping-pong-inspired illustration drawn purely in CSS.
+- A **distinct plum navigation rail** with seven lightweight line icons for Overview, Players, Championship, Consolation, Match Desk, Doubles Finale and Data & Restore. The FFTT emblem and exact `Developed by Chris Smith` credit remain.
+- A **plain, unboxed Overview header** retaining the headline, explanation, and working Players/Match Desk actions. Christopher explicitly rejected the large purple hero background and its decorative ball/orbits.
 - A full-height **event-configuration workspace** on the left, with labeled fields and the original Save event setup control.
 - A compact **2×2 live snapshot** on the right, reusing all four existing KPI elements and IDs.
 - A separate **three-stage tournament guide** on the right, describing championship, reviewed consolation and mixed-skill doubles finale.
@@ -61,6 +61,11 @@ The new Overview introduces:
 All seven sections, player form operations, IDs and the existing tournament JavaScript are retained. The Overview has a new spatial hierarchy, deliberately different from the original four equal stat cards + two equally styled content boxes.
 
 **Pending approval:** this is a bold concept candidate, not the approved final look. Ask Christopher to judge the live desktop and mobile composition before proceeding to features or further reskinning.
+
+
+### User review correction — October 8, 2026
+
+Christopher liked the new split Overview composition but explicitly requested (a) removal of the purple banner/background at the top, (b) icons beside each sidebar menu item, and (c) noticeably sharper rectangular card edges. This overrides the earlier hero background and illustration direction. The Overview remains an unboxed title and actions above the event workspace, snapshot, and format guide. Treat the latest rendered UI as a **design candidate pending approval**.
 
 ## Acceptance and safeguards
 
