@@ -18,6 +18,14 @@ Open `index.html` in a browser. No installation, database, or server is required
 The hosted version is deployed through **GitHub Pages** from the `main` branch and repository root. Live application:
 https://0xcls.github.io/fftt-bracket-manager/
 
+## Interface
+
+The application uses a lightweight design system **inspired by [shadcn/ui](https://ui.shadcn.com/docs/theming)**: semantic CSS tokens, typography, accessible focus states, consistent field/button styles, and responsive navigation. FFTT navy/yellow branding is preserved. This is **not** a React/shadcn component installation: all styling is embedded locally in the original `index.html`, so the app stays usable offline.
+
+## Registration sheet integration (planned)
+
+The organizer maintains event sign-ups in a separate private Google Sheet with playing-history and self-assessment questions. **This build does not fetch that Sheet or automatically import its rows.** Current seeding operates on FFTT ratings entered by staff. A future organizer-only, review-before-import workflow could read names and playing-assessment answers, suggest *provisional* ratings, let staff confirm them, and then build balanced opening matchups. Contact fields (email and phone) should not be imported into the bracket or exposed in a public-facing view. Avoid embedding private Sheet credentials, access tokens, or unprotected participant data in this public GitHub Pages app.
+
 ## Important data behavior
 
 **Tournament data is saved only in the current browser's local storage.** This app does not synchronize brackets between devices, send data to GitHub, or provide a spectator feed. Use the **Export backup** button regularly during events; store the JSON backups privately. Opening the hosted URL on another computer or phone will not load the first device's data unless you explicitly import a backup.
