@@ -15,7 +15,7 @@ The desired next capabilities — simultaneous volunteer scoring and live specta
 3. **Do not migrate actual FFTT3 participant details into a new service during architecture evaluation.** Development and security testing use synthetic event data only.
 4. Preserve current single-browser behavior and JSON backups until a cloud version passes rehearsal and an explicit cutover is approved.
 5. Do not embed private admin/service keys or real participant contacts in the public GitHub Pages repository.
-6. No provider, authentication mechanism, offline conflict policy, or deployment/cutover date has been approved.
+6. **Updated October 8, 2026:** Supabase is approved for synthetic prototyping, individual organizer-authorized accounts and public field-restricted results are approved, and cloud writes must pause offline with a controlled single-device fallback. No production provider, hosted project, paid plan, actual participant migration or cutover has been approved.
 
 ## Provider comparison (official documentation)
 
