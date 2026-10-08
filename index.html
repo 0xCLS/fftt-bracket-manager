@@ -43,28 +43,7 @@
 html{background:var(--canvas);color:var(--ink)}
 body{display:grid;grid-template-columns:252px minmax(0,1fr);min-height:100vh;
  margin:0;background:var(--canvas);color:var(--ink);font-family:inherit;line-height:1.5}
-button,input,select,textarea{
- width:100%;min-height:42px;padding:9px 12px;border:1px solid #dad5e8;
- border-radius:10px;background:#fff;color:#444760;box-shadow:inset 0 1px 2px #65538e07;
- font-size:13px;line-height:1.45;transition:border-color .15s,box-shadow .15s}
-/* Accessible, stable dropdown arrow with reserved room for the selection text. */
-select{
- -webkit-appearance:none;appearance:none;
- padding-right:42px;
- background-color:#fff;
- background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2365538e%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E");
- background-repeat:no-repeat;
- background-position:right 14px center;
- background-size:16px 16px;
- text-overflow:ellipsis;
-}
-select:disabled{background-color:#f5f3f8;color:#837991}
-td select{padding-right:34px;background-position:right 9px center}
-.roster-rstatus{min-width:143px}
-.roster-rating{min-width:88px}
-td:has(.roster-rstatus){min-width:165px}
-td:has(.roster-rating){min-width:110px}
-.field-label{display:block;margin:0 0 7px;color:#5a627b;font-size:12px;font-weight:720;line-height:1.4}
+button,input,select,textarea{font:inherit}
 button{cursor:pointer}
 button:disabled{opacity:.48;cursor:not-allowed}
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px}
@@ -166,6 +145,24 @@ input,select,textarea{
  border-radius:10px;background:#fff;color:#293f5d;box-shadow:0 1px 2px #253d5606;
  font-size:13px;line-height:1.45;transition:border-color .15s,box-shadow .15s
 }
+/* Accessible, stable dropdown arrow with reserved room for the selection text. */
+select{
+ -webkit-appearance:none;appearance:none;
+ padding-right:42px;
+ background-color:#fff;
+ background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2365538e%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E");
+ background-repeat:no-repeat;
+ background-position:right 14px center;
+ background-size:16px 16px;
+ text-overflow:ellipsis;
+}
+select:disabled{background-color:#f5f3f8;color:#837991}
+td select{padding-right:34px;background-position:right 9px center}
+.roster-rstatus{min-width:143px}
+.roster-rating{min-width:88px}
+td:has(.roster-rstatus){min-width:165px}
+td:has(.roster-rating){min-width:110px}
+.field-label{display:block;margin:0 0 7px;color:#5a627b;font-size:12px;font-weight:720;line-height:1.4}
 input:hover,select:hover,textarea:hover{border-color:#aea5ca}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--focus);
  box-shadow:0 0 0 3px #6c60a920}
