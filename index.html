@@ -47,6 +47,24 @@ button,input,select,textarea{
  width:100%;min-height:42px;padding:9px 12px;border:1px solid #dad5e8;
  border-radius:10px;background:#fff;color:#444760;box-shadow:inset 0 1px 2px #65538e07;
  font-size:13px;line-height:1.45;transition:border-color .15s,box-shadow .15s}
+/* Accessible, stable dropdown arrow with reserved room for the selection text. */
+select{
+ -webkit-appearance:none;appearance:none;
+ padding-right:42px;
+ background-color:#fff;
+ background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2365538e%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E");
+ background-repeat:no-repeat;
+ background-position:right 14px center;
+ background-size:16px 16px;
+ text-overflow:ellipsis;
+}
+select:disabled{background-color:#f5f3f8;color:#837991}
+td select{padding-right:34px;background-position:right 9px center}
+.roster-rstatus{min-width:143px}
+.roster-rating{min-width:88px}
+td:has(.roster-rstatus){min-width:165px}
+td:has(.roster-rating){min-width:110px}
+.field-label{display:block;margin:0 0 7px;color:#5a627b;font-size:12px;font-weight:720;line-height:1.4}
 button{cursor:pointer}
 button:disabled{opacity:.48;cursor:not-allowed}
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px}
@@ -375,9 +393,9 @@ hr{border:0;border-top:1px solid #ebe6f2;margin:21px 0}
         <h2>Add player</h2>
         <form id="addPlayerForm">
           <div class="formrow">
-            <div class="f6"><label for="playerName">Name</label><input id="playerName" required autocomplete="off"></div>
-            <div class="f3"><label for="playerRating">FFTT rating</label><select id="playerRating"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></div>
-            <div class="f3"><label for="playerRatingStatus">Status</label><select id="playerRatingStatus"><option value="provisional">Provisional</option><option value="established">Established</option></select></div>
+            <div class="f12"><label for="playerName">Name</label><input id="playerName" required autocomplete="off"></div>
+            <div class="f5"><label for="playerRating">FFTT rating</label><select id="playerRating"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></div>
+            <div class="f7"><label for="playerRatingStatus">Status</label><select id="playerRatingStatus"><option value="provisional">Provisional</option><option value="established">Established</option></select></div>
             <div class="f12"><button class="primary" type="submit">Add & check in</button></div>
           </div>
         </form>
@@ -487,8 +505,8 @@ hr{border:0;border-top:1px solid #ebe6f2;margin:21px 0}
       <input type="hidden" id="resultMatchId">
       <input type="hidden" id="resultBracketType">
       <div style="margin-top:14px">
-        <label>Winner</label>
-        <div id="winnerChoices"></div>
+        <div class="field-label" id="winnerGroupLabel">Winner</div>
+        <div id="winnerChoices" role="radiogroup" aria-labelledby="winnerGroupLabel"></div>
       </div>
       <div class="formrow" style="margin-top:10px">
         <div class="f5"><label for="resultTable">Table</label><select id="resultTable"></select></div>
@@ -788,10 +806,10 @@ function renderRoster(){
   let h='<div class="tablewrap"><table><thead><tr><th>In</th><th>Player</th><th>Rating</th><th>Status</th><th>Champ matches</th><th></th></tr></thead><tbody>';
   state.players.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(p=>{
     h+=`<tr>
-      <td><input class="check roster-check" type="checkbox" data-id="${p.id}" ${p.checkedIn?"checked":""} ${state.championship?"disabled":""}></td>
-      <td><input class="roster-name" data-id="${p.id}" value="${esc(p.name)}" ${state.championship?"disabled":""}></td>
-      <td><select class="roster-rating" data-id="${p.id}">${[1,2,3,4,5].map(n=>`<option ${p.rating===n?"selected":""}>${n}</option>`).join("")}</select></td>
-      <td><select class="roster-rstatus" data-id="${p.id}"><option value="provisional" ${p.ratingStatus==="provisional"?"selected":""}>Provisional</option><option value="established" ${p.ratingStatus==="established"?"selected":""}>Established</option></select></td>
+      <td><input class="check roster-check" type="checkbox" aria-label="Check in ${esc(p.name)}" data-id="${p.id}" ${p.checkedIn?"checked":""} ${state.championship?"disabled":""}></td>
+      <td><input class="roster-name" aria-label="Player name for ${esc(p.name)}" data-id="${p.id}" value="${esc(p.name)}" ${state.championship?"disabled":""}></td>
+      <td><select class="roster-rating" aria-label="FFTT rating for ${esc(p.name)}" data-id="${p.id}">${[1,2,3,4,5].map(n=>`<option ${p.rating===n?"selected":""}>${n}</option>`).join("")}</select></td>
+      <td><select class="roster-rstatus" aria-label="Rating status for ${esc(p.name)}" data-id="${p.id}"><option value="provisional" ${p.ratingStatus==="provisional"?"selected":""}>Provisional</option><option value="established" ${p.ratingStatus==="established"?"selected":""}>Established</option></select></td>
       <td>${matchCountForPlayer(p.id,state.championship)}</td>
       <td><button class="danger small remove-player" data-id="${p.id}" type="button" ${state.championship?"disabled":""}>Remove</button></td>
     </tr>`;
