@@ -582,24 +582,32 @@ nav.tabs button.active .nav-icon{color:#615080}
 .overview-format .format-steps li:last-child{padding-right:0}
 .overview-format .format-footnote{margin:14px 0 0!important;padding-top:13px}
 .statusline{
- position:sticky;top:0;z-index:15;display:flex;justify-content:flex-end;
- align-items:center;flex-wrap:wrap;gap:7px;
- min-height:49px;margin:0 0 20px;padding:8px 0;
- background:var(--canvas)
+ position:fixed;top:0;right:clamp(15px,2.5vw,40px);left:226px;z-index:60;
+ display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:7px;
+ min-height:53px;margin:0;padding:11px 0 9px;
+ background:var(--canvas);
+ pointer-events:none;
 }
-main:has(#setup.panel.active)>.statusline{margin:0 0 16px;justify-content:flex-end}
+.statusline>.pill{pointer-events:auto}
+.shell{padding-top:79px}
+main:has(#setup.panel.active)>.statusline{margin:0;justify-content:flex-end}
 @media(max-width:1120px){
  .overview-content{grid-template-columns:1fr;grid-template-areas:"settings" "snapshot" "format"}
  .overview-format .format-steps{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 @media(max-width:750px){
- .statusline{position:relative;top:auto;justify-content:flex-start;min-height:0;margin-bottom:18px}
- main:has(#setup.panel.active)>.statusline{justify-content:flex-start}
+ .statusline{position:fixed;top:0;left:0;right:0;z-index:60;min-height:0;
+  padding:10px 15px;justify-content:flex-end;background:var(--canvas);
+  box-shadow:0 1px 3px #43396012}
+ main:has(#setup.panel.active)>.statusline{justify-content:flex-end}
+ .topbar{padding-top:94px}
+ .shell{padding-top:26px}
  .overview-format .format-steps{grid-template-columns:1fr}
  .overview-format .format-steps li,.overview-format .format-steps li:first-child{padding:12px 0}
  .overview-format .format-steps li+li{border-left:0;border-top:1px solid #eeeaf4}
  .overview-format{padding:22px}
 }
+@media(max-width:430px){.topbar{padding-top:120px}}
 @media print{
  .statusline{display:none!important}
  .overview-content{display:block}
