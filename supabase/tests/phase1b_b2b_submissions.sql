@@ -3,7 +3,7 @@
 -- actual Supabase signed tokens and device concurrency require separate tests.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(24);
+select plan(25);
 
 select has_function('public','fftt_submit_match_result_v1',
   array['uuid','uuid','integer','bigint','uuid','uuid','text','smallint'],
@@ -90,6 +90,16 @@ call pg_temp.fftt_attempt('stale_generation','00000000-0000-4000-8000-0000000000
   'authenticated','44444444-0000-4000-8000-000000000021',0,
   '55555555-0000-4000-8000-000000000003',
   '22222222-0000-4000-8000-000000000021','',0);
+-- A malformed missing successor link must not terminate the bracket.
+update fftt_private.matches set next_match_id=null,next_match_slot=null
+  where id='44444444-0000-4000-8000-000000000021';
+call pg_temp.fftt_attempt('missing_link','00000000-0000-4000-8000-000000000021',
+  'authenticated','44444444-0000-4000-8000-000000000021',0,
+  '55555555-0000-4000-8000-000000000010',
+  '22222222-0000-4000-8000-000000000021','');
+update fftt_private.matches set
+  next_match_id='44444444-0000-4000-8000-000000000023',next_match_slot=1
+  where id='44444444-0000-4000-8000-000000000021';
 call pg_temp.fftt_attempt('first','00000000-0000-4000-8000-000000000021',
   'authenticated','44444444-0000-4000-8000-000000000021',0,
   '55555555-0000-4000-8000-000000000004',
@@ -136,6 +146,8 @@ select like((select result from fftt_b2b_outcomes where label='bad_winner'),
  'error:fftt_validation_error%', 'nonparticipant winner rejected');
 select like((select result from fftt_b2b_outcomes where label='stale_generation'),
  'error:fftt_stale_generation%', 'generation checked before write');
+select like((select result from fftt_b2b_outcomes where label='missing_link'),
+ 'error:fftt_conflict%', 'missing advancement link cannot finish bracket prematurely');
 select is((select result::jsonb->>'status' from fftt_b2b_outcomes where label='first'),
  'accepted', 'first match accepted');
 select is((select result from fftt_b2b_outcomes where label='retry'),
