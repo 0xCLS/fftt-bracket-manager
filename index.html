@@ -186,6 +186,122 @@ hr{border:0;border-top:1px solid #ebeff4;margin:20px 0}
  .card .inline[style*="space-between"]{align-items:flex-start;gap:12px}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* Phase 0 visual refinement — BitSight-inspired control states,
+   restrained labels and navigation. No feature or data changes. */
+:root{
+  --ui-control-accent:#087d9f;
+  --ui-control-accent-soft:#eaf6fb;
+  --ui-section-heading:#65558d;
+  --ui-control-stroke:#cdd8e4;
+  --ui-control-disabled:#f0f2f6;
+  --ui-soft-shadow:0 1px 2px #192c4507, 0 8px 24px #192c4507;
+  --ui-radius-small:7px;
+}
+.page-intro h2{color:var(--ui-section-heading);font-weight:720;letter-spacing:-.045em}
+.page-intro .eyebrow{color:#49637f;letter-spacing:.145em}
+.page-intro p{max-width:650px;color:#62758e}
+.card{border-color:#e0e6ee;box-shadow:var(--ui-soft-shadow)}
+.card h2{font-size:17px;font-weight:750;color:#263951;letter-spacing:-.025em}
+.card h3{font-size:13px;font-weight:760;color:#344b65}
+.card .help{color:#62758c}
+label{color:#354b61}
+input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]),
+select,textarea{
+ border-color:var(--ui-control-stroke);border-radius:var(--ui-radius-small);
+ background:#fff;min-height:42px;
+}
+input::placeholder,textarea::placeholder{color:#8b99aa;opacity:1}
+input:not([type=checkbox]):not([type=radio]):hover,select:hover,textarea:hover{border-color:#91adbe}
+input:not([type=checkbox]):not([type=radio]):focus-visible,
+select:focus-visible,textarea:focus-visible{
+ border-color:var(--ui-control-accent);outline:2px solid #087d9f24;
+ outline-offset:1px;box-shadow:0 0 0 3px #087d9f14
+}
+input:is([type=checkbox],[type=radio]){
+ appearance:auto;width:18px;height:18px;min-width:18px;min-height:18px;
+ padding:0;margin:0;flex:0 0 auto;vertical-align:middle;
+ border:0;border-radius:0;box-shadow:none;accent-color:var(--ui-control-accent);cursor:pointer
+}
+input:is([type=checkbox],[type=radio]):hover:not(:disabled){outline:3px solid #087d9f18;outline-offset:1px}
+input:is([type=checkbox],[type=radio]):focus-visible{outline:3px solid var(--ui-control-accent);outline-offset:3px}
+input:is([type=checkbox],[type=radio]):disabled{cursor:not-allowed;opacity:.55}
+button,.btn{border-radius:var(--ui-radius-small);font-size:12px;font-weight:700}
+button.secondary,.btn.secondary{background:#f8fbfd;border-color:#cad6e3;color:#295074}
+button.secondary:hover:not(:disabled),.btn.secondary:hover{background:var(--ui-control-accent-soft);border-color:#7cb8d0;color:#145f7b}
+button.primary:focus-visible,button.secondary:focus-visible,button.ghost:focus-visible,
+button.danger:focus-visible,.btn:focus-within{outline:3px solid var(--ui-control-accent);outline-offset:2px}
+nav.tabs{gap:3px}
+nav.tabs button{min-height:44px;border-radius:var(--ui-radius-small);transition:background .14s,color .14s}
+nav.tabs button.active{background:#ffffff1c;border-color:#ffffff2b;box-shadow:inset 3px 0 0 var(--brand-gold)}
+.statusline{gap:7px}
+.pill{min-height:28px;padding:6px 12px;border-color:#dce5ef;background:#f9fbfd;
+ color:#546881;letter-spacing:.012em;white-space:normal}
+.pill.good{background:#ecf7f3;border-color:#cfe7dd;color:#12634b}
+.pill.blue{background:#eef8fc;border-color:#c9e8f3;color:#186980}
+.pill.warn{background:#fff7ea;border-color:#f1ddb8;color:#8a5b18}
+.private{display:inline-flex;align-items:center;gap:5px;border:1px solid #ebdfc3;
+ padding:5px 8px;border-radius:999px;color:#815e22;letter-spacing:.045em;
+ background:#fffaf0;font-size:10px;font-weight:780}
+.kpis{gap:14px}
+#setup>.grid>.card:has(.kpis){padding:0;border:0;background:transparent;box-shadow:none}
+.kpi{border-color:#dde6f0;box-shadow:var(--ui-soft-shadow);border-radius:11px;
+ background:#fff;padding:20px 18px}
+.kpi::before{height:4px;width:30px;background:var(--brand-gold);border-radius:4px;margin-bottom:16px}
+.kpi strong{color:#263f60;font-weight:780;font-size:32px}
+.kpi span{color:#64788e;font-weight:640}
+.tablewrap{border-color:#dce5ee;box-shadow:0 1px 1px #10263b08}
+th{color:#596b80;background:#f3f7fb;font-size:10px;letter-spacing:.075em}
+td{font-size:12px;color:#314358}
+tbody tr:hover{background:#f1f8fb}
+td select,td input:not([type=checkbox]){min-height:34px;border-radius:6px}
+td .check{width:18px;height:18px;min-height:18px}
+.rating{border:1px solid #cfdeec;color:#2c5679;background:#eff5fb;
+ width:30px;height:30px;border-radius:50%}
+.notice{border-left-width:3px;border-radius:8px}
+.notice.good{background:#effaf6;border-color:#389e85}
+.notice.warn{background:#fff8ee;border-color:#e4ad52}
+.bracket-scroll{scrollbar-color:#c2d3e3 #f8fafc;scrollbar-width:thin}
+.round{gap:12px;width:245px}
+.round-title{color:#5f587e;font-size:11px;border-bottom:1px solid #e2e7f0;margin-bottom:2px}
+.match{border-color:#d8e3ee;border-radius:10px;box-shadow:0 2px 8px #112d480a}
+.match-head{background:#f5f8fc;color:#5f7185}
+.playerline{font-size:13px;min-height:44px}
+.playerline.winner{background:#e9f7f1;color:#17644f;box-shadow:inset 3px 0 0 #51a889}
+.score{font-variant-numeric:tabular-nums}
+.queue-card{border-color:#dbe4ec;border-radius:11px;box-shadow:var(--ui-soft-shadow)}
+.queue-card h3{font-size:11px;color:#5b6c80;text-transform:uppercase;letter-spacing:.035em}
+.versus{color:#233b57;font-weight:760;line-height:1.65;overflow-wrap:anywhere}
+.tabletag{background:#f1f7fb;border:1px solid #d4e6f0;color:#2a627d;border-radius:999px;font-size:11px;padding:5px 11px}
+.empty-state{border:1px dashed #c6d6e4;background:#f8fbfd;border-radius:9px;padding:32px 20px}
+.team{border-color:#dce5ee;background:#f8fbff;border-radius:10px}
+#resultDialog{border-color:#d7e2ee}
+#resultMatchLabel{background:#f1f7fd;border-color:#73a7c4;color:#314965}
+#winnerChoices label{
+ border-color:#d9e2ec!important;border-radius:var(--ui-radius-small)!important;
+ cursor:pointer;background:#fff;transition:border-color .15s,background .15s
+}
+#winnerChoices label:hover{background:#f3fafe;border-color:#7bb5ca!important}
+#winnerChoices label:has(input:checked){background:var(--ui-control-accent-soft);border-color:var(--ui-control-accent)!important}
+#winnerChoices label:focus-within{outline:2px solid var(--ui-control-accent);outline-offset:2px}
+.developer-credit{margin-top:13px;padding:13px 10px 1px;text-align:center;
+ color:#c0cfe0;font-size:11px;font-weight:600;letter-spacing:.015em}
+.footer-note{font-size:11px;color:#788ba1;padding:29px 0 10px}
+@media(max-width:800px){
+ nav.tabs button.active{box-shadow:inset 0 -3px 0 var(--brand-gold)}
+ .developer-credit{margin:8px 0 0;text-align:left;font-size:10px;color:#adbed4;padding:3px 0}
+ .topbar{padding-bottom:15px}
+}
+@media(max-width:540px){
+ .kpis{gap:10px}
+ .kpi{padding:16px 12px}
+ .kpi strong{font-size:28px}
+ .round{width:218px}
+ .statusline{gap:6px}
+ .pill{min-height:26px}
+}
+@media print{.developer-credit{display:none!important}}
+
 @media print{
  body{display:block;background:#fff}
  .topbar,.page-intro,.statusline,.tabs,.no-print,.footer-note{display:none!important}
@@ -221,6 +337,7 @@ hr{border:0;border-top:1px solid #ebeff4;margin:20px 0}
     <button class="ghost" id="printBtn" type="button">⎙ Print current</button>
     <button class="primary" id="saveJsonBtn" type="button">↓ Export backup</button>
   </div>
+  <div class="developer-credit">Developed by Chris Smith</div>
 </header>
 
 <main class="shell" id="app">
@@ -237,6 +354,14 @@ hr{border:0;border-top:1px solid #ebeff4;margin:20px 0}
   </div>
 <section id="setup" class="panel active print-me">
     <div class="grid">
+      <div class="card span-12">
+        <div class="kpis">
+          <div class="kpi"><strong id="kpiPlayers">0</strong><span>checked-in players</span></div>
+          <div class="kpi"><strong id="kpiChamp">0</strong><span>championship matches done</span></div>
+          <div class="kpi"><strong id="kpiCons">0</strong><span>consolation entrants</span></div>
+          <div class="kpi"><strong id="kpiTables">2</strong><span>active tables</span></div>
+        </div>
+      </div>
       <div class="card span-7">
         <h2>Event setup</h2>
         <div class="formrow">
@@ -256,14 +381,7 @@ hr{border:0;border-top:1px solid #ebeff4;margin:20px 0}
         <p class="help">The consolation bracket is intentionally generated only after its entrant pool can be reviewed. It is not a blind automatic drop-down bracket.</p>
         <p class="help">The finale pairs the two championship finalists with selected beginner-to-intermediate consolation players.</p>
       </div>
-      <div class="card span-12">
-        <div class="kpis">
-          <div class="kpi"><strong id="kpiPlayers">0</strong><span>checked-in players</span></div>
-          <div class="kpi"><strong id="kpiChamp">0</strong><span>championship matches done</span></div>
-          <div class="kpi"><strong id="kpiCons">0</strong><span>consolation entrants</span></div>
-          <div class="kpi"><strong id="kpiTables">2</strong><span>active tables</span></div>
-        </div>
-      </div>
+
     </div>
   </section>
 
