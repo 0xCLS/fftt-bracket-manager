@@ -122,16 +122,19 @@ with sync_playwright() as p:
     assert page.locator(".statusline > .pill").count() == 4
     print("PASS balanced Overview cards and four viewport-fixed top-right status pills")
 
-    print("PASS lightened plum sidebar and asymmetrical Overview")
+    print("PASS approved pastel Overview and balanced layout")
     page.locator('.overview-feature [data-go="players"]').click()
     assert page.locator("#players").is_visible()
-    assert page.locator(".topbar").evaluate("el => getComputedStyle(el).backgroundColor") == "rgb(86, 73, 110)"
-    assert page.locator("body").evaluate("el => getComputedStyle(el).backgroundColor") != "rgb(242, 243, 245)"
-    print("PASS other sections retain original navigation and canvas palette")
+    assert page.locator(".topbar").evaluate("el => getComputedStyle(el).backgroundColor") == "rgb(251, 252, 253)"
+    assert page.locator("body").evaluate("el => getComputedStyle(el).backgroundColor") == "rgb(242, 243, 245)"
+    assert page.locator("#players .card").first.evaluate("el => getComputedStyle(el).backgroundColor") == "rgb(255, 255, 255)"
+    assert page.locator("#players .section-pills .pill").count() == 3
+    assert page.locator("#players .pill.good").count() >= 1
+    print("PASS Players uses approved light surfaces, semantic pills and neutral background")
     page.locator('nav.tabs button[data-tab="setup"]').click()
     assert page.locator(".topbar").evaluate("el => getComputedStyle(el).backgroundColor") == "rgb(251, 252, 253)"
     assert feature.is_visible()
-    print("PASS overview hero action routes to Players and back")
+    print("PASS Overview hero action routes to Players and back")
 
 
     # Ensure the component system matches floating white tiles rather than
@@ -247,6 +250,13 @@ with sync_playwright() as p:
     assert page.locator("#champBracket .match-head-meta .pill.blue").count() >= 1
     page.locator('nav.tabs button[data-tab="consolation"]').click()
     assert page.locator("#consPills .pill").count() >= 2
+    for tab in ["championship","consolation","desk","finale","data"]:
+        page.locator(f'nav.tabs button[data-tab="{tab}"]').click()
+        assert page.locator(".topbar").evaluate("el => getComputedStyle(el).backgroundColor") == "rgb(251, 252, 253)"
+        assert page.locator("body").evaluate("el => getComputedStyle(el).backgroundColor") == "rgb(242, 243, 245)"
+        assert page.locator("#viewTitle").evaluate("el => getComputedStyle(el).color") == "rgb(41, 49, 60)"
+        assert page.locator(".statusline > .pill").count() == 4
+    print("PASS all seven tabs share cool-neutral approved color system")
     page.locator('nav.tabs button[data-tab="finale"]').click()
     assert page.locator("#finalePills .pill").count() == 2
     page.locator('nav.tabs button[data-tab="data"]').click()
