@@ -163,7 +163,7 @@ with sync_playwright() as p:
     add_radios.nth(2).press("ArrowRight")
     assert add_radios.nth(3).is_checked()
     assert page.locator("#ratingHint").inner_text() == "Level 4 · Strong Intermediate"
-    add_radios.nth(2).check()
+    page.locator("#addPlayerForm .rating-choice").nth(2).click()
     assert page.locator("#ratingHint").inner_text() == "Level 3 · Intermediate"
     assert page.get_by_role("group", name="FFTT rating").count() == 1
     print("PASS keyboard-operable add-player five-level rating selector")
@@ -186,7 +186,7 @@ with sync_playwright() as p:
     assert page.locator(".roster-rating").count() == 20
     first_rating = page.locator(".roster-rating-fieldset").first
     assert first_rating.locator('input[value="1"]').is_checked()
-    first_rating.locator('input[value="5"]').check()
+    first_rating.locator('label.rating-choice').nth(4).click()
     assert page.locator(".roster-rating-fieldset").first.locator('input[value="5"]').is_checked()
     saved = page.evaluate("JSON.parse(localStorage.getItem('fftt_bracket_manager_v01')).players")
     assert next(p["rating"] for p in saved if p["name"] == "Example Alpha") == 5
