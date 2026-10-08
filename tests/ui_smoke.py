@@ -41,6 +41,35 @@ with sync_playwright() as p:
     assert page.locator("nav.tabs button").count() == 7
     print("PASS app and brand render")
 
+    # Ensure the component system matches floating white tiles rather than
+    # multiple heavily rounded / tinted nested trays.
+    surfaces = page.evaluate("""() => {
+      const read = (selector) => {
+        const st = getComputedStyle(document.querySelector(selector));
+        return {
+          bg: st.backgroundColor, image: st.backgroundImage,
+          radius: parseFloat(st.borderTopLeftRadius),
+          border: parseFloat(st.borderTopWidth),
+          shadow: st.boxShadow
+        };
+      };
+      return {
+        canvas: getComputedStyle(document.body).backgroundColor,
+        card: read('#setup .card.span-7'),
+        kpi: read('.kpi'),
+        bracket: read('#champBracket'),
+        queue: read('#matchQueue')
+      };
+    }""")
+    assert surfaces["card"]["bg"] == "rgb(255, 255, 255)", surfaces
+    assert surfaces["card"]["radius"] <= 12 and surfaces["kpi"]["radius"] <= 12, surfaces
+    assert surfaces["card"]["image"] == "none", surfaces
+    assert surfaces["card"]["shadow"] != "none", surfaces
+    assert surfaces["bracket"]["border"] == 0, surfaces
+    assert surfaces["queue"]["bg"] == "rgba(0, 0, 0, 0)", surfaces
+    print("PASS floating card surfaces and unframed match containers")
+
+
     page.locator('nav.tabs button[data-tab="players"]').click()
     assert page.locator("#viewTitle").inner_text() == "Player management"
     geometry = page.locator("#playerRatingStatus").evaluate("""el => {
@@ -80,6 +109,14 @@ with sync_playwright() as p:
     print("PASS all roster and setup form controls have accessible names")
 
     page.locator("#buildChampBtn").click()
+    match_style = page.evaluate("""() => {
+      const m = document.querySelector('#champBracket .match');
+      const st = getComputedStyle(m);
+      return {radius: parseFloat(st.borderTopLeftRadius), shadow: st.boxShadow};
+    }""")
+    assert match_style["radius"] <= 10 and match_style["shadow"] != "none", match_style
+    print("PASS compact match-card geometry")
+
     page.locator('nav.tabs button[data-tab="desk"]').click()
     assert page.locator(".record-result").count() > 0
     page.locator(".record-result").first.click()
