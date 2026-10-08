@@ -1,0 +1,52 @@
+name: Render social preview image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - assets/fftt-bracket-manager-og.svg
+      - .github/workflows/render-social-card.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install image renderer
+        run: npm install --no-save --package-lock=false sharp@0.34.4
+      - name: Create PNG for social-media crawlers
+        run: |
+          node - <<'NODE'
+          const sharp = require('sharp');
+          (async () => {
+            const source = 'assets/fftt-bracket-manager-og.svg';
+            const target = 'assets/fftt-bracket-manager-og.png';
+            await sharp(source).resize(1200,630).png({compressionLevel:9}).toFile(target);
+            const info = await sharp(target).metadata();
+            if(info.format !== 'png' || info.width !== 1200 || info.height !== 630) {
+              throw new Error('Share image has incorrect type or dimensions');
+            }
+            console.log('Social preview ready:', info.format, info.width, info.height);
+          })().catch(e => { console.error(e); process.exit(1); });
+          NODE
+      - name: Commit static social preview
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/fftt-bracket-manager-og.png
+          if git diff --cached --quiet; then
+            echo 'Share image already matches SVG; no commit necessary.'
+          else
+            git commit -m 'Build public Open Graph social preview image'
+            git push
+          fi
