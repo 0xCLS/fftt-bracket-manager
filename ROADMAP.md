@@ -4,7 +4,7 @@ _Last organized: October 8, 2026. This roadmap is a planning record, **not** a c
 
 ## Product direction and sequencing
 
-**Current decision:** Complete and visually approve the interface before beginning further feature implementation. The event-day tournament format remains Championship Bracket + Consolation Bracket with one Mixed-Skill Doubles finale. Keep fellowship and a minimum of two competitive matches per player where practical.
+**Current decision (October 8, 2026):** Christopher explicitly accepted the current UI ("I'm satisfied with the design for now. Let's move on"). **Phase 0 visual approval is complete. Phase 1 is active: plan secure shared state, roles, and sync before implementing cross-device scoring.** The format remains Championship Bracket + Consolation Bracket with one Mixed-Skill Doubles finale, preserving fellowship and at least two competitive matches per player when practical.
 
 **Requested future capabilities:** Multiple volunteers able to enter scores from separate devices, with live bracket updates visible to spectators on phones and a TV/projector. A secure, central, authoritative event database will be needed; GitHub Pages alone only serves the application. **No backend vendor has been selected.** Supabase has been suggested, not approved.
 
@@ -27,9 +27,9 @@ These capabilities are described in the current README and app code. They are no
 
 **Current limitations:** No Google Sheets intake or automatic registration sync; no simultaneous cross-device scoring; no public/live bracket feed; no centrally saved event state; no active table reservations; no recorded doubles finale result.
 
-## Phase 0 — Approved palette; final cross-screen review
+## Phase 0 — Design accepted and closed (October 8, 2026)
 
-**Status:** Christopher approved the cool-gray, off-white, charcoal, and pastel color direction on October 8, 2026. It now appears on all seven screens, and the browser and tournament regression tests passed. Final cross-screen visual review remains open before new features.
+**Status:** Christopher approved the complete current interface as sufficient to move on. Cool-gray, off-white, charcoal and pastel styling is deployed across all seven screens, and UI/tournament regression tests passed. Further visual tweaks are optional and do not block Phase 1. Earlier Phase 0 open items below are historical quality-improvement candidates, not the approval gate.
 
 Reference: the [Figma Design System by Facundo Almiron](https://www.behance.net/gallery/125691923/Figma-Design-System) for a light, polished dashboard, with BitSight as a secondary inspiration for predictable controls. Christopher explicitly authorized a complete departure from previous FFTT colors or flyer-derived styling. **The only required branding is the existing FFTT emblem and the exact credit “Developed by Chris Smith.”** Do not copy proprietary assets.
 
@@ -39,7 +39,7 @@ Reference: the [Figma Design System by Facundo Almiron](https://www.behance.net/
 - [ ] Reduce UI friction: clear primary actions, logical screen layouts, readable brackets, legible statuses and appropriate sizing for volunteer phones.
 - [ ] Verify desktop, tablet, phone, projected display/TV readiness and printing where relevant.
 - [ ] Check keyboard navigation, accessibility contrast, text clipping and no regression of bracket/backup logic.
-- [ ] Conduct a visual review and capture Christopher's explicit approval **before** starting implementation of the feature backlog.
+- [x] Capture Christopher's explicit approval of the current design before progressing to feature planning — October 8, 2026.
 
 The screenshot demonstrates several styles, such as triple sliders and grade badges, but **does not imply all pictured widgets should be added** to the tournament app.
 
@@ -138,13 +138,15 @@ The rollout is CSS-only: it does not modify tournament logic, match handling, da
 - Preserve the previously approved charcoal/pastel palette, compact rating appearance in the roster, numeric values and keyboard operation; retain the approved 16px/12px responsive spacing around **Save teams**.
 - This supersedes the preceding full-width rating-row experiment. Visual approval of these precise refinements remains with Christopher.
 
-## Proposed feature backlog, after visual approval
+## Phase 1 onward — Feature roadmap
 
-Priority ordering below is a **provisional recommendation**, not an implementation commitment.
+The design approval gate is satisfied. Phase sequencing is provisional and subject to technical and scope decisions. **Next decision: backend provider and access approach**, not a unilateral live-data cutover. See [Phase 1 Shared Event Architecture](docs/PHASE1_SHARED_EVENT_ARCHITECTURE.md).
 
-### Phase 1 — Shared, reliable event state and access
+### Phase 1 — Shared, reliable event state and access (current)
 
-- [ ] Evaluate and choose a hosted real-time backend (Supabase was one suggestion, not a decision).
+- [x] Analyze the existing app's local-state limitations and prepare a provider-neutral shared-state architecture with recommendation and security/test gates — [Phase 1 proposal](docs/PHASE1_SHARED_EVENT_ARCHITECTURE.md).
+- [ ] Christopher chooses a backend and approves staff/public access and offline behavior. **Supabase is the leading recommendation, not approved or provisioned.**
+- [ ] Build and security-test a synthetic-event sandbox before touching real event data.
 - [ ] Set up authoritative event records, secure access, persistence and backups without publishing private player contact information or keys in the public repository.
 - [ ] Define roles: organizer/admin (full tournament control), volunteer scorekeeper (authorized score submission), spectator (read-only public results), and TV display (read-only).
 - [ ] Handle concurrent score entry, stale clients, retry/deduplication, corrections/auditability and device reconnection.
@@ -188,7 +190,7 @@ Priority ordering below is a **provisional recommendation**, not an implementati
 - Do not use public GitHub files as an event results database.
 - Do not embed Google credentials, private sign-up responses, phone numbers, email addresses or raw JSON event backups in the public front end.
 - Product-specific sign-in method, backend provider, exact sync behavior, offline policy, spectator access policy and eventual delivery scope **need confirmation**.
-- **Next action:** refine the BitSight-inspired UI screens for Christopher's visual approval. Only after approval should the post-design features be scoped and implemented.
+- **Next action:** review the [Phase 1 Shared Event Architecture](docs/PHASE1_SHARED_EVENT_ARCHITECTURE.md) with Christopher, select the backend and decide role/authentication, spectator access and offline policy. Then build the isolated synthetic-event proof of concept. Do not deploy a live write path or migrate actual player data before approval.
 
 ## Related canonical sources
 
