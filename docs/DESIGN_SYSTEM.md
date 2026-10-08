@@ -35,13 +35,13 @@ A minimal design should use generous white space between separate card tiles, co
 ## Component guidelines
 
 - **Brand:** Keep the currently embedded FFTT emblem as the sidebar logo and favicon, and preserve **Developed by Chris Smith** in the organizer view on desktop and mobile. The credit stays off printed brackets.
-- **Navigation:** A dark plum sidebar with a consistent 18px stroke-icon beside each of the seven text labels and a clear active state. On narrow screens it becomes horizontally scrollable.
+- **Navigation:** A **lighter medium-plum** sidebar (`#56496e`) with a consistent 18px stroke-icon beside each of the seven text labels. Maintain adequate contrast for text, active states, and the sidebar controls. On narrow screens it becomes horizontally scrollable.
 - **Cards / KPIs:** Standalone white tiles with **6px corner radius** (5px on compact controls), barely visible borders and one restrained soft shadow. No decorative top bars. The compact 2×2 KPI snapshot stays beside the setup workspace.
 - **Surface hierarchy:** Follow the Figma reference's **floating-card** language. Outer panels and match cards are independent white rectangles with restrained elevation. Do **not** enclose brackets or match queues in additional rounded lavender trays. Tables use flat white backgrounds, subtle row separators, and minimal chrome. Muted lavender is for background canvas and occasional semantic notices, not every nested container.
 - **Headings:** Use the approved screenshot's purple for major page headings and section headings, with a small gold dot in the EVENT OPERATIONS eyebrow.
 - **Buttons:** Indigo-blue for primary actions, unobtrusive white secondary controls, neutral ghost actions, and clear red destructive controls.
 - **Inputs, checkboxes, radio choices:** Consistent height, visible labels, generous touch targets, selected/hover/focus/disabled states.
-- **Status labels:** Compact contextual pills for autosave, attendance, matches, readiness, and internal ratings; do not rely on color alone.
+- **Status labels:** Reuse the existing top-right semantic pill component as the **shared status language across the app**. Global pills report autosave, total checked-in players, completed matches and consolation state on every screen. Contextual pill rows report accurate per-section states (registration/check-in, championship progress, consolation readiness, playable matches/table count, finale partners, browser-local backups). Match cards use `Ready`, `Waiting`, `Completed`, or `BYE`; Match Desk uses `Ready to play` and table pills. Never color-code a status without written text. Do not misrepresent table configuration as reserved/assigned tables or browser autosave as cloud sync.
 - **Bracket / match desk:** Prioritize readable player names, results and state changes above decorative treatment.
 - **Dialog:** Clear winner selection and scoring controls, clear cancel/save actions, keyboard focus.
 - **Responsiveness and print:** Verify common desktop and phone widths and preserve print behavior. No decorative components just because a reference depicts them.
@@ -66,6 +66,12 @@ All seven sections, player form operations, IDs and the existing tournament Java
 ### User review correction — October 8, 2026
 
 Christopher liked the new split Overview composition but explicitly requested (a) removal of the purple banner/background at the top, (b) icons beside each sidebar menu item, and (c) noticeably sharper rectangular card edges. This overrides the earlier hero background and illustration direction. The Overview remains an unboxed title and actions above the event workspace, snapshot, and format guide. Treat the latest rendered UI as a **design candidate pending approval**.
+
+### Current design feedback — October 8, 2026: lighter sidebar and pills
+
+Christopher approved the general style of the top-right global status pills and requested that it be used throughout the app. He also found the left navigation rail too dark. The color of the rail was lightened from `#2c2641` to `#56496e`, with accompanying icon, text and button contrast adjustments. The same `.pill` classes now appear in context-specific summaries for the six non-Overview tabs, on Match Desk cards and table labels, in bracket match headers, and on selected doubles teams. Pill text is derived from existing tournament state. No new tournament fields, synchronization or table assignment capability was introduced.
+
+The established 6px card corners, 5px compact corners, FFTT emblem, and exact attribution `Developed by Chris Smith` remain unchanged. **Visual approval is still pending.**
 
 ## Acceptance and safeguards
 
