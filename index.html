@@ -524,6 +524,38 @@ dialog{border-radius:7px}
  .nav-icon{flex-basis:17px;width:17px;height:17px}
 }
 @media(max-width:630px){.overview-feature{padding:12px 0 16px}}
+
+/* Semantic status pills shared across each screen, queues and brackets. */
+.section-pills{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.pill.neutral{color:#655b77;border-color:#e4deec;background:#fff}
+.pill.mini{min-height:22px;padding:3px 8px;font-size:10px;font-weight:730;white-space:nowrap}
+.queue-card-meta{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:0 0 13px}
+.queue-card-meta .pill{min-height:23px;padding:4px 9px;font-size:10px}
+.match-head-meta{display:inline-flex;align-items:center;gap:9px;white-space:nowrap}
+.tabletag.pill{min-height:29px;border-radius:999px;background:#f2effa;color:#5a5d9b;border-color:#dfdaf2}
+@media(max-width:630px){
+ .section-pills{gap:6px;margin-bottom:14px}
+ .section-pills .pill{font-size:10px;min-height:27px;padding:5px 9px}
+ .match-head-meta{gap:5px}
+}
+/* Lighter, softer plum navigation rail with readable text and controls. */
+.topbar{background:#56496e;color:#fff}
+.logo{border-color:#827294}
+.brand-kicker,.sidebar-caption,.sidebar-group-title{color:#dfd6e9}
+nav.tabs button{color:#e8dff1}
+nav.tabs button:hover:not(:disabled){background:#ffffff1a;border-color:#ffffff15;color:#fff}
+nav.tabs button.active{background:#f1eafa;color:#45335f}
+nav.tabs button.active .nav-icon{color:#615080}
+.nav-index{color:#d7c9e5}
+.sidebar-footer{border-top-color:#ffffff36}
+.local-first{color:#ddf6eb}
+.sidebar-footer small{color:#ded4ea}
+.toolbar button.ghost{color:#fff;border-color:#9e8bad;background:#ffffff14}
+.toolbar button.ghost:hover:not(:disabled){background:#ffffff25}
+.toolbar button.primary{background:#e4d5fa;border-color:#e4d5fa;color:#423358}
+.toolbar button.primary:hover:not(:disabled){background:#f1e8fc;border-color:#f1e8fc;color:#423358}
+.developer-credit{color:#eadff4}
+@media(max-width:800px){.topbar{background:#56496e}}
 </style>
 </head>
 <body>
@@ -617,6 +649,7 @@ dialog{border-radius:7px}
 </section>
 
   <section id="players" class="panel">
+    <div id="playersPills" class="section-pills" aria-label="Players status"></div>
     <div class="grid">
       <div class="card span-5">
         <h2>Add player</h2>
@@ -645,6 +678,7 @@ dialog{border-radius:7px}
   </section>
 
   <section id="championship" class="panel">
+    <div id="champPills" class="section-pills" aria-label="Championship status"></div>
     <div class="card">
       <div class="inline" style="justify-content:space-between">
         <div><h2>Championship bracket</h2><div class="help">Opening placement favors rating proximity while distributing stronger expected winners through the bracket.</div></div>
@@ -655,6 +689,7 @@ dialog{border-radius:7px}
   </section>
 
   <section id="consolation" class="panel">
+    <div id="consPills" class="section-pills" aria-label="Consolation status"></div>
     <div class="grid">
       <div class="card span-4">
         <h2>Consolation pool</h2>
@@ -673,6 +708,7 @@ dialog{border-radius:7px}
   </section>
 
   <section id="desk" class="panel">
+    <div id="deskPills" class="section-pills" aria-label="Match Desk status"></div>
     <div class="grid">
       <div class="card span-12">
         <div class="inline" style="justify-content:space-between">
@@ -685,6 +721,7 @@ dialog{border-radius:7px}
   </section>
 
   <section id="finale" class="panel">
+    <div id="finalePills" class="section-pills" aria-label="Finale status"></div>
     <div class="grid">
       <div class="card span-5">
         <h2>Mixed-Skill Doubles setup</h2>
@@ -703,6 +740,7 @@ dialog{border-radius:7px}
   </section>
 
   <section id="data" class="panel">
+    <div id="dataPills" class="section-pills" aria-label="Data and recovery status"></div>
     <div class="grid">
       <div class="card span-6">
         <h2>Backup & restore</h2>
@@ -1000,7 +1038,8 @@ function renderBracket(bracket,target){
     h+=`<div class="round"><div class="round-title">${esc(bracketRoundName(bracket,r))}</div>`;
     round.forEach(m=>{
       const best=(r===bracket.rounds.length-1?(bracket.type==="championship"?state.event.finalBestOf:state.event.regularBestOf):state.event.regularBestOf);
-      h+=`<div class="match"><div class="match-head"><span>${esc(m.id)}</span><span>${m.score==="BYE"?"BYE":`Best of ${best}`}</span></div>`;
+      const matchLabel=m.score==="BYE"?["BYE","blue"]:m.winner?["Completed","good"]:m.p1&&m.p2?["Ready","blue"]:["Waiting","neutral"];
+      h+=`<div class="match"><div class="match-head"><span>${esc(m.id)}</span><span class="match-head-meta"><span class="pill mini ${matchLabel[1]}">${matchLabel[0]}</span><span>${m.score==="BYE"?"BYE":`Best of ${best}`}</span></span></div>`;
       [["p1",m.p1],["p2",m.p2]].forEach(([k,id])=>{
         const win=id&&m.winner===id;
         h+=`<div class="playerline ${win?"winner":""} ${id?"":"empty"}"><span>${id?esc(pName(id)):"—"}</span><span class="score">${win?"✓":""}</span></div>`;
@@ -1062,7 +1101,7 @@ function renderConsolation(){
 }
 function renderDesk(){
   const tables=Math.max(1,Number(state.event.tables)||2);
-  $("#tableLegend").innerHTML=Array.from({length:tables},(_,i)=>`<span class="tabletag">Table ${i+1}</span>`).join("");
+  $("#tableLegend").innerHTML=Array.from({length:tables},(_,i)=>`<span class="tabletag pill blue">Table ${i+1}</span>`).join("");
   const matches=[
     ...playableMatches(state.championship).map(m=>({type:"championship",m})),
     ...playableMatches(state.consolation).map(m=>({type:"consolation",m}))
@@ -1073,7 +1112,8 @@ function renderDesk(){
     const isFinal=m.round===b.rounds.length-1;
     const best=isFinal&&type==="championship"?state.event.finalBestOf:state.event.regularBestOf;
     return`<div class="queue-card">
-      <h3>${type==="championship"?"Championship":"Consolation"} · ${esc(bracketRoundName(b,m.round))} · Best of ${best}</h3>
+      <div class="queue-card-meta"><span class="pill blue">${type==="championship"?"Championship":"Consolation"}</span><span class="pill good">Ready to play</span></div>
+      <h3>${esc(bracketRoundName(b,m.round))} · Best of ${best}</h3>
       <div class="versus">${esc(pName(m.p1))}<br><span class="help">vs</span><br>${esc(pName(m.p2))}</div>
       <button class="primary record-result" data-type="${type}" data-id="${m.id}" type="button">Record result</button>
     </div>`;
@@ -1102,9 +1142,9 @@ function renderFinale(){
   $("#partnerA").value=state.finale.partnerA||"";$("#partnerB").value=state.finale.partnerB||"";
   const ready=finals.length===2&&state.finale.partnerA&&state.finale.partnerB&&state.finale.partnerA!==state.finale.partnerB;
   $("#finaleTeams").innerHTML=ready?`<div class="partner-grid">
-    <div class="team"><div class="help">TEAM A</div><h3>${esc(pName(finals[0]))}</h3><div>+ ${esc(pName(state.finale.partnerA))}</div></div>
+    <div class="team"><span class="pill mini good">Team selected</span><div class="help" style="margin-top:9px">TEAM A</div><h3>${esc(pName(finals[0]))}</h3><div>+ ${esc(pName(state.finale.partnerA))}</div></div>
     <div class="vs">VS</div>
-    <div class="team"><div class="help">TEAM B</div><h3>${esc(pName(finals[1]))}</h3><div>+ ${esc(pName(state.finale.partnerB))}</div></div>
+    <div class="team"><span class="pill mini good">Team selected</span><div class="help" style="margin-top:9px">TEAM B</div><h3>${esc(pName(finals[1]))}</h3><div>+ ${esc(pName(state.finale.partnerB))}</div></div>
   </div><p class="help">Publicly present these as teams; keep individual FFTT ratings internal.</p>`:'<div class="empty-state">Select and save two different consolation partners.</div>';
 }
 function suggestPartners(){
@@ -1123,6 +1163,44 @@ function suggestPartners(){
   checkpoint("Suggest doubles partners");
   state.finale.partnerA=best.a.id;state.finale.partnerB=best.b.id;save();render();
 }
+function renderSectionPills(){
+  const badge=(value,kind="neutral")=>`<span class="pill ${kind}">${esc(String(value))}</span>`;
+  const checked=checkedPlayers().length, pending=pendingFirstMatches();
+  const readyChamp=playableMatches(state.championship).length;
+  const readyCons=playableMatches(state.consolation).length;
+  const firstLoss=firstChampLossEligible().length;
+  const finals=finalistIds(), partners=state.finale.partnerA&&state.finale.partnerB&&state.finale.partnerA!==state.finale.partnerB;
+  $("#playersPills").innerHTML=[
+    badge(`${state.players.length} registered`),
+    badge(`${checked} checked in`,checked?"good":"neutral"),
+    badge("Ratings private","blue")
+  ].join("");
+  $("#champPills").innerHTML=[
+    badge(!state.championship?"Not built":state.championship.champion?"Champion confirmed":"Bracket active",!state.championship?"warn":state.championship.champion?"good":"blue"),
+    badge(`${readyChamp} ready matches`,readyChamp?"good":"neutral"),
+    badge(`${completedRealMatches(state.championship).length} completed`)
+  ].join("");
+  const consState=state.consolation?(state.consolation.champion?"Consolation champion confirmed":"Consolation active"):(consolationReady()?"Ready to seed":state.championship?"Awaiting first matches":"Championship first");
+  $("#consPills").innerHTML=[
+    badge(consState,state.consolation||consolationReady()?"good":"warn"),
+    badge(`${firstLoss} eligible players`),
+    ...(pending.length?[badge(`${pending.length} first matches pending`,"warn")]:[])
+  ].join("");
+  $("#deskPills").innerHTML=[
+    badge(`${readyChamp+readyCons} matches ready`,readyChamp+readyCons?"good":"neutral"),
+    badge(`${state.event.tables} tables configured`,"blue"),
+    badge(`${completedRealMatches(state.championship).length+completedRealMatches(state.consolation).length} results recorded`)
+  ].join("");
+  $("#finalePills").innerHTML=[
+    badge(finals.length===2?"Two finalists known":"Awaiting finalists",finals.length===2?"good":"warn"),
+    badge(partners&&finals.length===2?"Teams selected":"Teams not selected",partners&&finals.length===2?"good":"neutral")
+  ].join("");
+  $("#dataPills").innerHTML=[
+    badge("Saved in this browser","good"),
+    badge("Manual JSON backup","blue"),
+    badge("No cloud sync","warn")
+  ].join("");
+}
 function renderStatus(){
   const checked=checkedPlayers().length;
   const champDone=completedRealMatches(state.championship).length;
@@ -1134,6 +1212,7 @@ function renderStatus(){
   $("#kpiPlayers").textContent=checked;$("#kpiChamp").textContent=champDone;$("#kpiCons").textContent=ids.length;$("#kpiTables").textContent=state.event.tables;
   $("#undoBtn").disabled=!state.history?.length;
   $("#eventSubtitle").textContent=(state.event.name||"Forging Fellowship Table Tennis Games")+(state.event.date?` · ${state.event.date}`:"");
+  renderSectionPills();
 }
 function renderSetup(){
   $("#eventName").value=state.event.name;$("#eventDate").value=state.event.date||"";$("#tableCount").value=state.event.tables;$("#regularFormat").value=String(state.event.regularBestOf);$("#finalFormat").value=String(state.event.finalBestOf);
