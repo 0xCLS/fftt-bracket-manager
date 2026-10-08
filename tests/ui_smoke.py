@@ -37,6 +37,11 @@ with sync_playwright() as p:
 
     assert page.title() == "FFTT Bracket Manager"
     assert page.get_by_text("Developed by Chris Smith").count() == 1
+    assert page.locator(".footer-note").inner_text() == (
+        "FFTT Bracket Manager · Building community through fellowship"
+    )
+    assert page.get_by_text("Internal ratings — do not display publicly").count() == 1
+    print("PASS fellowship footer and separate internal-rating privacy notice")
     assert page.locator(".brand-emblem").count() == 1
     assert page.locator("nav.tabs button").count() == 7
     assert page.locator("nav.tabs button .nav-icon").count() == 7
