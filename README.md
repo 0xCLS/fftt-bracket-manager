@@ -4,7 +4,7 @@ A lightweight, single-file tournament desk for **Forging Fellowship Table Tennis
 
 ## What it does
 
-- Check in and internally rate players (FFTT Levels 1–5).
+- Check in and internally rate players (FFTT Levels 1–5) using compact, keyboard-accessible five-level selectors instead of rating dropdowns. The labels remain internal; selecting a rating still updates the original player data and Undo history.
 - Seed and manage the championship bracket.
 - Move players who lose their first actual championship match into a reviewed consolation pool.
 - Record singles match results and manage a match queue for multiple tables.
