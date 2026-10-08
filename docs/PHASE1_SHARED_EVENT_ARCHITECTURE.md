@@ -1,6 +1,6 @@
 # Phase 1 — Shared Event State and Access Architecture
 
-_Status: architecture proposal, October 8, 2026; **not** a selected backend or implemented feature._
+_Status: architecture proposal, October 8, 2026. **Update:** Christopher has now approved Supabase **for a synthetic-only prototype**, individual organizer-authorized accounts, public restricted-field spectator results and pause-on-disconnect single-device fallback. No provider has been provisioned and no shared backend is implemented. See [Phase 1A contract](PHASE1A_SHARED_EVENT_CONTRACT.md). Earlier unapproved-state descriptions below are historical._
 
 ## Why this milestone comes first
 
@@ -15,7 +15,7 @@ The desired next capabilities — simultaneous volunteer scoring and live specta
 3. **Do not migrate actual FFTT3 participant details into a new service during architecture evaluation.** Development and security testing use synthetic event data only.
 4. Preserve current single-browser behavior and JSON backups until a cloud version passes rehearsal and an explicit cutover is approved.
 5. Do not embed private admin/service keys or real participant contacts in the public GitHub Pages repository.
-6. No provider, authentication mechanism, offline conflict policy, or deployment/cutover date has been approved.
+6. **Updated October 8, 2026:** Supabase is approved for synthetic prototyping, individual organizer-authorized accounts and public field-restricted results are approved, and cloud writes must pause offline with a controlled single-device fallback. No production provider, hosted project, paid plan, actual participant migration or cutover has been approved.
 
 ## Provider comparison (official documentation)
 
@@ -28,7 +28,7 @@ The desired next capabilities — simultaneous volunteer scoring and live specta
 | Offline considerations | Explicit application-level offline/degraded mode design required | Client cache/offline support exists, but default reconciliation behavior alone is not acceptable for conflicting tournament scores |
 | Fit to FFTT | Relational players, matches, event roles and auditable result submissions | Also workable, especially if deliberately choosing a Firebase-centric implementation |
 
-**Working recommendation:** Prototype **Supabase** because the FFTT domain is relational and strict, transactional result acceptance plus auditable match history are high priorities. This is a recommendation for Christopher to approve, **not a silent vendor selection**. No project, secrets or hosted database have been provisioned.
+**Updated decision:** Christopher approved evaluating **Supabase in an isolated synthetic-data prototype**, not using it for real participants or production. This remains a provider-neutral contract until a sandbox is separately authorized. No project, secrets or hosted database have been provisioned.
 
 Primary references:
 - Supabase RLS and access grants: https://supabase.com/docs/guides/database/postgres/row-level-security
@@ -116,3 +116,7 @@ Use stable submission IDs for retries/idempotency. Do not allow two phones to si
 5. **Rollout:** Target for an event-day rehearsal and production cutover; no date assumed.
 
 Do not interpret approval of the **visual design** as approval of these technical service, access, or deployment decisions.
+
+## October 8, 2026 Phase 1A checkpoint
+
+Approved directions and executable reference tests are now specified in [PHASE1A_SHARED_EVENT_CONTRACT.md](PHASE1A_SHARED_EVENT_CONTRACT.md), [contracts/phase1a_v1.json](../contracts/phase1a_v1.json), and [tests/test_phase1a_contract.py](../tests/test_phase1a_contract.py). These are design/synthetic artifacts; **no cloud/database/RLS/realtime implementation or event-data migration is complete**. The earlier approval questions in this proposal have been answered for the prototype only; production approval is still pending.

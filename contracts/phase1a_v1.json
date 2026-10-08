@@ -1,0 +1,104 @@
+{
+  "id": "fftt.shared-event",
+  "version": "phase1a.v1",
+  "status": "design-and-synthetic-tests-only",
+  "authority": {
+    "local": "unchanged browser-local v0.1",
+    "shared": "server-authoritative only after separately approved enablement",
+    "offline": "reject cloud writes; controlled isolated single-device fallback, never auto-merge"
+  },
+  "role_permissions": {
+    "organizer": [
+      "event.read_private",
+      "event.configure",
+      "player.manage",
+      "bracket.build",
+      "match.submit",
+      "match.correct",
+      "staff.manage",
+      "backup.export_private",
+      "event.read_public"
+    ],
+    "scorekeeper": [
+      "event.read_matchdesk",
+      "match.submit",
+      "event.read_public"
+    ],
+    "spectator": [
+      "event.read_public"
+    ],
+    "tv": [
+      "event.read_public"
+    ]
+  },
+  "public_event_fields": [
+    "event_id",
+    "event_name",
+    "event_date",
+    "status",
+    "brackets",
+    "updated_at"
+  ],
+  "public_match_fields": [
+    "match_id",
+    "bracket",
+    "round",
+    "slot",
+    "player_1_name",
+    "player_2_name",
+    "winner_name",
+    "game_scores",
+    "status"
+  ],
+  "prohibited_public_fields": [
+    "email",
+    "phone",
+    "contact",
+    "rating",
+    "ratingStatus",
+    "rating_status",
+    "checkedIn",
+    "firstChampLoss",
+    "staff",
+    "audit",
+    "backup",
+    "internal_player_id",
+    "submission_id",
+    "actor_id"
+  ],
+  "submit_result": {
+    "required": [
+      "event_id",
+      "match_id",
+      "bracket_generation",
+      "expected_match_version",
+      "submission_id",
+      "winner_id",
+      "game_scores",
+      "table_number"
+    ],
+    "empty_game_scores_allowed": true,
+    "unique_submission_scope": [
+      "event_id",
+      "authenticated_actor_id",
+      "submission_id"
+    ],
+    "retry": "identical authenticated retry returns original outcome",
+    "reused_id_changed_payload": "reject",
+    "stale_version": "reject without mutation",
+    "validation": "best-of 3 regular, best-of 5 championship final; 11-point win-by-two; match participant must win",
+    "outcome": "atomic match result, eligible advancement, version increments, audit record"
+  },
+  "corrections": {
+    "role": "organizer",
+    "reason_required": true,
+    "downstream_resolved": "reject until explicit audited dependent-result remediation",
+    "generation_guard": true
+  },
+  "snapshot": {
+    "private": "authorized staff only; never public",
+    "public": "allowlisted projection only; no complete organizer state"
+  },
+  "realtime": "notification with event revision; refetch authorized snapshot; never broadcast private player row",
+  "recovery": "no automatic offline queue or JSON upload into active cloud event; manual organizer-authorized reconciliation only"
+}

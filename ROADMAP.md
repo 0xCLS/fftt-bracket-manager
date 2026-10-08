@@ -6,7 +6,7 @@ _Last organized: October 8, 2026. This roadmap is a planning record, **not** a c
 
 **Current decision (October 8, 2026):** Christopher explicitly accepted the current UI ("I'm satisfied with the design for now. Let's move on"). **Phase 0 visual approval is complete. Phase 1 is active: plan secure shared state, roles, and sync before implementing cross-device scoring.** The format remains Championship Bracket + Consolation Bracket with one Mixed-Skill Doubles finale, preserving fellowship and at least two competitive matches per player when practical.
 
-**Requested future capabilities:** Multiple volunteers able to enter scores from separate devices, with live bracket updates visible to spectators on phones and a TV/projector. A secure, central, authoritative event database will be needed; GitHub Pages alone only serves the application. **No backend vendor has been selected.** Supabase has been suggested, not approved.
+**Requested future capabilities:** Multiple volunteers able to enter scores from separate devices, with live bracket updates visible to spectators on phones and a TV/projector. A secure, central, authoritative event database will be needed; GitHub Pages alone only serves the application. **Supabase is approved for an isolated synthetic-data prototype only.** Production provider selection, infrastructure and cutover remain unapproved.
 
 **Engineering principles:** Prefer a maintainable, small codebase; reuse the existing single-file deployment where sensible; avoid risking event-day result integrity; privacy and access control are non-negotiable for any public spectator or multi-device access. Keep backups and an offline contingency.
 
@@ -145,8 +145,9 @@ The design approval gate is satisfied. Phase sequencing is provisional and subje
 ### Phase 1 — Shared, reliable event state and access (current)
 
 - [x] Analyze the existing app's local-state limitations and prepare a provider-neutral shared-state architecture with recommendation and security/test gates — [Phase 1 proposal](docs/PHASE1_SHARED_EVENT_ARCHITECTURE.md).
-- [ ] Christopher chooses a backend and approves staff/public access and offline behavior. **Supabase is the leading recommendation, not approved or provisioned.**
-- [ ] Build and security-test a synthetic-event sandbox before touching real event data.
+- [x] October 8, 2026: Christopher approved **Supabase for a synthetic-only prototype**; individual organizer-authorized staff accounts; public field-restricted read-only results/TV; pause cloud writes on disconnection with a controlled single-device fallback. No service provisioned, production provider plan or production cutover approved.
+- [x] Define provider-neutral shared-state contract, role permissions, public field allowlist, command/version/error semantics and executable **in-memory synthetic reference tests** — [Phase 1A contract](docs/PHASE1A_SHARED_EVENT_CONTRACT.md). This is **not** a deployed sandbox or backend security verification.
+- [ ] Provision (after separate approval), implement and security-test an isolated **Supabase** synthetic-event sandbox before touching real event data.
 - [ ] Set up authoritative event records, secure access, persistence and backups without publishing private player contact information or keys in the public repository.
 - [ ] Define roles: organizer/admin (full tournament control), volunteer scorekeeper (authorized score submission), spectator (read-only public results), and TV display (read-only).
 - [ ] Handle concurrent score entry, stale clients, retry/deduplication, corrections/auditability and device reconnection.
@@ -190,7 +191,7 @@ The design approval gate is satisfied. Phase sequencing is provisional and subje
 - Do not use public GitHub files as an event results database.
 - Do not embed Google credentials, private sign-up responses, phone numbers, email addresses or raw JSON event backups in the public front end.
 - Product-specific sign-in method, backend provider, exact sync behavior, offline policy, spectator access policy and eventual delivery scope **need confirmation**.
-- **Next action:** review the [Phase 1 Shared Event Architecture](docs/PHASE1_SHARED_EVENT_ARCHITECTURE.md) with Christopher, select the backend and decide role/authentication, spectator access and offline policy. Then build the isolated synthetic-event proof of concept. Do not deploy a live write path or migrate actual player data before approval.
+- **Next action:** Validate [Phase 1A's provider-neutral contract](docs/PHASE1A_SHARED_EVENT_CONTRACT.md) and isolated synthetic reference suite; request separate permission before provisioning a Supabase sandbox. Then implement real SQL/RLS/transaction and multi-client tests. Production plans, fees, real-data migration and cutover remain unapproved. Do not deploy a live write path or migrate actual player data before approval.
 
 ## Related canonical sources
 
