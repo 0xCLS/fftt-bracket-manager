@@ -15,7 +15,7 @@ _Last organized: October 8, 2026. This roadmap is a planning record, **not** a c
 These capabilities are described in the current README and app code. They are not to be counted as new features:
 
 - Public, single-file, offline-capable HTML application hosted on GitHub Pages.
-- Responsive, navy-and-yellow organizer interface with seven numbered sections.
+- Responsive organizer interface with seven numbered sections; current visual direction uses a light lavender surface system.
 - Approved circular FFTT emblem used in sidebar and favicon.
 - Event configuration, player check-in, manual add and bulk entry.
 - Internal FFTT Level 1–5 ratings, provisional/established status, rating-aware championship seeding and fairer byes.
@@ -34,7 +34,7 @@ These capabilities are described in the current README and app code. They are no
 Reference: the [Figma Design System by Facundo Almiron](https://www.behance.net/gallery/125691923/Figma-Design-System) for a light, polished dashboard, with BitSight as a secondary inspiration for predictable controls. Christopher explicitly authorized a complete departure from previous FFTT colors or flyer-derived styling. **The only required branding is the existing FFTT emblem and the exact credit “Developed by Chris Smith.”** Do not copy proprietary assets.
 
 - [ ] Review the seven screens as one cohesive product, including dense roster and bracket states and empty/loading/error states.
-- [ ] Refine and visually approve the new light dashboard foundation: typography, spacing, controls, white cards, soft surfaces, blue accents, labels and states. Preserve the emblem and developer credit, but **not** the old navy/yellow palette.
+- [ ] Visually approve the light lavender dashboard foundation: purple headings, gold marker, white elevated cards, lavender inset surfaces, spacing, typography, indigo controls, labels, and interaction states. Preserve the emblem and developer credit.
 - [ ] Build a consistent in-app component language for **checkboxes, radio choices, toggles (only where functionally needed), tags/labels, badges, links, pagination/previous-next controls (when relevant), buttons, fields and score controls**. Include default, hover, selected, disabled and focus states.
 - [ ] Reduce UI friction: clear primary actions, logical screen layouts, readable brackets, legible statuses and appropriate sizing for volunteer phones.
 - [ ] Verify desktop, tablet, phone, projected display/TV readiness and printing where relevant.
@@ -42,6 +42,13 @@ Reference: the [Figma Design System by Facundo Almiron](https://www.behance.net/
 - [ ] Conduct a visual review and capture Christopher's explicit approval **before** starting implementation of the feature backlog.
 
 The screenshot demonstrates several styles, such as triple sliders and grade badges, but **does not imply all pictured widgets should be added** to the tournament app.
+
+### Phase 0 lavender surface refinement — October 8, 2026
+
+- Christopher requested that the **card and surface hierarchy** adopt the Figma-inspired visual direction, not just the navigation and controls, and particularly liked the purple heading color in his screenshot.
+- Applied a lavender-gray page canvas, deeper purple section titles and major headings, small gold header marker, white subtly elevated primary cards, pale lavender inset surfaces for tables/brackets/match queues/notices, and coordinated score/result dialog styling. Preserved the emblem and the exact `Developed by Chris Smith` credit.
+- Kept tournament JavaScript and event data unchanged; print styling keeps bracket outputs on white surfaces.
+- **User visual acceptance is pending.** Continue Phase 0 review before new backend, registration, or tournament features.
 
 ### Phase 0 implementation checkpoint — October 8, 2026
 
