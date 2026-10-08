@@ -100,6 +100,13 @@ This composition is a candidate for Christopher's visual review; do not consider
 - Updated the KPI label from **Active tables** to **Tables configured** to avoid implying automatic table assignment. All existing data IDs, match/scoring logic and browser-local persistence remain.
 - Explicit visual approval is still required. Do not start feature implementation based on test/deployment success.
 
+### Phase 0 correction — fixed top-right status strip (October 8, 2026)
+
+- Christopher clarified that the four top-right global status pills should **remain fixed relative to the browser viewport** and must not shift down when scrolling or when switching tabs. The earlier sticky positioning was insufficient.
+- The statusline now uses `position: fixed` at the viewport's top-right on desktop. At mobile widths, the fixed strip wraps above the navigation and the layout reserves enough space to avoid overlap.
+- Added browser regression assertions that the status-strip top coordinate remains unchanged when scrolling both desktop and mobile views. All tournament logic and player/event data remain unchanged.
+- The design remains **pending Christopher's visual acceptance**; this correction does not advance feature implementation.
+
 ## Proposed feature backlog, after visual approval
 
 Priority ordering below is a **provisional recommendation**, not an implementation commitment.
