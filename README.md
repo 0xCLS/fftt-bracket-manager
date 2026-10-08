@@ -13,7 +13,7 @@ A lightweight, single-file tournament desk for **Forging Fellowship Table Tennis
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the current feature inventory and proposed sequence. **The current priority is UI/UX refinement and visual approval before implementing additional features.**
+See [ROADMAP.md](ROADMAP.md) for the current feature inventory and proposed sequence. **The current design is approved. Phase 1 now focuses on a secure, authoritative shared event database and permission model** before adding multiple scorekeeping devices or spectator feeds. Start with [the architecture proposal](docs/PHASE1_SHARED_EVENT_ARCHITECTURE.md). No backend has been selected yet.
 
 ## Run it
 
@@ -24,7 +24,7 @@ https://0xcls.github.io/fftt-bracket-manager/
 
 ## Interface
 
-The interface combines its earlier shadcn/ui-inspired layout with a [documented FFTT design system](docs/DESIGN_SYSTEM.md) following the consistency, shared colors and component-guideline approach discussed in [BitSight's UI design-system article](https://www.bitsight.com/blog/building-our-ui-design-system). The organizer's FFTT artwork is embedded as the app icon and browser favicon. Styling is still embedded locally in `index.html`, with no framework, font request or runtime image dependency.
+The interface uses Christopher's approved light-gray, charcoal and pastel [FFTT design system](docs/DESIGN_SYSTEM.md), with an off-white icon sidebar, readable forms, status pills and bracket controls. The design phase was accepted on October 8, 2026. The organizer's FFTT artwork is embedded as the app icon and browser favicon. Styling is still embedded locally in `index.html`, with no framework, font request or runtime image dependency.
 
 ## Registration sheet integration (planned)
 
