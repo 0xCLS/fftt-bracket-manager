@@ -36,7 +36,7 @@ jobs:
             // The SVG uses an embedded WebP FFTT emblem. The SVG renderer used
             // by Sharp/librsvg silently skips it, leaving an empty logo circle.
             // Extract and composite that exact emblem as raster image pixels.
-            const embedded = /<image\\b[^>]*href="data:image\\/webp;base64,([^"]+)"[^>]*\\/>/;
+            const embedded = new RegExp('<image[^>]*href="data:image/webp;base64,([^"]+)"[^>]*/>');
             const match = svg.match(embedded);
             if (!match) throw new Error('Cannot locate the approved FFTT emblem in SVG source');
             const baseSvg = svg.replace(embedded, '');
