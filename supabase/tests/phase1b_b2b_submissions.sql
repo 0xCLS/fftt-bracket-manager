@@ -144,16 +144,16 @@ select ok((select result from fftt_b2b_outcomes where label='bad_score') like 'e
 select ok((select result from fftt_b2b_outcomes where label='bad_winner') like 'error:fftt_validation_error%', 'nonparticipant winner rejected');
 select ok((select result from fftt_b2b_outcomes where label='stale_generation') like 'error:fftt_stale_generation%', 'generation checked before write');
 select ok((select result from fftt_b2b_outcomes where label='missing_link') like 'error:fftt_conflict%', 'missing advancement link cannot finish bracket prematurely');
-select is((select result::jsonb->>'status' from fftt_b2b_outcomes where label='first'),
+select is((select case when left(result,1)='{' then result::jsonb->>'status' else result end from fftt_b2b_outcomes where label='first'),
  'accepted', 'first match accepted');
 select is((select result from fftt_b2b_outcomes where label='retry'),
  (select result from fftt_b2b_outcomes where label='first'), 'identical retry returns prior receipt');
 select ok((select result from fftt_b2b_outcomes where label='tampered_retry') like 'error:fftt_submission_id_reused%', 'tampered retry denied');
 select ok((select result from fftt_b2b_outcomes where label='stale_version') like 'error:fftt_conflict%', 'second submitted result rejected');
-select is((select result::jsonb->>'status' from fftt_b2b_outcomes where label='second'),
+select is((select case when left(result,1)='{' then result::jsonb->>'status' else result end from fftt_b2b_outcomes where label='second'),
  'accepted', 'second match accepted without score string');
 select ok((select result from fftt_b2b_outcomes where label='final_short') like 'error:fftt_validation_error%', 'best-of-five final needs 3 game wins');
-select is((select result::jsonb->>'status' from fftt_b2b_outcomes where label='final'),
+select is((select case when left(result,1)='{' then result::jsonb->>'status' else result end from fftt_b2b_outcomes where label='final'),
  'accepted', 'four-game best-of-five final accepted');
 select ok((select result from fftt_b2b_outcomes where label='revoked_retry') like 'error:forbidden%', 'revocation checked before receipt replay');
 select ok((select result from fftt_b2b_outcomes where label='outsider') like 'error:forbidden%', 'unaffiliated caller denied');
