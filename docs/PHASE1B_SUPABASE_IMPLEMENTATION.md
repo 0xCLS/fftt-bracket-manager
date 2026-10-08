@@ -69,6 +69,17 @@ For public results, `public.fftt_published_events` and `public.fftt_published_ma
 - In B2, privileged mutation functions reside in non-exposed `fftt_private`, with fixed `search_path`, narrow EXECUTE grants, and any thin exposed invoker wrapper reviewed for safe arguments/returns. Lock event/match transactionally. Never expose a `SECURITY DEFINER` function directly in an API-exposed schema.
 - Cloud writes stop during disconnection; no offline queue, whole-state import, local Undo replay or automatic conflict merge in shared mode. Existing local app remains the separate fallback.
 
+## B2a — DB-backed role checks and authorized match desk (in review)
+
+Code: `supabase/migrations/20261008000300_b2a_staff_read_api.sql`; synthetic SQL tests: `supabase/tests/phase1b_b2a_authorization.sql`. Draft [PR #3](https://github.com/0xCLS/fftt-bracket-manager/pull/3) is based on B1 PR #2, not the independently changing `main` branch.
+
+- Expose two versioned **security-invoker** PostgREST RPC wrappers, `public.fftt_staff_role_v1(event_id)` and `public.fftt_matchdesk_v1(event_id)`. Both are explicitly executable by `authenticated`, never `anon`.
+- The wrappers call narrowly granted **security-definer** functions kept in `fftt_private`, which must remain *outside* Data API exposed schemas. `authenticated` obtains only the schema USAGE needed to resolve these specific private functions and EXECUTE on those functions — **no private-table SELECT, INSERT, UPDATE or DELETE grants**. This intentional B2 change supersedes B1's unconditional no-USAGE design.
+- Every request checks `auth.uid()`, Supabase-authenticated JWT role, and **current** active, unrevoked membership in `fftt_private.event_staff` for the requested event. No browser-supplied role, editable `user_metadata`, or client-supplied event authority is honored. Supabase's API gateway must verify signed tokens; raw SQL test JWT settings merely simulate caller identity.
+- Scorekeepers and organizers may see only *pending playable matches* for their authorized active synthetic event, with ordered names/IDs, match code/version, bracket, round/slot and table number. No rating, provisional status, check-in flag, contact, staff list, audit, or backup fields.
+- **No write/grant-management or result-submission RPC is provided here.** Controlled organizer account invitation/bootstrap and permission-checked staff grants must be addressed before live Auth access is claimed. Bracket updates/corrections remain B2b/B3.
+- Authorization tests use **transaction-rolled-back synthetic `auth.users` entries and simulated JWT GUCs** on local PostgreSQL; no real Auth user credentials, player contact data, or real participant migrations. Live signed-JWT/Auth integration, session revocation, concurrency and public API adversarial testing remain further gates.
+
 ## Increment sequence and gates
 
 **B1 — isolated schema and privilege foundation** (this branch)
