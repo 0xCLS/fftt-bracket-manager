@@ -162,7 +162,7 @@ with sync_playwright() as p:
     print("PASS compact match-card geometry")
     assert page.locator("#champPills .pill").count() == 3
     assert page.locator("#champBracket .match-head-meta .pill").count() > 0
-    assert page.locator("#champBracket .match-head-meta .pill.good").count() >= 1
+    assert page.locator("#champBracket .match-head-meta .pill.blue").count() >= 1
     page.locator('nav.tabs button[data-tab="consolation"]').click()
     assert page.locator("#consPills .pill").count() >= 2
     page.locator('nav.tabs button[data-tab="finale"]').click()
