@@ -27,6 +27,10 @@ These capabilities are described in the current README and app code. They are no
 
 **Current limitations:** No Google Sheets intake or automatic registration sync; no simultaneous cross-device scoring; no public/live bracket feed; no centrally saved event state; no active table reservations; no recorded doubles finale result.
 
+### Design follow-up — reusable contextual panels (October 8, 2026)
+
+Christopher approved the Players-screen dotted-outline, notched contextual guidance treatment ("I like it"). The component now provides concise, task-specific guidance in the upper-right header area of the six operational sections: Players, Championship, Consolation, Match Desk, Doubles Finale, and Data & Restore. The Overview retains its accepted open layout. The panels use neutral surfaces and charcoal text, avoid duplicated status metrics, stack on narrower screens, and change text with the selected section; no new data fields or tournament actions were introduced. This is a minor approved visual refinement, **not** a reopening of the completed Phase 0 gate or a change to the parallel Phase 1B backend work.
+
 ## Phase 0 — Design accepted and closed (October 8, 2026)
 
 **Status:** Christopher approved the complete current interface as sufficient to move on. Cool-gray, off-white, charcoal and pastel styling is deployed across all seven screens, and UI/tournament regression tests passed. Further visual tweaks are optional and do not block Phase 1. Earlier Phase 0 open items below are historical quality-improvement candidates, not the approval gate.
