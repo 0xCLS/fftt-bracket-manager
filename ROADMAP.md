@@ -71,6 +71,12 @@ The screenshot demonstrates several styles, such as triple sliders and grade bad
 - Preserved the liked purple heading and gold header marker, plus the only required identity elements: the FFTT emblem and **Developed by Chris Smith**.
 - Added computed-style browser regression checks for tile corner radii, backgrounds, shadows and unframed bracket/queue areas. This remains **pending visual approval**, not an implemented feature request.
 
+### Phase 0 structural reset — October 8, 2026
+
+Christopher shared a current Overview screenshot and said the repeated styling iterations did not look meaningfully different. The next design pass therefore **changes layout and information hierarchy**, not just CSS tokens: plum left navigation, large tournament command hero, primary setup workspace, smaller live stats snapshot, and three-stage competition guide. The underlying seven-section application and tournament engine remain intact.
+
+This composition is a candidate for Christopher's visual review; do not consider it approved merely because tests or GitHub Pages deployment pass. Subsequent major design decisions should be judged against screenshots of the rendered application, not just repository CSS diffs.
+
 ## Proposed feature backlog, after visual approval
 
 Priority ordering below is a **provisional recommendation**, not an implementation commitment.
