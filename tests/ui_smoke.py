@@ -5,10 +5,16 @@ Run: python tests/ui_smoke.py
 """
 from pathlib import Path
 import os
+import struct
 
 from playwright.sync_api import sync_playwright
 
-HTML = (Path(__file__).resolve().parent.parent / "index.html").read_text(encoding="utf-8")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+HTML = (PROJECT_ROOT / "index.html").read_text(encoding="utf-8")
+OG_IMAGE_PATH = PROJECT_ROOT / "assets" / "fftt-bracket-manager-og.png"
+OG_IMAGE = OG_IMAGE_PATH.read_bytes()
+assert OG_IMAGE[:8] == bytes.fromhex("89504e470d0a1a0a"), "Open Graph image is not a PNG"
+assert struct.unpack(">II", OG_IMAGE[16:24]) == (1200, 630), "Open Graph image must be 1200x630"
 BOOT = """() => {
   window.__testStorage = new Map();
   Object.defineProperty(window, "localStorage", {
@@ -36,6 +42,19 @@ with sync_playwright() as p:
     page.set_content(HTML)
 
     assert page.title() == "FFTT Bracket Manager"
+    image_url = "https://0xcls.github.io/fftt-bracket-manager/assets/fftt-bracket-manager-og.png"
+    assert page.locator('meta[property="og:image"]').get_attribute("content") == image_url
+    assert page.locator('meta[property="og:image:secure_url"]').get_attribute("content") == image_url
+    assert page.locator('meta[property="og:image:type"]').get_attribute("content") == "image/png"
+    assert page.locator('meta[property="og:image:width"]').get_attribute("content") == "1200"
+    assert page.locator('meta[property="og:image:height"]').get_attribute("content") == "630"
+    assert page.locator('meta[property="og:title"]').get_attribute("content") == "FFTT Bracket Manager"
+    assert page.locator('meta[property="og:type"]').get_attribute("content") == "website"
+    assert page.locator('meta[property="og:description"]').count() == 1
+    assert page.locator('meta[property="og:url"]').get_attribute("content") == "https://0xcls.github.io/fftt-bracket-manager/"
+    assert page.locator('meta[name="twitter:card"]').get_attribute("content") == "summary_large_image"
+    assert page.locator('meta[name="twitter:image"]').get_attribute("content") == image_url
+    print("PASS static Open Graph + Twitter preview metadata with versioned PNG dimensions")
     assert page.get_by_text("Developed by Chris Smith").count() == 1
     assert page.locator(".footer-note").inner_text() == (
         "FFTT Bracket Manager · Building community through fellowship"
