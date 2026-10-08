@@ -125,6 +125,12 @@ The rollout is CSS-only: it does not modify tournament logic, match handling, da
 
 **Historical note:** Previous Phase 0 updates below may say the palette is purple or Overview-only, or that color approval is pending. Those were accurate at the time but are **superseded by this approval and rollout**.
 
+### Phase 0 small spacing refinement — October 8, 2026
+
+- In response to Christopher's screenshots, the **Add Player** FFTT rating scale now occupies its own full-width form row with five equal choices and the selected-level description; provisional/established Status occupies a separate, left-aligned row below it.
+- The Mixed-Skill Doubles setup actions now have a dedicated wrapping button row, with 16px separation on desktop and 12px on smaller screens, so **Save teams** no longer crowds **Suggest balanced partners**.
+- Retained the approved charcoal/pastel scheme, original player rating values, existing buttons, data model, and tournament logic. The compact roster rating control remains unchanged. Browser layout checks cover desktop and mobile spacing.
+
 ## Proposed feature backlog, after visual approval
 
 Priority ordering below is a **provisional recommendation**, not an implementation commitment.
