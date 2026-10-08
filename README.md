@@ -20,7 +20,7 @@ https://0xcls.github.io/fftt-bracket-manager/
 
 ## Interface
 
-The application uses a lightweight design system **inspired by [shadcn/ui](https://ui.shadcn.com/docs/theming)**: semantic CSS tokens, typography, accessible focus states, consistent field/button styles, and responsive navigation. FFTT navy/yellow branding is preserved. This is **not** a React/shadcn component installation: all styling is embedded locally in the original `index.html`, so the app stays usable offline.
+The interface combines its earlier shadcn/ui-inspired layout with a [documented FFTT design system](docs/DESIGN_SYSTEM.md) following the consistency, shared colors and component-guideline approach discussed in [BitSight's UI design-system article](https://www.bitsight.com/blog/building-our-ui-design-system). The organizer's FFTT artwork is embedded as the app icon and browser favicon. Styling is still embedded locally in `index.html`, with no framework, font request or runtime image dependency.
 
 ## Registration sheet integration (planned)
 
@@ -28,7 +28,11 @@ The organizer maintains event sign-ups in a separate private Google Sheet with p
 
 ## Important data behavior
 
-**Tournament data is saved only in the current browser's local storage.** This app does not synchronize brackets between devices, send data to GitHub, or provide a spectator feed. Use the **Export backup** button regularly during events; store the JSON backups privately. Opening the hosted URL on another computer or phone will not load the first device's data unless you explicitly import a backup.
+**Tournament data is saved only in the current browser's local storage.** GitHub Pages hosts the code but does not store tournament results or synchronize devices. It does not send data to GitHub or provide a live spectator feed. The hosted URL, a locally opened HTML file, a different browser profile, and a second computer can each have separate data. Browser storage may disappear if site data is cleared, in a private/incognito session, or after a device/browser failure.
+
+**FFTT3 event-day procedure:** Run the tournament on one organizer device in a normal browser profile. Use **Export backup** after check-in and bracket creation, after each major round, and before making a risky change. Keep at least one private copy outside the device (e.g., a secure Drive folder or USB), and rehearse **Import JSON** on a second device before the event. Never commit event backups, phone numbers or email addresses to this public repository.
+
+If simultaneous organizers or live spectators become necessary later, add a separately authenticated backend with access roles and a privacy-safe public read-only view. Do not place Google Sheets credentials or a writable database secret in this static frontend.
 
 The app displays individual players' names and internal skill ratings to operators. Keep this view with tournament staff, do not project ratings publicly, and do not commit participant rosters, backups, or other private player information to this public repository.
 
