@@ -11,6 +11,10 @@ A lightweight, single-file tournament desk for **Forging Fellowship Table Tennis
 - Select mixed-skill doubles finale partners for the championship finalists.
 - Print the current view, export a JSON event backup, restore a backup, and export a text results summary.
 
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for the current feature inventory and proposed sequence. **The current priority is UI/UX refinement and visual approval before implementing additional features.**
+
 ## Run it
 
 Open `index.html` in a browser. No installation, database, or server is required.
