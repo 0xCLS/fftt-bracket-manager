@@ -556,6 +556,58 @@ nav.tabs button.active .nav-icon{color:#615080}
 .toolbar button.primary:hover:not(:disabled){background:#f1e8fc;border-color:#f1e8fc;color:#423358}
 .developer-credit{color:#eadff4}
 @media(max-width:800px){.topbar{background:#56496e}}
+
+/* Overview balance correction: settings + stats above a full-width horizontal format guide. */
+.overview-content{
+ display:grid;
+ grid-template-columns:minmax(0,1.18fr) minmax(330px,.82fr);
+ grid-template-areas:"settings snapshot" "format format";
+ align-items:stretch;
+ column-gap:22px;row-gap:22px
+}
+.overview-settings{grid-area:settings}
+.overview-snapshot{grid-area:snapshot;min-width:0}
+.overview-format{grid-area:format;min-width:0;padding:25px 30px}
+.overview-snapshot .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+.overview-snapshot .kpi{min-width:0}
+.overview-format .side-section-heading{margin-bottom:18px}
+.overview-format .format-steps{
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+ list-style:none;gap:0;margin:0;padding:0
+}
+.overview-format .format-steps li{display:flex;align-items:flex-start;gap:13px;
+ border-top:0;min-width:0;padding:14px 20px 12px}
+.overview-format .format-steps li:first-child{padding-left:0}
+.overview-format .format-steps li+li{border-left:1px solid #eeeaf4}
+.overview-format .format-steps li:last-child{padding-right:0}
+.overview-format .format-footnote{margin:14px 0 0!important;padding-top:13px}
+.statusline{
+ position:sticky;top:0;z-index:15;display:flex;justify-content:flex-end;
+ align-items:center;flex-wrap:wrap;gap:7px;
+ min-height:49px;margin:0 0 20px;padding:8px 0;
+ background:var(--canvas)
+}
+main:has(#setup.panel.active)>.statusline{margin:0 0 16px;justify-content:flex-end}
+@media(max-width:1120px){
+ .overview-content{grid-template-columns:1fr;grid-template-areas:"settings" "snapshot" "format"}
+ .overview-format .format-steps{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:750px){
+ .statusline{position:relative;top:auto;justify-content:flex-start;min-height:0;margin-bottom:18px}
+ main:has(#setup.panel.active)>.statusline{justify-content:flex-start}
+ .overview-format .format-steps{grid-template-columns:1fr}
+ .overview-format .format-steps li,.overview-format .format-steps li:first-child{padding:12px 0}
+ .overview-format .format-steps li+li{border-left:0;border-top:1px solid #eeeaf4}
+ .overview-format{padding:22px}
+}
+@media print{
+ .statusline{display:none!important}
+ .overview-content{display:block}
+ .overview-content>.card{margin-bottom:12px}
+ .overview-format .format-steps{display:block}
+ .overview-format .format-steps li+li{border-left:0}
+}
+
 </style>
 </head>
 <body>
@@ -585,16 +637,16 @@ nav.tabs button.active .nav-icon{color:#615080}
 </header>
 
 <main class="shell" id="app">
-  <div class="page-intro no-print">
-    <div class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span> EVENT OPERATIONS</div>
-    <h2 id="viewTitle">Event overview</h2>
-    <p id="viewSubtitle">Configure the tournament and prepare for a smooth event day.</p>
-  </div>
-  <div class="statusline">
+  <div class="statusline" role="status" aria-label="Tournament status">
     <span class="pill good" id="saveStatus">● Autosaved locally</span>
     <span class="pill" id="playerStatus">0 checked in</span>
     <span class="pill blue" id="matchStatus">0 matches completed</span>
     <span class="pill warn" id="consolationStatus">Consolation not ready</span>
+  </div>
+  <div class="page-intro no-print">
+    <div class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span> EVENT OPERATIONS</div>
+    <h2 id="viewTitle">Event overview</h2>
+    <p id="viewSubtitle">Configure the tournament and prepare for a smooth event day.</p>
   </div>
 <section id="setup" class="panel active print-me">
   <div class="overview-feature">
@@ -625,14 +677,13 @@ nav.tabs button.active .nav-icon{color:#615080}
         <div class="f12 overview-save-row"><button class="primary" type="button" id="saveSetupBtn">Save event setup <span aria-hidden="true">→</span></button></div>
       </div>
     </div>
-    <div class="overview-side">
-      <section class="overview-snapshot card" aria-label="Tournament at a glance">
+    <section class="overview-snapshot card" aria-label="Tournament at a glance">
         <div class="side-section-heading"><span class="section-overline">LIVE SNAPSHOT</span><h2>At a glance</h2></div>
         <div class="kpis">
           <div class="kpi"><strong id="kpiPlayers">0</strong><span>Checked-in players</span></div>
           <div class="kpi"><strong id="kpiChamp">0</strong><span>Championship matches</span></div>
           <div class="kpi"><strong id="kpiCons">0</strong><span>Consolation entrants</span></div>
-          <div class="kpi"><strong id="kpiTables">2</strong><span>Active tables</span></div>
+          <div class="kpi"><strong id="kpiTables">2</strong><span>Tables configured</span></div>
         </div>
       </section>
       <section class="overview-format card">
@@ -644,7 +695,6 @@ nav.tabs button.active .nav-icon{color:#615080}
         </ol>
         <p class="format-footnote">Ratings stay private. Consolation matchups are reviewed before the bracket is built.</p>
       </section>
-    </div>
   </div>
 </section>
 
