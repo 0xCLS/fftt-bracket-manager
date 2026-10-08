@@ -13,7 +13,7 @@ A lightweight, single-file tournament desk for **Forging Fellowship Table Tennis
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the current feature inventory and proposed sequence. **The current design is approved. Phase 1 now focuses on a secure, authoritative shared event database and permission model** before adding multiple scorekeeping devices or spectator feeds. Start with [the architecture proposal](docs/PHASE1_SHARED_EVENT_ARCHITECTURE.md). Christopher has approved Supabase **for an isolated synthetic-data prototype only**; no backend has been provisioned or activated. The provider-neutral [Phase 1A contract](docs/PHASE1A_SHARED_EVENT_CONTRACT.md) and [machine-readable permission/field policy](contracts/phase1a_v1.json) define the next security gates.
+See [ROADMAP.md](ROADMAP.md) for the current feature inventory and proposed sequence. **The current design is approved. Phase 1 now focuses on a secure, authoritative shared event database and permission model** before adding multiple scorekeeping devices or spectator feeds. Start with [the architecture proposal](docs/PHASE1_SHARED_EVENT_ARCHITECTURE.md). Christopher has approved Supabase **for an isolated synthetic-data prototype only**; no backend has been provisioned or activated. The provider-neutral [Phase 1A contract](docs/PHASE1A_SHARED_EVENT_CONTRACT.md) and [machine-readable permission/field policy](contracts/phase1a_v1.json) define the next security gates. **Phase 1B B1** is now staged on a separate feature branch: [synthetic-only PostgreSQL schema, public projection, and security test plan](docs/PHASE1B_SUPABASE_IMPLEMENTATION.md). It has not been deployed to a Supabase project or wired to this application.
 
 ## Run it
 
