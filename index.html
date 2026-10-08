@@ -1043,6 +1043,19 @@ body:has(.panel.active:not(#setup)) .context-panel{
  .context-panel{display:none!important}
  body:has(.panel.active:not(#setup)) .page-intro{display:block}
 }
+
+/* Responsive Overview heading: let the entire event name use available width.
+   No forced line break on wide screens; natural wrapping on narrower devices.
+   Supporting copy stays deliberately narrower than the title. */
+.overview-feature-copy{width:100%;max-width:none}
+body .overview-feature h2{
+ max-width:100%;white-space:normal;overflow-wrap:normal;
+ font-size:clamp(34px,3.45vw,54px);
+}
+@media(max-width:540px){
+ body .overview-feature h2{font-size:34px}
+}
+
 </style>
 </head>
 <body>
@@ -1095,7 +1108,7 @@ body:has(.panel.active:not(#setup)) .context-panel{
   <div class="overview-feature">
     <div class="overview-feature-copy">
       <span class="feature-overline"><span class="feature-spark" aria-hidden="true"></span> FORGING FELLOWSHIP · TOURNAMENT DESK</span>
-      <h2>Forging Fellowship<br><em>Table Tennis Games</em></h2>
+      <h2>Forging Fellowship <em>Table Tennis Games</em></h2>
       <p>Everything you need to prepare the Games, organize players, and keep the competition moving.</p>
       <div class="feature-actions no-print">
         <button type="button" class="feature-primary" data-go="players">Manage players <span aria-hidden="true">↗</span></button>
