@@ -41,6 +41,37 @@ with sync_playwright() as p:
     assert page.locator("nav.tabs button").count() == 7
     print("PASS app and brand render")
 
+    # Major visual composition: this is a genuinely new overview, not only
+    # different background and corner-radius tokens.
+    feature = page.locator(".overview-feature")
+    assert feature.is_visible()
+    assert page.get_by_role("heading", name="Ready for the next great match.").count() == 1
+    assert page.locator(".overview-settings").is_visible()
+    assert page.locator(".overview-snapshot").is_visible()
+    assert page.locator(".overview-format").is_visible()
+    assert page.get_by_text("Three stages. More play.").is_visible()
+    layout = page.evaluate("""() => {
+      const hero = document.querySelector('.overview-feature').getBoundingClientRect();
+      const setup = document.querySelector('.overview-settings').getBoundingClientRect();
+      const snapshot = document.querySelector('.overview-snapshot').getBoundingClientRect();
+      return {
+        heroWidth: hero.width, heroHeight: hero.height,
+        setupX: setup.x, snapshotX: snapshot.x,
+        sidebar: getComputedStyle(document.querySelector('.topbar')).backgroundColor,
+        hero: getComputedStyle(document.querySelector('.overview-feature')).backgroundColor
+      };
+    }""")
+    assert layout["heroHeight"] > 220 and layout["heroWidth"] > 650, layout
+    assert layout["snapshotX"] > layout["setupX"] + 250, layout
+    assert layout["sidebar"] != "rgb(255, 255, 255)", layout
+    print("PASS new overview hero, dark navigation and asymmetrical workspace")
+    page.locator('.overview-feature [data-go="players"]').click()
+    assert page.locator("#players").is_visible()
+    page.locator('nav.tabs button[data-tab="setup"]').click()
+    assert feature.is_visible()
+    print("PASS overview hero action routes to Players and back")
+
+
     # Ensure the component system matches floating white tiles rather than
     # multiple heavily rounded / tinted nested trays.
     surfaces = page.evaluate("""() => {
@@ -136,6 +167,15 @@ with sync_playwright() as p:
     assert narrow["width"] >= 170 and narrow["fits"], narrow
     assert page.get_by_text("Developed by Chris Smith").count() == 1
     print("PASS mobile dropdown layout and developer credit")
+
+    page.locator('nav.tabs button[data-tab="setup"]').click()
+    feature_box = page.locator(".overview-feature").bounding_box()
+    assert feature_box is not None and feature_box["width"] <= 390
+    assert page.locator(".overview-settings").is_visible()
+    assert page.locator(".overview-snapshot").is_visible()
+    assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 2")
+    print("PASS mobile overview hero and stacked workspace")
+
 
     assert not errors, errors
     print("PASS no page JavaScript errors")
