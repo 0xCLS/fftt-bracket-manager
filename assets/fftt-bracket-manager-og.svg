@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="FFTT Bracket Manager — Forging Fellowship Table Tennis Games">
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="#f2f5fa"/></linearGradient>
+    <linearGradient id="under" x1="0" x2="1" y1="0" y2="0"><stop stop-color="#5794ee"/><stop offset=".34" stop-color="#5794ee"/><stop offset=".34" stop-color="#83d4bd"/><stop offset=".69" stop-color="#83d4bd"/><stop offset=".69" stop-color="#ffbaa1"/><stop offset="1" stop-color="#ffbaa1"/></linearGradient>
+    <clipPath id="roundLogo"><circle cx="246" cy="314" r="194"/></clipPath>
+  </defs>
+  <rect width="1200" height="630" fill="url(#paper)"/>
+  <path d="M 0 0 H 445 Q 490 130 425 250 L0 215 Z" fill="#e8eef7" opacity=".52"/>
+  <circle cx="1141" cy="36" r="178" fill="#e5edf8" opacity=".78"/>
+  <circle cx="1058" cy="126" r="30" fill="#dce6f4" opacity=".72"/>
+  <path d="M 0 468 Q 145 485 204 630 H0 Z" fill="#e7eff8" opacity=".65"/>
+  <path d="M 1055 630 Q 1105 555 1200 547 V630 Z" fill="#e5edf7" opacity=".64"/>
+  <g fill="#dfe7f2">
+    <circle cx="39" cy="39" r="4"/><circle cx="73" cy="39" r="4"/><circle cx="107" cy="39" r="4"/><circle cx="141" cy="39" r="4"/>
+    <circle cx="39" cy="72" r="4"/><circle cx="73" cy="72" r="4"/><circle cx="107" cy="72" r="4"/><circle cx="141" cy="72" r="4"/>
+    <circle cx="39" cy="105" r="4"/><circle cx="73" cy="105" r="4"/><circle cx="107" cy="105" r="4"/><circle cx="141" cy="105" r="4"/>
+  </g>
+  <circle cx="246" cy="315" r="204" fill="#e9edf3" opacity=".65"/>
+  <image x="52" y="120" width="388" height="388" href="data:image/webp;base64,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" clip-path="url(#roundLogo)"/>
+  <rect x="503" y="156" width="13" height="13" rx="6.5" fill="#b9d98f"/>
+  <text x="527" y="168" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" letter-spacing="3" fill="#687784">FORGING FELLOWSHIP</text>
+  <text x="500" y="262" font-family="Arial, Helvetica, sans-serif" font-size="84" font-weight="900" fill="#29313c" letter-spacing="-2">FFTT</text>
+  <text x="502" y="335" font-family="Arial, Helvetica, sans-serif" font-size="67" font-weight="800" fill="#29313c" letter-spacing="-3">Bracket Manager</text>
+  <rect x="504" y="355" width="635" height="6" rx="3" fill="#e4eaf2"/>
+  <rect x="504" y="355" width="420" height="6" rx="3" fill="url(#under)"/>
+  <text x="502" y="407" font-family="Arial, Helvetica, sans-serif" font-size="29" fill="#29313c">Forging Fellowship Table Tennis Games</text>
+  <text x="502" y="446" font-family="Arial, Helvetica, sans-serif" font-size="25" fill="#7b8da3">Building community through fellowship</text>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" letter-spacing=".5">
+    <rect x="502" y="491" width="181" height="57" rx="28.5" fill="#e8f1ff"/>
+    <circle cx="537" cy="519" r="10" fill="#598ee2"/><text x="555" y="525" fill="#2f4e7a">BRACKETS</text>
+    <rect x="702" y="491" width="169" height="57" rx="28.5" fill="#e4f6ef"/>
+    <circle cx="737" cy="519" r="10" fill="#469f80"/><text x="755" y="525" fill="#2c5c4d">PLAYERS</text>
+    <rect x="890" y="491" width="167" height="57" rx="28.5" fill="#ffebe5"/>
+    <circle cx="925" cy="519" r="10" fill="#ee987a"/><text x="943" y="525" fill="#865042">RESULTS</text>
+  </g>
+</svg>
