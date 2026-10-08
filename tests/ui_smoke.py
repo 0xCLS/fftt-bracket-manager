@@ -151,7 +151,22 @@ with sync_playwright() as p:
     assert geometry["paddingRight"] >= 40, geometry
     assert geometry["arrow"] and geometry["appearance"] == "none", geometry
     assert geometry["labels"] == ["Status"], geometry
-    print("PASS dropdown width, chevron and associated label")
+    print("PASS Status dropdown width, chevron and associated label")
+
+    # FFTT 1–5 ratings use native accessible segmented radio choices.
+    add_radios = page.locator('#addPlayerForm input[name="addRating"]')
+    assert add_radios.count() == 5
+    assert add_radios.nth(2).is_checked()
+    assert page.locator("#playerRating").count() == 0
+    assert page.locator("#ratingHint").inner_text() == "Level 3 · Intermediate"
+    add_radios.nth(2).focus()
+    add_radios.nth(2).press("ArrowRight")
+    assert add_radios.nth(3).is_checked()
+    assert page.locator("#ratingHint").inner_text() == "Level 4 · Strong Intermediate"
+    add_radios.nth(2).check()
+    assert page.locator("#ratingHint").inner_text() == "Level 3 · Intermediate"
+    assert page.get_by_role("group", name="FFTT rating").count() == 1
+    print("PASS keyboard-operable add-player five-level rating selector")
 
     page.locator("#bulkPlayers").fill(
         "Example Alpha,1,provisional\n"
@@ -166,6 +181,19 @@ with sync_playwright() as p:
     assert page.locator("#playersPills").get_by_text("4 checked in").count() == 1
     assert page.locator("#playersPills").get_by_text("Ratings private").count() == 1
     print("PASS player-context pills show real roster counts")
+    rating_rows = page.locator(".roster-rating-fieldset")
+    assert rating_rows.count() == 4
+    assert page.locator(".roster-rating").count() == 20
+    first_rating = page.locator(".roster-rating-fieldset").first
+    assert first_rating.locator('input[value="1"]').is_checked()
+    first_rating.locator('input[value="5"]').check()
+    assert page.locator(".roster-rating-fieldset").first.locator('input[value="5"]').is_checked()
+    saved = page.evaluate("JSON.parse(localStorage.getItem('fftt_bracket_manager_v01')).players")
+    assert next(p["rating"] for p in saved if p["name"] == "Example Alpha") == 5
+    page.locator("#undoBtn").click()
+    restored = page.evaluate("JSON.parse(localStorage.getItem('fftt_bracket_manager_v01')).players")
+    assert next(p["rating"] for p in restored if p["name"] == "Example Alpha") == 1
+    print("PASS roster segmented rating change persists and Undo restores")
 
     unlabeled = page.evaluate("""() => Array.from(
       document.querySelectorAll('input, select, textarea')
@@ -220,7 +248,10 @@ with sync_playwright() as p:
     }""")
     assert narrow["width"] >= 170 and narrow["fits"], narrow
     assert page.get_by_text("Developed by Chris Smith").count() == 1
-    print("PASS mobile dropdown layout and developer credit")
+    mobile_rating = page.locator(".rating-scale").first.bounding_box()
+    assert mobile_rating is not None and mobile_rating["width"] <= 390
+    assert page.locator('#addPlayerForm input[name="addRating"]').count() == 5
+    print("PASS mobile segmented rating controls and developer credit")
     page.locator('nav.tabs button[data-tab="data"]').click()
     assert page.locator("#dataPills").is_visible()
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 2")
