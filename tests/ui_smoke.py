@@ -64,7 +64,16 @@ with sync_playwright() as p:
         hero: getComputedStyle(document.querySelector('.overview-feature')).backgroundColor,
         heroImage: getComputedStyle(document.querySelector('.overview-feature')).backgroundImage,
         heroCorner: parseFloat(getComputedStyle(document.querySelector('.overview-feature')).borderTopLeftRadius),
-        heroDecoration: !!document.querySelector('.overview-feature-art')
+        heroDecoration: !!document.querySelector('.overview-feature-art'),
+        setupBottom: setup.bottom, snapshotBottom: snapshot.bottom,
+        setupWidth: setup.width, snapshotWidth: snapshot.width,
+        format: document.querySelector('.overview-format').getBoundingClientRect().toJSON(),
+        status: document.querySelector('.statusline').getBoundingClientRect().toJSON(),
+        statusPosition: getComputedStyle(document.querySelector('.statusline')).position,
+        statusAlignment: getComputedStyle(document.querySelector('.statusline')).justifyContent,
+        formatColumns: getComputedStyle(document.querySelector('.format-steps')).gridTemplateColumns,
+        statusFirst: document.querySelector('.statusline').compareDocumentPosition(document.querySelector('.page-intro')) & Node.DOCUMENT_POSITION_FOLLOWING
+
       };
     }""")
     assert 90 < layout["heroHeight"] < 270 and layout["heroWidth"] > 650, layout
@@ -72,6 +81,14 @@ with sync_playwright() as p:
     assert layout["heroCorner"] == 0 and not layout["heroDecoration"], layout
     assert layout["snapshotX"] > layout["setupX"] + 250, layout
     assert layout["sidebar"] == "rgb(86, 73, 110)", layout
+    assert layout["format"]["y"] >= max(layout["setupBottom"],layout["snapshotBottom"]) - 1, layout
+    assert layout["format"]["width"] >= layout["setupWidth"] + layout["snapshotWidth"], layout
+    assert layout["formatColumns"].count("px") == 3, layout
+    assert layout["statusPosition"] == "sticky" and layout["statusAlignment"] == "flex-end", layout
+    assert layout["statusFirst"], layout
+    assert page.locator(".statusline > .pill").count() == 4
+    print("PASS balanced Overview cards and four sticky top-right status pills")
+
     print("PASS lightened plum sidebar and asymmetrical Overview")
     page.locator('.overview-feature [data-go="players"]').click()
     assert page.locator("#players").is_visible()
@@ -206,7 +223,12 @@ with sync_playwright() as p:
     assert page.locator(".overview-settings").is_visible()
     assert page.locator(".overview-snapshot").is_visible()
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 2")
-    print("PASS mobile overview hero and stacked workspace")
+    mobile_format = page.locator(".overview-format").bounding_box()
+    mobile_setup = page.locator(".overview-settings").bounding_box()
+    assert mobile_format is not None and mobile_setup is not None
+    assert mobile_format["y"] > mobile_setup["y"] + mobile_setup["height"]
+    assert page.locator(".statusline > .pill").count() == 4
+    print("PASS stacked mobile cards and four readable tournament status pills")
 
 
     assert not errors, errors
