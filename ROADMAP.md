@@ -77,6 +77,13 @@ Christopher shared a current Overview screenshot and said the repeated styling i
 
 This composition is a candidate for Christopher's visual review; do not consider it approved merely because tests or GitHub Pages deployment pass. Subsequent major design decisions should be judged against screenshots of the rendered application, not just repository CSS diffs.
 
+### Phase 0 refinement — icon navigation and unboxed header (October 8, 2026)
+
+- Christopher liked the major Overview restructure but requested removal of its purple banner/background, seven navigation icons similar to the Figma reference, and sharper card edges.
+- The current version removes the purple hero surface and CSS illustration, retains the heading and working buttons on the plain page background, substitutes consistent inline SVG line icons for numbered navigation, and uses **6px card / 5px compact-control corners**.
+- Emblem and exact `Developed by Chris Smith` credit are retained; tournament JavaScript and persistence format are unchanged.
+- **Still pending visual approval.** Design refinements precede any new bracket, syncing, or registration feature.
+
 ## Proposed feature backlog, after visual approval
 
 Priority ordering below is a **provisional recommendation**, not an implementation commitment.
