@@ -967,6 +967,39 @@ body .overview-format.card{padding:8px 0 0}
  body .pill{border-color:#bbb;background:#fff!important;color:#222!important}
 }
 
+
+/* Player entry: one deliberate rating control, then the separate rating status. */
+#addPlayerForm .formrow{row-gap:20px}
+.add-rating-fieldset{align-self:stretch}
+.add-rating-fieldset legend{margin-bottom:9px}
+.add-rating-fieldset .rating-scale{
+ max-width:520px;gap:4px;padding:4px;
+ border:1px solid #dfe4e8;border-radius:7px;background:#f5f7f8;
+}
+.add-rating-fieldset .rating-choice span{
+ min-height:46px;background:transparent;border:1px solid transparent;
+ border-radius:5px;color:#35424d;box-shadow:none;font-size:15px;
+}
+.add-rating-fieldset .rating-choice:hover span{
+ background:#e7edf0;border-color:transparent
+}
+.add-rating-fieldset .rating-choice input:checked+span,
+.add-rating-fieldset .rating-choice input:checked+span:hover{
+ background:#29313c;border-color:#29313c;color:white;box-shadow:0 2px 5px #29313c20
+}
+.add-rating-fieldset .rating-hint{
+ margin-top:9px;font-size:12px;min-height:18px;font-weight:620;color:#52616c;
+}
+.add-status-field{max-width:390px}
+.add-status-field select{width:100%}
+/* Doubles buttons use intentional space, including when they wrap. */
+.finale-actions{display:flex;align-items:center;flex-wrap:wrap;gap:16px;margin-top:8px}
+.finale-actions button{margin:0}
+@media(max-width:540px){
+ .add-rating-fieldset .rating-scale{max-width:none}
+ .finale-actions{gap:12px}
+}
+
 </style>
 </head>
 <body>
@@ -1065,8 +1098,8 @@ body .overview-format.card{padding:8px 0 0}
         <form id="addPlayerForm">
           <div class="formrow">
             <div class="f12"><label for="playerName">Name</label><input id="playerName" required autocomplete="off"></div>
-            <fieldset class="rating-fieldset f5"><legend>FFTT rating</legend><div class="rating-scale"><label class="rating-choice" title="Level 1 — Beginner"><input type="radio" name="addRating" value="1" aria-label="Level 1 — Beginner"><span aria-hidden="true">1</span></label><label class="rating-choice" title="Level 2 — Recreational"><input type="radio" name="addRating" value="2" aria-label="Level 2 — Recreational"><span aria-hidden="true">2</span></label><label class="rating-choice" title="Level 3 — Intermediate"><input type="radio" name="addRating" value="3" aria-label="Level 3 — Intermediate" checked><span aria-hidden="true">3</span></label><label class="rating-choice" title="Level 4 — Strong Intermediate"><input type="radio" name="addRating" value="4" aria-label="Level 4 — Strong Intermediate"><span aria-hidden="true">4</span></label><label class="rating-choice" title="Level 5 — Advanced / Competitive"><input type="radio" name="addRating" value="5" aria-label="Level 5 — Advanced / Competitive"><span aria-hidden="true">5</span></label></div><div class="rating-hint" id="ratingHint">Level 3 · Intermediate</div></fieldset>
-            <div class="f7"><label for="playerRatingStatus">Status</label><select id="playerRatingStatus"><option value="provisional">Provisional</option><option value="established">Established</option></select></div>
+            <fieldset class="rating-fieldset add-rating-fieldset f12"><legend>FFTT rating</legend><div class="rating-scale"><label class="rating-choice" title="Level 1 — Beginner"><input type="radio" name="addRating" value="1" aria-label="Level 1 — Beginner"><span aria-hidden="true">1</span></label><label class="rating-choice" title="Level 2 — Recreational"><input type="radio" name="addRating" value="2" aria-label="Level 2 — Recreational"><span aria-hidden="true">2</span></label><label class="rating-choice" title="Level 3 — Intermediate"><input type="radio" name="addRating" value="3" aria-label="Level 3 — Intermediate" checked><span aria-hidden="true">3</span></label><label class="rating-choice" title="Level 4 — Strong Intermediate"><input type="radio" name="addRating" value="4" aria-label="Level 4 — Strong Intermediate"><span aria-hidden="true">4</span></label><label class="rating-choice" title="Level 5 — Advanced / Competitive"><input type="radio" name="addRating" value="5" aria-label="Level 5 — Advanced / Competitive"><span aria-hidden="true">5</span></label></div><div class="rating-hint" id="ratingHint">Level 3 · Intermediate</div></fieldset>
+            <div class="f12 add-status-field"><label for="playerRatingStatus">Status</label><select id="playerRatingStatus"><option value="provisional">Provisional</option><option value="established">Established</option></select></div>
             <div class="f12"><button class="primary" type="submit">Add & check in</button></div>
           </div>
         </form>
@@ -1138,7 +1171,7 @@ body .overview-format.card{padding:8px 0 0}
         <div class="formrow" style="margin-top:12px">
           <div class="f12"><label for="partnerA">Partner for Finalist A</label><select id="partnerA"></select></div>
           <div class="f12"><label for="partnerB">Partner for Finalist B</label><select id="partnerB"></select></div>
-          <div class="f12"><button class="secondary" type="button" id="suggestPartnersBtn">Suggest balanced partners</button> <button class="primary" type="button" id="saveFinaleBtn">Save teams</button></div>
+          <div class="f12 finale-actions"><button class="secondary" type="button" id="suggestPartnersBtn">Suggest balanced partners</button><button class="primary" type="button" id="saveFinaleBtn">Save teams</button></div>
         </div>
       </div>
       <div class="card span-7">
