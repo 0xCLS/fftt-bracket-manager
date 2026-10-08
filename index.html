@@ -1163,7 +1163,7 @@ function renderRoster(){
   h+='</tbody></table></div>';wrap.innerHTML=h;
   $$(".roster-check").forEach(x=>x.addEventListener("change",()=>{checkpoint("Change check-in");pById(x.dataset.id).checkedIn=x.checked;save();render()}));
   $$(".roster-name").forEach(x=>x.addEventListener("change",()=>{const p=pById(x.dataset.id);if(p&&x.value.trim()){checkpoint("Edit player name");p.name=x.value.trim();save();render()}}));
-  $(".roster-rating").forEach(x=>x.addEventListener("change",()=>{if(!x.checked)return;const p=pById(x.dataset.id);if(!p||p.rating===Number(x.value))return;checkpoint("Adjust player rating");p.rating=Number(x.value);save();render()}));
+  $$(".roster-rating").forEach(x=>x.addEventListener("change",()=>{if(!x.checked)return;const p=pById(x.dataset.id);if(!p||p.rating===Number(x.value))return;checkpoint("Adjust player rating");p.rating=Number(x.value);save();render()}));
   $$(".roster-rstatus").forEach(x=>x.addEventListener("change",()=>{checkpoint("Adjust rating status");pById(x.dataset.id).ratingStatus=x.value;save();render()}));
   $$(".remove-player").forEach(x=>x.addEventListener("click",()=>{if(confirm(`Remove ${pName(x.dataset.id)}?`)){checkpoint("Remove player");state.players=state.players.filter(p=>p.id!==x.dataset.id);save();render()}}));
 }
