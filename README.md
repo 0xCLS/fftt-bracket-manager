@@ -15,10 +15,7 @@ A lightweight, single-file tournament desk for **Forging Fellowship Table Tennis
 
 Open `index.html` in a browser. No installation, database, or server is required.
 
-For the hosted edition, enable **GitHub Pages** in the repository settings:
-**Settings → Pages → Build and deployment → Deploy from a branch → main → /(root) → Save**.
-
-Expected published URL after Pages deployment:
+The hosted version is deployed through **GitHub Pages** from the `main` branch and repository root. Live application:
 https://0xcls.github.io/fftt-bracket-manager/
 
 ## Important data behavior
@@ -29,8 +26,25 @@ The app displays individual players' names and internal skill ratings to operato
 
 ## Status
 
-**v0.1 baseline:** This is the uploaded initial single-file application. Treat the first hosted deployment as a preview until the full match-flow and event-day backup/restore workflow have been tested with sample players. In particular, check the intended minimum-matches experience against the actual number of players, brackets, byes, and tables. The doubles finale in v0.1 supports team selection, not recording its match result.
+**v0.1, rehearsal-hardened:** The championship and consolation flows have automated browser tests across 17 different player counts (2–48) plus alternative winner paths. A second test checks score validation, destructive-rebuild confirmation, backup export/restore, and malformed-import rejection. Ratings guide first-round matchmaking and stronger expected winners are distributed across the bracket. On uneven fields, higher-rated players receive byes.
+
+**Minimum matches:** Tests confirmed at least two real matches per player for the simulated 4–48-player fields **when the consolation bracket is played through**. A 2- or 3-player field cannot reliably guarantee two matches in this bracket format; use a manual round robin or rematch plan. The consolation bracket can be built only after all checked-in players have completed their first actual championship match.
+
+**Before event-day use:** Do an organizer rehearsal on the device and browser that will run the tournament, export a backup, verify a restore, and bring a printed bracket or score-sheet fallback. JSON backup/restore is manual, not live synchronization. The Match Desk lists playable matches and records their table numbers after play; it does not reserve tables or block simultaneous scheduling conflicts. The doubles finale supports team selection but **does not yet record the doubles match result**.
+
+**Scores:** You may record only the winner (leave scores blank). If entering scores, use per-game scores in the displayed player order, such as `11-8, 8-11, 11-7`; the app checks the winner, game count, and 11-point win-by-two rule.
 
 ## Development
 
-The project intentionally starts with `index.html` as its only application file. Keep changes lightweight; preserve a testable backup before event day. This code repository is distinct from the private FFTT event-planning and historical-record repository.
+The application is intentionally a single file, `index.html`. The optional browser tests are kept separately in `tests/` and need Python Playwright plus its Chromium browser:
+
+```sh
+python -m pip install playwright
+python -m playwright install chromium
+python tests/rehearsal.py
+python tests/safety.py
+```
+
+These tests run in an isolated browser with synthetic players and simulated local storage; they do not touch the live event's data. On systems with a separately installed Chromium, set `FFTT_CHROMIUM_BIN` to its executable path.
+
+Keep changes lightweight; preserve a backup before event day. This public code repository is distinct from the private FFTT event-planning and historical-record repository.
