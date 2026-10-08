@@ -15,8 +15,8 @@ select is((
 ), 9::bigint, 'RLS enabled on all private tables');
 select ok(not has_schema_privilege('anon', 'fftt_private', 'USAGE'),
           'Anonymous role cannot use private schema');
-select ok(not has_schema_privilege('authenticated', 'fftt_private', 'USAGE'),
-          'Authenticated role cannot use private schema at B1');
+select ok(not has_table_privilege('authenticated', 'fftt_private.players', 'SELECT'),
+          'Authenticated role cannot directly read private players (including B2)');
 select ok(not has_table_privilege('anon', 'fftt_private.players', 'SELECT'),
           'Anonymous cannot read private players');
 select ok(not has_table_privilege('authenticated', 'fftt_private.event_staff', 'SELECT'),
