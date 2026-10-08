@@ -71,8 +71,8 @@ with sync_playwright() as p:
     assert layout["hero"] == "rgba(0, 0, 0, 0)" and layout["heroImage"] == "none", layout
     assert layout["heroCorner"] == 0 and not layout["heroDecoration"], layout
     assert layout["snapshotX"] > layout["setupX"] + 250, layout
-    assert layout["sidebar"] != "rgb(255, 255, 255)", layout
-    print("PASS unboxed header, icon navigation and asymmetrical Overview")
+    assert layout["sidebar"] == "rgb(86, 73, 110)", layout
+    print("PASS lightened plum sidebar and asymmetrical Overview")
     page.locator('.overview-feature [data-go="players"]').click()
     assert page.locator("#players").is_visible()
     page.locator('nav.tabs button[data-tab="setup"]').click()
@@ -135,6 +135,11 @@ with sync_playwright() as p:
     )
     page.locator("#bulkAddBtn").click()
     assert page.locator(".roster-check").count() == 4
+    assert page.locator("#playersPills .pill").count() == 3
+    assert page.locator("#playersPills").get_by_text("4 registered").count() == 1
+    assert page.locator("#playersPills").get_by_text("4 checked in").count() == 1
+    assert page.locator("#playersPills").get_by_text("Ratings private").count() == 1
+    print("PASS player-context pills show real roster counts")
 
     unlabeled = page.evaluate("""() => Array.from(
       document.querySelectorAll('input, select, textarea')
@@ -155,9 +160,24 @@ with sync_playwright() as p:
     }""")
     assert match_style["radius"] <= 10 and match_style["shadow"] != "none", match_style
     print("PASS compact match-card geometry")
+    assert page.locator("#champPills .pill").count() == 3
+    assert page.locator("#champBracket .match-head-meta .pill").count() > 0
+    assert page.locator("#champBracket .match-head-meta .pill.good").count() >= 1
+    page.locator('nav.tabs button[data-tab="consolation"]').click()
+    assert page.locator("#consPills .pill").count() >= 2
+    page.locator('nav.tabs button[data-tab="finale"]').click()
+    assert page.locator("#finalePills .pill").count() == 2
+    page.locator('nav.tabs button[data-tab="data"]').click()
+    assert page.locator("#dataPills .pill").count() == 3
+    assert page.locator("#dataPills").get_by_text("No cloud sync").count() == 1
+    print("PASS contextual status pills across championship, consolation, finale and recovery")
 
     page.locator('nav.tabs button[data-tab="desk"]').click()
     assert page.locator(".record-result").count() > 0
+    assert page.locator("#deskPills .pill").count() == 3
+    assert page.locator(".queue-card-meta .pill.good").count() > 0
+    assert page.locator("#tableLegend .pill").count() == 2
+    print("PASS status and table pills in Match Desk")
     page.locator(".record-result").first.click()
     assert page.get_by_role("radiogroup", name="Winner").count() == 1
     radios = page.locator('#winnerChoices input[type="radio"]')
@@ -175,6 +195,10 @@ with sync_playwright() as p:
     assert narrow["width"] >= 170 and narrow["fits"], narrow
     assert page.get_by_text("Developed by Chris Smith").count() == 1
     print("PASS mobile dropdown layout and developer credit")
+    page.locator('nav.tabs button[data-tab="data"]').click()
+    assert page.locator("#dataPills").is_visible()
+    assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 2")
+    print("PASS contextual pills fit mobile view")
 
     page.locator('nav.tabs button[data-tab="setup"]').click()
     feature_box = page.locator(".overview-feature").bounding_box()
