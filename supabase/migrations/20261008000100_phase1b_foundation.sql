@@ -96,6 +96,7 @@ create table fftt_private.matches (
     references fftt_private.players(event_id, id),
   foreign key (event_id, winner_id)
     references fftt_private.players(event_id, id),
+  unique (event_id, id),
   unique (event_id, generation, bracket_id, id),
   unique (event_id, generation, bracket_id, match_code),
   unique (event_id, generation, bracket_id, round_number, slot),
