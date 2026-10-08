@@ -49,6 +49,23 @@ with sync_playwright() as p:
     feature = page.locator(".overview-feature")
     assert feature.is_visible()
     assert page.get_by_role("heading", name="Forging Fellowship Table Tennis Games").count() == 1
+    title = page.locator(".overview-feature h2")
+    assert title.locator("br").count() == 0
+    desktop_title = title.evaluate("""el => {
+      const st = getComputedStyle(el);
+      return {height:el.getBoundingClientRect().height,
+        lineHeight:parseFloat(st.lineHeight), width:el.clientWidth,
+        scrollWidth:el.scrollWidth};
+    }""")
+    assert desktop_title["height"] <= desktop_title["lineHeight"] + 2, desktop_title
+    assert desktop_title["scrollWidth"] <= desktop_title["width"] + 2, desktop_title
+    print("PASS full Overview event title on one line at 1440px")
+    for viewport_width in (1280, 1024):
+        page.set_viewport_size({"width":viewport_width,"height":900})
+        assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 2")
+        assert title.is_visible()
+    page.set_viewport_size({"width":1440,"height":900})
+    print("PASS responsive Overview title without laptop horizontal overflow")
     assert page.locator(".overview-settings").is_visible()
     assert page.locator(".overview-snapshot").is_visible()
     assert page.locator(".overview-format").is_visible()
@@ -390,6 +407,15 @@ with sync_playwright() as p:
 
     page.locator('nav.tabs button[data-tab="setup"]').click()
     feature_box = page.locator(".overview-feature").bounding_box()
+    mobile_title = page.locator(".overview-feature h2").evaluate("""el => {
+      const st = getComputedStyle(el);
+      return {height:el.getBoundingClientRect().height,
+        lineHeight:parseFloat(st.lineHeight), width:el.clientWidth,
+        scrollWidth:el.scrollWidth};
+    }""")
+    assert mobile_title["height"] > mobile_title["lineHeight"] + 2, mobile_title
+    assert mobile_title["scrollWidth"] <= mobile_title["width"] + 2, mobile_title
+    print("PASS natural title wrap without mobile horizontal overflow")
     assert feature_box is not None and feature_box["width"] <= 390
     assert page.locator(".overview-settings").is_visible()
     assert page.locator(".overview-snapshot").is_visible()
