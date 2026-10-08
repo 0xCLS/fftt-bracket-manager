@@ -151,7 +151,9 @@ The design approval gate is satisfied. Phase sequencing is provisional and subje
 - [ ] Provision (after organizer setup/authorization), apply and security-test a hosted **Supabase Free** synthetic-event sandbox before touching real event data; isolated CI Postgres success does not substitute for hosted auth/integration testing.
 - [ ] Set up authoritative event records, secure access, persistence and backups without publishing private player contact information or keys in the public repository.
 - [ ] Define roles: organizer/admin (full tournament control), volunteer scorekeeper (authorized score submission), spectator (read-only public results), and TV display (read-only).
-- [ ] **B2a in draft PR #3:** authenticated event-scoped role/eligible matchdesk RPCs, synthetic role revocation and privacy tests. No score write endpoint or real Auth account bootstrapping; requires PostgreSQL CI and hosted security verification before acceptance.
+- [x] **B2a synthetic backend milestone (PR #3):** hosted event-scoped authenticated role/eligible matchdesk read RPCs, with 20 B2a pgTAP security tests passed and browser regression passed. No real Auth users provisioned; full signed-JWT test still pending.
+- [x] **B2b synthetic backend milestone (PR #4):** hosted transactional score RPC tested against isolated local PostgreSQL (70 total pgTAP assertions passed across B1–B2b), plus hosted function privilege/security checks. This is NOT proof of real multi-session concurrency or production readiness.
+- [ ] Verify real organizer-approved Auth sessions, actual simultaneous scorekeeper connections, audit/corrections, reliable bye/advancement and recovery against synthetic data before connecting frontend.
 - [ ] Handle concurrent score entry, stale clients, retry/deduplication, corrections/auditability and device reconnection.
 - [ ] Define offline/degraded-mode behavior and a rehearsed recovery plan; retain private JSON export where practical.
 
