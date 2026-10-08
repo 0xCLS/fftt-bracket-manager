@@ -92,6 +92,14 @@ This composition is a candidate for Christopher's visual review; do not consider
 - Status pills describe *implemented behavior only*: configured tables are not table reservations, local autosave is not cloud sync, and the finale is team selection rather than result recording.
 - Still **awaiting visual approval** before feature development.
 
+### Phase 0 refinement — balanced panels and pinned global status (October 8, 2026)
+
+- Christopher's screenshot showed an unbalanced Overview: the tall three-stage guide occupied the bottom right while the left side remained empty. He also requested the four tournament-wide pills at the **top right**.
+- The new candidate places the Event Setup card beside the 2×2 Live Snapshot, then spans the three-stage guide across a **full-width second row**, with its stages arranged horizontally on desktop and vertically on mobile.
+- Moved the four unchanged global status pills ahead of the page intro, right aligned in a desktop **sticky header strip**, so they remain in view when scrolling.
+- Updated the KPI label from **Active tables** to **Tables configured** to avoid implying automatic table assignment. All existing data IDs, match/scoring logic and browser-local persistence remain.
+- Explicit visual approval is still required. Do not start feature implementation based on test/deployment success.
+
 ## Proposed feature backlog, after visual approval
 
 Priority ordering below is a **provisional recommendation**, not an implementation commitment.
