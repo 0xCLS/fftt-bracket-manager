@@ -18,7 +18,7 @@ These capabilities are described in the current README and app code. They are no
 - Responsive organizer interface with seven numbered sections; current visual direction uses a light lavender surface system.
 - Approved circular FFTT emblem used in sidebar and favicon.
 - Event configuration, player check-in, manual add and bulk entry.
-- Internal FFTT Level 1–5 ratings, provisional/established status, rating-aware championship seeding and fairer byes.
+- Internal FFTT Level 1–5 ratings, presented using segmented accessible 1–5 selectors (not dropdowns), provisional/established status, rating-aware championship seeding and fairer byes.
 - Championship bracket and reviewed first-match-loser consolation bracket.
 - Match Desk showing eligible matches, game scoring and result entry, with existing score validation.
 - Mixed-skill doubles partner suggestion/selection, **not** doubles result recording.
