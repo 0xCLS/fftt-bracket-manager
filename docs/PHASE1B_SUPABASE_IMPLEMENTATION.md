@@ -80,6 +80,15 @@ Code: `supabase/migrations/20261008000300_b2a_staff_read_api.sql`; synthetic SQL
 - **No write/grant-management or result-submission RPC is provided here.** Controlled organizer account invitation/bootstrap and permission-checked staff grants must be addressed before live Auth access is claimed. Bracket updates/corrections remain B2b/B3.
 - Authorization tests use **transaction-rolled-back synthetic `auth.users` entries and simulated JWT GUCs** on local PostgreSQL; no real Auth user credentials, player contact data, or real participant migrations. Live signed-JWT/Auth integration, session revocation, concurrency and public API adversarial testing remain further gates.
 
+## B2b — transactional score submission (draft, not approved for live operations)
+
+Draft [PR #4](https://github.com/0xCLS/fftt-bracket-manager/pull/4) builds on B2a and stages:
+- `supabase/migrations/20261008000400_b2b_transactional_score.sql`: event-row transaction lock, current active staff authorization checked *before* idempotent receipt lookup, event/generation/match-version guards, validated winner and table, winner-only or valid best-of 3/5 game scores, exact per-actor/submission fingerprinted replay, immutable audit, event revision and match version updates, downstream entrant placement, and first-*actual*-match loss eligibility for organizer **review**.
+- `supabase/tests/phase1b_b2b_submissions.sql`: synthetic-only SQL integration checks for invalid scores, nonparticipant winners, stale generations/versions, exact retries, tampered submission IDs, correct finals validation, bracket advancement, first-loss review eligibility, revocation-before-retry and no writes from denied attempts.
+- All outcomes are atomic in one PostgreSQL transaction. Event locking serializes simultaneous submit commands *using this RPC* for the same event, though actual competing-session load tests must still verify that property.
+
+**Known deferred risks:** no fully-tested automatic BYE propagation on dynamically reconstructed downstream paths; bracket build/rebuild and controlled score corrections require separately reviewed commands, and published results currently remain empty. No organizer staff-grant UI, signed Auth session tests or frontend adapter. Do not enable cloud mode, real players, public result publishing or event-day use based on this B2b draft.
+
 ## Increment sequence and gates
 
 **B1 — isolated schema and privilege foundation** (this branch)
