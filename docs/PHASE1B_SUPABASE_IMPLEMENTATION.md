@@ -69,7 +69,7 @@ For public results, `public.fftt_published_events` and `public.fftt_published_ma
 - In B2, privileged mutation functions reside in non-exposed `fftt_private`, with fixed `search_path`, narrow EXECUTE grants, and any thin exposed invoker wrapper reviewed for safe arguments/returns. Lock event/match transactionally. Never expose a `SECURITY DEFINER` function directly in an API-exposed schema.
 - Cloud writes stop during disconnection; no offline queue, whole-state import, local Undo replay or automatic conflict merge in shared mode. Existing local app remains the separate fallback.
 
-## B2a — DB-backed role checks and authorized match desk (in review)
+## B2a — DB-backed role checks and authorized match desk (synthetic hosted deployment verified)
 
 Code: `supabase/migrations/20261008000300_b2a_staff_read_api.sql`; synthetic SQL tests: `supabase/tests/phase1b_b2a_authorization.sql`. Draft [PR #3](https://github.com/0xCLS/fftt-bracket-manager/pull/3) is based on B1 PR #2, not the independently changing `main` branch.
 
@@ -80,7 +80,7 @@ Code: `supabase/migrations/20261008000300_b2a_staff_read_api.sql`; synthetic SQL
 - **No write/grant-management or result-submission RPC is provided here.** Controlled organizer account invitation/bootstrap and permission-checked staff grants must be addressed before live Auth access is claimed. Bracket updates/corrections remain B2b/B3.
 - Authorization tests use **transaction-rolled-back synthetic `auth.users` entries and simulated JWT GUCs** on local PostgreSQL; no real Auth user credentials, player contact data, or real participant migrations. Live signed-JWT/Auth integration, session revocation, concurrency and public API adversarial testing remain further gates.
 
-## B2b — transactional score submission (draft, not approved for live operations)
+## B2b — transactional score submission (synthetic hosted deployment verified; production unapproved)
 
 Draft [PR #4](https://github.com/0xCLS/fftt-bracket-manager/pull/4) builds on B2a and stages:
 - `supabase/migrations/20261008000400_b2b_transactional_score.sql`: event-row transaction lock, current active staff authorization checked *before* idempotent receipt lookup, event/generation/match-version guards, validated winner and table, winner-only or valid best-of 3/5 game scores, exact per-actor/submission fingerprinted replay, immutable audit, event revision and match version updates, downstream entrant placement, and first-*actual*-match loss eligibility for organizer **review**.
@@ -89,9 +89,17 @@ Draft [PR #4](https://github.com/0xCLS/fftt-bracket-manager/pull/4) builds on B2
 
 **Known deferred risks:** no fully-tested automatic BYE propagation on dynamically reconstructed downstream paths; bracket build/rebuild and controlled score corrections require separately reviewed commands, and published results currently remain empty. No organizer staff-grant UI, signed Auth session tests or frontend adapter. Do not enable cloud mode, real players, public result publishing or event-day use based on this B2b draft.
 
+### October 8, 2026 verification checkpoint
+
+- **CI:** [database workflow](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/37837335922) passed **70 pgTAP assertions** across B1/B2a/B2b; accompanying browser regression workflow passed. This includes synthetic test cases for accepted results, validation, stale versions/generations, idempotency, tampered retries, revocation, deterministic current-generation bracket advancement, and first-actual-loss consolation review.
+- **Hosted dev migrations:** `20261008195706_b2a_staff_read_api` and `20261008201142_b2b_transactional_score` have been applied to Free project `copmkalfkkrkzheohwuc`. Hosted migration versions differ from GitHub file timestamps; reconcile history before running CLI push.
+- **Hosted access checks:** `anon` cannot EXECUTE staff-role, matchdesk, or score RPCs; `authenticated` may call them through explicit grants but cannot directly SELECT/UPDATE/INSERT private tables. Public wrappers use SECURITY INVOKER. No staff grants exist; thus no signed-in visitor can currently submit a valid result. Database rows remain empty; no public results published.
+- **Security advisors:** only 9 informational `rls_enabled_no_policy` notices on private intentionally deny-all tables, no new warning findings. No production cutover, real participants, Auth test accounts, or client integration.
+- **Not yet validated:** signed JWT/Auth session verification with real organizer-authorized accounts; simultaneous independent PostgreSQL sessions with conflicting submissions; dynamic byes and bracket build/rebuild/correction flows; strict server-side publication and recovery. Keep the app browser-local.
+
 ## Increment sequence and gates
 
-**B1 — isolated schema and privilege foundation** (this branch)
+**B1 — isolated schema and privilege foundation** (PR #2; deployed to synthetic hosted development)
 - [x] Review Phase 1A, current engine and FFTT3 private format/rating sources.
 - [x] Stage schema migration, public allowlist projection, static guardrail test and pgTAP permission test.
 - [x] Apply migration to isolated local Supabase Postgres in GitHub Actions and run 25 pgTAP permission/shape checks — **PASS**, [run #1](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/37807810943).
@@ -99,7 +107,7 @@ Draft [PR #4](https://github.com/0xCLS/fftt-bracket-manager/pull/4) builds on B2
 - [ ] Verify `anon`, unaffiliated authenticated, organizer and scorekeeper access in a real authenticated database context. No role is assumed functional at B1.
 - [ ] Verify existing browser/Phase 1A regressions on the PR head before merging.
 
-**B2 — authenticated, transactional score command and private reads**
+**B2 — authenticated read and transactional scoring** (B2a/B2b synthetic implementations deployed; full Auth and concurrency acceptance pending)
 - Event-scoped secure grants/admin access, organizer-only controlled setup, minimal scorekeeper match desk.
 - Atomic score validation + version/generation guards + exact idempotent retries + locking, audit, bracket-advancement, byes, first actual championship loss; perform all writes within one transaction.
 - Match existing best-of-3, championship-final best-of-5, 11/win-by-2 and optional winner-only score.
