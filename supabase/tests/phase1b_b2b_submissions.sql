@@ -3,7 +3,7 @@
 -- actual Supabase signed tokens and device concurrency require separate tests.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(26);
+select plan(24);
 
 select has_function('public','fftt_submit_match_result_v1',
   array['uuid','uuid','integer','bigint','uuid','uuid','text','smallint'],
