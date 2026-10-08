@@ -6,6 +6,7 @@ Run: python tests/ui_smoke.py
 from pathlib import Path
 import os
 import struct
+import base64
 
 from playwright.sync_api import sync_playwright
 
@@ -54,7 +55,25 @@ with sync_playwright() as p:
     assert page.locator('meta[property="og:url"]').get_attribute("content") == "https://0xcls.github.io/fftt-bracket-manager/"
     assert page.locator('meta[name="twitter:card"]').get_attribute("content") == "summary_large_image"
     assert page.locator('meta[name="twitter:image"]').get_attribute("content") == image_url
-    print("PASS static Open Graph + Twitter preview metadata with versioned PNG dimensions")
+    # A valid 1200x630 PNG can still be missing the embedded FFTT emblem:
+    # reject pale/empty circles by checking real pixels, not just metadata.
+    emblem_pixels = page.evaluate("""async (encoded) => {
+      const image = new Image();
+      image.src = "data:image/png;base64," + encoded;
+      await image.decode();
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      const ctx = canvas.getContext("2d", {willReadFrequently:true});
+      ctx.drawImage(image,0,0);
+      const data = ctx.getImageData(160,220,172,170).data;
+      let sum=0;
+      for(let i=0;i<data.length;i+=4) sum += data[i]+data[i+1]+data[i+2];
+      return sum/(data.length/4*3);
+    }""", base64.b64encode(OG_IMAGE).decode("ascii"))
+    assert emblem_pixels < 175, f"OG logo missing: center-left RGB average {emblem_pixels}"
+    print("PASS social image visibly includes dark FFTT emblem, not an empty pale circle")
+    print("PASS static Open Graph + Twitter preview metadata with 1200x630 PNG")
     assert page.get_by_text("Developed by Chris Smith").count() == 1
     assert page.locator(".footer-note").inner_text() == (
         "FFTT Bracket Manager · Building community through fellowship"
