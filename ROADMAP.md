@@ -191,7 +191,7 @@ The design approval gate is satisfied. Phase sequencing is provisional and subje
 - Current FFTT3 event rules are not changing merely because another bracket-making product offers other formats.
 - Do not use public GitHub files as an event results database.
 - Do not embed Google credentials, private sign-up responses, phone numbers, email addresses or raw JSON event backups in the public front end.
-- Product-specific sign-in method, backend provider, exact sync behavior, offline policy, spectator access policy and eventual delivery scope **need confirmation**.
+- **Approved for synthetic prototype only:** Supabase, individually authenticated organizer-authorized volunteers, public read-only allowlisted results, and pause-on-disconnect controlled single-device fallback. Specific invitations/account recovery, publication consent for real names, production provider/scale, hosted cutover and event-day delivery scope **remain unapproved or need confirmation**.
 - **Next action:** Organizer creates/authorizes the isolated Supabase Free development project; apply/review B1 migration and execute pgTAP on actual PostgreSQL, then implement B2 trusted commands and authenticated concurrency tests. Phase 1A's design and synthetic reference suite are complete. Production plans, fees, real-data migration and cutover remain unapproved. Do not deploy a live write path or migrate actual player data before approval.
 
 ## Related canonical sources
