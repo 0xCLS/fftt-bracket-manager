@@ -86,8 +86,8 @@ with sync_playwright() as p:
       };
       return {
         canvas: getComputedStyle(document.body).backgroundColor,
-        card: read('#setup .card.span-7'),
-        kpi: read('.kpi'),
+        card: read('.overview-settings'),
+        kpi: read('.overview-snapshot .kpi'),
         bracket: read('#champBracket'),
         queue: read('#matchQueue')
       };
