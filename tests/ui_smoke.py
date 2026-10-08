@@ -129,7 +129,7 @@ with sync_playwright() as p:
     assert page.locator("body").evaluate("el => getComputedStyle(el).backgroundColor") == "rgb(242, 243, 245)"
     assert page.locator("#players .card").first.evaluate("el => getComputedStyle(el).backgroundColor") == "rgb(255, 255, 255)"
     assert page.locator("#players .section-pills .pill").count() == 3
-    assert page.locator("#players .pill.good").count() >= 1
+    assert page.locator("#players .pill.blue").count() >= 1
     print("PASS Players uses approved light surfaces, semantic pills and neutral background")
     page.locator('nav.tabs button[data-tab="setup"]').click()
     assert page.locator(".topbar").evaluate("el => getComputedStyle(el).backgroundColor") == "rgb(251, 252, 253)"
