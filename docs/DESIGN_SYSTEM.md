@@ -14,14 +14,18 @@ The application remains self-contained in `index.html`, with no external UI fram
 
 | Purpose | CSS token | Current palette |
 | --- | --- | --- |
-| App canvas | `--canvas` | `#f6f8fd` |
-| Cards | `--surface` | White |
+| Page canvas | `--canvas` | `#f3f4f9`, lavender-gray |
+| Primary card | `--surface`, `--surface-elevated` | White, subtly raised |
+| Inset surface | `--surface-inset` | `#f5f3fb`, soft lavender |
+| Secondary surface | `--surface-soft` | `#faf9fe`, near-white lavender |
+| Page and section headings | `--heading`, `--heading-deep` | `#65538e`, deep purple |
+| Small header marker | `--gold` | `#f3bb35`, gold |
 | Main text | `--ink`, `--ink-strong` | Slate / deep ink |
 | Subtle text | `--muted` | Muted blue-gray |
-| Borders | `--line` | Pale cool gray |
-| Primary interactions | `--accent` | `#4875f5` |
-| Focus | `--focus` | Blue |
-| Information / secondary accent | `--teal` | `#0e9db7` |
+| Borders | `--line`, `--line-strong` | Pale lavender-gray |
+| Primary interactions | `--accent`, `--accent-dark` | Indigo blue `#586dcf` |
+| Focus | `--focus` | Purple `#6c60a9` |
+| Information / secondary accent | `--teal` | Muted teal `#3b92a2` |
 | Success | `--positive` | Green |
 | Caution | `--warning` | Amber |
 | Destructive action | `--negative` | Red |
@@ -32,8 +36,10 @@ A minimal design should use consistent alignment, generous spacing, lightweight 
 
 - **Brand:** Keep the currently embedded FFTT emblem as the sidebar logo and favicon, and preserve **Developed by Chris Smith** in the organizer view on desktop and mobile. The credit stays off printed brackets.
 - **Navigation:** A simple, pale sidebar with distinct active state. On narrow screens it becomes horizontally scrollable.
-- **Cards / KPIs:** White and lightly elevated on a soft canvas. Four summary metrics lead the Overview screen.
-- **Buttons:** Solid blue for primary actions, unobtrusive white secondary controls, neutral ghost actions, and clear red destructive controls.
+- **Cards / KPIs:** White, softly elevated cards with pale lavender borders over a lavender-gray canvas; four subtly tinted KPI cards lead the Overview screen.
+- **Surface hierarchy:** The page canvas stays distinct from elevated outer cards; nested table containers, bracket panels, match queues, notices, and dialogs use coordinated lavender-tinted inset or raised surfaces rather than blending together. Preserve legible text contrast and avoid colorful callouts for ordinary information.
+- **Headings:** Use the approved screenshot's purple for major page headings and section headings, with a small gold dot in the EVENT OPERATIONS eyebrow.
+- **Buttons:** Indigo-blue for primary actions, unobtrusive white secondary controls, neutral ghost actions, and clear red destructive controls.
 - **Inputs, checkboxes, radio choices:** Consistent height, visible labels, generous touch targets, selected/hover/focus/disabled states.
 - **Status labels:** Compact contextual pills for autosave, attendance, matches, readiness, and internal ratings; do not rely on color alone.
 - **Bracket / match desk:** Prioritize readable player names, results and state changes above decorative treatment.
