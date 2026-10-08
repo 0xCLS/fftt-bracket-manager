@@ -131,6 +131,13 @@ The rollout is CSS-only: it does not modify tournament logic, match handling, da
 - The Mixed-Skill Doubles setup actions now have a dedicated wrapping button row, with 16px separation on desktop and 12px on smaller screens, so **Save teams** no longer crowds **Suggest balanced partners**.
 - Retained the approved charcoal/pastel scheme, original player rating values, existing buttons, data model, and tournament logic. The compact roster rating control remains unchanged. Browser layout checks cover desktop and mobile spacing.
 
+### Phase 0 user correction — rating label location (October 8, 2026)
+
+- Christopher rejected the full-width neutral-track Add Player rating control shown in the latest screenshot. Restore the earlier **five separate 1–5 radio buttons beside Status** on desktop, with both controls sharing a row.
+- Move the selected skill description from beneath the 1–5 buttons **up beside the FFTT rating label**, updating live (e.g., "FFTT rating · Intermediate"). On mobile, the two form fields can stack naturally.
+- Preserve the previously approved charcoal/pastel palette, compact rating appearance in the roster, numeric values and keyboard operation; retain the approved 16px/12px responsive spacing around **Save teams**.
+- This supersedes the preceding full-width rating-row experiment. Visual approval of these precise refinements remains with Christopher.
+
 ## Proposed feature backlog, after visual approval
 
 Priority ordering below is a **provisional recommendation**, not an implementation commitment.
