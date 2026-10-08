@@ -4,16 +4,23 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FFTT Bracket Manager</title>
+<link rel="icon" id="ffttFavicon" type="image/webp">
 <style>
 
-/* FFTT design tokens — a self-contained, shadcn/ui-inspired operations interface */
+/* FFTT design system: centralized brand tokens, consistent reusable UI styles, no runtime libraries. */
 :root{
   color-scheme:light;
-  --background:#f4f6fa;--foreground:#14233b;--card:#ffffff;--card-foreground:#14233b;
+  --brand-navy:#142945;--brand-deep:#0c1c31;--brand-gold:#f3c441;--brand-red:#b42318;
+  --surface-page:#f4f6fa;--surface-card:#fff;--text-primary:#14233b;--text-secondary:#607087;
+  --stroke-default:#dfe5ee;--focus-accent:#dfaa22;
+  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;--space-6:24px;
+  --corner-control:10px;--corner-card:14px;
+  --shadow-card:0 2px 5px #14294405,0 12px 28px #14294405;
+  --background:var(--surface-page);--foreground:var(--text-primary);--card:var(--surface-card);--card-foreground:var(--text-primary);
   --primary:#142945;--primary-foreground:#ffffff;--secondary:#eef2f7;--secondary-foreground:#25364c;
-  --muted:#f1f4f8;--muted-foreground:#607087;--border:#dfe5ee;--ring:#dfaa22;
-  --radius:14px;--accent:#f3c441;--accent-foreground:#162843;
-  --navy:#142945;--navy2:#1d385c;--yellow:#f3c441;--red:#bf342e;
+  --muted:#f1f4f8;--muted-foreground:var(--text-secondary);--border:var(--stroke-default);--ring:var(--focus-accent);
+  --radius:var(--corner-card);--accent:var(--brand-gold);--accent-foreground:#162843;
+  --navy:var(--brand-navy);--navy2:#1d385c;--yellow:var(--brand-gold);--red:var(--brand-red);
   --bg:var(--background);--ink:var(--foreground);--line:var(--border);
   --good:#146e52;--warn:#92530f;--bad:#b42318;--blue:#23549a;
   font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
@@ -40,11 +47,12 @@ button.ghost{background:transparent;border-color:#ffffff3c;color:#fff}
 button.ghost:hover:not(:disabled){background:#ffffff15;border-color:#ffffff66}
 button.small{min-height:34px;padding:7px 11px;font-size:12px}
 .topbar{grid-column:1;grid-row:1;position:sticky;top:0;align-self:start;height:100vh;
-  padding:29px 16px 20px;background:linear-gradient(180deg,#142b49 0%,#0c1c31 100%);color:#fff;
+  padding:29px 16px 20px;background:linear-gradient(180deg,var(--brand-navy) 0%,var(--brand-deep) 100%);color:#fff;
   display:flex;flex-direction:column;z-index:40;border-right:1px solid #2b3e59}
 .sidebar-brand{display:flex;align-items:center;gap:12px;padding:0 9px}
-.logo{width:45px;height:45px;border-radius:12px;background:var(--accent);color:var(--navy);
-  display:grid;place-items:center;font-size:16px;font-weight:900;letter-spacing:-.07em;box-shadow:0 0 0 4px #ffffff0b;flex:0 0 auto}
+.logo{width:60px;height:60px;flex:0 0 auto;border-radius:50%;overflow:hidden;
+  background:var(--brand-deep);border:1px solid #ffffff44;box-shadow:0 0 0 3px #ffffff0e}
+.logo .brand-emblem{display:block;width:100%;height:100%;object-fit:cover;border-radius:50%}
 .brand-copy{min-width:0}
 .brand-kicker{display:block;color:#b7c9df;font-size:9px;font-weight:800;letter-spacing:.15em}
 .brand-copy h1{font-size:17px;letter-spacing:-.055em;margin:2px 0 0;line-height:1.2;color:#fff}
@@ -85,7 +93,7 @@ nav.tabs button.active .nav-index{color:var(--yellow)}
 .span-12{grid-column:span 12}.span-8{grid-column:span 8}.span-7{grid-column:span 7}
 .span-6{grid-column:span 6}.span-5{grid-column:span 5}.span-4{grid-column:span 4}
 .card{min-width:0;padding:22px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card);
-  box-shadow:0 2px 5px #14294405,0 12px 28px #14294405}
+  box-shadow:var(--shadow-card)}
 .card h2,.card h3{margin:0 0 15px;color:#1a304f;font-weight:800;letter-spacing:-.025em}
 .card h2{font-size:17px;line-height:1.3}.card h3{font-size:14px}
 .card p{line-height:1.65}
@@ -193,7 +201,7 @@ hr{border:0;border-top:1px solid #ebeff4;margin:20px 0}
 <body>
 <header class="topbar">
   <div class="sidebar-brand">
-    <div class="logo" aria-hidden="true">FF</div>
+    <div class="logo"><img class="brand-emblem" src="data:image/webp;base64,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" alt="Forging Fellowship Table Tennis Games emblem" width="80" height="80"></div>
     <div class="brand-copy"><span class="brand-kicker">FORGING FELLOWSHIP</span><h1>Bracket Manager</h1></div>
   </div>
   <p class="sidebar-caption" id="eventSubtitle">Event-day tournament control desk</p>
@@ -207,7 +215,7 @@ hr{border:0;border-top:1px solid #ebeff4;margin:20px 0}
     <button type="button" data-tab="finale"><span class="nav-index">06</span> Doubles Finale</button>
     <button type="button" data-tab="data"><span class="nav-index">07</span> Data & Restore</button>
   </nav>
-  <div class="sidebar-footer"><span class="local-first">● Locally saved</span><small>Private tournament workspace</small></div>
+  <div class="sidebar-footer"><span class="local-first">● Browser-local data</span><small>Not cloud synced · export backups</small></div>
   <div class="toolbar">
     <button class="ghost" id="undoBtn" type="button">↶ Undo</button>
     <button class="ghost" id="printBtn" type="button">⎙ Print current</button>
@@ -349,7 +357,7 @@ hr{border:0;border-top:1px solid #ebeff4;margin:20px 0}
     <div class="grid">
       <div class="card span-6">
         <h2>Backup & restore</h2>
-        <p class="help">The app autosaves to this browser. Export a JSON backup during the event so the tournament can be restored on another device if needed.</p>
+        <p class="help"><strong>Saved in this browser only.</strong> Hosting the app online does not sync records between devices. Export a private JSON backup at key points during the event and import it on another device if recovery is needed.</p>
         <div class="inline">
           <button class="primary" id="exportBtn" type="button">Export JSON backup</button>
           <label class="btn secondary" style="display:inline-flex;align-items:center;margin:0;cursor:pointer">Import JSON<input id="importFile" type="file" accept="application/json,.json" style="display:none"></label>
@@ -887,6 +895,9 @@ $("#resetBtn").addEventListener("click",()=>{if(confirm("Reset the entire event?
 $("#printBtn").addEventListener("click",()=>window.print());
 
 render();
+  // Keep the app's favicon identical to its embedded sidebar emblem.
+  const emblem=$(".brand-emblem"),favicon=$("#ffttFavicon");
+  if(emblem&&favicon)favicon.href=emblem.src;
 })();
 </script>
 </body>
