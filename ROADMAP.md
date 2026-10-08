@@ -1,0 +1,102 @@
+# FFTT Bracket Manager — Product Roadmap
+
+_Last organized: October 8, 2026. This roadmap is a planning record, **not** a claim that proposed features are implemented or approved for delivery. Christopher's latest explicit instructions supersede this document._
+
+## Product direction and sequencing
+
+**Current decision:** Complete and visually approve the interface before beginning further feature implementation. The event-day tournament format remains Championship Bracket + Consolation Bracket with one Mixed-Skill Doubles finale. Keep fellowship and a minimum of two competitive matches per player where practical.
+
+**Requested future capabilities:** Multiple volunteers able to enter scores from separate devices, with live bracket updates visible to spectators on phones and a TV/projector. A secure, central, authoritative event database will be needed; GitHub Pages alone only serves the application. **No backend vendor has been selected.** Supabase has been suggested, not approved.
+
+**Engineering principles:** Prefer a maintainable, small codebase; reuse the existing single-file deployment where sensible; avoid risking event-day result integrity; privacy and access control are non-negotiable for any public spectator or multi-device access. Keep backups and an offline contingency.
+
+## Already implemented (baseline, not backlog)
+
+These capabilities are described in the current README and app code. They are not to be counted as new features:
+
+- Public, single-file, offline-capable HTML application hosted on GitHub Pages.
+- Responsive, navy-and-yellow organizer interface with seven numbered sections.
+- Approved circular FFTT emblem used in sidebar and favicon.
+- Event configuration, player check-in, manual add and bulk entry.
+- Internal FFTT Level 1–5 ratings, provisional/established status, rating-aware championship seeding and fairer byes.
+- Championship bracket and reviewed first-match-loser consolation bracket.
+- Match Desk showing eligible matches, game scoring and result entry, with existing score validation.
+- Mixed-skill doubles partner suggestion/selection, **not** doubles result recording.
+- Local browser autosave, Undo, JSON backup export/restore, text results export and print.
+- Browser-based rehearsal/safety tests for tournament flow and backup operations.
+
+**Current limitations:** No Google Sheets intake or automatic registration sync; no simultaneous cross-device scoring; no public/live bracket feed; no centrally saved event state; no active table reservations; no recorded doubles finale result.
+
+## Now: Phase 0 — Visual design and UI/UX approval
+
+**Status: current priority. No new feature work until this phase is visually approved.**
+
+Reference: the user's BitSight UI-system screenshot and [BitSight design-system article](https://www.bitsight.com/blog/building-our-ui-design-system). Adopt clarity and consistency, not BitSight-specific code, branding or proprietary assets.
+
+- [ ] Review the seven screens as one cohesive product, including dense roster and bracket states and empty/loading/error states.
+- [ ] Refine the visual foundation: typography hierarchy, spacing scale, control heights, backgrounds, borders, shadows and color roles. Preserve approved navy/yellow FFTT identity and emblem.
+- [ ] Build a consistent in-app component language for **checkboxes, radio choices, toggles (only where functionally needed), tags/labels, badges, links, pagination/previous-next controls (when relevant), buttons, fields and score controls**. Include default, hover, selected, disabled and focus states.
+- [ ] Reduce UI friction: clear primary actions, logical screen layouts, readable brackets, legible statuses and appropriate sizing for volunteer phones.
+- [ ] Verify desktop, tablet, phone, projected display/TV readiness and printing where relevant.
+- [ ] Check keyboard navigation, accessibility contrast, text clipping and no regression of bracket/backup logic.
+- [ ] Conduct a visual review and capture Christopher's explicit approval **before** starting implementation of the feature backlog.
+
+The screenshot demonstrates several styles, such as triple sliders and grade badges, but **does not imply all pictured widgets should be added** to the tournament app.
+
+## Proposed feature backlog, after visual approval
+
+Priority ordering below is a **provisional recommendation**, not an implementation commitment.
+
+### Phase 1 — Shared, reliable event state and access
+
+- [ ] Evaluate and choose a hosted real-time backend (Supabase was one suggestion, not a decision).
+- [ ] Set up authoritative event records, secure access, persistence and backups without publishing private player contact information or keys in the public repository.
+- [ ] Define roles: organizer/admin (full tournament control), volunteer scorekeeper (authorized score submission), spectator (read-only public results), and TV display (read-only).
+- [ ] Handle concurrent score entry, stale clients, retry/deduplication, corrections/auditability and device reconnection.
+- [ ] Define offline/degraded-mode behavior and a rehearsed recovery plan; retain private JSON export where practical.
+
+### Phase 2 — Live volunteer scoring and spectators
+
+- [ ] Mobile-friendly volunteer score-entry view with assigned/eligible matches, game scores and confirmation.
+- [ ] Instant propagation of results, bracket advancement and current-match information to every connected device.
+- [ ] Public read-only bracket/result views via shareable links or QR codes; exclude internal ratings, emails, phone numbers and admin controls.
+- [ ] TV/projector mode optimized for a large, distant display and automatically updating content.
+- [ ] Organizer monitoring of score submissions, active tables and match progress.
+
+### Phase 3 — Registration intake and smarter match suggestions
+
+- [ ] Read the private `FFTT3 Registration` Google Sheet through an organizer-controlled workflow. Its responses include skill-assessment answers; avoid importing emails/phone numbers into public or unnecessary event views.
+- [ ] Map playing-profile/experience answers to **suggested provisional** Level 1–5 ratings; organizer reviews and approves changes.
+- [ ] Use returning-player evidence and observation to refine ratings rather than relying on self-description alone.
+- [ ] Suggest balanced opening matchups: spread stronger players, avoid severe skill mismatches where practical, respect fair byes and let the organizer override.
+- [ ] Make checked-in/no-show reconciliation predictable; avoid unintentional duplicate player entries.
+
+### Phase 4 — Event-day operations and results
+
+- [ ] Active table assignment and availability tracking to avoid simultaneous table conflicts.
+- [ ] Dashboard of completed/remaining/ready matches and tournament progression.
+- [ ] Record final **Mixed-Skill Doubles** result in addition to team selection.
+- [ ] Polished, privacy-appropriate PDF/CSV export for brackets, scores, awards and post-event records; preserve existing text/print outputs.
+- [ ] Record tournament outcomes and useful lessons for future FFTT installments.
+
+### Later / optional: format flexibility and historical tracking
+
+- [ ] Round robin for very small fields and optional pool play / playoffs.
+- [ ] Three-match-guarantee or other formats when table count and time budget make them feasible.
+- [ ] Explore full double elimination only if event constraints justify it.
+- [ ] Prior-event match history and rating calibration over time, with organizer oversight.
+- [ ] Optional additional scorekeeper delegation and deeper spectator presentation features as needs become clear.
+
+## Explicit boundaries and unresolved decisions
+
+- Current FFTT3 event rules are not changing merely because another bracket-making product offers other formats.
+- Do not use public GitHub files as an event results database.
+- Do not embed Google credentials, private sign-up responses, phone numbers, email addresses or raw JSON event backups in the public front end.
+- Product-specific sign-in method, backend provider, exact sync behavior, offline policy, spectator access policy and eventual delivery scope **need confirmation**.
+- **Next action:** refine the BitSight-inspired UI screens for Christopher's visual approval. Only after approval should the post-design features be scoped and implemented.
+
+## Related canonical sources
+
+- [README](README.md) — currently implemented functions and limitations
+- [FFTT Design System](docs/DESIGN_SYSTEM.md) — existing styling foundation
+- Private `0xCLS/forging-fellowship-table-tennis` repository: `events/2026-11-22/EVENT_RECORD.md`, `knowledge/PLAYER_RATING_SYSTEM.md`, and `knowledge/FUTURE_EVENT_PLAYBOOK.md` — tournament requirements and planning context
