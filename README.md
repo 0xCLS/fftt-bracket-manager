@@ -59,8 +59,9 @@ python -m pip install playwright
 python -m playwright install chromium
 python tests/rehearsal.py
 python tests/safety.py
+python tests/ui_smoke.py
 ```
 
-These tests run in an isolated browser with synthetic players and simulated local storage; they do not touch the live event's data. On systems with a separately installed Chromium, set `FFTT_CHROMIUM_BIN` to its executable path.
+These tests run in an isolated browser with synthetic players and simulated local storage; they do not touch the live event's data. A GitHub Actions browser-regression workflow also runs these checks when the application or tests change. The UI smoke test covers select arrow/spacing, roster labels, winner radio-group labeling, and the mobile player form. On systems with a separately installed Chromium, set `FFTT_CHROMIUM_BIN` to its executable path.
 
 Keep changes lightweight; preserve a backup before event day. This public code repository is distinct from the private FFTT event-planning and historical-record repository.
