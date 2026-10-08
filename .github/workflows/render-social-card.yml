@@ -66,10 +66,16 @@ jobs:
             // Pixel-level quality gate: dimensions alone did not catch the
             // missing logo. The center-left logo area must be visibly dark,
             // unlike the pale blank circle in the prior faulty render.
-            const region = await sharp(target)
-              .extract({left:160, top:220, width:172, height:170}).stats();
-            const mean = region.channels.slice(0,3)
-              .reduce((sum, channel) => sum + channel.mean, 0) / 3;
+            // Sharp's .stats() measures the input rather than an extracted
+            // region; inspect the actual decoded pixels after the crop.
+            const region = await sharp(target).extract({
+              left:160, top:220, width:172, height:170
+            }).removeAlpha().raw().toBuffer({resolveWithObject:true});
+            let rgbSum = 0;
+            for (let i = 0; i < region.data.length; i += region.info.channels) {
+              rgbSum += region.data[i] + region.data[i+1] + region.data[i+2];
+            }
+            const mean = rgbSum / region.data.length;
             if (mean > 175) {
               throw new Error('FFTT emblem appears missing or too faint: RGB mean ' + mean);
             }
