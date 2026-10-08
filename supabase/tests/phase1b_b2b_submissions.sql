@@ -6,13 +6,13 @@ create extension if not exists pgtap with schema extensions;
 select plan(25);
 
 select has_function('public','fftt_submit_match_result_v1',
-  array['uuid','uuid','integer','bigint','uuid','uuid','text','smallint'],
+  array['uuid','uuid','integer','bigint','uuid','uuid','text','integer'],
   'score RPC exists');
 select ok(not has_function_privilege('anon',
-  'public.fftt_submit_match_result_v1(uuid,uuid,integer,bigint,uuid,uuid,text,smallint)','EXECUTE'),
+  'public.fftt_submit_match_result_v1(uuid,uuid,integer,bigint,uuid,uuid,text,integer)','EXECUTE'),
   'anonymous cannot invoke score RPC');
 select ok(has_function_privilege('authenticated',
-  'public.fftt_submit_match_result_v1(uuid,uuid,integer,bigint,uuid,uuid,text,smallint)','EXECUTE'),
+  'public.fftt_submit_match_result_v1(uuid,uuid,integer,bigint,uuid,uuid,text,integer)','EXECUTE'),
   'authenticated may invoke score RPC but must pass DB authorization');
 select ok((select not p.prosecdef from pg_proc p join pg_namespace n on n.oid=p.pronamespace
   where n.nspname='public' and p.proname='fftt_submit_match_result_v1'),
