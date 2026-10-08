@@ -107,6 +107,14 @@ This composition is a candidate for Christopher's visual review; do not consider
 - Added browser regression assertions that the status-strip top coordinate remains unchanged when scrolling both desktop and mobile views. All tournament logic and player/event data remain unchanged.
 - The design remains **pending Christopher's visual acceptance**; this correction does not advance feature implementation.
 
+### Phase 0 concept — cool-neutral/pastel Overview only (October 8, 2026)
+
+- Christopher provided a new light product-design reference and agreed to preview its color scheme on **Overview only** before changing the other six screens.
+- Introduced a cool-gray canvas, off-white sidebar, charcoal headings/actions, white event-setup surface, independently colored four-tile KPI bento (ice-blue, lavender, lime, yellow), and three lightly tinted format panels.
+- The previous plum palette remains on the other six tabs for A/B visual comparison. Fixed top-right tournament status pills, icon navigation, FFTT emblem and `Developed by Chris Smith` remain.
+- CSS is scoped to `body:has(#setup.panel.active)`; the original tournament engine, data fields, storage/backup format and match flow are unchanged.
+- **Awaiting Christopher's visual approval** before considering a full-app palette rollout or any feature development.
+
 ## Proposed feature backlog, after visual approval
 
 Priority ordering below is a **provisional recommendation**, not an implementation commitment.
