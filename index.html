@@ -986,6 +986,63 @@ body .overview-format.card{padding:8px 0 0}
  .finale-actions{gap:12px}
 }
 
+
+/* Players-only contextual note. Restrained, notched dotted outline rather
+   than a brightly colored third dashboard card. No duplicated status counts. */
+.players-context-panel{display:none}
+body:has(#players.panel.active) .page-intro{
+ display:grid;grid-template-columns:minmax(0,1fr) minmax(292px,345px);
+ grid-template-rows:auto auto auto;column-gap:clamp(22px,3.5vw,64px);
+ align-items:start;margin-bottom:27px;
+}
+body:has(#players.panel.active) .page-intro>.eyebrow,
+body:has(#players.panel.active) .page-intro>#viewTitle,
+body:has(#players.panel.active) .page-intro>#viewSubtitle{grid-column:1}
+body:has(#players.panel.active) .page-intro>.eyebrow{grid-row:1}
+body:has(#players.panel.active) .page-intro>#viewTitle{grid-row:2}
+body:has(#players.panel.active) .page-intro>#viewSubtitle{grid-row:3}
+body:has(#players.panel.active) .players-context-panel{
+ position:relative;isolation:isolate;display:flex;flex-direction:column;
+ grid-column:2;grid-row:1/4;align-self:center;min-width:0;
+ padding:23px 25px 24px;background:transparent;color:#29313c;
+}
+.players-context-panel::before{
+ content:"";position:absolute;inset:0;z-index:-1;background:#f7f8fa;
+ clip-path:polygon(0 0,96% 0,100% 8%,100% 100%,0 100%);
+}
+.players-context-outline{
+ position:absolute;inset:0;width:100%;height:100%;overflow:visible;
+ pointer-events:none;color:#b9c2cc;
+}
+.players-context-outline path{
+ fill:none;stroke:currentColor;stroke-width:1.2;
+ stroke-dasharray:1.3 4;stroke-linecap:round;vector-effect:non-scaling-stroke;
+}
+.players-context-eyebrow{
+ color:#67727f;font-size:10px;font-weight:800;
+ letter-spacing:.135em;line-height:1.4;
+}
+.players-context-panel h3{
+ color:#29313c;font-size:17px;font-weight:750;
+ letter-spacing:-.025em;line-height:1.25;margin:12px 0 8px;
+}
+.players-context-panel p{
+ color:#53616e;font-size:12px;line-height:1.65;
+ max-width:none;margin:0;
+}
+@media(max-width:1100px){
+ body:has(#players.panel.active) .page-intro{
+  grid-template-columns:minmax(0,1fr);row-gap:0
+ }
+ body:has(#players.panel.active) .players-context-panel{
+  grid-column:1;grid-row:4;align-self:start;width:min(100%,470px);
+  margin-top:20px;
+ }
+}
+@media print{
+ .players-context-panel{display:none!important}
+ body:has(#players.panel.active) .page-intro{display:block}
+}
 </style>
 </head>
 <body>
@@ -1025,6 +1082,14 @@ body .overview-format.card{padding:8px 0 0}
     <div class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span> EVENT OPERATIONS</div>
     <h2 id="viewTitle">Event overview</h2>
     <p id="viewSubtitle">Configure the tournament and prepare for a smooth event day.</p>
+    <aside class="players-context-panel" aria-labelledby="playersContextTitle">
+      <svg class="players-context-outline" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+        <path d="M0.6 0.6 H96 L99.4 8 V99.4 H0.6 Z"></path>
+      </svg>
+      <span class="players-context-eyebrow">BEFORE YOU BEGIN</span>
+      <h3 id="playersContextTitle">Prepare the player roster</h3>
+      <p>Add players, confirm their ratings, and check them in before building the championship bracket.</p>
+    </aside>
   </div>
 <section id="setup" class="panel active print-me">
   <div class="overview-feature">
