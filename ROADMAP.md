@@ -6,7 +6,7 @@ _Last organized: October 8, 2026. This roadmap is a planning record, **not** a c
 
 **Current decision (October 8, 2026):** Christopher explicitly accepted the current UI ("I'm satisfied with the design for now. Let's move on"). **Phase 0 visual approval is complete. Phase 1 is active: plan secure shared state, roles, and sync before implementing cross-device scoring.** The format remains Championship Bracket + Consolation Bracket with one Mixed-Skill Doubles finale, preserving fellowship and at least two competitive matches per player when practical.
 
-**Requested future capabilities:** Multiple volunteers able to enter scores from separate devices, with live bracket updates visible to spectators on phones and a TV/projector. A secure, central, authoritative event database will be needed; GitHub Pages alone only serves the application. **No backend vendor has been selected.** Supabase has been suggested, not approved.
+**Requested future capabilities:** Multiple volunteers able to enter scores from separate devices, with live bracket updates visible to spectators on phones and a TV/projector. A secure, central, authoritative event database will be needed; GitHub Pages alone only serves the application. **Supabase is approved for an isolated synthetic-data prototype only.** Production provider selection, infrastructure and cutover remain unapproved.
 
 **Engineering principles:** Prefer a maintainable, small codebase; reuse the existing single-file deployment where sensible; avoid risking event-day result integrity; privacy and access control are non-negotiable for any public spectator or multi-device access. Keep backups and an offline contingency.
 
