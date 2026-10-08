@@ -12,10 +12,14 @@ from playwright.sync_api import sync_playwright
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 HTML = (PROJECT_ROOT / "index.html").read_text(encoding="utf-8")
-OG_IMAGE_PATH = PROJECT_ROOT / "assets" / "fftt-bracket-manager-og.png"
+OG_IMAGE_PATH = PROJECT_ROOT / "assets" / "fftt-bracket-manager-og-v2.png"
 OG_IMAGE = OG_IMAGE_PATH.read_bytes()
 assert OG_IMAGE[:8] == bytes.fromhex("89504e470d0a1a0a"), "Open Graph image is not a PNG"
 assert struct.unpack(">II", OG_IMAGE[16:24]) == (1200, 630), "Open Graph image must be 1200x630"
+assert OG_IMAGE_PATH.stat().st_size > 300_000, "Share card appears excessively compressed; check brand sharpness"
+OG_SOURCE = (PROJECT_ROOT / "assets" / "fftt-bracket-manager-og-v2-source.png").read_bytes()
+assert OG_SOURCE[:8] == bytes.fromhex("89504e470d0a1a0a"), "Approved source must be PNG"
+assert struct.unpack(">II", OG_SOURCE[16:24]) == (1731,909), "Wrong full-resolution source"
 BOOT = """() => {
   window.__testStorage = new Map();
   Object.defineProperty(window, "localStorage", {
@@ -43,7 +47,7 @@ with sync_playwright() as p:
     page.set_content(HTML)
 
     assert page.title() == "FFTT Bracket Manager"
-    image_url = "https://0xcls.github.io/fftt-bracket-manager/assets/fftt-bracket-manager-og.png"
+    image_url = "https://0xcls.github.io/fftt-bracket-manager/assets/fftt-bracket-manager-og-v2.png"
     assert page.locator('meta[property="og:image"]').get_attribute("content") == image_url
     assert page.locator('meta[property="og:image:secure_url"]').get_attribute("content") == image_url
     assert page.locator('meta[property="og:image:type"]').get_attribute("content") == "image/png"

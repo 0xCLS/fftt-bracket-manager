@@ -24,13 +24,15 @@ https://0xcls.github.io/fftt-bracket-manager/
 
 ## Social sharing preview
 
-The live GitHub Pages link includes **static Open Graph and Twitter Card metadata** so supported messaging and social apps can show a branded preview without executing tournament JavaScript:
+The public GitHub Pages link uses static Open Graph and Twitter Card metadata for supported messaging and social apps.
 
 - Public URL: https://0xcls.github.io/fftt-bracket-manager/
-- Social image: [1200×630 PNG](assets/fftt-bracket-manager-og.png), generated from [the version-controlled SVG source](assets/fftt-bracket-manager-og.svg).
-- Preview text: `FFTT Bracket Manager` / `Forging Fellowship Table Tennis Games · Building community through fellowship.`
+- **Approved social card (October 8, revised for clarity):** [1200×630 PNG](assets/fftt-bracket-manager-og-v2.png)
+- **Full-resolution approved source:** [1731×909 PNG](assets/fftt-bracket-manager-og-v2-source.png)
+- Display title: `FFTT Bracket Manager`
+- Description: `Forging Fellowship Table Tennis Games · Building community through fellowship.`
 
-The dedicated [image-rendering GitHub Actions workflow](.github/workflows/render-social-card.yml) updates the static PNG after SVG edits. **The embedded FFTT WebP emblem is composited as raster pixels separately**: GitHub Actions' SVG renderer otherwise omitted it and left a blank circle. The rendering workflow and browser smoke test now check the actual logo region's pixel brightness, in addition to file type and dimensions. Preview providers cache links independently, so existing chats may temporarily show an older card even after a successful deployment. The share card contains **no private player information**. It does not imply cloud synchronization or public live result feeds.
+The [social image build workflow](.github/workflows/render-social-card.yml) can regenerate the 1200×630 PNG from the full-resolution approved source using high-quality resampling. The previous [SVG card](assets/fftt-bracket-manager-og.svg) and its initial [render](assets/fftt-bracket-manager-og.png) are historical provenance and are **not** the active social image; they had used an 80-pixel emblem scaled up in the share preview. Pixel-region and file-size tests protect the current image against a blank or severely degraded logo. Messaging apps cache link previews independently, so existing conversations may show an older card for a while. The card contains no real participant details, private ratings, or live results and does not imply cloud synchronization.
 
 ## Interface
 

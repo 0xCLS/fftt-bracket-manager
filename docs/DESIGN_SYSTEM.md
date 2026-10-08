@@ -43,6 +43,7 @@ Use pastels selectively for useful distinctions. Do **not** tint every panel sim
 - **Doubles setup actions:** Give **Suggest balanced partners** and **Save teams** a dedicated responsive flex row with a 16px horizontal gap on desktop and 12px on narrow screens, wrapping without overlap. Keep Save teams visually primary and preserve both button actions.
 - **Brackets/queue/dialogs:** Flat readable round labels, white match/queue/dialog surfaces, subtle meaningful semantic accents and readable player names/scores. Keep scrollable brackets, print output and score entry usable at event time.
 - **Application footer (approved October 8):** Use the exact centered copy **`FFTT Bracket Manager · Building community through fellowship`**. Replace the former technical tagline about a single-file offline app and internal ratings. The internal-rating privacy notice remains with the player roster, and the separate **Developed by Chris Smith** credit remains unchanged.
+- **Approved social preview (October 8):** Use the 1200×630 image at `assets/fftt-bracket-manager-og-v2.png`, generated from the full-resolution approved source `assets/fftt-bracket-manager-og-v2-source.png`. Retain the charcoal/pastel app treatment, sharply rendered FFTT emblem, fellowship tagline, and three pastel feature pills. Earlier SVG and preview assets are historical, not current. Avoid resizing the small browser favicon into share-card artwork.
 - **Print:** Preserve clear, predominantly white printed brackets and controls hidden from print where appropriate.
 
 ## Scope and safeguards
