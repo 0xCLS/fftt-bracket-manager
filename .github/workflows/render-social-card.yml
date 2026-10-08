@@ -28,15 +28,53 @@ jobs:
         run: |
           node - <<'NODE'
           const sharp = require('sharp');
+          const fs = require('fs');
           (async () => {
             const source = 'assets/fftt-bracket-manager-og.svg';
             const target = 'assets/fftt-bracket-manager-og.png';
-            await sharp(source).resize(1200,630).png({compressionLevel:9}).toFile(target);
+            const svg = fs.readFileSync(source, 'utf8');
+            // The SVG uses an embedded WebP FFTT emblem. The SVG renderer used
+            // by Sharp/librsvg silently skips it, leaving an empty logo circle.
+            // Extract and composite that exact emblem as raster image pixels.
+            const embedded = /<image\\b[^>]*href="data:image\\/webp;base64,([^"]+)"[^>]*\\/>/;
+            const match = svg.match(embedded);
+            if (!match) throw new Error('Cannot locate the approved FFTT emblem in SVG source');
+            const baseSvg = svg.replace(embedded, '');
+            const emblemSource = Buffer.from(match[1], 'base64');
+            const sourceInfo = await sharp(emblemSource).metadata();
+            if (sourceInfo.format !== 'webp') {
+              throw new Error('The approved emblem must be an embedded WebP');
+            }
+            const size = 388;
+            const resized = await sharp(emblemSource).resize(size, size, {
+              fit: 'fill', kernel: 'lanczos3'
+            }).png().toBuffer();
+            const circularMask = Buffer.from(
+              '<svg width="388" height="388" xmlns="http://www.w3.org/2000/svg">' +
+              '<circle cx="194" cy="194" r="194" fill="white"/></svg>'
+            );
+            const logo = await sharp(resized).composite([
+              {input:circularMask, blend:'dest-in'}
+            ]).png().toBuffer();
+            await sharp(Buffer.from(baseSvg)).resize(1200,630).composite([
+              {input:logo, left:52, top:120}
+            ]).png({compressionLevel:9}).toFile(target);
             const info = await sharp(target).metadata();
             if(info.format !== 'png' || info.width !== 1200 || info.height !== 630) {
               throw new Error('Share image has incorrect type or dimensions');
             }
-            console.log('Social preview ready:', info.format, info.width, info.height);
+            // Pixel-level quality gate: dimensions alone did not catch the
+            // missing logo. The center-left logo area must be visibly dark,
+            // unlike the pale blank circle in the prior faulty render.
+            const region = await sharp(target)
+              .extract({left:160, top:220, width:172, height:170}).stats();
+            const mean = region.channels.slice(0,3)
+              .reduce((sum, channel) => sum + channel.mean, 0) / 3;
+            if (mean > 175) {
+              throw new Error('FFTT emblem appears missing or too faint: RGB mean ' + mean);
+            }
+            console.log('Social preview logo verified:', info.width, info.height,
+                        'logo-region mean RGB', mean.toFixed(1));
           })().catch(e => { console.error(e); process.exit(1); });
           NODE
       - name: Commit static social preview
