@@ -15,7 +15,7 @@ _Last organized: October 8, 2026. This roadmap is a planning record, **not** a c
 These capabilities are described in the current README and app code. They are not to be counted as new features:
 
 - Public, single-file, offline-capable HTML application hosted on GitHub Pages.
-- Responsive organizer interface with seven numbered sections; current visual direction uses a light lavender surface system.
+- Responsive organizer interface with seven icon-labeled sections using the approved charcoal-and-pastel palette.
 - Approved circular FFTT emblem used in sidebar and favicon.
 - Event configuration, player check-in, manual add and bulk entry.
 - Internal FFTT Level 1–5 ratings, presented using segmented accessible 1–5 selectors (not dropdowns), provisional/established status, rating-aware championship seeding and fairer byes.
@@ -27,9 +27,9 @@ These capabilities are described in the current README and app code. They are no
 
 **Current limitations:** No Google Sheets intake or automatic registration sync; no simultaneous cross-device scoring; no public/live bracket feed; no centrally saved event state; no active table reservations; no recorded doubles finale result.
 
-## Now: Phase 0 — Visual design and UI/UX approval
+## Phase 0 — Approved palette; final cross-screen review
 
-**Status: current priority. No new feature work until this phase is visually approved.**
+**Status:** Christopher approved the cool-gray, off-white, charcoal, and pastel color direction on October 8, 2026. It now appears on all seven screens, and the browser and tournament regression tests passed. Final cross-screen visual review remains open before new features.
 
 Reference: the [Figma Design System by Facundo Almiron](https://www.behance.net/gallery/125691923/Figma-Design-System) for a light, polished dashboard, with BitSight as a secondary inspiration for predictable controls. Christopher explicitly authorized a complete departure from previous FFTT colors or flyer-derived styling. **The only required branding is the existing FFTT emblem and the exact credit “Developed by Chris Smith.”** Do not copy proprietary assets.
 
