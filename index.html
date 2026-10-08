@@ -364,57 +364,47 @@ function pendingFirstMatches(){
 function consolationReady(){return !!state.championship && pendingFirstMatches().length===0 && firstChampLossEligible().length>=2}
 
 function setupInitialSlots(players){
-  const arr=[...players].sort((a,b)=>b.rating-a.rating || (a.ratingStatus==="established"?-1:1) || a.name.localeCompare(b.name));
-  if(arr.length<=1)return arr.map(p=>p.id);
-  // Create rating-near pairings, while spreading stronger pair winners through the tree.
-  const pool=[...arr], pairs=[];
+  const ranked=[...players].sort((a,b)=>b.rating-a.rating ||
+    (a.ratingStatus==="established"?0:1)-(b.ratingStatus==="established"?0:1) ||
+    a.name.localeCompare(b.name));
+  const size=Math.max(2,nextPow2(ranked.length));
+  const byes=size-ranked.length;
+  // Byes go to the highest-rated players. Every first-round slot is either
+  // one bye player or a pair of players with reasonably close ratings.
+  const groups=ranked.slice(0,byes).map(p=>[p]);
+  const pool=ranked.slice(byes);
   while(pool.length>=2){
     const a=pool.shift();
-    let bestIdx=0,bestScore=Infinity;
+    const lowerNear=pool.some(p=>p.rating===a.rating-1);
+    let best=0,bestScore=Infinity;
     for(let i=0;i<pool.length;i++){
-      const b=pool[i];
-      const gap=Math.abs(a.rating-b.rating);
-      const severe=(Math.min(a.rating,b.rating)<=2 && Math.max(a.rating,b.rating)>=4)?5:0;
-      const score=gap*10+severe;
-      if(score<bestScore){bestScore=score;bestIdx=i}
+      const b=pool[i],gap=Math.abs(a.rating-b.rating);
+      // Avoid making two strongest same-level players face each other
+      // if an opponent one level below is available instead.
+      const samePenalty=(gap===0&&lowerNear)?12:0;
+      const score=gap*10+samePenalty;
+      if(score<bestScore){best=i;bestScore=score}
     }
-    const b=pool.splice(bestIdx,1)[0];
-    pairs.push([a,b]);
+    groups.push([a,pool.splice(best,1)[0]]);
   }
-  const leftover=pool.length?pool[0]:null;
-  pairs.sort((x,y)=>Math.max(y[0].rating,y[1].rating)-Math.max(x[0].rating,x[1].rating));
-  // Serpentine pair order to keep strongest expected pair winners apart.
-  const ordered=[];
-  let lo=0,hi=pairs.length-1,flip=true;
-  while(lo<=hi){ordered.push(flip?pairs[lo++]:pairs[hi--]);flip=!flip}
-  const bracketSize=nextPow2(arr.length);
-  const slots=Array(bracketSize).fill(null);
-  let s=0;
-  for(const pair of ordered){slots[s++]=pair[0].id;slots[s++]=pair[1].id}
-  if(leftover) slots[s++]=leftover.id;
-  // Distribute byes instead of clustering them at the end.
-  const filled=slots.filter(Boolean), finalSlots=Array(bracketSize).fill(null);
-  if(filled.length===bracketSize)return filled;
-  const step=bracketSize/filled.length;
-  const used=new Set();
-  filled.forEach((id,i)=>{
-    let idx=Math.floor(i*step);
-    while(used.has(idx)) idx=(idx+1)%bracketSize;
-    finalSlots[idx]=id;used.add(idx);
+  // Standard seed positions separate the strongest expected winners until
+  // the latest practical rounds (1 vs 2 cannot happen before the final).
+  const groupCount=size/2;
+  let seedOrder=[1];
+  for(let n=2;n<=groupCount;n*=2) seedOrder=seedOrder.flatMap(seed=>[seed,n+1-seed]);
+  const slots=Array(size).fill(null);
+  seedOrder.forEach((rank,i)=>{
+    const group=groups[rank-1];
+    slots[2*i]=group[0].id;
+    slots[2*i+1]=group[1]?.id||null;
   });
-  return finalSlots;
+  return slots;
 }
+
 function createBracket(type, ids){
   const ps=ids.map(pById).filter(Boolean);
   const size=Math.max(2,nextPow2(ps.length));
-  let slots;
-  if(type==="championship") slots=setupInitialSlots(ps);
-  else{
-    const sorted=[...ps].sort((a,b)=>a.rating-b.rating||a.name.localeCompare(b.name));
-    // Pair consolation entrants close in current rating.
-    slots=Array(size).fill(null);
-    sorted.forEach((p,i)=>slots[i]=p.id);
-  }
+  const slots=setupInitialSlots(ps);
   const roundCount=Math.log2(size);
   const rounds=[];
   for(let r=0;r<roundCount;r++){
