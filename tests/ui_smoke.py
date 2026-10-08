@@ -48,7 +48,7 @@ with sync_playwright() as p:
     # different background and corner-radius tokens.
     feature = page.locator(".overview-feature")
     assert feature.is_visible()
-    assert page.get_by_role("heading", name="Ready for the next great match.").count() == 1
+    assert page.get_by_role("heading", name="Forging Fellowship Table Tennis Games").count() == 1
     assert page.locator(".overview-settings").is_visible()
     assert page.locator(".overview-snapshot").is_visible()
     assert page.locator(".overview-format").is_visible()
