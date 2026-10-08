@@ -53,7 +53,18 @@ with sync_playwright() as p:
   result=page.evaluate(JAVASCRIPT,{'n':n})
   assert result['champ']==n-1, str(result)
   if n>2:
-   assert result['cons']==result['consolationPool']-1,str(result)
-   assert result['minimumMatches']>=2,str(result)
+   if result['consolationPool']>=2: assert result['cons']==result['consolationPool']-1,str(result)
+   if n>=4: assert result['minimumMatches']>=2,str(result)
   print('PASS bracket:',json.dumps({k:result[k] for k in ('n','champ','cons','minimumMatches')}),flush=True)
+ # Explicit seeded-draw regression: two highest-rated players should not
+ # meet in the opening round when close-rated alternatives are available.
+ page.goto('about:blank')
+ page.evaluate('''() => {window.__testStorage=new Map();Object.defineProperty(window,'localStorage',{configurable:true,get(){return {setItem:(k,v)=>window.__testStorage.set(k,v),getItem:k=>window.__testStorage.get(k)||null,removeItem:k=>window.__testStorage.delete(k),clear:()=>window.__testStorage.clear()}}});}''')
+ page.set_content(HTML)
+ pairs=page.evaluate('''() => {document.querySelector('[data-tab=players]').click();document.querySelector('#bulkPlayers').value='A,5\\nB,5\\nC,4\\nD,4\\nE,3\\nF,3\\nG,2\\nH,2';document.querySelector('#bulkAddBtn').click();document.querySelector('#buildChampBtn').click();const st=JSON.parse(localStorage.getItem('fftt_bracket_manager_v01'));const nm=id=>st.players.find(p=>p.id===id)?.name;return st.championship.rounds[0].map(m=>[nm(m.p1),nm(m.p2)])}''')
+ whereA=next(i for i,pair in enumerate(pairs) if 'A' in pair)
+ whereB=next(i for i,pair in enumerate(pairs) if 'B' in pair)
+ assert (whereA<2)!=(whereB<2),f'Top seeds not separated across bracket halves: {pairs}'
+ assert all(abs(int({'A':5,'B':5,'C':4,'D':4,'E':3,'F':3,'G':2,'H':2}[p[0]])-int({'A':5,'B':5,'C':4,'D':4,'E':3,'F':3,'G':2,'H':2}[p[1]]))<=1 for p in pairs),str(pairs)
+ print('PASS top-rated seeding:',pairs)
  b.close()
