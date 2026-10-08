@@ -134,6 +134,7 @@ with sync_playwright() as p:
     page.locator('nav.tabs button[data-tab="setup"]').click()
     assert page.locator(".topbar").evaluate("el => getComputedStyle(el).backgroundColor") == "rgb(251, 252, 253)"
     assert feature.is_visible()
+    assert page.locator(".context-panel").is_hidden()
     print("PASS Overview hero action routes to Players and back")
 
 
@@ -168,12 +169,12 @@ with sync_playwright() as p:
 
     page.locator('nav.tabs button[data-tab="players"]').click()
     assert page.locator("#viewTitle").inner_text() == "Player management"
-    context = page.locator(".players-context-panel")
+    context = page.locator(".context-panel")
     assert context.is_visible()
     assert context.get_by_role("heading", name="Prepare the player roster").count() == 1
-    assert context.locator(".players-context-outline path").count() == 1
+    assert context.locator(".context-outline path").count() == 1
     context_geometry = page.evaluate("""() => {
-      const note = document.querySelector('.players-context-panel');
+      const note = document.querySelector('.context-panel');
       const title = document.querySelector('#viewTitle');
       const noteBox = note.getBoundingClientRect();
       const titleBox = title.getBoundingClientRect();
@@ -182,14 +183,14 @@ with sync_playwright() as p:
       return {noteX:noteBox.x, noteRight:noteBox.right, noteW:noteBox.width,
         titleRight:titleBox.right, noteBackground:style.backgroundColor,
         textColor:titleStyle.color, outlineDash:getComputedStyle(
-          note.querySelector('.players-context-outline path')).strokeDasharray};
+          note.querySelector('.context-outline path')).strokeDasharray};
     }""")
     assert context_geometry["noteX"] >= context_geometry["titleRight"] + 10, context_geometry
     assert context_geometry["noteRight"] <= 1441 and context_geometry["noteW"] >= 292, context_geometry
     assert context_geometry["noteBackground"] == "rgba(0, 0, 0, 0)", context_geometry
     assert context_geometry["textColor"] == "rgb(41, 49, 60)", context_geometry
     assert context_geometry["outlineDash"] != "none", context_geometry
-    print("PASS Players-only dotted notched context panel in desktop header")
+    print("PASS approved dotted notched context panel in Players header")
     geometry = page.locator("#playerRatingStatus").evaluate("""el => {
       const style = getComputedStyle(el);
       return {
@@ -312,8 +313,23 @@ with sync_playwright() as p:
     page.locator('nav.tabs button[data-tab="data"]').click()
     assert page.locator("#dataPills .pill").count() == 3
     assert page.locator("#dataPills").get_by_text("No cloud sync").count() == 1
-    assert page.locator(".players-context-panel").is_hidden()
-    print("PASS Players context panel hidden on other screens")
+    expected_context={
+      "championship":"Prepare the singles bracket",
+      "consolation":"Review first-match losses",
+      "desk":"Record each result carefully",
+      "finale":"Choose balanced partners",
+      "data":"Keep a private backup"
+    }
+    for tab,expected in expected_context.items():
+        page.locator(f'nav.tabs button[data-tab="{tab}"]').click()
+        context=page.locator(".context-panel")
+        assert context.is_visible(), tab
+        assert context.locator("#contextTitle").inner_text() == expected, tab
+        assert context.locator("#contextDescription").inner_text().strip(), tab
+        assert context.locator(".context-outline path").count() == 1
+    page.locator('nav.tabs button[data-tab="setup"]').click()
+    assert page.locator(".context-panel").is_hidden()
+    print("PASS shared context guidance on six operational screens, absent on Overview")
     print("PASS contextual status pills across championship, consolation, finale and recovery")
 
     page.locator('nav.tabs button[data-tab="desk"]').click()
@@ -347,7 +363,7 @@ with sync_playwright() as p:
     assert status_mobile["y"] >= rating_mobile["y"] + rating_mobile["height"] + 8
     assert rating_mobile["width"] <= 390
     assert page.locator("#ratingHint").inner_text() == "· Intermediate"
-    note_mobile = page.locator(".players-context-panel").bounding_box()
+    note_mobile = page.locator(".context-panel").bounding_box()
     title_mobile = page.locator("#viewTitle").bounding_box()
     subtitle_mobile = page.locator("#viewSubtitle").bounding_box()
     assert note_mobile and title_mobile and subtitle_mobile
