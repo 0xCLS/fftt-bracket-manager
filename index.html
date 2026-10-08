@@ -636,11 +636,11 @@ td:has(.roster-rating-fieldset){min-width:185px}
 .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 @media(max-width:540px){.rating-scale{max-width:none}}
 
-/* Overview color exploration — cool neutrals + pastel bento accents.
-   Based on Christopher's Samfund visual reference, applied ONLY while Overview is active.
-   All six other tabs retain their existing UI palette pending user approval.
-   Original FFTT emblem, attribution, data format and match behavior are untouched. */
-body:has(#setup.panel.active){
+/* APPROVED light/charcoal/pastel product palette, October 8, 2026.
+   The Overview concept is the canonical look, now carried across all seven tabs.
+   Original FFTT emblem and Developed by Chris Smith are mandatory and retained.
+   Typography/layout/color decisions are UI-only; tournament engine unchanged. */
+body{
  --ov-canvas:#f2f3f5;
  --ov-paper:#ffffff;
  --ov-text:#29313c;
@@ -653,197 +653,312 @@ body:has(#setup.panel.active){
  --ov-shadow:0 7px 22px rgba(41,49,60,.055),0 2px 4px rgba(41,49,60,.035);
  background:var(--ov-canvas);color:var(--ov-text);
 }
-body:has(#setup.panel.active) .topbar{
+body .topbar{
  background:#fbfcfd;color:var(--ov-text);border-right:1px solid #e3e6eb;
  box-shadow:none;
 }
-body:has(#setup.panel.active) .brand-copy h1{color:var(--ov-text)}
-body:has(#setup.panel.active) .brand-kicker{color:#7b8590}
-body:has(#setup.panel.active) .sidebar-caption{color:#77838c}
-body:has(#setup.panel.active) .sidebar-group-title{color:#929aa2}
-body:has(#setup.panel.active) nav.tabs button{color:#56616e}
-body:has(#setup.panel.active) nav.tabs button:hover:not(:disabled){
+body .brand-copy h1{color:var(--ov-text)}
+body .brand-kicker{color:#7b8590}
+body .sidebar-caption{color:#77838c}
+body .sidebar-group-title{color:#929aa2}
+body nav.tabs button{color:#56616e}
+body nav.tabs button:hover:not(:disabled){
  background:#edf0f3;border-color:#edf0f3;color:var(--ov-text)
 }
-body:has(#setup.panel.active) nav.tabs button.active{
+body nav.tabs button.active{
  background:#e8edf0;border-color:transparent;color:var(--ov-text);
  box-shadow:inset 3px 0 0 #343d47;
 }
-body:has(#setup.panel.active) nav.tabs button.active .nav-icon{color:#29313c}
-body:has(#setup.panel.active) .sidebar-footer{border-top-color:#e2e6eb}
-body:has(#setup.panel.active) .local-first{color:#3c6663}
-body:has(#setup.panel.active) .sidebar-footer small{color:#77838c}
-body:has(#setup.panel.active) .toolbar button.ghost{
+body nav.tabs button.active .nav-icon{color:#29313c}
+body .sidebar-footer{border-top-color:#e2e6eb}
+body .local-first{color:#3c6663}
+body .sidebar-footer small{color:#77838c}
+body .toolbar button.ghost{
  background:#fff;border-color:#dfe4e9;color:#49545f
 }
-body:has(#setup.panel.active) .toolbar button.ghost:hover:not(:disabled){
+body .toolbar button.ghost:hover:not(:disabled){
  background:#f0f3f5;color:#29313c
 }
-body:has(#setup.panel.active) .toolbar button.primary{
+body .toolbar button.primary{
  background:#29313c;border-color:#29313c;color:#fff
 }
-body:has(#setup.panel.active) .toolbar button.primary:hover:not(:disabled){
+body .toolbar button.primary:hover:not(:disabled){
  background:#465361;border-color:#465361
 }
-body:has(#setup.panel.active) .developer-credit{color:#77818d}
-body:has(#setup.panel.active) .shell{background:var(--ov-canvas)}
-body:has(#setup.panel.active) .statusline{
+body .developer-credit{color:#77818d}
+body .shell{background:var(--ov-canvas)}
+body .statusline{
  background:var(--ov-canvas);border-bottom:1px solid #e8ebef;
 }
-body:has(#setup.panel.active) .statusline .pill{
+body .statusline .pill{
  box-shadow:none;
 }
-body:has(#setup.panel.active) .statusline .pill.good{background:#e3f2e0;border-color:#c8e5cd;color:#216b54}
-body:has(#setup.panel.active) .statusline .pill.blue{background:#e6f3f7;border-color:#c9e6ee;color:#315e6e}
-body:has(#setup.panel.active) .statusline .pill.warn{background:#fff4d6;border-color:#f2e1ad;color:#75581e}
-body:has(#setup.panel.active) .overview-feature{margin-bottom:25px}
-body:has(#setup.panel.active) .feature-overline{
+body .statusline .pill.good{background:#e3f2e0;border-color:#c8e5cd;color:#216b54}
+body .statusline .pill.blue{background:#e6f3f7;border-color:#c9e6ee;color:#315e6e}
+body .statusline .pill.warn{background:#fff4d6;border-color:#f2e1ad;color:#75581e}
+body .overview-feature{margin-bottom:25px}
+body .feature-overline{
  color:#68727d;letter-spacing:.14em;font-size:10px;font-weight:760
 }
-body:has(#setup.panel.active) .feature-spark{
+body .feature-spark{
  background:#bcd884;box-shadow:0 0 0 5px #bcd88438
 }
-body:has(#setup.panel.active) .overview-feature h2{
+body .overview-feature h2{
  color:var(--ov-text);font-size:clamp(34px,3.6vw,54px);
  letter-spacing:-.052em;line-height:1.12;font-weight:740
 }
-body:has(#setup.panel.active) .overview-feature h2 em{
+body .overview-feature h2 em{
  color:var(--ov-text);font-weight:740
 }
-body:has(#setup.panel.active) .overview-feature p{
+body .overview-feature p{
  color:#586672;font-size:14px;max-width:570px
 }
-body:has(#setup.panel.active) .feature-actions button{
+body .feature-actions button{
  border-radius:999px;min-height:42px;padding:10px 20px;font-size:12px;font-weight:730
 }
-body:has(#setup.panel.active) .feature-primary{
+body .feature-primary{
  background:var(--ov-text);color:#fff;border:1px solid var(--ov-text);
  box-shadow:0 5px 12px #29313c20
 }
-body:has(#setup.panel.active) .feature-primary:hover:not(:disabled){
+body .feature-primary:hover:not(:disabled){
  background:#475461;border-color:#475461
 }
-body:has(#setup.panel.active) .feature-secondary{
+body .feature-secondary{
  background:#fff;color:var(--ov-text);border:1px solid #d6dbe1
 }
-body:has(#setup.panel.active) .feature-secondary:hover:not(:disabled){
+body .feature-secondary:hover:not(:disabled){
  background:#e8f3f5;border-color:#b9d7dd
 }
-body:has(#setup.panel.active) .overview-content{gap:18px}
-body:has(#setup.panel.active) .overview-settings{
+body .overview-content{gap:18px}
+body .overview-settings{
  background:#fff;border:1px solid #e7e9ed;
  border-radius:6px;box-shadow:var(--ov-shadow);
 }
-body:has(#setup.panel.active) .section-icon{
+body .section-icon{
  background:var(--ov-blue);color:var(--ov-text);border-radius:5px;
 }
-body:has(#setup.panel.active) .section-overline{
+body .section-overline{
  color:#6b747e;font-size:10px;letter-spacing:.15em
 }
-body:has(#setup.panel.active) .section-heading h2,
-body:has(#setup.panel.active) .side-section-heading h2{color:var(--ov-text)}
-body:has(#setup.panel.active) .section-description{color:var(--ov-muted)!important}
-body:has(#setup.panel.active) .overview-settings label{
+body .section-heading h2,
+body .side-section-heading h2{color:var(--ov-text)}
+body .section-description{color:var(--ov-muted)!important}
+body .overview-settings label{
  color:#46525f;font-weight:680
 }
-body:has(#setup.panel.active) .overview-settings input,
-body:has(#setup.panel.active) .overview-settings select{
+body .overview-settings input,
+body .overview-settings select{
  background:#fff;border-color:#dbe0e6;color:var(--ov-text);box-shadow:none;
 }
-body:has(#setup.panel.active) .overview-settings input:focus-visible,
-body:has(#setup.panel.active) .overview-settings select:focus-visible{
+body .overview-settings input:focus-visible,
+body .overview-settings select:focus-visible{
  border-color:#538da1;outline:2px solid #7bc3d483;outline-offset:1px
 }
-body:has(#setup.panel.active) .overview-save-row .primary{
+body .overview-save-row .primary{
  background:var(--ov-text);border-color:var(--ov-text);color:#fff;
  border-radius:999px;padding-inline:21px;box-shadow:0 4px 12px #29313c1c
 }
-body:has(#setup.panel.active) .overview-save-row .primary:hover:not(:disabled){
+body .overview-save-row .primary:hover:not(:disabled){
  background:#475461;border-color:#475461
 }
 /* Four independently colored statistics — not a card within a card. */
-body:has(#setup.panel.active) .overview-snapshot{
+body .overview-snapshot{
  background:transparent;border:0;box-shadow:none;padding:0;min-width:0;
 }
-body:has(#setup.panel.active) .overview-snapshot .side-section-heading{
+body .overview-snapshot .side-section-heading{
  margin:0 0 13px;padding:0 1px;
 }
-body:has(#setup.panel.active) .overview-snapshot .kpis{
+body .overview-snapshot .kpis{
  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
  gap:12px;
 }
-body:has(#setup.panel.active) .overview-snapshot .kpi{
+body .overview-snapshot .kpi{
  min-height:136px;padding:19px 17px;border:1px solid #29313c0d!important;
  border-radius:6px;background:var(--ov-blue);box-shadow:none;
  display:flex;flex-direction:column;justify-content:space-between;
 }
-body:has(#setup.panel.active) .overview-snapshot .kpi:nth-child(1){background:var(--ov-blue)}
-body:has(#setup.panel.active) .overview-snapshot .kpi:nth-child(2){background:var(--ov-lavender)}
-body:has(#setup.panel.active) .overview-snapshot .kpi:nth-child(3){background:var(--ov-green)}
-body:has(#setup.panel.active) .overview-snapshot .kpi:nth-child(4){background:var(--ov-yellow)}
-body:has(#setup.panel.active) .overview-snapshot .kpi strong{
+body .overview-snapshot .kpi:nth-child(1){background:var(--ov-blue)}
+body .overview-snapshot .kpi:nth-child(2){background:var(--ov-lavender)}
+body .overview-snapshot .kpi:nth-child(3){background:var(--ov-green)}
+body .overview-snapshot .kpi:nth-child(4){background:var(--ov-yellow)}
+body .overview-snapshot .kpi strong{
  font-size:clamp(29px,3vw,42px);color:var(--ov-text);line-height:1.05;
 }
-body:has(#setup.panel.active) .overview-snapshot .kpi span{
+body .overview-snapshot .kpi span{
  color:#3f4b56;font-size:11px;font-weight:670;margin-top:12px;
 }
-body:has(#setup.panel.active) .overview-format{
+body .overview-format{
  background:transparent;border:0;box-shadow:none;padding:8px 0 0;
 }
-body:has(#setup.panel.active) .overview-format .side-section-heading{
+body .overview-format .side-section-heading{
  margin:0 0 13px;
 }
-body:has(#setup.panel.active) .overview-format .format-steps{
+body .overview-format .format-steps{
  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;
 }
-body:has(#setup.panel.active) .overview-format .format-steps li,
-body:has(#setup.panel.active) .overview-format .format-steps li:first-child,
-body:has(#setup.panel.active) .overview-format .format-steps li:last-child{
+body .overview-format .format-steps li,
+body .overview-format .format-steps li:first-child,
+body .overview-format .format-steps li:last-child{
  display:flex;align-items:flex-start;gap:13px;min-height:122px;
  padding:21px 18px;border:1px solid #29313c0c;border-radius:6px;
  background:#eaf3f5;
 }
-body:has(#setup.panel.active) .overview-format .format-steps li:nth-child(1){background:#eaf3f5}
-body:has(#setup.panel.active) .overview-format .format-steps li:nth-child(2){background:#f2eaf7}
-body:has(#setup.panel.active) .overview-format .format-steps li:nth-child(3){background:#f4f6e8}
-body:has(#setup.panel.active) .overview-format .format-index{
+body .overview-format .format-steps li:nth-child(1){background:#eaf3f5}
+body .overview-format .format-steps li:nth-child(2){background:#f2eaf7}
+body .overview-format .format-steps li:nth-child(3){background:#f4f6e8}
+body .overview-format .format-index{
  background:#fff9;color:#29313c;border:1px solid #29313c14;border-radius:5px;
 }
-body:has(#setup.panel.active) .overview-format .format-steps strong{
+body .overview-format .format-steps strong{
  color:var(--ov-text);font-size:13px
 }
-body:has(#setup.panel.active) .overview-format .format-steps p{
+body .overview-format .format-steps p{
  color:#586672;font-size:12px;line-height:1.6;
 }
-body:has(#setup.panel.active) .overview-format .format-footnote{
+body .overview-format .format-footnote{
  color:#687580;border-top:0;padding-top:2px;margin-top:10px!important;
 }
-body:has(#setup.panel.active) .footer-note{color:#79838d}
+body .footer-note{color:#79838d}
 @media(max-width:1120px){
- body:has(#setup.panel.active) .overview-format .format-steps{grid-template-columns:repeat(3,minmax(0,1fr))}
+ body .overview-format .format-steps{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 @media(max-width:800px){
- body:has(#setup.panel.active) .topbar{background:#fbfcfd;color:var(--ov-text)}
- body:has(#setup.panel.active) .overview-format .format-steps{
+ body .topbar{background:#fbfcfd;color:var(--ov-text)}
+ body .overview-format .format-steps{
   grid-template-columns:1fr
  }
- body:has(#setup.panel.active) .overview-format .format-steps li{
+ body .overview-format .format-steps li{
   min-height:0
  }
 }
 @media(max-width:540px){
- body:has(#setup.panel.active) .overview-snapshot .kpi{
+ body .overview-snapshot .kpi{
   min-height:118px;padding:16px 13px
  }
- body:has(#setup.panel.active) .overview-snapshot .kpi strong{font-size:31px}
- body:has(#setup.panel.active) .overview-feature h2{font-size:34px}
+ body .overview-snapshot .kpi strong{font-size:31px}
+ body .overview-feature h2{font-size:34px}
 }
 @media print{
- body:has(#setup.panel.active) .overview-snapshot .kpi,
- body:has(#setup.panel.active) .overview-format .format-steps li{
+ body .overview-snapshot .kpi,
+ body .overview-format .format-steps li{
   background:#fff!important;box-shadow:none!important
  }
- body:has(#setup.panel.active) .overview-settings{box-shadow:none}
+ body .overview-settings{box-shadow:none}
+}
+
+
+
+/* Global component harmonization — the same color language on all seven screens.
+   Overview's bento cards remain as accepted. Pastels distinguish meaning rather
+   than applying loud fills to every card. */
+html{background:#f2f3f5}
+body{
+ --canvas:#f2f3f5;--surface:#fff;--surface-soft:#f9fafb;
+ --surface-inset:#f8fafb;--surface-elevated:#fff;
+ --heading:#29313c;--heading-deep:#29313c;
+ --ink:#29313c;--ink-strong:#29313c;--muted:#63707a;
+ --line:#e4e7ec;--line-strong:#cfd6dd;
+ --accent:#29313c;--accent-dark:#475461;--accent-soft:#e8f3f5;
+ --teal:#468998;--teal-soft:#e6f3f7;
+ --positive:#216b54;--positive-soft:#e3f2e0;
+ --warning:#75581e;--warning-soft:#fff4d6;
+ --negative:#ae4049;--negative-soft:#fff0f1;
+ --focus:#538da1;--card-border:#e6e9ed;
+ --shadow:0 7px 22px rgba(41,49,60,.055),0 2px 4px rgba(41,49,60,.035);
+ --shadow-lift:0 9px 22px rgba(41,49,60,.09),0 2px 5px rgba(41,49,60,.045);
+}
+body .page-intro .eyebrow{color:#68727d}
+body .page-intro .eyebrow-dot{background:#bcd884;box-shadow:0 0 0 6px #bcd88438}
+body .page-intro h2{color:#29313c;letter-spacing:-.048em}
+body .page-intro p{color:#61707e}
+body .card,
+body .queue-card,
+body .team{
+ background:#fff;border:1px solid #e7e9ed;
+ border-radius:6px;box-shadow:var(--ov-shadow);
+}
+body .card h2,body .card h3{color:#29313c}
+body .card .help,body .help{color:#65727d}
+body label,body .field-label,body .rating-fieldset legend{color:#46525f}
+body input:not([type="radio"]):not([type="checkbox"]),
+body select,body textarea{
+ background-color:#fff;border-color:#dbe0e6;color:#29313c;
+ box-shadow:none;
+}
+body input:not([type="radio"]):not([type="checkbox"]):focus,
+body select:focus,body textarea:focus{
+ border-color:#538da1;box-shadow:0 0 0 3px #7bc3d42e;
+}
+body button.primary,body button.primary:hover:not(:disabled){
+ border-radius:999px;
+}
+body button.primary{
+ background:#29313c;border-color:#29313c;color:#fff;
+ box-shadow:0 4px 12px #29313c1c;
+}
+body button.primary:hover:not(:disabled){
+ background:#475461;border-color:#475461;
+}
+body button.secondary,body .btn.secondary{
+ background:#fff;color:#29313c;border-color:#d6dbe1;
+}
+body button.secondary:hover:not(:disabled),body .btn.secondary:hover{
+ background:#e8f3f5;color:#29313c;border-color:#b9d7dd;
+}
+body button.ghost{color:#49545f;border-color:#dfe4e9;background:#fff}
+body button.ghost:hover:not(:disabled){
+ background:#f0f3f5;color:#29313c;border-color:#cad2da
+}
+body .pill{background:#fff;border-color:#e2e6ec;color:#505b68}
+body .pill.good{background:#e3f2e0;border-color:#c8e5cd;color:#216b54}
+body .pill.blue{background:#e6f3f7;border-color:#c9e6ee;color:#315e6e}
+body .pill.warn{background:#fff4d6;border-color:#f2e1ad;color:#75581e}
+body .pill.neutral{background:#f7f8fa;border-color:#e4e7ec;color:#586474}
+body .private{background:#e6f3f7;border-color:#c9e6ee;color:#315e6e}
+body .rating{background:#e6f3f7;border-color:#c9e6ee;color:#315e6e}
+body .rating-choice span{
+ color:#29313c;border-color:#d6dbe1;background:#fff
+}
+body .rating-choice:hover span{background:#e8f3f5;border-color:#b9d7dd}
+body .rating-choice input:checked+span{
+ background:#29313c;border-color:#29313c;color:#fff;
+ box-shadow:0 2px 6px #29313c1c
+}
+body .rating-choice input:focus-visible+span{outline:3px solid #538da199}
+body .rating-hint{color:#586672}
+body .tablewrap{background:#fff;border-color:#e4e7ec}
+body table{background:#fff}
+body th{background:#f6f8f9;color:#5d6874}
+body th,body td{border-bottom-color:#eaedf0}
+body tbody tr:hover{background:#f4f9fb}
+body .bracket-scroll{background:transparent;border:0}
+body .round-title{color:#475461;border-bottom-color:#e5e9ec}
+body .match{background:#fff;border-color:#e4e7ec;box-shadow:0 2px 7px #29313c0e}
+body .match-head{background:#f4f8fa;color:#61707b}
+body .playerline{border-top-color:#ebedef;color:#29313c}
+body .playerline.winner{background:#eaf4e6;color:#216b54;box-shadow:inset 3px 0 0 #9fc98e}
+body .queue-card h3{color:#586672}
+body .versus{color:#29313c}
+body .tabletag{background:#e6f3f7;color:#315e6e;border-color:#c9e6ee}
+body .empty-state{background:#f9fafb;border-color:#d9e0e5;color:#64717b}
+body .notice{background:#e6f3f7;color:#365967;border-left-color:#76b9c6}
+body .notice.warn{background:#fff4d6;color:#75581e;border-left-color:#d8b95f}
+body .notice.good{background:#e3f2e0;color:#216b54;border-left-color:#97c48a}
+body .team{color:#29313c}
+body .format-index{background:#e6f3f7;color:#29313c}
+body dialog{background:#fff;border-color:#e4e7ec;color:#29313c}
+body .dialog-body h2{color:#29313c}
+body .dialog-actions{background:#f7f9fa;border-top-color:#e4e7ec}
+body #resultMatchLabel{background:#e6f3f7;border-color:#acd3df;color:#315e6e}
+body #winnerChoices label{border-color:#dbe1e6!important}
+body #winnerChoices label:hover{background:#e8f3f5;border-color:#b9d7dd!important}
+body #winnerChoices label:has(input:checked){
+ background:#e6f3f7;border-color:#538da1!important
+}
+body .footer-note{color:#79838d}
+@media print{
+ body .card,body .queue-card,body .team,body .match{box-shadow:none!important}
+ body .pill{border-color:#bbb;background:#fff!important;color:#222!important}
 }
 
 </style>
