@@ -635,6 +635,217 @@ main:has(#setup.panel.active)>.statusline{margin:0;justify-content:flex-end}
 td:has(.roster-rating-fieldset){min-width:185px}
 .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 @media(max-width:540px){.rating-scale{max-width:none}}
+
+/* Overview color exploration — cool neutrals + pastel bento accents.
+   Based on Christopher's Samfund visual reference, applied ONLY while Overview is active.
+   All six other tabs retain their existing UI palette pending user approval.
+   Original FFTT emblem, attribution, data format and match behavior are untouched. */
+body:has(#setup.panel.active){
+ --ov-canvas:#f2f3f5;
+ --ov-paper:#ffffff;
+ --ov-text:#29313c;
+ --ov-muted:#64707b;
+ --ov-line:#e4e7ec;
+ --ov-blue:#d1eff5;
+ --ov-green:#bbd98f;
+ --ov-lavender:#e9d7f3;
+ --ov-yellow:#f7e99b;
+ --ov-shadow:0 7px 22px rgba(41,49,60,.055),0 2px 4px rgba(41,49,60,.035);
+ background:var(--ov-canvas);color:var(--ov-text);
+}
+body:has(#setup.panel.active) .topbar{
+ background:#fbfcfd;color:var(--ov-text);border-right:1px solid #e3e6eb;
+ box-shadow:none;
+}
+body:has(#setup.panel.active) .brand-copy h1{color:var(--ov-text)}
+body:has(#setup.panel.active) .brand-kicker{color:#7b8590}
+body:has(#setup.panel.active) .sidebar-caption{color:#77838c}
+body:has(#setup.panel.active) .sidebar-group-title{color:#929aa2}
+body:has(#setup.panel.active) nav.tabs button{color:#56616e}
+body:has(#setup.panel.active) nav.tabs button:hover:not(:disabled){
+ background:#edf0f3;border-color:#edf0f3;color:var(--ov-text)
+}
+body:has(#setup.panel.active) nav.tabs button.active{
+ background:#e8edf0;border-color:transparent;color:var(--ov-text);
+ box-shadow:inset 3px 0 0 #343d47;
+}
+body:has(#setup.panel.active) nav.tabs button.active .nav-icon{color:#29313c}
+body:has(#setup.panel.active) .sidebar-footer{border-top-color:#e2e6eb}
+body:has(#setup.panel.active) .local-first{color:#3c6663}
+body:has(#setup.panel.active) .sidebar-footer small{color:#77838c}
+body:has(#setup.panel.active) .toolbar button.ghost{
+ background:#fff;border-color:#dfe4e9;color:#49545f
+}
+body:has(#setup.panel.active) .toolbar button.ghost:hover:not(:disabled){
+ background:#f0f3f5;color:#29313c
+}
+body:has(#setup.panel.active) .toolbar button.primary{
+ background:#29313c;border-color:#29313c;color:#fff
+}
+body:has(#setup.panel.active) .toolbar button.primary:hover:not(:disabled){
+ background:#465361;border-color:#465361
+}
+body:has(#setup.panel.active) .developer-credit{color:#77818d}
+body:has(#setup.panel.active) .shell{background:var(--ov-canvas)}
+body:has(#setup.panel.active) .statusline{
+ background:var(--ov-canvas);border-bottom:1px solid #e8ebef;
+}
+body:has(#setup.panel.active) .statusline .pill{
+ box-shadow:none;
+}
+body:has(#setup.panel.active) .statusline .pill.good{background:#e3f2e0;border-color:#c8e5cd;color:#216b54}
+body:has(#setup.panel.active) .statusline .pill.blue{background:#e6f3f7;border-color:#c9e6ee;color:#315e6e}
+body:has(#setup.panel.active) .statusline .pill.warn{background:#fff4d6;border-color:#f2e1ad;color:#75581e}
+body:has(#setup.panel.active) .overview-feature{margin-bottom:25px}
+body:has(#setup.panel.active) .feature-overline{
+ color:#68727d;letter-spacing:.14em;font-size:10px;font-weight:760
+}
+body:has(#setup.panel.active) .feature-spark{
+ background:#bcd884;box-shadow:0 0 0 5px #bcd88438
+}
+body:has(#setup.panel.active) .overview-feature h2{
+ color:var(--ov-text);font-size:clamp(34px,3.6vw,54px);
+ letter-spacing:-.052em;line-height:1.12;font-weight:740
+}
+body:has(#setup.panel.active) .overview-feature h2 em{
+ color:var(--ov-text);font-weight:740
+}
+body:has(#setup.panel.active) .overview-feature p{
+ color:#586672;font-size:14px;max-width:570px
+}
+body:has(#setup.panel.active) .feature-actions button{
+ border-radius:999px;min-height:42px;padding:10px 20px;font-size:12px;font-weight:730
+}
+body:has(#setup.panel.active) .feature-primary{
+ background:var(--ov-text);color:#fff;border:1px solid var(--ov-text);
+ box-shadow:0 5px 12px #29313c20
+}
+body:has(#setup.panel.active) .feature-primary:hover:not(:disabled){
+ background:#475461;border-color:#475461
+}
+body:has(#setup.panel.active) .feature-secondary{
+ background:#fff;color:var(--ov-text);border:1px solid #d6dbe1
+}
+body:has(#setup.panel.active) .feature-secondary:hover:not(:disabled){
+ background:#e8f3f5;border-color:#b9d7dd
+}
+body:has(#setup.panel.active) .overview-content{gap:18px}
+body:has(#setup.panel.active) .overview-settings{
+ background:#fff;border:1px solid #e7e9ed;
+ border-radius:6px;box-shadow:var(--ov-shadow);
+}
+body:has(#setup.panel.active) .section-icon{
+ background:var(--ov-blue);color:var(--ov-text);border-radius:5px;
+}
+body:has(#setup.panel.active) .section-overline{
+ color:#6b747e;font-size:10px;letter-spacing:.15em
+}
+body:has(#setup.panel.active) .section-heading h2,
+body:has(#setup.panel.active) .side-section-heading h2{color:var(--ov-text)}
+body:has(#setup.panel.active) .section-description{color:var(--ov-muted)!important}
+body:has(#setup.panel.active) .overview-settings label{
+ color:#46525f;font-weight:680
+}
+body:has(#setup.panel.active) .overview-settings input,
+body:has(#setup.panel.active) .overview-settings select{
+ background:#fff;border-color:#dbe0e6;color:var(--ov-text);box-shadow:none;
+}
+body:has(#setup.panel.active) .overview-settings input:focus-visible,
+body:has(#setup.panel.active) .overview-settings select:focus-visible{
+ border-color:#538da1;outline:2px solid #7bc3d483;outline-offset:1px
+}
+body:has(#setup.panel.active) .overview-save-row .primary{
+ background:var(--ov-text);border-color:var(--ov-text);color:#fff;
+ border-radius:999px;padding-inline:21px;box-shadow:0 4px 12px #29313c1c
+}
+body:has(#setup.panel.active) .overview-save-row .primary:hover:not(:disabled){
+ background:#475461;border-color:#475461
+}
+/* Four independently colored statistics — not a card within a card. */
+body:has(#setup.panel.active) .overview-snapshot{
+ background:transparent;border:0;box-shadow:none;padding:0;min-width:0;
+}
+body:has(#setup.panel.active) .overview-snapshot .side-section-heading{
+ margin:0 0 13px;padding:0 1px;
+}
+body:has(#setup.panel.active) .overview-snapshot .kpis{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:12px;
+}
+body:has(#setup.panel.active) .overview-snapshot .kpi{
+ min-height:136px;padding:19px 17px;border:1px solid #29313c0d!important;
+ border-radius:6px;background:var(--ov-blue);box-shadow:none;
+ display:flex;flex-direction:column;justify-content:space-between;
+}
+body:has(#setup.panel.active) .overview-snapshot .kpi:nth-child(1){background:var(--ov-blue)}
+body:has(#setup.panel.active) .overview-snapshot .kpi:nth-child(2){background:var(--ov-lavender)}
+body:has(#setup.panel.active) .overview-snapshot .kpi:nth-child(3){background:var(--ov-green)}
+body:has(#setup.panel.active) .overview-snapshot .kpi:nth-child(4){background:var(--ov-yellow)}
+body:has(#setup.panel.active) .overview-snapshot .kpi strong{
+ font-size:clamp(29px,3vw,42px);color:var(--ov-text);line-height:1.05;
+}
+body:has(#setup.panel.active) .overview-snapshot .kpi span{
+ color:#3f4b56;font-size:11px;font-weight:670;margin-top:12px;
+}
+body:has(#setup.panel.active) .overview-format{
+ background:transparent;border:0;box-shadow:none;padding:8px 0 0;
+}
+body:has(#setup.panel.active) .overview-format .side-section-heading{
+ margin:0 0 13px;
+}
+body:has(#setup.panel.active) .overview-format .format-steps{
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;
+}
+body:has(#setup.panel.active) .overview-format .format-steps li,
+body:has(#setup.panel.active) .overview-format .format-steps li:first-child,
+body:has(#setup.panel.active) .overview-format .format-steps li:last-child{
+ display:flex;align-items:flex-start;gap:13px;min-height:122px;
+ padding:21px 18px;border:1px solid #29313c0c;border-radius:6px;
+ background:#eaf3f5;
+}
+body:has(#setup.panel.active) .overview-format .format-steps li:nth-child(1){background:#eaf3f5}
+body:has(#setup.panel.active) .overview-format .format-steps li:nth-child(2){background:#f2eaf7}
+body:has(#setup.panel.active) .overview-format .format-steps li:nth-child(3){background:#f4f6e8}
+body:has(#setup.panel.active) .overview-format .format-index{
+ background:#fff9;color:#29313c;border:1px solid #29313c14;border-radius:5px;
+}
+body:has(#setup.panel.active) .overview-format .format-steps strong{
+ color:var(--ov-text);font-size:13px
+}
+body:has(#setup.panel.active) .overview-format .format-steps p{
+ color:#586672;font-size:12px;line-height:1.6;
+}
+body:has(#setup.panel.active) .overview-format .format-footnote{
+ color:#687580;border-top:0;padding-top:2px;margin-top:10px!important;
+}
+body:has(#setup.panel.active) .footer-note{color:#79838d}
+@media(max-width:1120px){
+ body:has(#setup.panel.active) .overview-format .format-steps{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:800px){
+ body:has(#setup.panel.active) .topbar{background:#fbfcfd;color:var(--ov-text)}
+ body:has(#setup.panel.active) .overview-format .format-steps{
+  grid-template-columns:1fr
+ }
+ body:has(#setup.panel.active) .overview-format .format-steps li{
+  min-height:0
+ }
+}
+@media(max-width:540px){
+ body:has(#setup.panel.active) .overview-snapshot .kpi{
+  min-height:118px;padding:16px 13px
+ }
+ body:has(#setup.panel.active) .overview-snapshot .kpi strong{font-size:31px}
+ body:has(#setup.panel.active) .overview-feature h2{font-size:34px}
+}
+@media print{
+ body:has(#setup.panel.active) .overview-snapshot .kpi,
+ body:has(#setup.panel.active) .overview-format .format-steps li{
+  background:#fff!important;box-shadow:none!important
+ }
+ body:has(#setup.panel.active) .overview-settings{box-shadow:none}
+}
+
 </style>
 </head>
 <body>
