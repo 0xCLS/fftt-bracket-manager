@@ -189,27 +189,31 @@ with sync_playwright() as p:
     assert add_radios.count() == 5
     assert add_radios.nth(2).is_checked()
     assert page.locator("#playerRating").count() == 0
-    assert page.locator("#ratingHint").inner_text() == "Level 3 · Intermediate"
+    assert page.locator("#ratingHint").inner_text() == "· Intermediate"
     add_radios.nth(2).focus()
     add_radios.nth(2).press("ArrowRight")
     assert add_radios.nth(3).is_checked()
-    assert page.locator("#ratingHint").inner_text() == "Level 4 · Strong Intermediate"
+    assert page.locator("#ratingHint").inner_text() == "· Strong Intermediate"
     page.locator("#addPlayerForm .rating-choice").nth(2).click()
-    assert page.locator("#ratingHint").inner_text() == "Level 3 · Intermediate"
+    assert page.locator("#ratingHint").inner_text() == "· Intermediate"
     assert page.get_by_role("group", name="FFTT rating").count() == 1
     rating_layout = page.evaluate("""() => {
       const r = document.querySelector('.add-rating-fieldset').getBoundingClientRect();
       const scale = document.querySelector('.add-rating-fieldset .rating-scale').getBoundingClientRect();
       const status = document.querySelector('.add-status-field').getBoundingClientRect();
       const first = document.querySelector('.add-rating-fieldset .rating-choice span').getBoundingClientRect();
-      return {ratingTop:r.top, ratingBottom:r.bottom, scaleWidth:scale.width,
-        statusTop:status.top, statusWidth:status.width, firstButtonWidth:first.width};
+      return {ratingLeft:r.left, ratingRight:r.right, ratingBottom:r.bottom,
+        scaleWidth:scale.width, statusLeft:status.left, statusBottom:status.bottom,
+        firstButtonWidth:first.width,
+        inlineHintInLegend:document.querySelector('.add-rating-fieldset legend').contains(
+          document.querySelector('#ratingHint'))};
     }""")
-    assert rating_layout["statusTop"] >= rating_layout["ratingBottom"] + 10, rating_layout
-    assert rating_layout["scaleWidth"] >= 250, rating_layout
-    assert rating_layout["firstButtonWidth"] >= 40, rating_layout
-    assert rating_layout["statusWidth"] <= 391, rating_layout
-    print("PASS full-row segmented rating, clear separation from status")
+    assert rating_layout["inlineHintInLegend"], rating_layout
+    assert rating_layout["statusLeft"] >= rating_layout["ratingRight"] + 8, rating_layout
+    assert abs(rating_layout["statusBottom"] - rating_layout["ratingBottom"]) <= 3, rating_layout
+    assert rating_layout["scaleWidth"] >= 140, rating_layout
+    assert rating_layout["firstButtonWidth"] >= 22, rating_layout
+    print("PASS rating and Status share one row with selected skill beside the label")
     print("PASS keyboard-operable add-player five-level rating selector")
 
     page.locator("#bulkPlayers").fill(
@@ -316,9 +320,10 @@ with sync_playwright() as p:
     rating_mobile = page.locator(".add-rating-fieldset").bounding_box()
     status_mobile = page.locator(".add-status-field").bounding_box()
     assert rating_mobile is not None and status_mobile is not None
-    assert status_mobile["y"] >= rating_mobile["y"] + rating_mobile["height"] + 10
+    assert status_mobile["y"] >= rating_mobile["y"] + rating_mobile["height"] + 8
     assert rating_mobile["width"] <= 390
-    print("PASS mobile rating and status occupy separate rows")
+    assert page.locator("#ratingHint").inner_text() == "· Intermediate"
+    print("PASS mobile fields stack and inline skill label remains visible")
     print("PASS mobile segmented rating controls and developer credit")
     page.locator('nav.tabs button[data-tab="data"]').click()
     assert page.locator("#dataPills").is_visible()
