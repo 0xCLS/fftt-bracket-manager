@@ -133,14 +133,14 @@ begin
       end if;
       v_a := v_pair[1]::integer;
       v_b := v_pair[2]::integer;
-      if pg_catalog.greatest(v_a,v_b) < 11
+      if greatest(v_a,v_b) < 11
          or pg_catalog.abs(v_a-v_b) < 2
-         or (pg_catalog.greatest(v_a,v_b)>11 and pg_catalog.abs(v_a-v_b)<>2) then
+         or (greatest(v_a,v_b)>11 and pg_catalog.abs(v_a-v_b)<>2) then
         raise exception 'fftt_validation_error' using errcode = '22023';
       end if;
       if v_a>v_b then v_wins1:=v_wins1+1; else v_wins2:=v_wins2+1; end if;
       if v_i < pg_catalog.array_length(v_games,1)
-         and pg_catalog.greatest(v_wins1,v_wins2)>=v_needed then
+         and greatest(v_wins1,v_wins2)>=v_needed then
         raise exception 'fftt_validation_error' using errcode = '22023';
       end if;
       if v_i>1 then v_score:=v_score||', '; end if;
