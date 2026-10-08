@@ -12,7 +12,7 @@ create function fftt_private.submit_match_result_v1(
   p_submission_id uuid,
   p_winner_id uuid,
   p_game_scores text,
-  p_table_number smallint
+  p_table_number integer
 )
 returns jsonb
 language plpgsql volatile security definer set search_path = ''
@@ -251,15 +251,15 @@ end;
 $fn$;
 
 revoke all on function fftt_private.submit_match_result_v1(
-  uuid,uuid,integer,bigint,uuid,uuid,text,smallint)
+  uuid,uuid,integer,bigint,uuid,uuid,text,integer)
   from public,anon,authenticated;
 grant execute on function fftt_private.submit_match_result_v1(
-  uuid,uuid,integer,bigint,uuid,uuid,text,smallint) to authenticated;
+  uuid,uuid,integer,bigint,uuid,uuid,text,integer) to authenticated;
 
 create function public.fftt_submit_match_result_v1(
   p_event_id uuid, p_match_id uuid, p_bracket_generation integer,
   p_expected_match_version bigint, p_submission_id uuid,
-  p_winner_id uuid, p_game_scores text, p_table_number smallint
+  p_winner_id uuid, p_game_scores text, p_table_number integer
 )
 returns jsonb
 language sql volatile security invoker set search_path = ''
@@ -270,12 +270,12 @@ as $fn$
 $fn$;
 
 revoke all on function public.fftt_submit_match_result_v1(
-  uuid,uuid,integer,bigint,uuid,uuid,text,smallint)
+  uuid,uuid,integer,bigint,uuid,uuid,text,integer)
   from public,anon,authenticated;
 grant execute on function public.fftt_submit_match_result_v1(
-  uuid,uuid,integer,bigint,uuid,uuid,text,smallint) to authenticated;
+  uuid,uuid,integer,bigint,uuid,uuid,text,integer) to authenticated;
 
-comment on function public.fftt_submit_match_result_v1(uuid,uuid,integer,bigint,uuid,uuid,text,smallint)
+comment on function public.fftt_submit_match_result_v1(uuid,uuid,integer,bigint,uuid,uuid,text,integer)
 is 'Synthetic-only transactional score submission. Requires active event-scoped organizer/scorekeeper grant; no cloud client enabled.';
 
 commit;
