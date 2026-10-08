@@ -78,10 +78,10 @@ The established 6px card corners, 5px compact corners, FFTT emblem, and exact at
 The previous two-column layout placed a tall format guide below the live snapshot while leaving unused space under Event Setup. Christopher specifically objected to the arrangement and asked that the four global status pills sit at the **top right**.
 
 - Overview now uses a **two-row composition**: Event Setup and Live Snapshot side by side, followed by a full-width Three Stages guide whose steps are horizontal on desktop.
-- The four existing tournament-wide pills are in the **first header row**, right aligned ahead of the page intro and **sticky at the top on desktop**, so they remain visible while scrolling.
-- On narrower widths, the cards and stages stack; the status strip wraps naturally without horizontal overflow.
+- The four existing tournament-wide pills are in the **first header row**, right aligned ahead of the page intro and **fixed to the browser viewport at the top-right on desktop**, so they never move as the page scrolls or the active section changes.
+- On narrower widths, the cards and stages stack; the status strip remains **fixed** above the mobile navigation and wraps naturally, with reserved layout space to avoid overlap.
 - The pill content and IDs, all event input IDs and actions, bracket engine, private local state and exact FFTT branding remain unchanged. The table summary is labeled **Tables configured** instead of suggesting table reservations.
-- Automated tests verify desktop spatial relationships, sticky alignment, all four pills, mobile layout and existing tournament controls.
+- Automated tests verify desktop spatial relationships, viewport-fixed alignment before and after scrolling, all four pills, mobile layout and existing tournament controls.
 
 **This remains an unapproved design candidate.**
 
