@@ -197,6 +197,19 @@ with sync_playwright() as p:
     page.locator("#addPlayerForm .rating-choice").nth(2).click()
     assert page.locator("#ratingHint").inner_text() == "Level 3 · Intermediate"
     assert page.get_by_role("group", name="FFTT rating").count() == 1
+    rating_layout = page.evaluate("""() => {
+      const r = document.querySelector('.add-rating-fieldset').getBoundingClientRect();
+      const scale = document.querySelector('.add-rating-fieldset .rating-scale').getBoundingClientRect();
+      const status = document.querySelector('.add-status-field').getBoundingClientRect();
+      const first = document.querySelector('.add-rating-fieldset .rating-choice span').getBoundingClientRect();
+      return {ratingTop:r.top, ratingBottom:r.bottom, scaleWidth:scale.width,
+        statusTop:status.top, statusWidth:status.width, firstButtonWidth:first.width};
+    }""")
+    assert rating_layout["statusTop"] >= rating_layout["ratingBottom"] + 10, rating_layout
+    assert rating_layout["scaleWidth"] >= 250, rating_layout
+    assert rating_layout["firstButtonWidth"] >= 40, rating_layout
+    assert rating_layout["statusWidth"] <= 391, rating_layout
+    print("PASS full-row segmented rating, clear separation from status")
     print("PASS keyboard-operable add-player five-level rating selector")
 
     page.locator("#bulkPlayers").fill(
@@ -259,6 +272,17 @@ with sync_playwright() as p:
     print("PASS all seven tabs share cool-neutral approved color system")
     page.locator('nav.tabs button[data-tab="finale"]').click()
     assert page.locator("#finalePills .pill").count() == 2
+    actions = page.locator(".finale-actions")
+    assert actions.evaluate("el => getComputedStyle(el).display") == "flex"
+    assert actions.evaluate("el => parseFloat(getComputedStyle(el).columnGap)") >= 15
+    suggest = page.locator("#suggestPartnersBtn").bounding_box()
+    save = page.locator("#saveFinaleBtn").bounding_box()
+    assert suggest is not None and save is not None
+    assert (
+      save["x"] - (suggest["x"] + suggest["width"]) >= 15
+      or save["y"] >= suggest["y"] + suggest["height"] + 10
+    ), (suggest,save)
+    print("PASS balanced-partner and Save teams buttons have deliberate spacing")
     page.locator('nav.tabs button[data-tab="data"]').click()
     assert page.locator("#dataPills .pill").count() == 3
     assert page.locator("#dataPills").get_by_text("No cloud sync").count() == 1
@@ -289,11 +313,27 @@ with sync_playwright() as p:
     mobile_rating = page.locator(".rating-scale").first.bounding_box()
     assert mobile_rating is not None and mobile_rating["width"] <= 390
     assert page.locator('#addPlayerForm input[name="addRating"]').count() == 5
+    rating_mobile = page.locator(".add-rating-fieldset").bounding_box()
+    status_mobile = page.locator(".add-status-field").bounding_box()
+    assert rating_mobile is not None and status_mobile is not None
+    assert status_mobile["y"] >= rating_mobile["y"] + rating_mobile["height"] + 10
+    assert rating_mobile["width"] <= 390
+    print("PASS mobile rating and status occupy separate rows")
     print("PASS mobile segmented rating controls and developer credit")
     page.locator('nav.tabs button[data-tab="data"]').click()
     assert page.locator("#dataPills").is_visible()
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 2")
     print("PASS contextual pills fit mobile view")
+    page.locator('nav.tabs button[data-tab="finale"]').click()
+    a_btn = page.locator("#suggestPartnersBtn").bounding_box()
+    b_btn = page.locator("#saveFinaleBtn").bounding_box()
+    assert a_btn and b_btn
+    assert (
+      b_btn["x"] - (a_btn["x"] + a_btn["width"]) >= 11
+      or b_btn["y"] >= a_btn["y"] + a_btn["height"] + 10
+    ), (a_btn,b_btn)
+    assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 2")
+    print("PASS mobile doubles actions wrap with adequate separation")
 
     page.locator('nav.tabs button[data-tab="setup"]').click()
     feature_box = page.locator(".overview-feature").bounding_box()
