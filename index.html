@@ -417,37 +417,60 @@ hr{border:0;border-top:1px solid #ebe6f2;margin:21px 0}
     <span class="pill warn" id="consolationStatus">Consolation not ready</span>
   </div>
 <section id="setup" class="panel active print-me">
-    <div class="grid">
-      <div class="card span-12">
-        <div class="kpis">
-          <div class="kpi"><strong id="kpiPlayers">0</strong><span>checked-in players</span></div>
-          <div class="kpi"><strong id="kpiChamp">0</strong><span>championship matches done</span></div>
-          <div class="kpi"><strong id="kpiCons">0</strong><span>consolation entrants</span></div>
-          <div class="kpi"><strong id="kpiTables">2</strong><span>active tables</span></div>
-        </div>
+  <div class="overview-feature">
+    <div class="overview-feature-copy">
+      <span class="feature-overline"><span class="feature-spark" aria-hidden="true"></span> FORGING FELLOWSHIP · TOURNAMENT DESK</span>
+      <h2>Ready for the<br><em>next great match.</em></h2>
+      <p>Everything you need to prepare the Games, organize players, and keep the competition moving.</p>
+      <div class="feature-actions no-print">
+        <button type="button" class="feature-primary" data-go="players">Manage players <span aria-hidden="true">↗</span></button>
+        <button type="button" class="feature-secondary" data-go="desk">Open Match Desk <span aria-hidden="true">→</span></button>
       </div>
-      <div class="card span-7">
-        <h2>Event setup</h2>
-        <div class="formrow">
-          <div class="f8"><label for="eventName">Event name</label><input id="eventName" value="Forging Fellowship Table Tennis Games"></div>
-          <div class="f4"><label for="eventDate">Date</label><input id="eventDate" type="date"></div>
-          <div class="f4"><label for="tableCount">Tables in use</label><input id="tableCount" type="number" min="1" max="12" value="2"></div>
-          <div class="f4"><label for="regularFormat">Regular matches</label><select id="regularFormat"><option value="3">Best of 3</option><option value="5">Best of 5</option></select></div>
-          <div class="f4"><label for="finalFormat">Singles final</label><select id="finalFormat"><option value="5">Best of 5</option><option value="3">Best of 3</option></select></div>
-          <div class="f12"><button class="primary" type="button" id="saveSetupBtn">Save event setup</button></div>
-        </div>
-      </div>
-      <div class="card span-5">
-        <h2>Format in this manager</h2>
-        <div class="notice">
-          Championship bracket + consolation for players who lose their <strong>first actual championship match</strong>. Ratings are internal planning data.
-        </div>
-        <p class="help">The consolation bracket is intentionally generated only after its entrant pool can be reviewed. It is not a blind automatic drop-down bracket.</p>
-        <p class="help">The finale pairs the two championship finalists with selected beginner-to-intermediate consolation players.</p>
-      </div>
-
     </div>
-  </section>
+    <div class="overview-feature-art" aria-hidden="true">
+      <div class="feature-orbit feature-orbit-one"></div><div class="feature-orbit feature-orbit-two"></div>
+      <div class="feature-ball"></div><div class="feature-playline"></div>
+    </div>
+  </div>
+
+  <div class="overview-content">
+    <div class="overview-settings card">
+      <div class="section-heading">
+        <div class="section-icon" aria-hidden="true">01</div>
+        <div><span class="section-overline">EVENT DETAILS</span><h2>Set up your tournament</h2></div>
+      </div>
+      <p class="section-description">Choose the event details and match rules before creating the bracket.</p>
+      <div class="formrow">
+        <div class="f8"><label for="eventName">Event name</label><input id="eventName" value="Forging Fellowship Table Tennis Games"></div>
+        <div class="f4"><label for="eventDate">Event date</label><input id="eventDate" type="date"></div>
+        <div class="f4"><label for="tableCount">Tables in use</label><input id="tableCount" type="number" min="1" max="12" value="2"></div>
+        <div class="f4"><label for="regularFormat">Regular matches</label><select id="regularFormat"><option value="3">Best of 3</option><option value="5">Best of 5</option></select></div>
+        <div class="f4"><label for="finalFormat">Singles final</label><select id="finalFormat"><option value="5">Best of 5</option><option value="3">Best of 3</option></select></div>
+        <div class="f12 overview-save-row"><button class="primary" type="button" id="saveSetupBtn">Save event setup <span aria-hidden="true">→</span></button></div>
+      </div>
+    </div>
+    <div class="overview-side">
+      <section class="overview-snapshot card" aria-label="Tournament at a glance">
+        <div class="side-section-heading"><span class="section-overline">LIVE SNAPSHOT</span><h2>At a glance</h2></div>
+        <div class="kpis">
+          <div class="kpi"><strong id="kpiPlayers">0</strong><span>Checked-in players</span></div>
+          <div class="kpi"><strong id="kpiChamp">0</strong><span>Championship matches</span></div>
+          <div class="kpi"><strong id="kpiCons">0</strong><span>Consolation entrants</span></div>
+          <div class="kpi"><strong id="kpiTables">2</strong><span>Active tables</span></div>
+        </div>
+      </section>
+      <section class="overview-format card">
+        <div class="side-section-heading"><span class="section-overline">HOW IT WORKS</span><h2>Three stages. More play.</h2></div>
+        <ol class="format-steps">
+          <li><span class="format-index" aria-hidden="true">1</span><div><strong>Championship</strong><p>Every player begins on the championship side.</p></div></li>
+          <li><span class="format-index" aria-hidden="true">2</span><div><strong>Consolation</strong><p>Players who lose their first actual match get another opportunity.</p></div></li>
+          <li><span class="format-index" aria-hidden="true">3</span><div><strong>Doubles finale</strong><p>Finalists pair with selected consolation players.</p></div></li>
+        </ol>
+        <p class="format-footnote">Ratings stay private. Consolation matchups are reviewed before the bracket is built.</p>
+      </section>
+    </div>
+  </div>
+</section>
 
   <section id="players" class="panel">
     <div class="grid">
