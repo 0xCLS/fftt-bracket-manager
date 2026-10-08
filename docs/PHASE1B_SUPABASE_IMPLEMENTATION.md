@@ -1,6 +1,6 @@
 # Phase 1B — Supabase Prototype and Security Milestones
 
-_Status: October 8, 2026. Milestone **B1 schema foundation staged on a feature branch only**; no remote project provisioned, migrations applied, SQL policies exercised against Postgres, authenticated score submission implemented, or app connected. All future milestones must use synthetic data exclusively. Production cutover is **not approved**._
+_Status: October 8, 2026. Milestone **B1 schema foundation staged on a feature branch only**. Migration and 25 pgTAP security/shape checks **passed against an isolated local Supabase PostgreSQL instance in GitHub Actions** ([run #1](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/37807810943)). No hosted project provisioned, authenticated score submission implemented, real-user login tested, or app connected. All future milestones must use synthetic data exclusively. Production cutover is **not approved**._
 
 ## Source precedence
 
@@ -65,7 +65,8 @@ For public results, `public.fftt_published_events` and `public.fftt_published_ma
 **B1 — isolated schema and privilege foundation** (this branch)
 - [x] Review Phase 1A, current engine and FFTT3 private format/rating sources.
 - [x] Stage schema migration, public allowlist projection, static guardrail test and pgTAP permission test.
-- [ ] Create/connect isolated Free project, apply migration to local or remote *development* database, and execute pgTAP tests there.
+- [x] Apply migration to isolated local Supabase Postgres in GitHub Actions and run 25 pgTAP permission/shape checks — **PASS**, [run #1](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/37807810943).
+- [ ] Organizer creates/connects isolated hosted Free project, and re-runs reviewed migrations and security tests there.
 - [ ] Verify `anon`, unaffiliated authenticated, organizer and scorekeeper access in a real authenticated database context. No role is assumed functional at B1.
 - [ ] Verify existing browser/Phase 1A regressions on the PR head before merging.
 
@@ -90,13 +91,13 @@ For public results, `public.fftt_published_events` and `public.fftt_published_ma
 
 The **static** standard-library tests (`tests/test_phase1b_schema.py`) check contract/key correspondence, RLS declarations and SQL grants in source, no direct write grants, no exposed private table references, and no active score RPC. They do *not* run SQL.
 
-The **database** tests (`supabase/tests/phase1b_permissions.sql`) require Supabase PostgreSQL + pgTAP and check actual schema/table privileges, enabled RLS, public view fields/invoker mode, write denial, empty publication and audit trigger. The first successful PostgreSQL run must be recorded before reporting B1 security validated. Later auth/RPC/concurrency tests are separate and mandatory.
+The **database** tests (`supabase/tests/phase1b_permissions.sql`) require Supabase PostgreSQL + pgTAP and check actual schema/table privileges, enabled RLS, public view fields/invoker mode, write denial, empty publication and audit trigger. The first isolated PostgreSQL migration and 25 privilege/projection checks passed in GitHub Actions ([evidence](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/37807810943)). This validates B1 database structure and grants **only**; it is not proof of JWT-backed organizer/scorekeeper login, B2 transactional operations or hosted deployment. Later auth/RPC/concurrency tests are separate and mandatory.
 
 Existing `tests/test_phase1a_contract.py`, `tests/ui_smoke.py`, `tests/safety.py` and `tests/rehearsal.py` remain mandatory regressions. No implementation changes to `index.html` are part of B1.
 
 ## Known limitations and deferred decisions
 
-- No linked Supabase project, Auth accounts, permission-checked RPCs, server score validation, population of public data, Realtime, shared backups, integration tests or live synchronization exist at B1.
+- No linked **hosted** Supabase project, real Auth accounts, permission-checked RPCs, server score validation, population of public data, Realtime, shared backups, authenticated/concurrency integration tests or live synchronization exist at B1. The isolated local PostgreSQL/pgTAP integration checks **have** passed.
 - B1 event schema fixes regular/final best-of values to current rules; a future approved rules change requires a separate migration.
 - A development RLS/SQL success does not automatically authorize a real participant import, spectator name publication, paid tier or event-day cutover.
 - A later cloud design must model bracket builds/rebuilds and dependency repair explicitly; do not reuse v0.1 browser Undo as a database command.
