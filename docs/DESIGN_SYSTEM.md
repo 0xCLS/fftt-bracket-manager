@@ -1,116 +1,53 @@
-# FFTT Bracket Manager — Interface Design System
+# FFTT Bracket Manager — Design System
 
-_Last revised October 8, 2026._
+_Last updated: October 8, 2026._
 
-## Approved visual direction
+## Approved direction
 
-A clean, airy, **light dashboard** inspired by the [Figma Design System by Facundo Almiron](https://www.behance.net/gallery/125691923/Figma-Design-System) (Behance, 2021). Use that work as *visual inspiration*, not as a source for copying proprietary assets or components. BitSight's system remains a secondary reference for consistent control states and reusable design rules.
+**Christopher approved the cool-neutral/charcoal/pastel color direction on October 8, 2026** ("I think this is it") following the Overview-only visual preview. That approval supersedes the older plum/lavender/blue design experiments. The same language now applies to **all seven Bracket Manager screens**, while the accepted Overview bento composition remains unchanged.
 
-**Christopher's explicit direction:** The only mandatory FFTT branding is (1) the existing circular table-tennis emblem, preserved, and (2) the exact visible attribution **Developed by Chris Smith**. The previous navy/yellow color palette, typography, sidebar background, and flyer-derived visual language are **no longer requirements**. This supersedes the earlier branding instruction in this document and older roadmap notes.
+Inspiration: the neutral, restrained surfaces and pastel accents in Christopher's most recent website reference, informed by the earlier [Facundo Almiron Figma Design System](https://www.behance.net/gallery/125691923/Figma-Design-System). References are inspiration, not templates or license to copy third-party assets.
 
-## Overview-only color exploration — October 8, 2026
+The **only fixed FFTT branding** is the existing embedded circular FFTT emblem and the exact on-screen attribution **Developed by Chris Smith**. Keep both on desktop and mobile. Attribution need not print on bracket reports.
 
-**Status: candidate for Christopher's visual review, not yet approved for the rest of the app.**
+## Palette and visual tokens
 
-Christopher supplied a separate modern, neutral-and-pastel product design reference. We have applied a coherent interpretation **only while Overview is active**. Do not silently apply these colors to Players, brackets, Match Desk, or other screens until he explicitly approves this preview.
-
-- **Canvas:** cool light-gray `#f2f3f5`; **navigation:** off-white `#fbfcfd`.
-- **Typography and primary actions:** charcoal `#29313c`, replacing the purple treatment on Overview; secondary copy uses muted slate.
-- **Four KPI bento tiles:** ice blue `#d1eff5`, soft lavender `#e9d7f3`, pastel lime `#bbd98f`, and butter yellow `#f7e99b`.
-- **Event setup:** a simple floating white workspace. Three tournament stages use quieter tinted background tiles (blue/neutral, lavender/neutral, lime/neutral).
-- **Status pills:** remain pinned to the viewport top-right. Their established meanings are unchanged and the Overview version uses subdued pastel semantic colors.
-- **Buttons:** charcoal primary buttons with rounded pill edges, without rounding the rectangular cards. The emblem and **Developed by Chris Smith** remain unchanged.
-- **Isolation:** the CSS uses `body:has(#setup.panel.active)` to scope the preview so the previous interface returns immediately on the six other tabs. Only styling changed; no data schema, scoring rule or JS behavior changed.
-- **Validation:** desktop and mobile browser tests check the actual colors, responsive layout, fixed status placement, saved tournament behavior and that non-Overview screens retain their existing palette.
-
-This experiment supersedes the earlier *Overview-only* purple surface recommendations when Overview is active. The historical style guidance below still describes the current six other screens and is not a directive to implement the older purple styling on Overview.
-
-## Current implementation
-
-The application remains self-contained in `index.html`, with no external UI framework, remote font, stylesheet, or server required to render the organizer screen.
-
-| Purpose | CSS token | Current palette |
+| Usage | Color / token | Guidance |
 | --- | --- | --- |
-| Page canvas | `--canvas` | `#f3f4f9`, lavender-gray |
-| Primary card | `--surface`, `--surface-elevated` | White, subtly raised |
-| Inset surface | `--surface-inset` | `#faf9fd`, used sparingly for notices and labels |
-| Secondary surface | `--surface-soft` | `#faf9fc`, nearly white |
-| Page and section headings | `--heading`, `--heading-deep` | `#65538e`, deep purple |
-| Small header marker | `--gold` | `#f3bb35`, gold |
-| Main text | `--ink`, `--ink-strong` | Slate / deep ink |
-| Subtle text | `--muted` | Muted blue-gray |
-| Borders | `--line`, `--line-strong` | Pale lavender-gray |
-| Primary interactions | `--accent`, `--accent-dark` | Indigo blue `#586dcf` |
-| Focus | `--focus` | Purple `#6c60a9` |
-| Information / secondary accent | `--teal` | Muted teal `#3b92a2` |
-| Success | `--positive` | Green |
-| Caution | `--warning` | Amber |
-| Destructive action | `--negative` | Red |
+| Canvas | `#f2f3f5` | Cool, neutral gray |
+| Sidebar | `#fbfcfd` | Off-white; charcoal navigation and line icons |
+| Content surfaces | `#fff` | Simple white cards, minimal borders |
+| Main text and primary buttons | `#29313c` | Charcoal, not the superseded purple |
+| Secondary text | muted slate `#586672` / `#63707a` | Maintain adequate contrast |
+| Ice blue | `#d1eff5` | Overview KPI tile; useful neutral-information accent |
+| Soft lavender | `#e9d7f3` | Overview KPI tile; low-intensity accent |
+| Pastel lime | `#bbd98f` | Overview KPI tile |
+| Butter yellow | `#f7e99b` | Overview KPI tile |
+| Informational semantic pill | `#e6f3f7` | Blue/cyan with readable dark text |
+| Good / complete semantic pill | `#e3f2e0` | Soft green |
+| Warning / not ready semantic pill | `#fff4d6` | Soft amber |
+| Focus | `#538da1` | Teal-blue visible keyboard focus |
 
-A minimal design should use generous white space between separate card tiles, consistent 5–6px corners (except true pill controls), soft low-contrast shadows and mostly white content surfaces. Avoid visually heavy box-within-box treatments. Colors are semantic and may evolve with visual review.
+Use pastels selectively for useful distinctions. Do **not** tint every panel simply for decoration.
 
-## Component guidelines
+## Layout
 
-- **Brand:** Keep the currently embedded FFTT emblem as the sidebar logo and favicon, and preserve **Developed by Chris Smith** in the organizer view on desktop and mobile. The credit stays off printed brackets.
-- **Navigation:** A **lighter medium-plum** sidebar (`#56496e`) with a consistent 18px stroke-icon beside each of the seven text labels. Maintain adequate contrast for text, active states, and the sidebar controls. On narrow screens it becomes horizontally scrollable.
-- **Cards / KPIs:** Standalone white tiles with **6px corner radius** (5px on compact controls), barely visible borders and one restrained soft shadow. No decorative top bars. The compact 2×2 KPI snapshot stays beside the setup workspace.
-- **Surface hierarchy:** Follow the Figma reference's **floating-card** language. Outer panels and match cards are independent white rectangles with restrained elevation. Do **not** enclose brackets or match queues in additional rounded lavender trays. Tables use flat white backgrounds, subtle row separators, and minimal chrome. Muted lavender is for background canvas and occasional semantic notices, not every nested container.
-- **Headings:** Use the approved screenshot's purple for major page headings and section headings, with a small gold dot in the EVENT OPERATIONS eyebrow.
-- **Buttons:** Indigo-blue for primary actions, unobtrusive white secondary controls, neutral ghost actions, and clear red destructive controls.
-- **Inputs, checkboxes, radio choices:** Consistent height, visible labels, generous touch targets, selected/hover/focus/disabled states.
-- **FFTT rating scale:** Represent Levels 1–5 as a compact segmented *native radio group* in Add Player and in the roster. Show the selected number in purple; the Add Player control displays the working skill description (Beginner, Recreational, Intermediate, Strong Intermediate, Advanced / Competitive). Preserve private/internal status, the existing numeric rating data model, keyboard navigation, bulk-entry compatibility and Undo. Keep the separate provisional/established status control.
-- **Status labels:** Reuse the existing top-right semantic pill component as the **shared status language across the app**. Global pills report autosave, total checked-in players, completed matches and consolation state on every screen. Contextual pill rows report accurate per-section states (registration/check-in, championship progress, consolation readiness, playable matches/table count, finale partners, browser-local backups). Match cards use `Ready`, `Waiting`, `Completed`, or `BYE`; Match Desk uses `Ready to play` and table pills. Never color-code a status without written text. Do not misrepresent table configuration as reserved/assigned tables or browser autosave as cloud sync.
-- **Bracket / match desk:** Prioritize readable player names, results and state changes above decorative treatment.
-- **Dialog:** Clear winner selection and scoring controls, clear cancel/save actions, keyboard focus.
-- **Responsiveness and print:** Verify common desktop and phone widths and preserve print behavior. No decorative components just because a reference depicts them.
+- **Seven-screen navigation:** Off-white left rail, one consistent line icon next to each label. On narrow screens, navigation scrolls horizontally.
+- **Global tournament status:** Four compact semantic pills are **fixed to the viewport's top-right** (not merely sticky in page content). On phones, they wrap above navigation without overlap. Per-screen contextual pills continue reporting existing tournament states.
+- **Overview:** Unboxed charcoal header with two working navigation buttons; white Event Setup workspace; four **independent** blue/lavender/lime/yellow KPI tiles in a 2×2 grid; full-width three-stage guide in subtle pastel panels below. Preserve the accepted composition and spacing.
+- **Other six sections:** Same cool-gray canvas, off-white sidebar, charcoal headings/buttons, simple white forms and cards. Use the shared restrained pill and pastel semantics for roster, bracket, Match Desk, finale and recovery. Do not imply table reservations, synced/cloud saving or unimplemented result tracking.
+- **Card surfaces:** Mostly white, 6px corner radius (5px compact surfaces), quiet borders and a single subdued shadow. No bulky nested lavender trays.
+- **Buttons:** Charcoal primary actions, white or lightly tinted secondary actions; soft pill shape is suitable for action buttons, not all content cards.
+- **Forms:** Clear labels, hover/selected/focus/disabled states and readable select chevrons. FFTT Level 1–5 ratings use five native, keyboard-accessible radio segments. The provisional/established selector remains separate.
+- **Brackets/queue/dialogs:** Flat readable round labels, white match/queue/dialog surfaces, subtle meaningful semantic accents and readable player names/scores. Keep scrollable brackets, print output and score entry usable at event time.
+- **Print:** Preserve clear, predominantly white printed brackets and controls hidden from print where appropriate.
 
-## Structural Overview redesign — October 8, 2026
+## Scope and safeguards
 
-The previous iterations changed colors, shadows and radii but retained essentially the same screen structure, which Christopher found insufficient. **Visual differentiation now requires a layout redesign, not another cosmetic CSS pass.**
+The app remains self-contained in `index.html` on GitHub Pages. It stores event state **locally in the browser** unless a future backend is deliberately added; the color rollout does not implement cloud sync, live spectator feeds or volunteer scoring.
 
-The new Overview introduces:
+The October 8 rollout changed CSS only and did not change HTML controls, event fields, tournament logic, save format, Undo, backups or the embedded emblem. Automated desktop/mobile UI tests and safety/bracket rehearsal suites are the release checks.
 
-- A **distinct plum navigation rail** with seven lightweight line icons for Overview, Players, Championship, Consolation, Match Desk, Doubles Finale and Data & Restore. The FFTT emblem and exact `Developed by Chris Smith` credit remain.
-- A **plain, unboxed Overview header** retaining the headline, explanation, and working Players/Match Desk actions. Christopher explicitly rejected the large purple hero background and its decorative ball/orbits.
-- A full-height **event-configuration workspace** on the left, with labeled fields and the original Save event setup control.
-- A compact **2×2 live snapshot** on the right, reusing all four existing KPI elements and IDs.
-- A separate **three-stage tournament guide** spanning the full row **below** the event settings and 2×2 snapshot, with horizontally arranged stages on large screens and a vertical stack on phones. This avoids the tall right-hand card and unused left-hand space visible in the organizer's October 8 screenshot.
+**Status:** Color direction approved by Christopher. Global application of the palette is implemented. Further visual refinements may be requested, but do not revert to plum/lavender or treat the earlier Overview-only experiment as a current constraint.
 
-All seven sections, player form operations, IDs and the existing tournament JavaScript are retained. The Overview has a new spatial hierarchy, deliberately different from the original four equal stat cards + two equally styled content boxes.
-
-**Pending approval:** this is a bold concept candidate, not the approved final look. Ask Christopher to judge the live desktop and mobile composition before proceeding to features or further reskinning.
-
-
-### User review correction — October 8, 2026
-
-Christopher liked the new split Overview composition but explicitly requested (a) removal of the purple banner/background at the top, (b) icons beside each sidebar menu item, and (c) noticeably sharper rectangular card edges. This overrides the earlier hero background and illustration direction. The Overview remains an unboxed title and actions above the event workspace, snapshot, and format guide. Treat the latest rendered UI as a **design candidate pending approval**.
-
-### Current design feedback — October 8, 2026: lighter sidebar and pills
-
-Christopher approved the general style of the top-right global status pills and requested that it be used throughout the app. He also found the left navigation rail too dark. The color of the rail was lightened from `#2c2641` to `#56496e`, with accompanying icon, text and button contrast adjustments. The same `.pill` classes now appear in context-specific summaries for the six non-Overview tabs, on Match Desk cards and table labels, in bracket match headers, and on selected doubles teams. Pill text is derived from existing tournament state. No new tournament fields, synchronization or table assignment capability was introduced.
-
-The established 6px card corners, 5px compact corners, FFTT emblem, and exact attribution `Developed by Chris Smith` remain unchanged. **Visual approval is still pending.**
-
-### Overview balance and top-right status correction — October 8, 2026
-
-The previous two-column layout placed a tall format guide below the live snapshot while leaving unused space under Event Setup. Christopher specifically objected to the arrangement and asked that the four global status pills sit at the **top right**.
-
-- Overview now uses a **two-row composition**: Event Setup and Live Snapshot side by side, followed by a full-width Three Stages guide whose steps are horizontal on desktop.
-- The four existing tournament-wide pills are in the **first header row**, right aligned ahead of the page intro and **fixed to the browser viewport at the top-right on desktop**, so they never move as the page scrolls or the active section changes.
-- On narrower widths, the cards and stages stack; the status strip remains **fixed** above the mobile navigation and wraps naturally, with reserved layout space to avoid overlap.
-- The pill content and IDs, all event input IDs and actions, bracket engine, private local state and exact FFTT branding remain unchanged. The table summary is labeled **Tables configured** instead of suggesting table reservations.
-- Automated tests verify desktop spatial relationships, viewport-fixed alignment before and after scrolling, all four pills, mobile layout and existing tournament controls.
-
-**This remains an unapproved design candidate.**
-
-## Acceptance and safeguards
-
-This is **Phase 0 visual work** only. The existing tournament rules, score validation, seeding, backup data format, and local browser save behavior must remain functional. No real contact data belongs in this public repository.
-
-Before calling the phase done:
-
-1. Review all seven existing screens in empty and populated states; desktop and narrow-screen layouts.
-2. Check keyboard access, focus, labels, text clipping, long player names, and bracket horizontal scrolling.
-3. Verify navigation, scoring dialogs, undo, JSON export/import and print as appropriate.
-4. Confirm the live GitHub Pages deployment reflects the intended code.
-5. Request Christopher's explicit visual approval before starting the next roadmap feature phase.
+For historical decisions and superseded iterations, see Git history, `ROADMAP.md` and the FFTT project maintenance changelog.
