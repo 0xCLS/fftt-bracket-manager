@@ -39,7 +39,10 @@ with sync_playwright() as p:
     assert page.get_by_text("Developed by Chris Smith").count() == 1
     assert page.locator(".brand-emblem").count() == 1
     assert page.locator("nav.tabs button").count() == 7
-    print("PASS app and brand render")
+    assert page.locator("nav.tabs button .nav-icon").count() == 7
+    assert page.locator("nav.tabs button .nav-index").count() == 0
+    assert page.locator("nav.tabs button .nav-icon[aria-hidden='true']").count() == 7
+    print("PASS app branding and seven accessible icon navigation entries")
 
     # Major visual composition: this is a genuinely new overview, not only
     # different background and corner-radius tokens.
@@ -58,13 +61,18 @@ with sync_playwright() as p:
         heroWidth: hero.width, heroHeight: hero.height,
         setupX: setup.x, snapshotX: snapshot.x,
         sidebar: getComputedStyle(document.querySelector('.topbar')).backgroundColor,
-        hero: getComputedStyle(document.querySelector('.overview-feature')).backgroundColor
+        hero: getComputedStyle(document.querySelector('.overview-feature')).backgroundColor,
+        heroImage: getComputedStyle(document.querySelector('.overview-feature')).backgroundImage,
+        heroCorner: parseFloat(getComputedStyle(document.querySelector('.overview-feature')).borderTopLeftRadius),
+        heroDecoration: !!document.querySelector('.overview-feature-art')
       };
     }""")
-    assert layout["heroHeight"] > 220 and layout["heroWidth"] > 650, layout
+    assert 90 < layout["heroHeight"] < 270 and layout["heroWidth"] > 650, layout
+    assert layout["hero"] == "rgba(0, 0, 0, 0)" and layout["heroImage"] == "none", layout
+    assert layout["heroCorner"] == 0 and not layout["heroDecoration"], layout
     assert layout["snapshotX"] > layout["setupX"] + 250, layout
     assert layout["sidebar"] != "rgb(255, 255, 255)", layout
-    print("PASS new overview hero, dark navigation and asymmetrical workspace")
+    print("PASS unboxed header, icon navigation and asymmetrical Overview")
     page.locator('.overview-feature [data-go="players"]').click()
     assert page.locator("#players").is_visible()
     page.locator('nav.tabs button[data-tab="setup"]').click()
@@ -93,7 +101,7 @@ with sync_playwright() as p:
       };
     }""")
     assert surfaces["card"]["bg"] == "rgb(255, 255, 255)", surfaces
-    assert surfaces["card"]["radius"] <= 12 and surfaces["kpi"]["radius"] <= 12, surfaces
+    assert surfaces["card"]["radius"] <= 6 and surfaces["kpi"]["radius"] <= 6, surfaces
     assert surfaces["card"]["image"] == "none", surfaces
     assert surfaces["card"]["shadow"] != "none", surfaces
     assert surfaces["bracket"]["border"] == 0, surfaces
