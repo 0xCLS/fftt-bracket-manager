@@ -80,7 +80,31 @@ with sync_playwright() as p:
     assert layout["hero"] == "rgba(0, 0, 0, 0)" and layout["heroImage"] == "none", layout
     assert layout["heroCorner"] == 0 and not layout["heroDecoration"], layout
     assert layout["snapshotX"] > layout["setupX"] + 250, layout
-    assert layout["sidebar"] == "rgb(86, 73, 110)", layout
+    assert layout["sidebar"] == "rgb(251, 252, 253)", layout
+    palette = page.evaluate("""() => {
+      const bg = selector => getComputedStyle(document.querySelector(selector)).backgroundColor;
+      const color = selector => getComputedStyle(document.querySelector(selector)).color;
+      return {
+        canvas: bg('body'),
+        headline: color('.overview-feature h2'),
+        settings: bg('.overview-settings'),
+        snapshotOuter: bg('.overview-snapshot'),
+        kpis: [...document.querySelectorAll('.overview-snapshot .kpi')].map(el => getComputedStyle(el).backgroundColor),
+        stages: [...document.querySelectorAll('.overview-format .format-steps li')].map(el => getComputedStyle(el).backgroundColor),
+        primary: bg('.overview-save-row button')
+      };
+    }""")
+    assert palette["canvas"] == "rgb(242, 243, 245)", palette
+    assert palette["settings"] == "rgb(255, 255, 255)", palette
+    assert palette["snapshotOuter"] == "rgba(0, 0, 0, 0)", palette
+    assert palette["headline"] == "rgb(41, 49, 60)", palette
+    assert palette["kpis"] == [
+      "rgb(209, 239, 245)", "rgb(233, 215, 243)",
+      "rgb(187, 217, 143)", "rgb(247, 233, 155)"
+    ], palette
+    assert len(set(palette["stages"])) == 3, palette
+    assert palette["primary"] == "rgb(41, 49, 60)", palette
+    print("PASS cool-neutral pastel Overview palette and independently colored KPI tiles")
     assert layout["format"]["y"] >= max(layout["setupBottom"],layout["snapshotBottom"]) - 1, layout
     assert layout["format"]["width"] >= layout["setupWidth"] + layout["snapshotWidth"], layout
     assert layout["formatColumns"].count("px") == 3, layout
@@ -101,7 +125,11 @@ with sync_playwright() as p:
     print("PASS lightened plum sidebar and asymmetrical Overview")
     page.locator('.overview-feature [data-go="players"]').click()
     assert page.locator("#players").is_visible()
+    assert page.locator(".topbar").evaluate("el => getComputedStyle(el).backgroundColor") == "rgb(86, 73, 110)"
+    assert page.locator("body").evaluate("el => getComputedStyle(el).backgroundColor") != "rgb(242, 243, 245)"
+    print("PASS other sections retain original navigation and canvas palette")
     page.locator('nav.tabs button[data-tab="setup"]').click()
+    assert page.locator(".topbar").evaluate("el => getComputedStyle(el).backgroundColor") == "rgb(251, 252, 253)"
     assert feature.is_visible()
     print("PASS overview hero action routes to Players and back")
 
@@ -276,6 +304,12 @@ with sync_playwright() as p:
     page.wait_for_timeout(120)
     mobile_after_scroll = page.locator(".statusline").bounding_box()
     assert mobile_after_scroll is not None and abs(mobile_after_scroll["y"] - mobile_pills["y"]) < 1, (mobile_pills,mobile_after_scroll)
+    assert page.locator(".overview-snapshot .kpi").count() == 4
+    mobile_tiles = page.locator(".overview-snapshot .kpi").all()
+    assert all(tile.is_visible() for tile in mobile_tiles)
+    assert page.locator(".overview-format .format-steps li").count() == 3
+    assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 2")
+    print("PASS pastel Overview tiles and stages fit phone viewport")
     print("PASS four global pills remain anchored to viewport on desktop/mobile")
 
 
