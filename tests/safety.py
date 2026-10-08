@@ -23,6 +23,12 @@ with sync_playwright() as p:
  page.locator('#resultScore').fill('11-8, 8-11, 11-7'); page.locator('#resultForm button[type=submit]').click()
  assert sum(x['resolved'] for r in get()['championship']['rounds'] for x in r)==1
  print('PASS accept valid 2/3 score')
+ page.locator('#undoBtn').click()
+ assert sum(x['resolved'] for r in get()['championship']['rounds'] for x in r)==0
+ print('PASS undo previously saved result')
+ page.locator('[data-tab=desk]').click();page.locator('.record-result').first.click();page.locator('#winnerChoices input').first.check()
+ page.locator('#resultScore').fill('11-8, 8-11, 11-7');page.locator('#resultForm button[type=submit]').click()
+ assert sum(x['resolved'] for r in get()['championship']['rounds'] for x in r)==1
  page.locator('[data-tab=championship]').click()
  accepts.append(False);page.locator('#rebuildChampBtn').click()
  assert sum(x['resolved'] for r in get()['championship']['rounds'] for x in r)==1
@@ -53,4 +59,9 @@ with sync_playwright() as p:
  assert get()==pre
  assert seen[-1][0]=='alert' and 'do not match the selected winner' in seen[-1][1]
  print('PASS reject inconsistent score/winner')
+ page.locator('#cancelResultBtn').click()
+ page.locator('[data-tab=data]').click();page.locator('#resetBtn').click()
+ assert seen[-1][0]=='confirm' and 'Reset the entire event' in seen[-1][1]
+ assert not get()['players'] and get()['championship'] is None
+ print('PASS confirmed reset clears synthetic players and event')
  b.close()
