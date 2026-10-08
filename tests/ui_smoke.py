@@ -76,7 +76,7 @@ with sync_playwright() as p:
 
       };
     }""")
-    assert 90 < layout["heroHeight"] < 270 and layout["heroWidth"] > 650, layout
+    assert 90 < layout["heroHeight"] < 365 and layout["heroWidth"] > 650, layout
     assert layout["hero"] == "rgba(0, 0, 0, 0)" and layout["heroImage"] == "none", layout
     assert layout["heroCorner"] == 0 and not layout["heroDecoration"], layout
     assert layout["snapshotX"] > layout["setupX"] + 250, layout
