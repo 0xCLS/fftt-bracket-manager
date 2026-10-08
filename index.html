@@ -19,7 +19,7 @@
  --heading:#65538e;--heading-deep:#504376;--gold:#f3bb35;
  --shadow:0 3px 10px rgba(67,57,96,.065),0 1px 3px rgba(67,57,96,.035);
  --shadow-lift:0 7px 20px rgba(67,57,96,.10),0 2px 5px rgba(67,57,96,.045);
- --card-border:#f0eef5;--card-radius:10px;--compact-radius:8px;
+ --card-border:#eeebf3;--card-radius:6px;--compact-radius:5px;
  --ink:#4b556d;--ink-strong:#343b55;--muted:#6c7d98;
  --line:#e5e2ef;--line-strong:#d6d2e6;
  --accent:#586dcf;--accent-dark:#4358b5;--accent-soft:#f0effc;
@@ -28,7 +28,7 @@
  --warning:#975d19;--warning-soft:#fff7ea;
  --negative:#c04552;--negative-soft:#fff0f1;
  --focus:#6c60a9;
- --radius-sm:8px;--radius:10px;--radius-lg:10px;
+ --radius-sm:5px;--radius:6px;--radius-lg:6px;
  /* Compatibility aliases, retaining existing markup */
  --background:var(--canvas);--foreground:var(--ink);
  --card:var(--surface);--card-foreground:var(--ink);
@@ -493,6 +493,37 @@ main:has(#setup.panel.active)>.footer-note{padding-top:24px}
  .overview-side>.card{margin-top:15px}
  .overview-settings,.overview-snapshot,.overview-format{box-shadow:none!important;border:0!important}
 }
+
+/* Simplified, unboxed header and Figma-inspired icon navigation. */
+.overview-feature{display:block;position:relative;min-height:0;margin:0 0 22px;
+ padding:12px 0 18px;overflow:visible;background:transparent;color:var(--ink);
+ border:0;border-radius:0;box-shadow:none}
+.overview-feature:before,.overview-feature-art,.feature-orbit,.feature-ball,.feature-playline{display:none!important;content:none!important}
+.overview-feature-copy{max-width:680px}
+.feature-overline{color:#7d6e99}
+.overview-feature h2{color:var(--heading-deep);font-size:clamp(30px,3vw,44px);margin:15px 0 11px}
+.overview-feature h2 em{color:#7961a5}
+.overview-feature p{color:#718098;font-size:13px;max-width:530px}
+.feature-actions{margin-top:20px}
+.feature-actions button{min-height:40px;border-radius:var(--card-radius)}
+.feature-primary{background:#65518e;border-color:#65518e;color:#fff}
+.feature-primary:hover:not(:disabled){background:#4d3a71;border-color:#4d3a71}
+.feature-secondary{background:#fff;border-color:#d8d1e6;color:#584975}
+.feature-secondary:hover:not(:disabled){background:#faf8fd;border-color:#b8acce;color:#584975}
+nav.tabs button,nav.tabs button.active{border-radius:5px}
+nav.tabs button{gap:12px}
+.nav-icon{display:block;flex:0 0 18px;width:18px;height:18px;opacity:.8}
+nav.tabs button.active .nav-icon,nav.tabs button:hover .nav-icon{opacity:1}
+.nav-label{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.card,.kpi,.queue-card,.match,.team,.empty-state{border-radius:var(--card-radius)}
+.tablewrap,.notice,.section-icon{border-radius:var(--compact-radius)}
+dialog{border-radius:7px}
+@media(max-width:800px){
+ .overview-feature{min-height:0;padding:14px 0 18px}
+ nav.tabs button{border-radius:5px}
+ .nav-icon{flex-basis:17px;width:17px;height:17px}
+}
+@media(max-width:630px){.overview-feature{padding:12px 0 16px}}
 </style>
 </head>
 <body>
@@ -504,13 +535,13 @@ main:has(#setup.panel.active)>.footer-note{padding-top:24px}
   <p class="sidebar-caption" id="eventSubtitle">Event-day tournament control desk</p>
   <div class="sidebar-group-title">WORKSPACE</div>
   <nav class="tabs no-print" aria-label="Bracket manager sections">
-    <button type="button" data-tab="setup" class="active" aria-current="page"><span class="nav-index">01</span> Overview</button>
-    <button type="button" data-tab="players"><span class="nav-index">02</span> Players</button>
-    <button type="button" data-tab="championship"><span class="nav-index">03</span> Championship</button>
-    <button type="button" data-tab="consolation"><span class="nav-index">04</span> Consolation</button>
-    <button type="button" data-tab="desk"><span class="nav-index">05</span> Match Desk</button>
-    <button type="button" data-tab="finale"><span class="nav-index">06</span> Doubles Finale</button>
-    <button type="button" data-tab="data"><span class="nav-index">07</span> Data & Restore</button>
+    <button type="button" data-tab="setup" class="active" aria-current="page"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span class="nav-label">Overview</span></button>
+    <button type="button" data-tab="players"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="nav-label">Players</span></button>
+    <button type="button" data-tab="championship"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v7a5 5 0 0 1-10 0V4ZM7 6H4v3a4 4 0 0 0 4 4M17 6h3v3a4 4 0 0 1-4 4"/></svg><span class="nav-label">Championship</span></button>
+    <button type="button" data-tab="consolation"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><path d="M3 11a9 9 0 0 1 16-5l2 2M21 3v5h-5M21 13a9 9 0 0 1-16 5l-2-2M3 21v-5h5"/></svg><span class="nav-label">Consolation</span></button>
+    <button type="button" data-tab="desk"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5V3h6v1.5M9 10h6M9 14h6M9 18h4"/></svg><span class="nav-label">Match Desk</span></button>
+    <button type="button" data-tab="finale"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><circle cx="7.5" cy="7" r="3"/><circle cx="16.5" cy="7" r="3"/><path d="M2 20v-2a5.5 5.5 0 0 1 11 0v2M11 20v-2a5.5 5.5 0 0 1 11 0v2"/></svg><span class="nav-label">Doubles Finale</span></button>
+    <button type="button" data-tab="data"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><path d="M4 7V4h16v3M5 7h14v13H5V7ZM9 12h6M9 16h6"/></svg><span class="nav-label">Data & Restore</span></button>
   </nav>
   <div class="sidebar-footer"><span class="local-first">● Browser-local data</span><small>Not cloud synced · export backups</small></div>
   <div class="toolbar">
@@ -543,10 +574,6 @@ main:has(#setup.panel.active)>.footer-note{padding-top:24px}
         <button type="button" class="feature-primary" data-go="players">Manage players <span aria-hidden="true">↗</span></button>
         <button type="button" class="feature-secondary" data-go="desk">Open Match Desk <span aria-hidden="true">→</span></button>
       </div>
-    </div>
-    <div class="overview-feature-art" aria-hidden="true">
-      <div class="feature-orbit feature-orbit-one"></div><div class="feature-orbit feature-orbit-two"></div>
-      <div class="feature-ball"></div><div class="feature-playline"></div>
     </div>
   </div>
 
