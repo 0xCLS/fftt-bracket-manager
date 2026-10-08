@@ -13,7 +13,7 @@ A lightweight, single-file tournament desk for **Forging Fellowship Table Tennis
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the current feature inventory and proposed sequence. **The current design is approved. Phase 1 now focuses on a secure, authoritative shared event database and permission model** before adding multiple scorekeeping devices or spectator feeds. Start with [the architecture proposal](docs/PHASE1_SHARED_EVENT_ARCHITECTURE.md). No backend has been selected yet.
+See [ROADMAP.md](ROADMAP.md) for the current feature inventory and proposed sequence. **The current design is approved. Phase 1 now focuses on a secure, authoritative shared event database and permission model** before adding multiple scorekeeping devices or spectator feeds. Start with [the architecture proposal](docs/PHASE1_SHARED_EVENT_ARCHITECTURE.md). Christopher has approved Supabase **for an isolated synthetic-data prototype only**; no backend has been provisioned or activated. The provider-neutral [Phase 1A contract](docs/PHASE1A_SHARED_EVENT_CONTRACT.md) and [machine-readable permission/field policy](contracts/phase1a_v1.json) define the next security gates.
 
 ## Run it
 
@@ -60,8 +60,9 @@ python -m playwright install chromium
 python tests/rehearsal.py
 python tests/safety.py
 python tests/ui_smoke.py
+python -m unittest discover -s tests -p 'test_phase1a_contract.py' -v
 ```
 
-These tests run in an isolated browser with synthetic players and simulated local storage; they do not touch the live event's data. A GitHub Actions browser-regression workflow also runs these checks when the application or tests change. The UI smoke test covers select arrow/spacing, roster labels, winner radio-group labeling, and the mobile player form. On systems with a separately installed Chromium, set `FFTT_CHROMIUM_BIN` to its executable path.
+The three Playwright suites run in an isolated browser with synthetic players and simulated local storage. The Phase 1A standard-library suite tests an **in-memory contract reference**, not real authorization, synchronization, or Supabase. No suite touches the live event's data. A GitHub Actions browser-regression workflow also runs these checks when the application or tests change. The UI smoke test covers select arrow/spacing, roster labels, winner radio-group labeling, and the mobile player form. On systems with a separately installed Chromium, set `FFTT_CHROMIUM_BIN` to its executable path.
 
 Keep changes lightweight; preserve a backup before event day. This public code repository is distinct from the private FFTT event-planning and historical-record repository.
