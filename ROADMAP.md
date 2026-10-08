@@ -34,7 +34,7 @@ These capabilities are described in the current README and app code. They are no
 Reference: the [Figma Design System by Facundo Almiron](https://www.behance.net/gallery/125691923/Figma-Design-System) for a light, polished dashboard, with BitSight as a secondary inspiration for predictable controls. Christopher explicitly authorized a complete departure from previous FFTT colors or flyer-derived styling. **The only required branding is the existing FFTT emblem and the exact credit “Developed by Chris Smith.”** Do not copy proprietary assets.
 
 - [ ] Review the seven screens as one cohesive product, including dense roster and bracket states and empty/loading/error states.
-- [ ] Visually approve the Figma-aligned light dashboard: purple headings, gold marker, independent white floating cards, 8–10px corners, subtle shadows, unframed bracket/queue areas, spacing, labels, and interactive states. Preserve the emblem and developer credit.
+- [x] Approve the cool-gray, charcoal and pastel color scheme across the application, preserving the emblem and developer credit; earlier purple styling is superseded.
 - [ ] Build a consistent in-app component language for **checkboxes, radio choices, toggles (only where functionally needed), tags/labels, badges, links, pagination/previous-next controls (when relevant), buttons, fields and score controls**. Include default, hover, selected, disabled and focus states.
 - [ ] Reduce UI friction: clear primary actions, logical screen layouts, readable brackets, legible statuses and appropriate sizing for volunteer phones.
 - [ ] Verify desktop, tablet, phone, projected display/TV readiness and printing where relevant.
@@ -114,6 +114,16 @@ This composition is a candidate for Christopher's visual review; do not consider
 - The previous plum palette remains on the other six tabs for A/B visual comparison. Fixed top-right tournament status pills, icon navigation, FFTT emblem and `Developed by Chris Smith` remain.
 - CSS is scoped to `body:has(#setup.panel.active)`; the original tournament engine, data fields, storage/backup format and match flow are unchanged.
 - **Awaiting Christopher's visual approval** before considering a full-app palette rollout or any feature development.
+
+### Phase 0 accepted color direction and all-screen rollout (October 8, 2026)
+
+Christopher approved the cool-neutral, charcoal and selective pastel color scheme after reviewing the isolated Overview preview. The design has now been applied to all seven sections, maintaining the accepted Overview KPI tiles, white surfaces, off-white navigation, four fixed tournament-status pills, original FFTT emblem, and exact "Developed by Chris Smith" credit.
+
+The rollout is CSS-only: it does not modify tournament logic, match handling, data, browser-local storage, or backup compatibility. Automated browser, tournament-safety, and bracket-rehearsal tests passed.
+
+**Approved:** visual color direction. **Still available for review:** details of the six other sections now using that palette. New feature development is a separate decision.
+
+**Historical note:** Previous Phase 0 updates below may say the palette is purple or Overview-only, or that color approval is pending. Those were accurate at the time but are **superseded by this approval and rollout**.
 
 ## Proposed feature backlog, after visual approval
 
