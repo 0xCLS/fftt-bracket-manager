@@ -956,6 +956,12 @@ body #winnerChoices label:has(input:checked){
  background:#e6f3f7;border-color:#538da1!important
 }
 body .footer-note{color:#79838d}
+/* Keep the approved open pastel bento layout on Overview. */
+body .overview-snapshot.card,body .overview-format.card{
+ background:transparent;border:0;box-shadow:none;
+}
+body .overview-snapshot.card{padding:0}
+body .overview-format.card{padding:8px 0 0}
 @media print{
  body .card,body .queue-card,body .team,body .match{box-shadow:none!important}
  body .pill{border-color:#bbb;background:#fff!important;color:#222!important}
