@@ -1,6 +1,6 @@
 # Phase 1B — Supabase Prototype and Security Milestones
 
-_Status: October 8, 2026. Milestone **B1 schema foundation staged on a feature branch only**. Migration and 25 pgTAP security/shape checks **passed against an isolated local Supabase PostgreSQL instance in GitHub Actions** ([run #1](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/37807810943)). No hosted project provisioned, authenticated score submission implemented, real-user login tested, or app connected. All future milestones must use synthetic data exclusively. Production cutover is **not approved**._
+_Status: October 8, 2026. Milestone **B1 schema foundation staged on a feature branch only**. Migration and 25 pgTAP security/shape checks **passed against an isolated local Supabase PostgreSQL instance in GitHub Actions** ([run #1](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/37807810943)). An isolated hosted Free project and the B1 schema are now deployed; authenticated score submission, real-user login, and app integration remain unimplemented. All future milestones must use synthetic data exclusively. Production cutover is **not approved**._
 
 ## Source precedence
 
@@ -31,7 +31,16 @@ python tests/rehearsal.py
 
 After organizer approval and project linking, use reviewed migrations (`supabase link` and `supabase db push`) **only against the isolated development project**. Do not commit `.env`, Supabase tokens, real user exports or credentialed URLs.
 
-## B1: Physical data model (prepared; not applied)
+## Hosted Free development project — October 8, 2026
+
+- **Verified project:** `fftt-bracket-manager-dev`, CLS Studios Free, `us-east-1`, PostgreSQL 17.11, `ACTIVE_HEALTHY`. Project reference: `copmkalfkkrkzheohwuc` (not a credential). No real participant data imported.
+- **Applied hosted migrations:** Supabase `20261008183821_phase1b_foundation` from GitHub B1 migration, plus `restrict_auto_rls_helper_execution` hardening. The latter's equivalent tracked repository migration is `20261008000200_restrict_auto_rls_helper.sql`; the hosted migration's version/name differ because the first application was performed through the Supabase integration. **Do not blindly reapply either migration via CLI without reconciling hosted migration history.**
+- **Live database verification:** exactly 9 `fftt_private` tables, all 9 with RLS enabled; `anon` and `authenticated` have no private schema USAGE; public result tables/view allow SELECT but no browser writes; invoker-secured public view; 0 published event/match rows. No score submission or publication RPC has been installed.
+- **Security advisory resolution:** the new project's automatic-RLS event-trigger helper `public.rls_auto_enable()` was initially `SECURITY DEFINER` with execute rights for `anon` and `authenticated`. Revoked both roles' (and PUBLIC's) execute rights, preserving the event trigger. SQL privilege recheck passed; Supabase security advisor reports **only 9 informational `rls_enabled_no_policy` findings** in private, intentionally inaccessible tables. Those are deliberate B1 deny-all behavior, not missing public policies. Details: https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy.
+- **Scope of pass:** previously all 25 local-CI pgTAP tests passed, and equivalent essential hosted permission/projection checks passed. Full hosted pgTAP suite, authenticated user/session grants, concurrent transactional scoring, corrections, and multi-device testing still pending. Do not call B2 production-ready.
+- **Performance advisors:** foreign-key indexing opportunities (15) and unused indices on empty prototype tables (4) were reported. Assess after B2 query design and synthetic workload; don't remove protective indices due to zero usage.
+
+## B1: Physical data model (prepared and applied to isolated hosted development project)
 
 `supabase/migrations/20261008000100_phase1b_foundation.sql` defines the private schema:
 
@@ -66,7 +75,7 @@ For public results, `public.fftt_published_events` and `public.fftt_published_ma
 - [x] Review Phase 1A, current engine and FFTT3 private format/rating sources.
 - [x] Stage schema migration, public allowlist projection, static guardrail test and pgTAP permission test.
 - [x] Apply migration to isolated local Supabase Postgres in GitHub Actions and run 25 pgTAP permission/shape checks — **PASS**, [run #1](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/37807810943).
-- [ ] Organizer creates/connects isolated hosted Free project, and re-runs reviewed migrations and security tests there.
+- [x] Organizer created and connected isolated hosted Free project; applied B1 migration; verified critical hosted RLS/grants and fixed automatic-RLS helper EXECUTE exposure. Full hosted pgTAP and authenticated-RPC tests remain pending.
 - [ ] Verify `anon`, unaffiliated authenticated, organizer and scorekeeper access in a real authenticated database context. No role is assumed functional at B1.
 - [ ] Verify existing browser/Phase 1A regressions on the PR head before merging.
 
