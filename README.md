@@ -30,7 +30,7 @@ The live GitHub Pages link includes **static Open Graph and Twitter Card metadat
 - Social image: [1200×630 PNG](assets/fftt-bracket-manager-og.png), generated from [the version-controlled SVG source](assets/fftt-bracket-manager-og.svg).
 - Preview text: `FFTT Bracket Manager` / `Forging Fellowship Table Tennis Games · Building community through fellowship.`
 
-The dedicated [image-rendering GitHub Actions workflow](.github/workflows/render-social-card.yml) updates the static PNG after SVG edits. Preview providers cache links independently, so existing chats may temporarily show an older card even after a successful deployment. The share card contains **no private player information**. It does not imply cloud synchronization or public live result feeds.
+The dedicated [image-rendering GitHub Actions workflow](.github/workflows/render-social-card.yml) updates the static PNG after SVG edits. **The embedded FFTT WebP emblem is composited as raster pixels separately**: GitHub Actions' SVG renderer otherwise omitted it and left a blank circle. The rendering workflow and browser smoke test now check the actual logo region's pixel brightness, in addition to file type and dimensions. Preview providers cache links independently, so existing chats may temporarily show an older card even after a successful deployment. The share card contains **no private player information**. It does not imply cloud synchronization or public live result feeds.
 
 ## Interface
 
