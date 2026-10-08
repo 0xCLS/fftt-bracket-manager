@@ -34,7 +34,7 @@ These capabilities are described in the current README and app code. They are no
 Reference: the [Figma Design System by Facundo Almiron](https://www.behance.net/gallery/125691923/Figma-Design-System) for a light, polished dashboard, with BitSight as a secondary inspiration for predictable controls. Christopher explicitly authorized a complete departure from previous FFTT colors or flyer-derived styling. **The only required branding is the existing FFTT emblem and the exact credit “Developed by Chris Smith.”** Do not copy proprietary assets.
 
 - [ ] Review the seven screens as one cohesive product, including dense roster and bracket states and empty/loading/error states.
-- [ ] Visually approve the light lavender dashboard foundation: purple headings, gold marker, white elevated cards, lavender inset surfaces, spacing, typography, indigo controls, labels, and interaction states. Preserve the emblem and developer credit.
+- [ ] Visually approve the Figma-aligned light dashboard: purple headings, gold marker, independent white floating cards, 8–10px corners, subtle shadows, unframed bracket/queue areas, spacing, labels, and interactive states. Preserve the emblem and developer credit.
 - [ ] Build a consistent in-app component language for **checkboxes, radio choices, toggles (only where functionally needed), tags/labels, badges, links, pagination/previous-next controls (when relevant), buttons, fields and score controls**. Include default, hover, selected, disabled and focus states.
 - [ ] Reduce UI friction: clear primary actions, logical screen layouts, readable brackets, legible statuses and appropriate sizing for volunteer phones.
 - [ ] Verify desktop, tablet, phone, projected display/TV readiness and printing where relevant.
@@ -63,6 +63,13 @@ The screenshot demonstrates several styles, such as triple sliders and grade bad
 - **Visual acceptance still pending:** review the deployed desktop and phone interface with Christopher; do not mark Phase 0 approved or begin subsequent feature work without his approval.
 
 
+
+### Phase 0 card-system fidelity correction — October 8, 2026
+
+- Christopher clarified that the rounded boxes/surfaces still did not resemble the [Facundo Almiron Figma Design System](https://www.behance.net/gallery/125691923/Figma-Design-System) closely enough.
+- Replaced large (18–20px) rounded lavender-framed nesting with a restrained floating-card language: predominantly white 8–10px-radius cards, subtle single-layer shadows, quiet borders, simpler summary tiles, flatter tables and no redundant lavender wrapper around bracket scroll or Match Desk queue.
+- Preserved the liked purple heading and gold header marker, plus the only required identity elements: the FFTT emblem and **Developed by Chris Smith**.
+- Added computed-style browser regression checks for tile corner radii, backgrounds, shadows and unframed bracket/queue areas. This remains **pending visual approval**, not an implemented feature request.
 
 ## Proposed feature backlog, after visual approval
 
