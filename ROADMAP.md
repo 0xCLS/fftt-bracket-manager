@@ -43,6 +43,16 @@ Reference: the user's BitSight UI-system screenshot and [BitSight design-system 
 
 The screenshot demonstrates several styles, such as triple sliders and grade badges, but **does not imply all pictured widgets should be added** to the tournament app.
 
+### Phase 0 implementation checkpoint — October 8, 2026
+
+- Added **Developed by Chris Smith** in the desktop sidebar footer and compact mobile header.
+- Applied the BitSight screenshot's interaction-state vocabulary to existing checkboxes, radio choices, labels, badges, cards, bracket rows, Match Desk cards and controls; preserved FFTT navy/yellow branding and approved emblem.
+- Moved tournament KPI cards to the top of Overview.
+- Tournament JavaScript, event data schema, backup compatibility and match rules were deliberately left unchanged.
+- **Visual acceptance still pending:** review the deployed desktop and phone interface with Christopher; do not mark Phase 0 approved or begin subsequent feature work without his approval.
+
+
+
 ## Proposed feature backlog, after visual approval
 
 Priority ordering below is a **provisional recommendation**, not an implementation commitment.
