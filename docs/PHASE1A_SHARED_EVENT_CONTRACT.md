@@ -14,7 +14,7 @@ Machine-readable normative companion: [contracts/phase1a_v1.json](../contracts/p
 
 ## Shared-state boundary
 
-- **Existing local mode (unchanged):** \`index.html\` reads/writes \`fftt_bracket_manager_v01\`; Undo, export/import and offline browser use continue to work. Its \`version: "0.1"\` backup remains a **local backup format**, not a cloud update command.
+- **Existing local mode (unchanged):** `index.html` reads/writes `fftt_bracket_manager_v01`; Undo, export/import and offline browser use continue to work. Its `version: "0.1"` backup remains a **local backup format**, not a cloud update command.
 - **Future shared mode (not implemented):** The server is authoritative for event and bracket versions, staff access, bracket generation, result acceptance, advancement, corrections and audit. Cloud clients display verified snapshots and send **intent commands**, never whole-state overwrites.
 - **Integration later:** A selectable local/shared adapter is introduced only after the sandbox is security-tested. A shared-mode browser must not overwrite its cloud event from cached localStorage, and local Undo or JSON restore must not write into the cloud.
 - **Supabase-specific mappings, later:** PostgreSQL tables, RLS/grants, trusted transactional operations, Auth and Realtime subscriptions will implement this contract. Client-visible keys are publishable/anon only with verified RLS; privileged service credentials remain server-only. Do not conflate a public anon key with authorization.
@@ -23,19 +23,19 @@ Machine-readable normative companion: [contracts/phase1a_v1.json](../contracts/p
 
 | Entity | Required identity/behavior | Visibility |
 | --- | --- | --- |
-| Event | Opaque \`event_id\`, event-scoped revision, name/date/config and lifecycle state | Name/date/status via public projection; private configuration to authorized staff |
-| Staff grant | Authenticated principal, \`event_id\`, organizer or scorekeeper, active/revoked flag | Organizer only |
-| Player | Stable private \`player_id\`, display name, internal FFTT Level 1–5, provisional status, check-in | Only approved display name published; raw player ID, rating and check-in never public |
-| Bracket | Type championship/consolation, \`bracket_generation\` counter, ordered matches; preserve existing first-loss eligibility and byes | Published presentation only |
-| Match | Event + generation + bracket + match identity, ordered players, round/slot, result, \`match_version\` | Public projection uses opaque presentation ID and display names, not private FK IDs |
-| Result submission | Unique \`submission_id\`, authenticated actor, requested result, expected version, accepted/rejected response | Restricted staff/audit only |
+| Event | Opaque `event_id`, event-scoped revision, name/date/config and lifecycle state | Name/date/status via public projection; private configuration to authorized staff |
+| Staff grant | Authenticated principal, `event_id`, organizer or scorekeeper, active/revoked flag | Organizer only |
+| Player | Stable private `player_id`, display name, internal FFTT Level 1–5, provisional status, check-in | Only approved display name published; raw player ID, rating and check-in never public |
+| Bracket | Type championship/consolation, `bracket_generation` counter, ordered matches; preserve existing first-loss eligibility and byes | Published presentation only |
+| Match | Event + generation + bracket + match identity, ordered players, round/slot, result, `match_version` | Public projection uses opaque presentation ID and display names, not private FK IDs |
+| Result submission | Unique `submission_id`, authenticated actor, requested result, expected version, accepted/rejected response | Restricted staff/audit only |
 | Audit event | Who/when/what, before/after references, reason for privileged correction, immutable history | Organizer only |
 
-All IDs are scoped to the event. Existing UI-style match labels like \`C-0-0\` are **not globally unique**: a rebuilt bracket can reuse them. Server keys and commands must include event identity and bracket generation. All client versions are advisory preconditions, never an authority source. Table number records where play occurred; it does not imply an exclusive reservation (not currently implemented).
+All IDs are scoped to the event. Existing UI-style match labels like `C-0-0` are **not globally unique**: a rebuilt bracket can reuse them. Server keys and commands must include event identity and bracket generation. All client versions are advisory preconditions, never an authority source. Table number records where play occurred; it does not imply an exclusive reservation (not currently implemented).
 
 ## Roles and permission enforcement
 
-See machine-readable \`role_permissions\` for the allowlist.
+See machine-readable `role_permissions` for the allowlist.
 
 - **Organizer:** Manage event/player setup, internal ratings, staff membership, bracket builds/rebuilds, result submissions, audited corrections and private backup export. Even organizer writes must pass server-side validation.
 - **Scorekeeper:** Read only the minimum match-desk data needed to score and submit results for **any eligible active match** in their authorized event (no table/match assignment system in this milestone). No roster ratings, contact data, participant management, bracket rebuilds, score corrections or other staff grants.
@@ -47,7 +47,7 @@ See machine-readable \`role_permissions\` for the allowlist.
 
 Request (logical shape, not a deployed API):
 
-\`\`\`json
+```json
 {
   "event_id": "synthetic-event",
   "match_id": "C-0-0",
@@ -58,16 +58,16 @@ Request (logical shape, not a deployed API):
   "game_scores": "11-8, 8-11, 11-7",
   "table_number": 1
 }
-\`\`\`
+```
 
 The server must:
 
 1. Authenticate the caller and verify their current event-scoped role **before** returning a prior idempotency outcome.
 2. In a single transaction (or equivalent serializable operation), lock/check the event/bracket/match and verify generation, match version, eligibility, ordered participants and result status.
-3. Check the \`(event_id, authenticated actor, submission_id)\` idempotency key: an exact authenticated repeat returns its prior outcome; reuse with changed payload is rejected. Store canonical request fingerprint and response. Different submissions to the same match contend on version.
-4. Validate winner belongs to the current match; preserve optional blank game scores; otherwise enforce best-of 3 for regular matches, best-of 5 for the championship final, first to 11 and win-by-two (including deuce), and no extra games after victory. Score order matches displayed \`p1,p2\`, not inferred winner/loser order.
+3. Check the `(event_id, authenticated actor, submission_id)` idempotency key: an exact authenticated repeat returns its prior outcome; reuse with changed payload is rejected. Store canonical request fingerprint and response. Different submissions to the same match contend on version.
+4. Validate winner belongs to the current match; preserve optional blank game scores; otherwise enforce best-of 3 for regular matches, best-of 5 for the championship final, first to 11 and win-by-two (including deuce), and no extra games after victory. Score order matches displayed `p1,p2`, not inferred winner/loser order.
 5. Atomically save the result, update match/event versions, advance dependent bracket slots and permitted byes, mark first actual championship-match losers for later **reviewed** consolation placement, and append server audit facts. No automatic random consolation drop-down.
-6. Return accepted authoritative state/version or structured \`conflict\` / \`validation_error\` / \`forbidden\` / \`offline\`, with no partial writes. Concurrent different submissions for one unresolved match must yield at most one accepted outcome.
+6. Return accepted authoritative state/version or structured `conflict` / `validation_error` / `forbidden` / `offline`, with no partial writes. Concurrent different submissions for one unresolved match must yield at most one accepted outcome.
 7. Emit a minimal change notification after commit (e.g., event revision), prompting each authorized client to reload the correct snapshot. No private payload is broadcast publicly.
 
 ## Corrections, rebuilds and Undo
@@ -95,7 +95,7 @@ The server must:
 
 ## Synthetic validation and acceptance
 
-Run: \`python -m unittest discover -s tests -p 'test_phase1a_contract.py' -v\`. This executes an **in-memory reference model**, not Supabase and not the live \`index.html\`. The tests assert the specification's intended security and transaction invariants, including role revocation, allowlisted public projection, version conflicts, exact retries, tampered IDs, scoring validation, advancement, downstream-correction safety and offline rejection. Existing Playwright tests continue to test the real local application.
+Run: `python -m unittest discover -s tests -p 'test_phase1a_contract.py' -v`. This executes an **in-memory reference model**, not Supabase and not the live `index.html`. The tests assert the specification's intended security and transaction invariants, including role revocation, allowlisted public projection, version conflicts, exact retries, tampered IDs, scoring validation, advancement, downstream-correction safety and offline rejection. Existing Playwright tests continue to test the real local application.
 
 **Not proven by 1A:** Actual RLS/grants, authentication integration, SQL isolation/locks, Postgres migrations, Realtime permissions, cloud multi-device behavior, production backups or event-day recovery. Those require Phase 1B onward, with separate end-to-end security/concurrency tests. Do not mark shared state functional based solely on reference tests.
 
