@@ -84,6 +84,14 @@ This composition is a candidate for Christopher's visual review; do not consider
 - Emblem and exact `Developed by Chris Smith` credit are retained; tournament JavaScript and persistence format are unchanged.
 - **Still pending visual approval.** Design refinements precede any new bracket, syncing, or registration feature.
 
+### Phase 0 refinement — contextual pills and lighter sidebar (October 8, 2026)
+
+- Christopher liked the four top-right summary pills and requested the same status treatment **throughout the application**, plus a less dark navigation rail.
+- The current candidate keeps the global summary visible across tabs and introduces dynamic, context-specific pills for Players, Championship, Consolation, Match Desk, Doubles Finale and Data & Restore; bracket match cards, playable-match cards, configured-table labels and selected doubles teams also use the shared pill language.
+- The sidebar moves from near-black plum to lighter `#56496e`. The FFTT emblem, `Developed by Chris Smith`, 6px/5px card radii and existing tournament state schema remain unchanged.
+- Status pills describe *implemented behavior only*: configured tables are not table reservations, local autosave is not cloud sync, and the finale is team selection rather than result recording.
+- Still **awaiting visual approval** before feature development.
+
 ## Proposed feature backlog, after visual approval
 
 Priority ordering below is a **provisional recommendation**, not an implementation commitment.
