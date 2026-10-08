@@ -22,6 +22,9 @@ Existing semantic aliases (`--background`, `--foreground`, `--navy`, `--yellow`)
 
 - **Brand emblem:** the organizer's approved FFTT image replaces `FF` in the sidebar and browser favicon. An optimized copy is embedded as WebP for offline use; keep the approved artwork itself unchanged.
 - **Navigation:** seven numbered sections, clear selected state, responsive horizontal scrolling on small screens.
+- **Developer attribution:** display the exact credit **Developed by Chris Smith** discreetly at the bottom of the sidebar on desktop and below the compact controls on mobile. Keep it visible in the application, not printed on brackets.
+- **BitSight reference states:** use restrained neutral form surfaces, a teal-blue interaction accent for checkboxes/radio buttons, visible hover/selected/focus/disabled states, small status pills, consistent card geometry, and clear section typography. Do not create sliders, toggles or pagination just to imitate the reference screenshot; introduce controls only when the product needs them.
+- **Dashboard hierarchy:** put four tournament KPIs first on Overview, above the configuration cards; use distinct score/advancement and success/warning styling with accessible text labels.
 - **Cards:** group relevant workflow actions; consistent padding, borders and restrained elevation.
 - **Primary and destructive buttons:** one prominent task action per area; confirmations remain for destructive operations.
 - **Form controls:** readable labels, sufficient hit targets, visible focus rings and explicit error feedback.
