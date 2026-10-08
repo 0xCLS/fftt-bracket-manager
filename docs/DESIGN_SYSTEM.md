@@ -16,8 +16,8 @@ The application remains self-contained in `index.html`, with no external UI fram
 | --- | --- | --- |
 | Page canvas | `--canvas` | `#f3f4f9`, lavender-gray |
 | Primary card | `--surface`, `--surface-elevated` | White, subtly raised |
-| Inset surface | `--surface-inset` | `#f5f3fb`, soft lavender |
-| Secondary surface | `--surface-soft` | `#faf9fe`, near-white lavender |
+| Inset surface | `--surface-inset` | `#faf9fd`, used sparingly for notices and labels |
+| Secondary surface | `--surface-soft` | `#faf9fc`, nearly white |
 | Page and section headings | `--heading`, `--heading-deep` | `#65538e`, deep purple |
 | Small header marker | `--gold` | `#f3bb35`, gold |
 | Main text | `--ink`, `--ink-strong` | Slate / deep ink |
@@ -30,14 +30,14 @@ The application remains self-contained in `index.html`, with no external UI fram
 | Caution | `--warning` | Amber |
 | Destructive action | `--negative` | Red |
 
-A minimal design should use consistent alignment, generous spacing, lightweight shadows, rounded controls, and readable brackets. Colors are semantic and may evolve with visual review.
+A minimal design should use generous white space between separate card tiles, consistent 8–10px corners (except true pill controls), soft low-contrast shadows and mostly white content surfaces. Avoid visually heavy box-within-box treatments. Colors are semantic and may evolve with visual review.
 
 ## Component guidelines
 
 - **Brand:** Keep the currently embedded FFTT emblem as the sidebar logo and favicon, and preserve **Developed by Chris Smith** in the organizer view on desktop and mobile. The credit stays off printed brackets.
 - **Navigation:** A simple, pale sidebar with distinct active state. On narrow screens it becomes horizontally scrollable.
-- **Cards / KPIs:** White, softly elevated cards with pale lavender borders over a lavender-gray canvas; four subtly tinted KPI cards lead the Overview screen.
-- **Surface hierarchy:** The page canvas stays distinct from elevated outer cards; nested table containers, bracket panels, match queues, notices, and dialogs use coordinated lavender-tinted inset or raised surfaces rather than blending together. Preserve legible text contrast and avoid colorful callouts for ordinary information.
+- **Cards / KPIs:** Standalone white tiles with **10px corner radius**, barely visible borders, and one restrained soft shadow. No gradients or decorative top bars. Four summary KPI tiles lead the Overview screen.
+- **Surface hierarchy:** Follow the Figma reference's **floating-card** language. Outer panels and match cards are independent white rectangles with restrained elevation. Do **not** enclose brackets or match queues in additional rounded lavender trays. Tables use flat white backgrounds, subtle row separators, and minimal chrome. Muted lavender is for background canvas and occasional semantic notices, not every nested container.
 - **Headings:** Use the approved screenshot's purple for major page headings and section headings, with a small gold dot in the EVENT OPERATIONS eyebrow.
 - **Buttons:** Indigo-blue for primary actions, unobtrusive white secondary controls, neutral ghost actions, and clear red destructive controls.
 - **Inputs, checkboxes, radio choices:** Consistent height, visible labels, generous touch targets, selected/hover/focus/disabled states.
