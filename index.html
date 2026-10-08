@@ -616,6 +616,25 @@ main:has(#setup.panel.active)>.statusline{margin:0;justify-content:flex-end}
  .overview-format .format-steps li+li{border-left:0}
 }
 
+
+/* The five FFTT rating levels, with native keyboard-operable radio inputs. */
+.rating-fieldset{border:0;padding:0;margin:0;min-width:0}
+.rating-fieldset legend{padding:0;margin:0 0 8px;color:#5a627b;font-size:12px;font-weight:720;line-height:1.4}
+.rating-scale{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;width:100%;max-width:320px}
+.rating-choice{position:relative;display:block;min-width:0;margin:0;cursor:pointer}
+.rating-choice input[type="radio"]{position:absolute;width:1px;height:1px;min-width:1px;min-height:1px;margin:0;padding:0;border:0;opacity:0;clip-path:inset(50%);pointer-events:none}
+.rating-choice span{display:flex;align-items:center;justify-content:center;min-height:42px;border:1px solid #dad5e8;border-radius:var(--compact-radius);background:#fff;color:#655873;font-size:14px;font-weight:760;transition:background .14s,border-color .14s,color .14s}
+.rating-choice:hover span{background:#f4f0fa;border-color:#a99abd}
+.rating-choice input:checked+span{background:#65518e;color:#fff;border-color:#65518e;box-shadow:0 2px 5px #51437818}
+.rating-choice input:focus-visible+span{outline:3px solid #65518e88;outline-offset:2px}
+.rating-choice input:disabled+span{opacity:.45;cursor:not-allowed}
+.rating-hint{margin-top:7px;min-height:16px;font-size:11px;color:#746887;line-height:1.35}
+.roster-rating-fieldset{min-width:155px}
+.roster-rating-fieldset .rating-scale{grid-template-columns:repeat(5,28px);gap:4px;max-width:none}
+.roster-rating-fieldset .rating-choice span{min-height:30px;font-size:11px}
+td:has(.roster-rating-fieldset){min-width:185px}
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+@media(max-width:540px){.rating-scale{max-width:none}}
 </style>
 </head>
 <body>
@@ -714,7 +733,7 @@ main:has(#setup.panel.active)>.statusline{margin:0;justify-content:flex-end}
         <form id="addPlayerForm">
           <div class="formrow">
             <div class="f12"><label for="playerName">Name</label><input id="playerName" required autocomplete="off"></div>
-            <div class="f5"><label for="playerRating">FFTT rating</label><select id="playerRating"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></div>
+            <fieldset class="rating-fieldset f5"><legend>FFTT rating</legend><div class="rating-scale"><label class="rating-choice" title="Level 1 — Beginner"><input type="radio" name="addRating" value="1" aria-label="Level 1 — Beginner"><span aria-hidden="true">1</span></label><label class="rating-choice" title="Level 2 — Recreational"><input type="radio" name="addRating" value="2" aria-label="Level 2 — Recreational"><span aria-hidden="true">2</span></label><label class="rating-choice" title="Level 3 — Intermediate"><input type="radio" name="addRating" value="3" aria-label="Level 3 — Intermediate" checked><span aria-hidden="true">3</span></label><label class="rating-choice" title="Level 4 — Strong Intermediate"><input type="radio" name="addRating" value="4" aria-label="Level 4 — Strong Intermediate"><span aria-hidden="true">4</span></label><label class="rating-choice" title="Level 5 — Advanced / Competitive"><input type="radio" name="addRating" value="5" aria-label="Level 5 — Advanced / Competitive"><span aria-hidden="true">5</span></label></div><div class="rating-hint" id="ratingHint">Level 3 · Intermediate</div></fieldset>
             <div class="f7"><label for="playerRatingStatus">Status</label><select id="playerRatingStatus"><option value="provisional">Provisional</option><option value="established">Established</option></select></div>
             <div class="f12"><button class="primary" type="submit">Add & check in</button></div>
           </div>
@@ -889,6 +908,7 @@ function undo(){
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
 function pById(id){return state.players.find(p=>p.id===id)}
 function pName(id){return pById(id)?.name||"TBD"}
+const ratingName=n=>({1:"Beginner",2:"Recreational",3:"Intermediate",4:"Strong Intermediate",5:"Advanced / Competitive"})[n]||"Intermediate";
 function nextPow2(n){let p=1;while(p<n)p*=2;return p}
 function checkedPlayers(){return state.players.filter(p=>p.checkedIn)}
 function matchCountForPlayer(id, bracket){
@@ -1134,7 +1154,7 @@ function renderRoster(){
     h+=`<tr>
       <td><input class="check roster-check" type="checkbox" aria-label="Check in ${esc(p.name)}" data-id="${p.id}" ${p.checkedIn?"checked":""} ${state.championship?"disabled":""}></td>
       <td><input class="roster-name" aria-label="Player name for ${esc(p.name)}" data-id="${p.id}" value="${esc(p.name)}" ${state.championship?"disabled":""}></td>
-      <td><select class="roster-rating" aria-label="FFTT rating for ${esc(p.name)}" data-id="${p.id}">${[1,2,3,4,5].map(n=>`<option ${p.rating===n?"selected":""}>${n}</option>`).join("")}</select></td>
+      <td><fieldset class="rating-fieldset roster-rating-fieldset"><legend class="sr-only">FFTT rating for ${esc(p.name)}</legend><div class="rating-scale compact">${[1,2,3,4,5].map(n=>`<label class="rating-choice" title="Level ${n} — ${esc(ratingName(n))}"><input type="radio" class="roster-rating" name="rating-${esc(p.id)}" aria-label="Level ${n} — ${esc(ratingName(n))}" data-id="${p.id}" value="${n}" ${p.rating===n?"checked":""}><span aria-hidden="true">${n}</span></label>`).join("")}</div></fieldset></td>
       <td><select class="roster-rstatus" aria-label="Rating status for ${esc(p.name)}" data-id="${p.id}"><option value="provisional" ${p.ratingStatus==="provisional"?"selected":""}>Provisional</option><option value="established" ${p.ratingStatus==="established"?"selected":""}>Established</option></select></td>
       <td>${matchCountForPlayer(p.id,state.championship)}</td>
       <td><button class="danger small remove-player" data-id="${p.id}" type="button" ${state.championship?"disabled":""}>Remove</button></td>
@@ -1143,7 +1163,7 @@ function renderRoster(){
   h+='</tbody></table></div>';wrap.innerHTML=h;
   $$(".roster-check").forEach(x=>x.addEventListener("change",()=>{checkpoint("Change check-in");pById(x.dataset.id).checkedIn=x.checked;save();render()}));
   $$(".roster-name").forEach(x=>x.addEventListener("change",()=>{const p=pById(x.dataset.id);if(p&&x.value.trim()){checkpoint("Edit player name");p.name=x.value.trim();save();render()}}));
-  $$(".roster-rating").forEach(x=>x.addEventListener("change",()=>{checkpoint("Adjust player rating");pById(x.dataset.id).rating=Number(x.value);save();render()}));
+  $(".roster-rating").forEach(x=>x.addEventListener("change",()=>{if(!x.checked)return;const p=pById(x.dataset.id);if(!p||p.rating===Number(x.value))return;checkpoint("Adjust player rating");p.rating=Number(x.value);save();render()}));
   $$(".roster-rstatus").forEach(x=>x.addEventListener("change",()=>{checkpoint("Adjust rating status");pById(x.dataset.id).ratingStatus=x.value;save();render()}));
   $$(".remove-player").forEach(x=>x.addEventListener("click",()=>{if(confirm(`Remove ${pName(x.dataset.id)}?`)){checkpoint("Remove player");state.players=state.players.filter(p=>p.id!==x.dataset.id);save();render()}}));
 }
@@ -1363,7 +1383,8 @@ function summaryText(){
 $$(".tabs button").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
 $$("[data-go]").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.go)));
 $("#saveSetupBtn").addEventListener("click",()=>{checkpoint("Save event setup");state.event.name=$("#eventName").value.trim()||"Forging Fellowship Table Tennis Games";state.event.date=$("#eventDate").value;state.event.tables=Math.min(12,Math.max(1,Number($("#tableCount").value)||2));state.event.regularBestOf=Number($("#regularFormat").value);state.event.finalBestOf=Number($("#finalFormat").value);save();render()});
-$("#addPlayerForm").addEventListener("submit",e=>{e.preventDefault();const name=$("#playerName").value.trim();if(!name)return;if(state.championship){alert("Rebuild/reset the bracket before adding players to the active championship field.");return}checkpoint("Add player");state.players.push({id:uid("p"),name,rating:Number($("#playerRating").value),ratingStatus:$("#playerRatingStatus").value,checkedIn:true});$("#playerName").value="";save();render();$("#playerName").focus()});
+$('input[name="addRating"]').forEach(input=>input.addEventListener("change",()=>{if(input.checked)$("#ratingHint").textContent=`Level ${input.value} · ${ratingName(Number(input.value))}`}));
+$("#addPlayerForm").addEventListener("submit",e=>{e.preventDefault();const name=$("#playerName").value.trim();if(!name)return;if(state.championship){alert("Rebuild/reset the bracket before adding players to the active championship field.");return}checkpoint("Add player");state.players.push({id:uid("p"),name,rating:Number($('input[name="addRating"]:checked')?.value||3),ratingStatus:$("#playerRatingStatus").value,checkedIn:true});$("#playerName").value="";save();render();$("#playerName").focus()});
 $("#bulkAddBtn").addEventListener("click",()=>{if(state.championship){alert("Rebuild/reset the bracket before adding players.");return}const lines=$("#bulkPlayers").value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);if(!lines.length)return;checkpoint("Bulk add players");for(const line of lines){const parts=line.split(",").map(x=>x.trim()),name=parts[0];if(!name)continue;const rating=Math.min(5,Math.max(1,Number(parts[1])||3));const status=(parts[2]||"provisional").toLowerCase().startsWith("e")?"established":"provisional";state.players.push({id:uid("p"),name,rating,ratingStatus:status,checkedIn:true})}$("#bulkPlayers").value="";save();render()});
 $("#buildChampBtn").addEventListener("click",()=>buildChampionship(false));
 $("#rebuildChampBtn").addEventListener("click",()=>buildChampionship(true));
