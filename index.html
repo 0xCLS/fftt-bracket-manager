@@ -45,12 +45,7 @@
 html{background:var(--canvas);color:var(--ink)}
 body{display:grid;grid-template-columns:252px minmax(0,1fr);min-height:100vh;
  margin:0;background:var(--canvas);color:var(--ink);font-family:inherit;line-height:1.5}
-button,input,select,textarea{
-width:100%;min-height:42px;padding:9px 12px;border:1px solid #e1dce9;
-border-radius:var(--compact-radius);background:#fff;color:#444760;
-box-shadow:0 1px 2px rgba(67,57,96,.025);font-size:13px;line-height:1.45;
-transition:border-color .15s,box-shadow .15s;
-}
+button,input,select,textarea{font:inherit}
 button{cursor:pointer}
 button:disabled{opacity:.48;cursor:not-allowed}
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px}
@@ -162,9 +157,10 @@ letter-spacing:-.023em;font-weight:740;
 .card p{line-height:1.7}
 label{display:block;margin:0 0 7px;color:#5a627b;font-size:12px;font-weight:720;line-height:1.4}
 input,select,textarea{
- width:100%;min-height:42px;padding:9px 12px;border:1px solid #dbe3ef;
- border-radius:10px;background:#fff;color:#293f5d;box-shadow:0 1px 2px #253d5606;
- font-size:13px;line-height:1.45;transition:border-color .15s,box-shadow .15s
+ width:100%;min-height:42px;padding:9px 12px;border:1px solid #e1dce9;
+ border-radius:var(--compact-radius);background:#fff;color:#444760;
+ box-shadow:0 1px 2px rgba(67,57,96,.025);font-size:13px;line-height:1.45;
+ transition:border-color .15s,box-shadow .15s
 }
 /* Accessible, stable dropdown arrow with reserved room for the selection text. */
 select{
