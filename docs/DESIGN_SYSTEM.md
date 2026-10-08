@@ -46,6 +46,22 @@ A minimal design should use generous white space between separate card tiles, co
 - **Dialog:** Clear winner selection and scoring controls, clear cancel/save actions, keyboard focus.
 - **Responsiveness and print:** Verify common desktop and phone widths and preserve print behavior. No decorative components just because a reference depicts them.
 
+## Structural Overview redesign — October 8, 2026
+
+The previous iterations changed colors, shadows and radii but retained essentially the same screen structure, which Christopher found insufficient. **Visual differentiation now requires a layout redesign, not another cosmetic CSS pass.**
+
+The new Overview introduces:
+
+- A **distinct plum navigation rail** that retains the FFTT emblem and `Developed by Chris Smith`.
+- A wide purple **tournament workspace hero** with clear actions for Players and Match Desk, plus restrained ping-pong-inspired illustration drawn purely in CSS.
+- A full-height **event-configuration workspace** on the left, with labeled fields and the original Save event setup control.
+- A compact **2×2 live snapshot** on the right, reusing all four existing KPI elements and IDs.
+- A separate **three-stage tournament guide** on the right, describing championship, reviewed consolation and mixed-skill doubles finale.
+
+All seven sections, player form operations, IDs and the existing tournament JavaScript are retained. The Overview has a new spatial hierarchy, deliberately different from the original four equal stat cards + two equally styled content boxes.
+
+**Pending approval:** this is a bold concept candidate, not the approved final look. Ask Christopher to judge the live desktop and mobile composition before proceeding to features or further reskinning.
+
 ## Acceptance and safeguards
 
 This is **Phase 0 visual work** only. The existing tournament rules, score validation, seeding, backup data format, and local browser save behavior must remain functional. No real contact data belongs in this public repository.
