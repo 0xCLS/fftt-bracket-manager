@@ -56,7 +56,7 @@ The new Overview introduces:
 - A **plain, unboxed Overview header** retaining the headline, explanation, and working Players/Match Desk actions. Christopher explicitly rejected the large purple hero background and its decorative ball/orbits.
 - A full-height **event-configuration workspace** on the left, with labeled fields and the original Save event setup control.
 - A compact **2×2 live snapshot** on the right, reusing all four existing KPI elements and IDs.
-- A separate **three-stage tournament guide** on the right, describing championship, reviewed consolation and mixed-skill doubles finale.
+- A separate **three-stage tournament guide** spanning the full row **below** the event settings and 2×2 snapshot, with horizontally arranged stages on large screens and a vertical stack on phones. This avoids the tall right-hand card and unused left-hand space visible in the organizer's October 8 screenshot.
 
 All seven sections, player form operations, IDs and the existing tournament JavaScript are retained. The Overview has a new spatial hierarchy, deliberately different from the original four equal stat cards + two equally styled content boxes.
 
@@ -72,6 +72,18 @@ Christopher liked the new split Overview composition but explicitly requested (a
 Christopher approved the general style of the top-right global status pills and requested that it be used throughout the app. He also found the left navigation rail too dark. The color of the rail was lightened from `#2c2641` to `#56496e`, with accompanying icon, text and button contrast adjustments. The same `.pill` classes now appear in context-specific summaries for the six non-Overview tabs, on Match Desk cards and table labels, in bracket match headers, and on selected doubles teams. Pill text is derived from existing tournament state. No new tournament fields, synchronization or table assignment capability was introduced.
 
 The established 6px card corners, 5px compact corners, FFTT emblem, and exact attribution `Developed by Chris Smith` remain unchanged. **Visual approval is still pending.**
+
+### Overview balance and top-right status correction — October 8, 2026
+
+The previous two-column layout placed a tall format guide below the live snapshot while leaving unused space under Event Setup. Christopher specifically objected to the arrangement and asked that the four global status pills sit at the **top right**.
+
+- Overview now uses a **two-row composition**: Event Setup and Live Snapshot side by side, followed by a full-width Three Stages guide whose steps are horizontal on desktop.
+- The four existing tournament-wide pills are in the **first header row**, right aligned ahead of the page intro and **sticky at the top on desktop**, so they remain visible while scrolling.
+- On narrower widths, the cards and stages stack; the status strip wraps naturally without horizontal overflow.
+- The pill content and IDs, all event input IDs and actions, bracket engine, private local state and exact FFTT branding remain unchanged. The table summary is labeled **Tables configured** instead of suggesting table reservations.
+- Automated tests verify desktop spatial relationships, sticky alignment, all four pills, mobile layout and existing tournament controls.
+
+**This remains an unapproved design candidate.**
 
 ## Acceptance and safeguards
 
