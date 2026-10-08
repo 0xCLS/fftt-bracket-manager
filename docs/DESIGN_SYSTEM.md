@@ -8,6 +8,23 @@ A clean, airy, **light dashboard** inspired by the [Figma Design System by Facun
 
 **Christopher's explicit direction:** The only mandatory FFTT branding is (1) the existing circular table-tennis emblem, preserved, and (2) the exact visible attribution **Developed by Chris Smith**. The previous navy/yellow color palette, typography, sidebar background, and flyer-derived visual language are **no longer requirements**. This supersedes the earlier branding instruction in this document and older roadmap notes.
 
+## Overview-only color exploration — October 8, 2026
+
+**Status: candidate for Christopher's visual review, not yet approved for the rest of the app.**
+
+Christopher supplied a separate modern, neutral-and-pastel product design reference. We have applied a coherent interpretation **only while Overview is active**. Do not silently apply these colors to Players, brackets, Match Desk, or other screens until he explicitly approves this preview.
+
+- **Canvas:** cool light-gray `#f2f3f5`; **navigation:** off-white `#fbfcfd`.
+- **Typography and primary actions:** charcoal `#29313c`, replacing the purple treatment on Overview; secondary copy uses muted slate.
+- **Four KPI bento tiles:** ice blue `#d1eff5`, soft lavender `#e9d7f3`, pastel lime `#bbd98f`, and butter yellow `#f7e99b`.
+- **Event setup:** a simple floating white workspace. Three tournament stages use quieter tinted background tiles (blue/neutral, lavender/neutral, lime/neutral).
+- **Status pills:** remain pinned to the viewport top-right. Their established meanings are unchanged and the Overview version uses subdued pastel semantic colors.
+- **Buttons:** charcoal primary buttons with rounded pill edges, without rounding the rectangular cards. The emblem and **Developed by Chris Smith** remain unchanged.
+- **Isolation:** the CSS uses `body:has(#setup.panel.active)` to scope the preview so the previous interface returns immediately on the six other tabs. Only styling changed; no data schema, scoring rule or JS behavior changed.
+- **Validation:** desktop and mobile browser tests check the actual colors, responsive layout, fixed status placement, saved tournament behavior and that non-Overview screens retain their existing palette.
+
+This experiment supersedes the earlier *Overview-only* purple surface recommendations when Overview is active. The historical style guidance below still describes the current six other screens and is not a directive to implement the older purple styling on Overview.
+
 ## Current implementation
 
 The application remains self-contained in `index.html`, with no external UI framework, remote font, stylesheet, or server required to render the organizer screen.
