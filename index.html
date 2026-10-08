@@ -471,7 +471,7 @@ function autoAdvanceByes(bracket){
 function buildChampionship(force=false){
   const ps=checkedPlayers();
   if(ps.length<2){alert("Check in at least two players first.");return}
-  if(state.championship&&!force){if(!confirm("A championship bracket already exists. Rebuilding it will clear championship results, consolation, and finale teams. Continue?"))return}
+  if(state.championship){if(!confirm("Rebuild the championship bracket? This will clear ALL recorded championship results, the consolation bracket and its results, and doubles teams. Export a backup first if needed."))return}
   checkpoint("Build championship bracket");
   state.players.forEach(p=>{delete p.firstChampLoss});
   state.championship=createBracket("championship",ps.map(p=>p.id));
@@ -482,7 +482,7 @@ function buildConsolation(force=false){
   const ids=firstChampLossEligible();
   if(ids.length<2){alert("At least two first-match losers are needed.");return}
   const pending=pendingFirstMatches();
-  if(pending.length && !confirm(`${pending.length} checked-in player(s) have not yet completed their first championship match. Build the consolation bracket now anyway? Late first-match losers will not be inserted automatically.`))return;
+  if(pending.length){alert(`${pending.length} player(s) have not yet played their first championship match. Finish those matches before building consolation so no eligible player is excluded.`);return}
   if(state.consolation&&!force){if(!confirm("Rebuilding will clear consolation results. Continue?"))return}
   checkpoint("Build consolation bracket");
   state.consolation=createBracket("consolation",ids);
@@ -514,6 +514,35 @@ function recordResult(type,matchId,winner,score,table){
   autoAdvanceByes(bracket);
   save();render();
 }
+function normalizedMatchScore(raw,type,matchId,winner){
+  const value=raw.trim();
+  if(!value)return "";
+  const bracket=type==="championship"?state.championship:state.consolation;
+  const match=bracket?.rounds.flat().find(m=>m.id===matchId);
+  if(!match)throw new Error("Match not found.");
+  const isFinal=match.round===bracket.rounds.length-1;
+  const best=isFinal&&type==="championship"?state.event.finalBestOf:state.event.regularBestOf;
+  const needed=(best+1)/2;
+  const games=value.split(",").map(x=>x.trim());
+  if(games.length<needed||games.length>best)throw new Error(`Enter ${needed} to ${best} completed game scores, separated by commas, or leave the field blank.`);
+  let wins1=0,wins2=0;
+  const formatted=[];
+  for(let i=0;i<games.length;i++){
+    const parts=games[i].match(/^(\d+)\s*[-–—]\s*(\d+)$/);
+    if(!parts)throw new Error("Use game scores such as 11-8, 8-11, 11-7.");
+    const a=Number(parts[1]),b=Number(parts[2]);
+    const high=Math.max(a,b),low=Math.min(a,b);
+    if(high<11 || high-low<2 || (high>11 && high-low!==2))throw new Error("Each game must reach at least 11 points and be won by exactly 2 after deuce.");
+    if(a>b)wins1++;else wins2++;
+    if(i<games.length-1&&(wins1===needed||wins2===needed))throw new Error("Extra games were entered after the match was already won.");
+    formatted.push(`${a}-${b}`);
+  }
+  if((winner===match.p1?wins1:wins2)!==needed || (winner===match.p1?wins2:wins1)>=needed){
+    throw new Error("The entered game scores do not match the selected winner.");
+  }
+  return formatted.join(", ");
+}
+
 function bracketRoundName(bracket,r){
   const total=bracket.rounds.length;
   if(r===total-1)return bracket.type==="championship"?"Final":"Consolation Final";
@@ -573,8 +602,8 @@ function renderConsolation(){
     ? `<div class="notice ${pending.length?"warn":"good"}"><strong>${ids.length}</strong> eligible first-match loser(s). ${pending.length?`<strong>${pending.length}</strong> player(s) still awaiting a first actual championship match.`:"All checked-in players have completed a first actual championship match."}</div>`
     : '<div class="notice warn">Build the championship bracket first.</div>';
   $("#consPool").innerHTML=ids.length?ids.map(id=>{const p=pById(id);return`<div class="inline" style="justify-content:space-between;padding:7px 0;border-bottom:1px solid #eaecf0"><span>${esc(p.name)}</span><span class="rating">${p.rating}</span></div>`}).join(""):'<div class="help">No eligible players yet.</div>';
-  $("#buildConsBtn").disabled=ids.length<2;
-  $("#rebuildConsBtn").disabled=!state.consolation;
+  $("#buildConsBtn").disabled=!consolationReady();
+  $("#rebuildConsBtn").disabled=!state.consolation || pending.length>0;
   renderBracket(state.consolation,"#consBracket");
 }
 function renderDesk(){
@@ -674,6 +703,48 @@ function openResultDialog(type,id){
 function download(name,text,type="text/plain"){
   const blob=new Blob([text],{type});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+function validatedBackup(data){
+  const invalid=()=>{throw new Error("Invalid or unsupported FFTT backup. Your existing event was not changed.")};
+  if(!data||data.version!=="0.1"||!data.event||typeof data.event.name!=="string"||
+     typeof data.event.date!=="string"||!Number.isInteger(data.event.tables)||data.event.tables<1||data.event.tables>12||
+     ![3,5].includes(data.event.regularBestOf)||![3,5].includes(data.event.finalBestOf)||
+     !Array.isArray(data.players)||!data.finale||typeof data.finale!=="object")invalid();
+  const ids=new Set();
+  for(const p of data.players){
+    if(!p||typeof p.id!=="string"||!p.id||ids.has(p.id)||typeof p.name!=="string"||!p.name.trim()||
+       !Number.isInteger(p.rating)||p.rating<1||p.rating>5||!["provisional","established"].includes(p.ratingStatus)||
+       typeof p.checkedIn!=="boolean"||(p.firstChampLoss!==undefined&&typeof p.firstChampLoss!=="boolean"))invalid();
+    ids.add(p.id);
+  }
+  const validId=id=>id===null||(typeof id==="string"&&ids.has(id));
+  for(const k of ["partnerA","partnerB"]){if(!validId(data.finale[k]))invalid()}
+  if(data.finale.partnerA&&data.finale.partnerA===data.finale.partnerB)invalid();
+  const verifyBracket=(b,type)=>{
+    if(b===null)return;
+    if(!b||b.type!==type||!Number.isInteger(b.size)||b.size<2||
+       (b.size&(b.size-1))!==0||!Array.isArray(b.rounds)||b.rounds.length!==Math.log2(b.size)||
+       !validId(b.champion)||!validId(b.runnerUp))invalid();
+    const seen=new Set();
+    for(let r=0;r<b.rounds.length;r++){
+      const round=b.rounds[r];
+      if(!Array.isArray(round)||round.length!==b.size/Math.pow(2,r+1))invalid();
+      for(let i=0;i<round.length;i++){
+        const m=round[i];
+        if(!m||typeof m.id!=="string"||seen.has(m.id)||m.round!==r||m.index!==i||
+           !validId(m.p1)||!validId(m.p2)||!validId(m.winner)||typeof m.score!=="string"||
+           typeof m.resolved!=="boolean"||(m.winner&&![m.p1,m.p2].includes(m.winner)))invalid();
+        seen.add(m.id);
+      }
+    }
+  };
+  if(!Object.prototype.hasOwnProperty.call(data,"championship")||
+     !Object.prototype.hasOwnProperty.call(data,"consolation"))invalid();
+  verifyBracket(data.championship,"championship");
+  verifyBracket(data.consolation,"consolation");
+  if(data.consolation&&!data.championship)invalid();
+  return {...data,history:[]};
+}
+
 function exportJson(){
   const date=state.event.date||"event";
   download(`FFTT_bracket_backup_${date}.json`,JSON.stringify({...state,history:[]},null,2),"application/json");
@@ -707,14 +778,14 @@ $("#buildChampBtn").addEventListener("click",()=>buildChampionship(false));
 $("#rebuildChampBtn").addEventListener("click",()=>buildChampionship(true));
 $("#buildConsBtn").addEventListener("click",()=>buildConsolation(false));
 $("#rebuildConsBtn").addEventListener("click",()=>{if(confirm("Rebuild the consolation bracket and clear its results?"))buildConsolation(true)});
-$("#resultForm").addEventListener("submit",e=>{e.preventDefault();const w=$('input[name="winner"]:checked');if(!w){alert("Choose a winner.");return}recordResult($("#resultBracketType").value,$("#resultMatchId").value,w.value,$("#resultScore").value,$("#resultTable").value);$("#resultDialog").close()});
+$("#resultForm").addEventListener("submit",e=>{e.preventDefault();const w=$('input[name="winner"]:checked');if(!w){alert("Choose a winner.");return}const type=$("#resultBracketType").value,id=$("#resultMatchId").value;let score;try{score=normalizedMatchScore($("#resultScore").value,type,id,w.value)}catch(err){alert(err.message);return}recordResult(type,id,w.value,score,$("#resultTable").value);$("#resultDialog").close()});
 $("#cancelResultBtn").addEventListener("click",()=>$("#resultDialog").close());
 $("#suggestPartnersBtn").addEventListener("click",suggestPartners);
 $("#saveFinaleBtn").addEventListener("click",()=>{const a=$("#partnerA").value,b=$("#partnerB").value;if(!a||!b||a===b){alert("Choose two different consolation players.");return}checkpoint("Save doubles teams");state.finale.partnerA=a;state.finale.partnerB=b;save();render()});
 $("#undoBtn").addEventListener("click",undo);
 $("#saveJsonBtn").addEventListener("click",exportJson);$("#exportBtn").addEventListener("click",exportJson);
 $("#exportSummaryBtn").addEventListener("click",()=>download(`FFTT_results_${state.event.date||"event"}.txt`,summaryText()));
-$("#importFile").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const incoming=JSON.parse(r.result);if(!incoming.event||!Array.isArray(incoming.players))throw new Error("Invalid FFTT backup");if(!confirm("Replace the current event with this backup?"))return;state=incoming;state.history=[];save();render();setTab("setup")}catch(err){alert("Could not import this file: "+err.message)}};r.readAsText(f);e.target.value=""});
+$("#importFile").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const previous=state;try{const incoming=validatedBackup(JSON.parse(r.result));if(!confirm("Replace the current event with this backup?"))return;state=incoming;render();save();setTab("setup")}catch(err){state=previous;alert("Could not import this file: "+err.message)}};r.readAsText(f);e.target.value=""});
 $("#resetBtn").addEventListener("click",()=>{if(confirm("Reset the entire event? This cannot be undone after local data is cleared.")){localStorage.removeItem(STORAGE_KEY);state=emptyState();save();render();setTab("setup")}});
 $("#printBtn").addEventListener("click",()=>window.print());
 
