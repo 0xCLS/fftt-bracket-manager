@@ -1,0 +1,9 @@
+# Synthetic-only local/CI database. No project URL, keys, user data or secrets.
+# This is NOT a linked remote Supabase project.
+project_id = "fftt-bracket-manager-synthetic"
+
+[api]
+schemas = ["public", "graphql_public"]
+
+[db.seed]
+enabled = false
