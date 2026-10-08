@@ -84,10 +84,19 @@ with sync_playwright() as p:
     assert layout["format"]["y"] >= max(layout["setupBottom"],layout["snapshotBottom"]) - 1, layout
     assert layout["format"]["width"] >= layout["setupWidth"] + layout["snapshotWidth"], layout
     assert layout["formatColumns"].count("px") == 3, layout
-    assert layout["statusPosition"] == "sticky" and layout["statusAlignment"] == "flex-end", layout
+    assert layout["statusPosition"] == "fixed" and layout["statusAlignment"] == "flex-end", layout
+    assert abs(layout["status"]["y"]) < 1, layout
+    assert abs(layout["status"]["x"] + layout["status"]["width"] - 1440) <= 45, layout
+    original_pills = page.locator(".statusline").bounding_box()
+    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+    page.wait_for_timeout(120)
+    scrolled_pills = page.locator(".statusline").bounding_box()
+    assert original_pills and scrolled_pills, (original_pills, scrolled_pills)
+    assert abs(original_pills["y"] - scrolled_pills["y"]) < 1, (original_pills, scrolled_pills)
+    page.evaluate("window.scrollTo(0, 0)")
     assert layout["statusFirst"], layout
     assert page.locator(".statusline > .pill").count() == 4
-    print("PASS balanced Overview cards and four sticky top-right status pills")
+    print("PASS balanced Overview cards and four viewport-fixed top-right status pills")
 
     print("PASS lightened plum sidebar and asymmetrical Overview")
     page.locator('.overview-feature [data-go="players"]').click()
@@ -228,7 +237,15 @@ with sync_playwright() as p:
     assert mobile_format is not None and mobile_setup is not None
     assert mobile_format["y"] > mobile_setup["y"] + mobile_setup["height"]
     assert page.locator(".statusline > .pill").count() == 4
-    print("PASS stacked mobile cards and four readable tournament status pills")
+    mobile_pills = page.locator(".statusline").bounding_box()
+    assert mobile_pills is not None and abs(mobile_pills["y"]) < 1, mobile_pills
+    assert mobile_pills["width"] <= 390 and abs(mobile_pills["x"]) < 1, mobile_pills
+    assert page.locator(".statusline").evaluate("el => getComputedStyle(el).position") == "fixed"
+    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+    page.wait_for_timeout(120)
+    mobile_after_scroll = page.locator(".statusline").bounding_box()
+    assert mobile_after_scroll is not None and abs(mobile_after_scroll["y"] - mobile_pills["y"]) < 1, (mobile_pills,mobile_after_scroll)
+    print("PASS four global pills remain anchored to viewport on desktop/mobile")
 
 
     assert not errors, errors
