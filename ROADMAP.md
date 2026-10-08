@@ -31,10 +31,10 @@ These capabilities are described in the current README and app code. They are no
 
 **Status: current priority. No new feature work until this phase is visually approved.**
 
-Reference: the user's BitSight UI-system screenshot and [BitSight design-system article](https://www.bitsight.com/blog/building-our-ui-design-system). Adopt clarity and consistency, not BitSight-specific code, branding or proprietary assets.
+Reference: the [Figma Design System by Facundo Almiron](https://www.behance.net/gallery/125691923/Figma-Design-System) for a light, polished dashboard, with BitSight as a secondary inspiration for predictable controls. Christopher explicitly authorized a complete departure from previous FFTT colors or flyer-derived styling. **The only required branding is the existing FFTT emblem and the exact credit “Developed by Chris Smith.”** Do not copy proprietary assets.
 
 - [ ] Review the seven screens as one cohesive product, including dense roster and bracket states and empty/loading/error states.
-- [ ] Refine the visual foundation: typography hierarchy, spacing scale, control heights, backgrounds, borders, shadows and color roles. Preserve approved navy/yellow FFTT identity and emblem.
+- [ ] Refine and visually approve the new light dashboard foundation: typography, spacing, controls, white cards, soft surfaces, blue accents, labels and states. Preserve the emblem and developer credit, but **not** the old navy/yellow palette.
 - [ ] Build a consistent in-app component language for **checkboxes, radio choices, toggles (only where functionally needed), tags/labels, badges, links, pagination/previous-next controls (when relevant), buttons, fields and score controls**. Include default, hover, selected, disabled and focus states.
 - [ ] Reduce UI friction: clear primary actions, logical screen layouts, readable brackets, legible statuses and appropriate sizing for volunteer phones.
 - [ ] Verify desktop, tablet, phone, projected display/TV readiness and printing where relevant.
@@ -44,6 +44,10 @@ Reference: the user's BitSight UI-system screenshot and [BitSight design-system 
 The screenshot demonstrates several styles, such as triple sliders and grade badges, but **does not imply all pictured widgets should be added** to the tournament app.
 
 ### Phase 0 implementation checkpoint — October 8, 2026
+
+**Visual direction update:** A source-only light-dashboard redesign has been committed, replacing the former navy/yellow styling with white navigation, slate typography, soft surfaces and blue interactions. The user requested this design freedom. The emblem and developer credit remain; visual acceptance is still pending.
+
+
 
 - Added **Developed by Chris Smith** in the desktop sidebar footer and compact mobile header.
 - Applied the BitSight screenshot's interaction-state vocabulary to existing checkboxes, radio choices, labels, badges, cards, bracket rows, Match Desk cards and controls; preserved FFTT navy/yellow branding and approved emblem.
