@@ -198,14 +198,12 @@ el("disconnect").addEventListener("click",()=>{
   el("publicMessage").textContent="STALE — previously loaded mock public result; not authoritative.";
   renderState();
 });
-el("reconnect").addEventListener("click",async()=>{
+el("reconnect").addEventListener("click",()=>{
   online=true;
   client.restoreConnection();
-  try{
-    await client.reloadAuthoritativeState();
-  }catch{
-    // Expected fail closed: C3 lacks a secure revision/receipt snapshot API.
-  }
+  // The C3 adapter has NO authenticated revision/receipt snapshot endpoint.
+  // Do not even request one: keep C2 in cloud-reloading (stale and blocked).
+  // A real recovery would require a separately reviewed trusted protocol.
   renderState();
 });
 renderState();
