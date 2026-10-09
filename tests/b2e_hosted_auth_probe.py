@@ -58,8 +58,8 @@ def valid_target(raw: str) -> str:
 def public_key(raw: str) -> str:
     if raw.startswith("sb_secret_") or raw.startswith("sb_service_"):
         raise PreflightError("Refusing a privileged/secret key in a client smoke test")
-    if not raw.startswith("sb_publishable_") and not raw.startswith("eyJ"):
-        raise PreflightError("Expected a Supabase publishable or legacy anonymous key")
+    if not raw.startswith("sb_publishable_"):
+        raise PreflightError("A project publishable key is required, not legacy JWT or service keys")
     return raw
 
 
