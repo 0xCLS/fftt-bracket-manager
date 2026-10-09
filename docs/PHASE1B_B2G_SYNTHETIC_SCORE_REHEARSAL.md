@@ -2,7 +2,7 @@
 
 **Environment:** `fftt-bracket-manager-dev` Supabase Free, ref `copmkalfkkrkzheohwuc`. **Scope:** one isolated synthetic event dated **2099-01-01**, *never* FFTT3, actual volunteers or registration records. The public GitHub Pages app remains browser-local. Branch and all files here are drafts and unmerged.
 
-**Status (October 9, 2026):** An audit-aware, **disabled-by-default** fixture SQL template and offline safeguards are prepared. **No hosted match fixtures have been inserted, no match scores have been submitted, no passwords have been changed, and no hosted signed-JWT testing has passed.** The organizer must separately approve the first fixture-changing transaction. This milestone builds on B2e administrative assignments and B2f anonymous HTTP observations; it does not replace signed-in organizer or scorekeeper checks.
+**Status (October 9, 2026):** An audit-aware, **disabled-by-default** fixture SQL template and offline safeguards are prepared. All **14 offline safety guards passed** in [GitHub Actions B2g run #37919171704](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/37919171704). Independently verified the hosted development event remains unchanged (revision 2, zero players/brackets/matches/score receipts). **No hosted match fixtures have been inserted, no match scores have been submitted, no passwords have been changed, and no hosted signed-JWT testing has passed.** The organizer must separately approve the first fixture-changing transaction. This milestone builds on B2e administrative assignments and B2f anonymous HTTP observations; it does not replace signed-in organizer or scorekeeper checks.
 
 ## Verified hosted baseline (read-only, October 9)
 
@@ -45,9 +45,9 @@ These tests statically validate the blocked approval, zero UUID, exact host/proj
 
 ## Acceptance gates
 
-- [ ] Offline B2g safety guards pass in CI on draft PR (record run).
-- [ ] Confirm no unintended files changed, and correct stacked branch remains unmerged.
-- [ ] Independently verify the existing hosted event stays revision 2, with no players/brackets/matches/score receipts.
+- [x] All **14** offline B2g safety guards passed in CI on draft PR #9 ([run](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/37919171704)).
+- [x] Compared against its B2f base: only the B2g SQL template, test file, CI workflow, dedicated runbook and ROADMAP changed. Branch remains a draft/unmerged PR.
+- [x] Independently verified the hosted development event remains revision 2, bracket generation 0, with no players/brackets/matches/score receipts.
 - [ ] **Separate organizer approval** for **one trusted synthetic fixture insert transaction** after reviewing the exact template, existing staff grants and current baseline.
 - [ ] Verify fixture state, administrative audit provenance and no publication after *approved* insertion.
 - [ ] Resolve safe sign-in for all four test accounts privately; no credential exchange in chat or GitHub.
