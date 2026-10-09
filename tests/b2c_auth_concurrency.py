@@ -158,9 +158,7 @@ def run() -> None:
           ('{event}','{public_event}','B2c Isolated Synthetic Tournament','2099-10-01','active',1),
           ('{other_event}','{other_public}','B2c Other Event','2099-10-02','active',1);
         insert into fftt_private.event_staff(event_id,user_id,role) values
-          ('{event}','{organizer_id}','organizer'),
-          ('{event}','{keeper_a_id}','scorekeeper'),
-          ('{event}','{keeper_b_id}','scorekeeper');
+          ('{event}','{organizer_id}','organizer');
         insert into fftt_private.players
           (id,event_id,display_name,rating,rating_status,checked_in)
         values
@@ -181,6 +179,41 @@ def run() -> None:
     role_path = "/rest/v1/rpc/fftt_staff_role_v1"
     desk_path = "/rest/v1/rpc/fftt_matchdesk_v1"
     score_path = "/rest/v1/rpc/fftt_submit_match_result_v1"
+    staff_path = "/rest/v1/rpc/fftt_manage_staff_v1"
+
+    def staff_body(target: str, action: str, role: str | None) -> dict[str, str | None]:
+        return {"p_event_id": event, "p_target_user_id": target,
+                "p_action": action, "p_role": role}
+
+    ensure(denied(request(api, anon, "POST", role_path,
+                          token=keeper_a, body={"p_event_id": event})),
+           "Unassigned synthetic scorekeeper starts with NO access")
+    ensure(denied(request(api, anon, "POST", staff_path,
+                          body=staff_body(keeper_a_id, "grant", "scorekeeper"))),
+           "Anonymous caller cannot manage staff")
+    ensure(denied(request(api, anon, "POST", staff_path, token=outsider,
+                          body=staff_body(outsider_id, "grant", "organizer"))),
+           "Unaffiliated account cannot elevate itself")
+    ensure(denied(request(api, anon, "POST", staff_path, token=organizer,
+                          body=staff_body(organizer_id, "revoke", None))),
+           "Organizer cannot revoke own access")
+    for target in (keeper_a_id, keeper_b_id):
+        grant = request(api, anon, "POST", staff_path, token=organizer,
+                        body=staff_body(target, "grant", "scorekeeper"))
+        ensure(grant.code == 200 and isinstance(grant.body, dict)
+               and grant.body.get("status") == "granted",
+               "Organizer granted one verified synthetic scorekeeper")
+    repeat_grant = request(api, anon, "POST", staff_path, token=organizer,
+                           body=staff_body(keeper_a_id, "grant", "scorekeeper"))
+    ensure(repeat_grant.code == 200 and repeat_grant.body.get("status") == "unchanged",
+           "Identical staff grant is idempotent without a new event revision")
+    ensure(denied(request(api, anon, "POST", staff_path, token=keeper_a,
+                          body=staff_body(outsider_id, "grant", "organizer"))),
+           "Scorekeeper cannot promote unrelated account")
+    ensure(denied(request(api, anon, "POST", staff_path, token=organizer,
+                          body={**staff_body(keeper_a_id, "grant", "scorekeeper"),
+                                "p_event_id": other_event})),
+           "Organizer cannot grant access to a different event")
 
     r = request(api, anon, "POST", role_path, token=organizer, body={"p_event_id": event})
     ensure(r.code == 200 and r.body == "organizer", "Organizer role resolved from database")
@@ -286,11 +319,11 @@ def run() -> None:
       where m.id='{match}';
     """)
     expected_winner = str(winning_body["p_winner_id"])
-    ensure(state == f"complete|{expected_winner}|1|1",
+    ensure(state == f"complete|{expected_winner}|1|3",
            "Postgres persisted exactly one authoritative score and revision")
     audit_count = sql(db_url, f"""
       select (select count(*) from fftt_private.audit_events
-               where event_id='{event}')::text || '|' ||
+               where event_id='{event}' and operation='result_accepted')::text || '|' ||
              (select count(*) from fftt_private.result_submissions
                where event_id='{event}')::text || '|' ||
              (select count(*) from fftt_private.consolation_reviews
@@ -300,10 +333,17 @@ def run() -> None:
            "Concurrent conflict created one audit, one receipt and one review candidate")
 
     revoked_id = [keeper_a_id, keeper_b_id][winning_index]
-    sql(db_url, f"""
-      update fftt_private.event_staff set active=false,revoked_at=now()
-      where event_id='{event}' and user_id='{revoked_id}';
+    revoked = request(api, anon, "POST", staff_path, token=organizer,
+                      body=staff_body(revoked_id, "revoke", None))
+    ensure(revoked.code == 200 and isinstance(revoked.body, dict)
+           and revoked.body.get("status") == "revoked",
+           "Organizer revoked winning scorekeeper through authenticated API")
+    staff_audits = sql(db_url, f"""
+      select count(*) from fftt_private.audit_events
+       where event_id='{event}' and operation='staff_grant_changed';
     """)
+    ensure(staff_audits == "3", "Two staff grants and one revocation are audited")
+
     ensure(denied(request(api, anon, "POST", score_path,
                           token=winning_token, body=winning_body)),
            "Revoked Auth user cannot replay previously accepted submission")
