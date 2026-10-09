@@ -20,6 +20,24 @@ The organizer ran the first B2h Mac launcher locally with a valid modern project
 
 **Observed after stopped attempt:** Read-only hosted database check: **4** Auth accounts remain, **1** organizer and **2** scorekeeper grants remain, **1** pending match at revision **3**, zero score submissions and zero public results. One Auth magic link was generated but **no verify/redeem request and no signed JWT success occurred**. No participant/event/bracket/staff/score mutation occurred. A magic-link generation can update transient Auth token metadata, so do not claim absolutely no Auth state changed. Do not label B2h hosted as passed until the new operator attempt actually succeeds. Do not share the private API key, generated magic links, token hashes, or JWTs in chat/screenshots.
 
+## October 9 operator rerun — B2h HOSTED PASS (actual signed JWTs)
+
+The organizer reran the corrected, fixed-commit Mac launcher. The user-provided Terminal screenshot shows the **complete test finishing with** `B2h HOSTED PASS: real signed Auth event access verified; NO score/staff/event writes or password changes` and `B2h runner finished.` No secret key, magic-link token, JWT or refresh token was displayed in the output.
+
+Confirmed checks **from the actual organizer-local hosted execution**, not GitHub Actions mocks:
+
+- Auth Admin account inventory verified **exactly four** pre-existing, confirmed independent synthetic accounts: organizer, scorekeeper A, scorekeeper B and an unassigned outsider.
+- Each account exchanged a separate administrator-generated one-time magic link for a real Supabase-issued JWT; **all four** JWTs were independently resolved back to their expected original account with `GET /auth/v1/user`.
+- Staff-role API returned exactly **organizer** for organizer and **scorekeeper** for both scorekeepers, using those genuine JWTs. Each authorized identity saw exactly **one pending synthetic `C-0-0` match** and the expected fake player names/version, with private-field allowlist checks passing.
+- The **signed-in outsider** was denied staff-role and matchdesk RPCs; an **anonymous** role RPC was also denied.
+- Crucially, the authenticated request with `Accept-Profile: fftt_private` against `event_staff` was **denied over actual hosted HTTP**, closing the earlier *authenticated* private-schema header verification gap. The original B2f **anonymous** seven-request Python probe itself is still not recorded as having run; do not conflate the two.
+- Anonymous public-results projection remained **empty** at the time of the hosted HTTP test.
+- The B2h harness has no scoring, staff-write, bracket-write or password-reset endpoint in its strict allowlist; **no such operation was invoked by the runner**. Normal Auth sessions and temporary magic-link state were created as designed.
+
+**Scope of evidence:** This PASS comes from the organizer's supplied Terminal screenshot of genuine hosted HTTP requests, not a fabricated SQL JWT context. An additional read-only Supabase SQL count verification was attempted afterward, but the connector blocked that read; therefore a new independent post-B2h SQL snapshot is **not claimed** here. The passed hosted HTTP matchdesk/public-results observations remain valid.
+
+**Remaining gates:** These were **administrator-initiated** sessions, not a test of independent volunteer invitation, email delivery, account recovery or login UX. No concurrent hosted score-submission test, authenticated organizer staff grant/revoke, bye propagation, corrections, publication, live app cloud cutover or production readiness has been completed. Do **not** assume B2h authorizes a later hosted match write or staff revocation. The private project changelog holds dated outcome/provenance. The original old launcher remains superseded; no further B2h rerun is needed to establish this completed read-only milestone.
+
 ## Implementation
 
 `tests/b2h_admin_magiclink_signed_auth.py` is a standard-library Python 3 command-line probe for the organizer's **trusted personal Mac**, never a GitHub Action deployment or public web app. It contains a public client key only; no secret key, JWT, refresh token or password is checked into source.
@@ -36,7 +54,7 @@ Safety controls:
 
 **Public-source privacy:** Only the three deliberately synthetic testing aliases are embedded. The organizer's personal address and the private event UUID must be entered locally; neither is hardcoded into public repository source.
 
-## Operator steps — not yet executed
+## Operator steps — completed for B2h signed-Auth verification
 
 1. Have Python 3 installed on your personal Mac. Retrieve the project `sb_secret_` key from [Supabase project API Keys](https://supabase.com/dashboard/project/copmkalfkkrkzheohwuc/settings/api-keys). **Do not paste that key into this chat or GitHub.**
 2. Obtain the synthetic event UUID from private `0xCLS/forging-fellowship-table-tennis/maintenance/CHANGELOG.md`, or your approved private project notes. Do not use the real FFTT3 event ID. Know the existing organizer login email.
@@ -62,6 +80,6 @@ An **updated** Mac operator launcher archive `FFTT_B2h_Passwordless_Auth_Mac_FIX
 | Ordinary real-volunteer inbox/login UX | **NOT tested by admin-issued sessions** |
 | Hosted score race, idempotency, event-day offline fallback | **Pending separate approval** |
 
-**Current status:** Only offline test suite and CI source are prepared; **operator has not run real hosted Auth magic-link session test**. No Auth session success may be claimed until real operator output is verified and hosted event invariant checked.
+**Current status (October 9, 2026):** **B2h HOSTED PASS** documented from actual organizer-local Terminal execution with four real signed sessions and hosted permission checks. The separate post-run Supabase SQL-count attempt was blocked by the connector and is marked **not independently verified**. No password reset or tournament/scoring/staff-write endpoint was invoked. The volunteer-controlled login UX and hosted score/concurrency/recovery gates remain pending.
 
 Official Supabase references: https://supabase.com/docs/reference/javascript/auth-admin-generatelink , https://supabase.com/docs/reference/javascript/auth-verifyotp , https://supabase.com/docs/guides/getting-started/api-keys and https://supabase.com/docs/guides/auth/jwts .
