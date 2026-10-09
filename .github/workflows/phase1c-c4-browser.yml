@@ -1,0 +1,40 @@
+name: Phase 1C C4 isolated browser rehearsal
+
+on:
+  pull_request:
+    paths:
+      - rehearsals/c4/**
+      - tests/c4_browser_rehearsal.py
+      - contracts/phase1c_disconnect_reference.mjs
+      - contracts/phase1c_mock_shared_client.mjs
+      - contracts/phase1c_c3_readonly_supabase_transport.mjs
+      - docs/PHASE1C_C4_BROWSER_REHEARSAL.md
+      - .github/workflows/phase1c-c4-browser.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-browser-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check isolated module syntax
+        run: |
+          node --check rehearsals/c4/rehearsal.mjs
+          node --check contracts/phase1c_c3_readonly_supabase_transport.mjs
+          python -m py_compile tests/c4_browser_rehearsal.py
+      - name: Install Chromium for isolated rehearsal
+        run: |
+          python -m pip install playwright
+          python -m playwright install chromium --with-deps
+      - name: Run isolated localhost-only Chromium rehearsal
+        run: python tests/c4_browser_rehearsal.py
