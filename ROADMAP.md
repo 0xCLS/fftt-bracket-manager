@@ -153,6 +153,7 @@ The design approval gate is satisfied. Phase sequencing is provisional and subje
 - [ ] Define roles: organizer/admin (full tournament control), volunteer scorekeeper (authorized score submission), spectator (read-only public results), and TV display (read-only).
 - [x] **B2a synthetic backend milestone (PR #3):** hosted event-scoped authenticated role/eligible matchdesk read RPCs, with 20 B2a pgTAP security tests passed and browser regression passed. No real Auth users provisioned; full signed-JWT test still pending.
 - [x] **B2b synthetic backend milestone (PR #4):** hosted transactional score RPC tested against isolated local PostgreSQL (70 total pgTAP assertions passed across B1–B2b), plus hosted function privilege/security checks. This is NOT proof of real multi-session concurrency or production readiness.
+- [ ] **B2c PR #5:** Complete real local Supabase Auth and simultaneous HTTP scoring tests with disposable synthetic identities; retain separate gates for hosted Auth, organizer-approved corrections, bye logic, and recovery.
 - [ ] Verify real organizer-approved Auth sessions, actual simultaneous scorekeeper connections, audit/corrections, reliable bye/advancement and recovery against synthetic data before connecting frontend.
 - [ ] Handle concurrent score entry, stale clients, retry/deduplication, corrections/auditability and device reconnection.
 - [ ] Define offline/degraded-mode behavior and a rehearsed recovery plan; retain private JSON export where practical.

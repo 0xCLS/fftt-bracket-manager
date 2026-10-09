@@ -7,3 +7,8 @@ schemas = ["public", "graphql_public"]
 
 [db.seed]
 enabled = false
+
+# B2c local-only signed Auth integration: disposable synthetic users must be
+# able to sign in without a real email inbox. Hosted Auth is NOT modified.
+[auth.email]
+enable_confirmations = false
