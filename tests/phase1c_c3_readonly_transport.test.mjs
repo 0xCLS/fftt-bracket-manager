@@ -21,7 +21,7 @@ const deskRow=()=>({
   is_championship_final:false,table_number:1,
 });
 const pubMatch=()=>({
-  event_id:PUBLIC,match_id:UUID,bracket:"championship",round:0,slot:0,
+  event_id:PUBLIC,match_id:"C-0-0",bracket:"championship",round:0,slot:0,
   player_1_name:"Synthetic Alpha",player_2_name:"Synthetic Beta",
   winner_name:"Synthetic Alpha",game_scores:"11-7, 11-8",status:"complete",
 });
@@ -44,7 +44,7 @@ function harness(payload, opts={}) {
   };
   const getAccessToken=async()=>{
     tokenLookups++;
-    return opts.token??ACCESS;
+    return Object.hasOwn(opts,"token")?opts.token:ACCESS;
   };
   const transport=createC3ReadOnlySupabaseTransport({
     publishableKey:KEY,getAccessToken,fetchImpl,
@@ -181,6 +181,7 @@ test("published events read-only GET with strict fields",async()=>{
 test("published matches read-only GET and field allowlist",async()=>{
   const h=harness([pubMatch()]);
   assert.equal((await h.transport.readPublicMatches())[0].game_scores,"11-7, 11-8");
+  assert.equal((await h.transport.readPublicMatches())[0].match_id,"C-0-0");
   assert.equal(new URL(h.calls[0].url).pathname,"/rest/v1/fftt_published_matches");
   const bad=harness([{...pubMatch(),player_1_id:UUID}]);
   await fail(()=>bad.transport.readPublicMatches());
