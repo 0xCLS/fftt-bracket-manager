@@ -1,0 +1,28 @@
+name: Phase 1C offline authority and reconnect guards
+
+on:
+  pull_request:
+    paths:
+      - contracts/phase1c_disconnect_reference.mjs
+      - tests/phase1c_disconnect_reference.test.mjs
+      - docs/PHASE1C_C1_OFFLINE_AUTHORITY.md
+      - .github/workflows/phase1c-offline-authority.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pure-authority-reference:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check pure JS syntax
+        run: |
+          node --check contracts/phase1c_disconnect_reference.mjs
+          node --check tests/phase1c_disconnect_reference.test.mjs
+      - name: Run 19 no-network state and recovery tests
+        run: node --test tests/phase1c_disconnect_reference.test.mjs
