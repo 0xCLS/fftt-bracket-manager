@@ -2,7 +2,7 @@
 
 **Scope:** An isolated, read-only **anonymous/public API** smoke test against the existing Supabase Free development project `fftt-bracket-manager-dev`, pinned to `https://copmkalfkkrkzheohwuc.supabase.co`. This does **not** require anyone's password and does **not** test signed organizer or scorekeeper access.
 
-**Status:** Script and twelve no-network guard tests prepared in an unmerged draft feature branch. Live hosted HTTP outcomes must be recorded separately after the probe is actually executed; a passing unit test is **not** proof that hosted HTTP was exercised.
+**Status (October 9, 2026):** Script and twelve no-network guard tests prepared in unmerged draft PR #8; **all 12 local/CI guards passed**. A separate read-only *browser-driven* hosted HTTPS GET spot-check returned the expected statuses for **six** public projection/field/anonymous RPC checks; the seventh request rejected access to a nonexistent **public** staff table, but did not send the required `Accept-Profile: fftt_private` header, so the *private schema* boundary is **not yet proven by this HTTP run**. The stricter scripted seven-case probe with proper headers remains **not executed against hosted Supabase**. The browser spot-check used a public publishable key as a URL query parameter; the scripted probe instead sends the API key in an HTTP header. No real JWT sign-ins were attempted.
 
 ## Why this milestone is separate
 
@@ -46,10 +46,29 @@ python3 -m py_compile tests/b2f_anonymous_http_probe.py tests/test_b2f_anonymous
 python3 -m unittest discover -s tests -p test_b2f_anonymous_http_probe.py -v
 ```
 
+## Observed browser-side hosted GET spot-check — October 9, 2026
+
+Independent browser-driven testing against the exact Free development project performed seven **GET-only** requests using the project's modern **public** API key (passed as URL query parameter by that browser agent). The browser operator did **not** run the Python probe itself or submit an Authorization/JWT header.
+
+| Browser request | Observed status | Interpretation |
+| --- | --- | --- |
+| Anonymous public results projection | 200, empty JSON array | PASS |
+| Anonymous published events table | 200, empty JSON array | PASS |
+| Anonymous published matches table | 200, empty JSON array | PASS |
+| Anonymous result projection `select=email` | 400 (`42703`, missing column) | PASS: private field absent |
+| Anonymous staff-role RPC | 403 (`42501`, function permission denied) | PASS |
+| Anonymous matchdesk RPC | 403 (`42501`, function permission denied) | PASS |
+| Anonymous public-schema `event_staff` lookup | HTTP 4xx (`PGRST205`, no `public.event_staff`) | **INCONCLUSIVE for private schema**: no `Accept-Profile: fftt_private` header was actually used |
+
+Browser evidence: https://agent.tinyfish.ai/runs/366a05f1-deb4-4514-b6bd-05ab8e004b6a
+
+**Important limitations:** Unlike the new Python probe, the browser used an `apikey` URL parameter instead of an HTTP request header, and it did not supply the private-schema header for the final test. Its sixth meaningful success only establishes the six explicitly observed HTTP boundaries above, not the full strict-script B2f suite. Do not claim the private-schema HTTP test passed or that genuine user login/JWT rights have been exercised. The hosted database-side private table grants were separately checked in B2e.
+
 ## Acceptance and next gates
 
-- [ ] No-network guard suite and Python syntax pass in GitHub Actions.
-- [ ] Run the exact live hosted HTTP probe once and record actual statuses, without echoing response bodies containing user data.
+- [x] Twelve no-network unit guards and Python syntax passed in the B2f GitHub Actions workflow.
+- [x] Browser-driven HTTP GET spot-check: six supported checks passed; seventh private-schema check **inconclusive** due to missing header.
+- [ ] Run the **exact** strict live Python probe with header-based authentication and `Accept-Profile: fftt_private`, then record real statuses. Do not confuse browser results with probe execution.
 - [ ] Verify anonymous public view is accessible and empty, private query/schema blocked, and event remains unmodified.
 - [ ] Verify Supabase Security Advisor and record outcomes in private project changelog.
 - [ ] **Still pending:** genuine signed-in role/matchdesk verification for four controlled accounts, organizer RPC grant/revoke tests, remote multi-client scoring and fixture-based recovery, byes, corrections and publication.
