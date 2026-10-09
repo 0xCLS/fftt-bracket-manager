@@ -37,7 +37,7 @@ class GuardedSyntheticFixture(unittest.TestCase):
 
     def test_requires_database_admin_and_event_lock(self):
         self.assertIn("current_user not in ('postgres', 'supabase_admin')", SQL)
-        self.assertRegex(SQL, r"select \* into v_event.*?for update;", msg="Must lock event")
+        self.assertRegex(SQL, r"(?s)select \* into v_event.*?for update;", msg="Must lock event")
         self.assertIn("count(*) from fftt_private.events) <> 1", SQL)
 
     def test_expected_revision_and_staff_baseline(self):
