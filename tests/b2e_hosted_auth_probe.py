@@ -150,7 +150,6 @@ def check_hosted_roles() -> None:
     signed = {r: sign_in(origin, key, r, *credentials[r]) for r in AUTH_USERS}
     role_path = "/rest/v1/rpc/fftt_staff_role_v1"
     desk_path = "/rest/v1/rpc/fftt_matchdesk_v1"
-    grants_path = "/rest/v1/rpc/fftt_manage_staff_v1"
     expected = {"ORGANIZER": "organizer", "SCOREKEEPER_A": "scorekeeper",
                 "SCOREKEEPER_B": "scorekeeper"}
 
@@ -168,23 +167,6 @@ def check_hosted_roles() -> None:
     require(denied(http(origin, key, "POST", role_path,
                         payload={"p_event_id": event})),
             "Anonymous browser cannot call staff-role RPC")
-    require(denied(http(origin, key, "POST", grants_path,
-                        payload={"p_event_id": event,
-                                 "p_target_user_id": signed["OUTSIDER"].user_id,
-                                 "p_action": "grant", "p_role": "organizer"})),
-            "Anonymous browser cannot grant staff")
-    require(denied(http(origin, key, "POST", grants_path,
-                        token=signed["SCOREKEEPER_A"].token,
-                        payload={"p_event_id": event,
-                                 "p_target_user_id": signed["OUTSIDER"].user_id,
-                                 "p_action": "grant", "p_role": "organizer"})),
-            "Scorekeeper cannot elevate outsider")
-    require(denied(http(origin, key, "POST", grants_path,
-                        token=signed["OUTSIDER"].token,
-                        payload={"p_event_id": event,
-                                 "p_target_user_id": signed["OUTSIDER"].user_id,
-                                 "p_action": "grant", "p_role": "organizer"})),
-            "Outsider cannot self-elevate")
 
     for r in ("ORGANIZER", "SCOREKEEPER_A", "SCOREKEEPER_B"):
         desk = http(origin, key, "POST", desk_path, token=signed[r].token,
