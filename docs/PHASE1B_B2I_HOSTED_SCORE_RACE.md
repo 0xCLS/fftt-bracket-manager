@@ -36,10 +36,16 @@ Pass requires **exactly one** HTTP 200 response containing `status=accepted` and
 - Capture a safe test report with only labels, statuses, versions and counts; **never** log JWTs, private keys, one-time magic links or response bodies containing private player data.
 - **On uncertain network outcome, stop all writes**; independently read the match, receipts and audit before retrying anything. Do not run a destructive reset or replay a second race on the same completed match. Preserve immutable history; any new fixture/correction/revocation requires new organizer approval.
 
+## Hardened operator template (still disabled)
+
+The branch also contains `tests/b2i_hosted_race_operator_DISABLED.py`, which imports the existing **corrected B2h** JWT/Auth helper and the **pure B2i** acceptance oracle. Its `HOSTED_SCORE_WRITES_ENABLED = False` is a deliberate **source-level hard stop** checked immediately in `main`, before any secret key, Auth session or network request. Each potential score HTTP POST independently checks that hard stop again. A local approval phrase *alone* cannot override it. This file is **not** a runnable hosted score test until a separate organizer approval and reviewed follow-up commit explicitly open that hard gate.
+
+For later review, the unenabled code specifies two independent authenticated scorekeepers and a two-worker barrier, builds unique submission UUIDs for opposing fictional winners, validates the exact `C-0-0` matchdesk row, accepts no automatic replay after ambiguous results and emits no tokens or private response bodies. It intentionally leaves the initial operator `main` in non-operating stop mode; it does not perform or claim SQL post-write verification. The offline unit suite includes additional blocked-path and payload checks.
+
 ## Acceptance gates
 
-- [ ] Create/offline-test a fail-closed pure response-and-snapshot validator. CI must be no-network with no credentials.
-- [ ] Build/review a separately gated Mac-hosted scoring runner (default **dry-run**, no scoring endpoints until explicit approval).
+- [x] Create a fail-closed pure response-and-snapshot validator with no network/credentials; 16 offline unit tests added to B2i GitHub Actions.
+- [x] Stage a **hard-disabled**, separate Mac-hosted signed-JWT scoring harness and 10 no-network guard tests; no score POST can run until an explicitly approved source change. This is preparatory, not tested hosted scoring.
 - [ ] Independently recheck exact hosted preflight, including event/fixture/protected staff and publication.
 - [ ] Request and receive **explicit organizer permission to submit two conflicting synthetic hosted match scores**.
 - [ ] Only then conduct live race and independently verify post-conditions, idempotent retry and denial semantics.
