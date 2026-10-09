@@ -1,0 +1,47 @@
+name: Phase 1C C6 individual OTP read-only browser guards
+
+on:
+  pull_request:
+    paths:
+      - contracts/phase1c_c6_existing_user_otp.mjs
+      - tests/phase1c_c6_existing_user_otp.test.mjs
+      - rehearsals/c6/**
+      - tests/c6_browser_read_rehearsal.py
+      - docs/PHASE1C_C6_OTP_BROWSER_READ.md
+      - .github/workflows/phase1c-c6-browser-read.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  c6-existing-user-otp-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check source syntax, including C3 transport
+        run: |
+          node --check contracts/phase1c_c6_existing_user_otp.mjs
+          node --check rehearsals/c6/read-only.mjs
+          node --check contracts/phase1c_c3_readonly_supabase_transport.mjs
+          node --check tests/phase1c_c6_existing_user_otp.test.mjs
+      - name: Test existing-user only OTP and memory-bound JWT identity verification
+        run: node --test tests/phase1c_c6_existing_user_otp.test.mjs
+
+  c6-mocked-chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Chromium test browser
+        run: |
+          python -m pip install playwright
+          python -m playwright install chromium --with-deps
+      - name: Run individual mock identity/role read UI rehearsal (NO EXTERNAL NETWORK)
+        run: python tests/c6_browser_read_rehearsal.py
