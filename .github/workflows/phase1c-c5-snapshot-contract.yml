@@ -1,0 +1,38 @@
+name: Phase 1C C5 proposed trusted snapshot guards (offline only)
+
+on:
+  pull_request:
+    paths:
+      - supabase/proposals/PHASE1C_C5_SNAPSHOT_DRAFT_DO_NOT_APPLY.sql
+      - contracts/phase1c_c5_snapshot_wire.mjs
+      - tests/phase1c_c5_snapshot_wire.test.mjs
+      - tests/test_phase1c_c5_snapshot_sql_static.py
+      - docs/PHASE1C_C5_TRUSTED_SNAPSHOT_CONTRACT.md
+      - .github/workflows/phase1c-c5-snapshot-contract.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract-only-no-database:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install PostgreSQL syntax parser (NO database connection)
+        run: python -m pip install pglast
+      - name: Check JS syntax and Python compile
+        run: |
+          node --check contracts/phase1c_c5_snapshot_wire.mjs
+          node --check tests/phase1c_c5_snapshot_wire.test.mjs
+          python -m py_compile tests/test_phase1c_c5_snapshot_sql_static.py
+      - name: Validate proposed SQL parse, permissions and field scope (NO EXECUTION)
+        run: python -m unittest discover -s tests -p 'test_phase1c_c5_snapshot_sql_static.py' -v
+      - name: Validate receipt/reconnect wire responses without a real server
+        run: node --test tests/phase1c_c5_snapshot_wire.test.mjs
