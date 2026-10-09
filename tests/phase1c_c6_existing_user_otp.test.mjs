@@ -145,6 +145,32 @@ test("repeated OTP request cannot create another session when signed in",async()
   const h=mock();await signed(h);await denied(()=>h.client.requestCode(EMAIL));
   assert.equal(h.requests.length,3);
 });
+test("local sign-out during pending verification cannot resurrect old session",async()=>{
+  let resolveUser;
+  const requests=[];
+  const h=new C6ExistingUserOtp({
+    publishableKey:KEY,now:()=>100000,
+    fetchImpl:async(url,init)=>{
+      const path=new URL(url).pathname;
+      requests.push(path);
+      if(path==="/auth/v1/otp")return{status:200,json:async()=>({})};
+      if(path==="/auth/v1/verify")return{status:200,json:async()=>validVerify};
+      if(path==="/auth/v1/user")return new Promise(ok=>{resolveUser=ok});
+      throw Error("Unlisted auth route");
+    },
+  });
+  await h.requestCode(EMAIL);
+  const inFlight=h.verifyCode("123456");
+  // Promise advances after auth verify before /user response.
+  for(let i=0;i<10&&!resolveUser;i++)await Promise.resolve();
+  assert.equal(typeof resolveUser,"function");
+  h.end();
+  resolveUser({status:200,json:async()=>okUser});
+  await denied(()=>inFlight);
+  assert.equal(h.status.authenticated,false);
+  assert.throws(()=>h.accessToken(),AuthorityGateError);
+  assert.deepEqual(requests,["/auth/v1/otp","/auth/v1/verify","/auth/v1/user"]);
+});
 test("source cannot contain account creation, password reset, Auth admin, persistence or logging",async()=>{
   const fs=await import("node:fs");
   const src=fs.readFileSync(new URL("../contracts/phase1c_c6_existing_user_otp.mjs",import.meta.url),"utf8");
