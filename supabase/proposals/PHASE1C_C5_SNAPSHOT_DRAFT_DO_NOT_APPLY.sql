@@ -75,7 +75,7 @@ begin
 
     if found then
       v_status := v_receipt_response ->> 'status';
-      if v_status <> 'accepted' then
+      if v_status is distinct from 'accepted' then
         -- Unexpected stored receipt shape is an incident, not "rejected".
         raise exception 'invalid result receipt' using errcode = '22023';
       end if;
@@ -89,9 +89,10 @@ begin
          or v_receipt_event_revision < 0
          or v_receipt_match_version is null
          or v_receipt_match_version < 0
+         or v_receipt_generation is null
          or v_receipt_generation > v_generation
          or v_receipt_generation < 0
-         or v_receipt_response ->> 'match_id' <> v_receipt_match_id::text
+         or v_receipt_response ->> 'match_id' is distinct from v_receipt_match_id::text
       then
         raise exception 'invalid result receipt' using errcode = '22023';
       end if;
