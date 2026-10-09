@@ -186,9 +186,15 @@ test("read error pauses instead of falling back to stale data",async()=>{
   assert.equal(c.status.phase,PHASE.PAUSED);
   assert.equal(c.status.stale,true);
 });
-test("offline fallback cannot POST score and cannot automatically merge",async()=>{
+test("offline fallback cannot POST score or accept an outdated server snapshot",async()=>{
   let calls=0;
-  const {c}=client({submitScore:async()=>{calls++;return accepted();}});
+  let authoritativeRevision=4;
+  const {c}=client({
+    submitScore:async()=>{calls++;return accepted();},
+    fetchAuthoritativeSnapshot:async()=>({
+      eventId:EVENT,revision:authoritativeRevision,generation:1,
+    }),
+  });
   c.loseConnection();
   c.startFallback({
     eventId:EVENT,backupRevision:4,backupGeneration:1,
@@ -211,10 +217,14 @@ test("offline fallback cannot POST score and cannot automatically merge",async()
   });
   assert.equal(flagged.phase,PHASE.RELOADING);
   assert.equal(flagged.cloudWritesEnabled,false);
+  // The transport still reports revision 4, below the reviewed version 5.
+  // It MUST fail closed rather than silently discarding fallback changes.
+  await rejects(()=>c.reloadAuthoritativeState());
+  assert.equal(c.status.cloudWritesEnabled,false);
+  authoritativeRevision=5;
   const online=await c.reloadAuthoritativeState();
-  // Fake transport still returns revision 4, so this MUST be rejected,
-  // demonstrating that reconciling cannot silently accept an old snapshot.
   assert.equal(online.cloudWritesEnabled,true);
+  assert.equal(calls,0);
 });
 test("reference source never sends HTTP or touches browser state",async()=>{
   const fs=await import("node:fs");
