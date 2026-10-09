@@ -12,7 +12,7 @@ from pathlib import Path
 import json
 import threading
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, expect
 
 ROOT = Path(__file__).resolve().parent.parent
 HOST = "127.0.0.1"
@@ -148,9 +148,7 @@ def case(browser, role):
           "Requesting an OTP does not grant access")
     page.locator("#code").fill("123456")
     page.locator("#verifyCode").click()
-    page.wait_for_function(
-        "document.getElementById('authBadge').textContent.includes('SIGNED IN')"
-    )
+    expect(page.locator("#authBadge")).to_contain_text("SIGNED IN", timeout=10000)
     check(page.locator("#staffControls").is_visible(),
           "Signed session permits attempting real role-gated read")
     page.locator("#eventId").fill(EVENT)
