@@ -1,0 +1,30 @@
+name: Phase 1C mock shared-client integration guards
+
+on:
+  pull_request:
+    paths:
+      - contracts/phase1c_disconnect_reference.mjs
+      - contracts/phase1c_mock_shared_client.mjs
+      - tests/phase1c_disconnect_reference.test.mjs
+      - tests/phase1c_mock_shared_client.test.mjs
+      - docs/PHASE1C_C2_MOCKED_SHARED_CLIENT.md
+      - .github/workflows/phase1c-mock-shared-client.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  no-transport-cloud-controller:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check reference and fake transport test syntax
+        run: |
+          node --check contracts/phase1c_mock_shared_client.mjs
+          node --check tests/phase1c_mock_shared_client.test.mjs
+      - name: Run 19 mocked cloud-client scenarios
+        run: node --test tests/phase1c_mock_shared_client.test.mjs
