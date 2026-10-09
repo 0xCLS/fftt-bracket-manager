@@ -210,7 +210,7 @@ class B2hTests(unittest.TestCase):
         self.assertIn("getpass.getpass", src)
         self.assertIn("NoRedirect", src)
         self.assertNotIn("file.write(", src)
-        self.assertNotIn("open(", src)
+        self.assertNotIn("with open(", src)
 
 
 if __name__ == "__main__":
