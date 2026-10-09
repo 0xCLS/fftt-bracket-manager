@@ -33,7 +33,7 @@ Safety controls:
 3. From the checked-out application repository on this **unmerged B2h branch**, run `python3 tests/b2h_admin_magiclink_signed_auth.py` in your own Terminal. The tool prompts for organizer email, synthetic event UUID, a hidden secret key, and the exact confirmation phrase.
 4. When it reports `B2h HOSTED PASS`, share **only the non-secret pass/fail outcome**, not key, email, JWTs, returned links, or hidden prompt contents. On any failure, the script stops with the test label and a safe short error; do not retry multiple times in a row without investigating existing sessions/rate limits.
 
-A local archive/one-click operator packaging step may be added after the offline tests pass; any such archive must be generated from current GitHub source. A connected GitHub/Supabase tool does **not** itself provide the private project secret required to run this.
+A small Mac operator launcher archive was also prepared and verified for delivery in the chat. Its `.command` file downloads this **pinned public source at commit `af5d9c9cefde125f85dc0e2e793c5c708605f75c`** directly on the organizer's Mac, then runs Python 3 locally. The archive does **not** contain credentials or pre-generated Auth links. The exact project secret is still entered only by the organizer in a hidden Terminal prompt. Its wrapper has not been executed here or on hosted Auth. A connected GitHub/Supabase tool does **not** itself provide the private project secret required to run this.
 
 ## Checks and acceptance criteria
 
