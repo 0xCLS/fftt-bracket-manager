@@ -109,7 +109,7 @@ class B2hTests(unittest.TestCase):
         def fake(method, path, key, **opts):
             calls.append((method, path, key, opts))
             if path.endswith("/generate_link"):
-                return app.Response(200, {"user": {"id": IDS["SCOREKEEPER_A"]},
+                return app.Response(200, {"user": {"id": IDS["SCOREKEEPER_A"], "email": EMAILS["SCOREKEEPER_A"]},
                                           "properties": {"hashed_token": "token-hash"}})
             if path.endswith("/verify"):
                 return app.Response(200, {"access_token": "header.payload.signature"})
@@ -130,10 +130,80 @@ class B2hTests(unittest.TestCase):
         self.assertEqual(calls[1][3]["body"], {"type": "magiclink",
                                                "token_hash": "token-hash"})
 
+    def test_flat_raw_gotrue_link_format_supported_and_verified(self):
+        """Live raw /admin/generate_link is FLAT, unlike normalized supabase-js."""
+        calls = []
+        def fake(method, path, key, **opts):
+            calls.append(path)
+            if path.endswith("/generate_link"):
+                return app.Response(200, {
+                    "id": IDS["SCOREKEEPER_A"], "email": EMAILS["SCOREKEEPER_A"],
+                    "hashed_token": "one-time-mock",
+                    "verification_type": "magiclink",
+                })
+            if path.endswith("/verify"):
+                self.assertEqual(opts["body"]["token_hash"], "one-time-mock")
+                return app.Response(200, {"access_token": "header.payload.signature"})
+            if path.endswith("/user"):
+                return app.Response(200, {
+                    "id": IDS["SCOREKEEPER_A"], "email": EMAILS["SCOREKEEPER_A"],
+                    "email_confirmed_at": "confirmed", "is_anonymous": False,
+                })
+            raise AssertionError("Unexpected path")
+        with patch.object(app, "http", side_effect=fake):
+            self.assertEqual(
+                app.exchange_link("sb_secret_fake", "SCOREKEEPER_A",
+                                  EMAILS["SCOREKEEPER_A"], IDS["SCOREKEEPER_A"]),
+                "header.payload.signature")
+        self.assertEqual(calls, ["/auth/v1/admin/generate_link",
+                                 "/auth/v1/verify", "/auth/v1/user"])
+
+    def test_flat_raw_mismatched_id_never_redeems(self):
+        calls = []
+        def fake(method, path, key, **opts):
+            calls.append(path)
+            return app.Response(200, {
+                "id": IDS["OUTSIDER"],
+                "email": EMAILS["SCOREKEEPER_A"],
+                "hashed_token": "should-not-redeem",
+            })
+        with patch.object(app, "http", side_effect=fake):
+            with self.assertRaises(app.StopTest):
+                app.exchange_link("sb_secret_fake", "SCOREKEEPER_A",
+                                  EMAILS["SCOREKEEPER_A"], IDS["SCOREKEEPER_A"])
+        self.assertEqual(calls, ["/auth/v1/admin/generate_link"])
+
+    def test_flat_raw_mismatched_email_never_redeems(self):
+        calls = []
+        def fake(method, path, key, **opts):
+            calls.append(path)
+            return app.Response(200, {
+                "id": IDS["SCOREKEEPER_A"],
+                "email": EMAILS["OUTSIDER"],
+                "hashed_token": "should-not-redeem",
+            })
+        with patch.object(app, "http", side_effect=fake):
+            with self.assertRaises(app.StopTest):
+                app.exchange_link("sb_secret_fake", "SCOREKEEPER_A",
+                                  EMAILS["SCOREKEEPER_A"], IDS["SCOREKEEPER_A"])
+        self.assertEqual(calls, ["/auth/v1/admin/generate_link"])
+
+    def test_flat_raw_missing_identity_never_redeems(self):
+        calls = []
+        def fake(method, path, key, **opts):
+            calls.append(path)
+            return app.Response(200, {"email": EMAILS["SCOREKEEPER_A"],
+                                      "hashed_token": "should-not-redeem"})
+        with patch.object(app, "http", side_effect=fake):
+            with self.assertRaises(app.StopTest):
+                app.exchange_link("sb_secret_fake", "SCOREKEEPER_A",
+                                  EMAILS["SCOREKEEPER_A"], IDS["SCOREKEEPER_A"])
+        self.assertEqual(calls, ["/auth/v1/admin/generate_link"])
+
     def test_wrong_generated_identity_blocks_token_redemption(self):
         def fake(method, path, key, **opts):
             if path.endswith("/generate_link"):
-                return app.Response(200, {"user": {"id": IDS["OUTSIDER"]},
+                return app.Response(200, {"user": {"id": IDS["OUTSIDER"], "email": EMAILS["OUTSIDER"]},
                                           "properties": {"hashed_token": "foo"}})
             raise AssertionError("Unexpected verify attempt")
         with patch.object(app, "http", side_effect=fake):
@@ -144,7 +214,7 @@ class B2hTests(unittest.TestCase):
     def test_incorrect_auth_server_identity_rejected(self):
         def fake(method, path, key, **opts):
             if path.endswith("/generate_link"):
-                return app.Response(200, {"user": {"id": IDS["SCOREKEEPER_A"]},
+                return app.Response(200, {"user": {"id": IDS["SCOREKEEPER_A"], "email": EMAILS["SCOREKEEPER_A"]},
                                           "properties": {"hashed_token": "foo"}})
             if path.endswith("/verify"):
                 return app.Response(200, {"access_token": "header.payload.signature"})
