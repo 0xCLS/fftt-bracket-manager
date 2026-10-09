@@ -84,6 +84,11 @@ class HostedProbeGuards(unittest.TestCase):
         self.assertFalse(probe.denied(probe.Response(200, {})))
         self.assertFalse(probe.denied(probe.Response(500, {})))
 
+    def test_readonly_probe_never_references_write_rpc(self):
+        source = PROBE.read_text(encoding="utf-8")
+        self.assertNotIn("fftt_manage_staff_v1", source)
+        self.assertNotIn("fftt_submit_match_result_v1", source)
+
     def test_prohibited_public_fields(self):
         self.assertTrue({"email", "rating", "staff", "actor_id"} <= probe.PROHIBITED)
         self.assertFalse({"match_id", "match_code", "player_1_name"} & probe.PROHIBITED)
