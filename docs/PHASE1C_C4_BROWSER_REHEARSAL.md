@@ -41,6 +41,12 @@ python3 tests/c4_browser_rehearsal.py
 
 The automated suite uses an ephemeral localhost port and closes it afterward. GitHub Actions installs headless Chromium in an isolated CI environment. **Do not republish this rehearsal UI as an authenticated organizer/scorer interface.**
 
+## Verified Chromium CI evidence — October 9, 2026
+
+The first live Chromium CI rehearsal correctly verified all initial organizer/scorekeeper/spectator/outsider reads and offline controls, but it exposed one **reconnect simulator bug**: after restoring connectivity, the harness attempted to invoke C3's deliberately unavailable `fetchAuthoritativeSnapshot()`, which reverted the reference state to `cloud-paused` instead of preserving the informative blocked `cloud-reloading` status. No hosted RPC or scoring action was made. Corrected only `rehearsals/c4/rehearsal.mjs`: reconnection now transitions to **reloading/verification pending** without contacting any nonexistent snapshot endpoint. C1/C2/C3's own backend authority and read-only guards were not loosened.
+
+[Successful C4 real Chromium run #37986481713](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/37986481713) passed **all 22 reported browser checks**, including the 375px mobile viewport, zero external requests, no localStorage changes, no score/publish controls, role/privacy checks and blocked reconnect. The existing [browser regression run #37986481718](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/37986481718) also passed. The tested source commit for the full browser rehearsal was `ec220eac9e622454fe64380de82b796f68a6cdcb`; later metadata-only README/this-document commits do not modify the proven browser logic. CI does **not** establish real hosted volunteer login or physical multi-device failover.
+
 ## Existing constraints and next steps
 
 - Current [B2i hosted two-scorekeeper race](PHASE1B_B2I_HOSTED_SCORE_RACE.md) **already passed and completed its one fictional match**. Do not rerun its Mac launcher, reset the fixture or submit another test score without new approval.
