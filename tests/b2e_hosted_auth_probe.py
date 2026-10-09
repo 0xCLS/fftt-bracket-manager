@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""FFTT B2e: read-only HOSTED Supabase Auth and role-revocation preflight.
+"""FFTT B2e: read-only HOSTED Supabase Auth and role-visibility preflight.
 
 This script NEVER creates accounts, inserts fixtures, grants staff, submits
 scores, or modifies hosted data. It signs four organizer-controlled TEST-ONLY
