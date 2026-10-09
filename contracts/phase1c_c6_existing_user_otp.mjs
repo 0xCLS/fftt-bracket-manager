@@ -22,7 +22,7 @@ function requireSafe(x,reason) {
   if(!x) throw new AuthorityGateError(reason);
 }
 export class C6ExistingUserOtp {
-  #fetch; #key; #now; #email=null; #session=null; #inFlight=false;
+  #fetch; #key; #now; #email=null; #session=null; #inFlight=false; #epoch=0;
   constructor({projectUrl=C3_HOST,publishableKey,fetchImpl,now=()=>Date.now()}={}){
     requireSafe(projectUrl===C3_HOST,"Only the synthetic development Auth host is supported");
     requireSafe(typeof publishableKey==="string"
@@ -76,6 +76,7 @@ export class C6ExistingUserOtp {
 
   async requestCode(email){
     this.#start();
+    const epoch=this.#epoch;
     try{
       requireSafe(this.#session===null,"End current session before requesting another code");
       requireSafe(typeof email==="string"&&EMAIL.test(email.trim())
@@ -83,6 +84,7 @@ export class C6ExistingUserOtp {
       const clean=email.trim().toLowerCase();
       // create_user false means real participants cannot silently self-enroll.
       await this.#request("otp",{email:clean,create_user:false});
+      requireSafe(this.#epoch===epoch,"Auth attempt cancelled");
       this.#email=clean;
       return Object.freeze({requested:true});
     }catch(error){
@@ -93,6 +95,7 @@ export class C6ExistingUserOtp {
 
   async verifyCode(token){
     this.#start();
+    const epoch=this.#epoch;
     try{
       requireSafe(!this.#session&&this.#email!==null,
         "A requested one-time code is required");
@@ -116,6 +119,7 @@ export class C6ExistingUserOtp {
       // Validation is by the actual hosted Auth GET /user endpoint, not by
       // decoding unauthenticated JWT user metadata in browser code.
       const confirmed=await this.#request("user",null,access);
+      requireSafe(this.#epoch===epoch,"Auth attempt cancelled");
       requireSafe(confirmed?.id===user.id
         && typeof confirmed.email==="string"
         && confirmed.email.toLowerCase()===this.#email,
@@ -145,6 +149,7 @@ export class C6ExistingUserOtp {
   end(){
     // This only clears the local in-memory session. The backend access token
     // remains live until expiry: true server sign-out is a later auth gate.
+    this.#epoch++;
     this.#session=null;this.#email=null;
     return Object.freeze({signedOutLocally:true});
   }
