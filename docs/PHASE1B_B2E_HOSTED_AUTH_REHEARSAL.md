@@ -2,7 +2,7 @@
 
 **Environment:** Supabase Free `fftt-bracket-manager-dev`, project ref `copmkalfkkrkzheohwuc`. This is **not** FFTT3 or any real event. Do not migrate real participants, authorize volunteers, or connect the GitHub Pages application.
 
-**Status:** Scripted procedure prepared and guard-tested; hosted Auth-user provisioning, administrative bootstrap and remote signed-in tests **not executed** until the organizer confirms ownership of four controlled test-only accounts. The existing hosted database may contain the B1/B2a/B2b/B2d migrations but does not yet contain any FFTT event, Auth user or grant.
+**Status (October 9, 2026):** Hosted Supabase Auth now has four administratively confirmed identities: three newly created test-only role accounts (two scorekeepers and an unassigned outsider) and one previously existing, unchanged account. Exactly three synthetic accounts were created through Supabase Authentication → Users with individual Auto Confirm User enabled; no confirmation emails were sent. Temporary random passwords were not retained or delivered to the organizer: **set new organizer-controlled passwords privately before running hosted sign-in checks**. The suitability of the existing account as the synthetic organizer still requires explicit confirmation. There are **zero FFTT event records, staff grants, or published results**. Trusted organizer bootstrap, scorekeeper grants, and real hosted signed-in tests remain **not executed**.
 
 ## Approved method and gate checklist
 
