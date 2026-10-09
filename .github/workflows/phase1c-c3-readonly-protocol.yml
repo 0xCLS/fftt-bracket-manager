@@ -1,0 +1,28 @@
+name: Phase 1C C3 read-only hosted protocol guards
+
+on:
+  pull_request:
+    paths:
+      - contracts/phase1c_c3_readonly_supabase_transport.mjs
+      - tests/phase1c_c3_readonly_transport.test.mjs
+      - docs/PHASE1C_C3_READONLY_PROTOCOL.md
+      - .github/workflows/phase1c-c3-readonly-protocol.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  no-hosted-network-no-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify adapter and test syntax
+        run: |
+          node --check contracts/phase1c_c3_readonly_supabase_transport.mjs
+          node --check tests/phase1c_c3_readonly_transport.test.mjs
+      - name: Run 22 strict read-only protocol tests (mock HTTP only)
+        run: node --test tests/phase1c_c3_readonly_transport.test.mjs
