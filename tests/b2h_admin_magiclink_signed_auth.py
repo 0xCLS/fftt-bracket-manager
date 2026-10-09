@@ -163,15 +163,30 @@ def exchange_link(secret: str, label: str, email: str, expected_id: str) -> str:
                      body={"type": "magiclink", "email": email})
     if generated.code != 200 or not isinstance(generated.body, dict):
         raise StopTest(label + ": admin magic link generation was rejected")
-    props = generated.body.get("properties", generated.body)
-    if not isinstance(props, dict):
-        raise StopTest(label + ": magic link token properties unavailable")
+    # Raw GoTrue /auth/v1/admin/generate_link returns a FLAT user object
+    # with top-level id, email and hashed_token. supabase-js normalizes it
+    # into {"user": {...}, "properties": {...}}. Accept both, but NEVER
+    # skip identity validation or redeem when the id/email is missing.
+    wrapped = "user" in generated.body or "properties" in generated.body
+    if wrapped:
+        user = generated.body.get("user")
+        props = generated.body.get("properties")
+    else:
+        user = generated.body
+        props = generated.body
+    if not isinstance(user, dict) or not isinstance(props, dict):
+        raise StopTest(label + ": magic link user or token properties unavailable")
+    minted_id = user.get("id")
+    minted_email = user.get("email")
+    try:
+        valid_id = str(uuid.UUID(str(minted_id))) == expected_id
+    except (ValueError, TypeError, AttributeError):
+        valid_id = False
+    if not valid_id or not isinstance(minted_email, str) or minted_email.casefold() != email.casefold():
+        raise StopTest(label + ": generated link did not identify existing preflight user")
     token_hash = props.get("hashed_token")
     if not isinstance(token_hash, str) or not token_hash:
         raise StopTest(label + ": missing one-time token hash")
-    minted_id = (generated.body.get("user") or {}).get("id")
-    if minted_id != expected_id:
-        raise StopTest(label + ": generated link did not identify existing preflight user")
     verified = http("POST", "/auth/v1/verify", PUBLISHABLE_KEY,
                     body={"type": "magiclink", "token_hash": token_hash})
     if verified.code != 200 or not isinstance(verified.body, dict):
