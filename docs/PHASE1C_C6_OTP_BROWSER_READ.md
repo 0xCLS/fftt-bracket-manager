@@ -33,7 +33,15 @@ Open `http://127.0.0.1:8080/rehearsals/c6/index.html`. The standalone page may p
 
 Ordinary volunteer-owned sign-in is not considered production verified until a human tester successfully receives a six-digit code and signs in through the real development Supabase Auth system with independently verified role/desk permissions, followed by a separate documented backend check. The mock CI **cannot** substantiate real email sending, Auth user-level policies or CORS behavior.
 
-### Existing production and future gates
+### Verified offline CI results — October 9, 2026
+
+[C6 successful mock Auth + Chromium run #38000611540](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/38000611540) completed **16/16 Node contract tests**, plus the full real Chromium rehearsal using **three entirely fictional identities** and intercepted HTTPS response fixtures (organizer, scorekeeper and outsider). The browser tested no unsolicited OTP on startup, `create_user:false` in the actual request body, six-digit verification, identity validation, signed role/desk reads, outsider denial, public-only published projection, local session clearance, zero localStorage/sessionStorage data, no score/grant/admin RPCs and the 375px mobile layout. CI never contacted real hosted Auth, sent an email or touched production.
+
+The initial C6 browser CI run reached successful OTP-request/mock-verify assertions but failed because the Playwright test invoked `wait_for_function` with a JavaScript expression on a page whose **correct CSP forbids unsafe eval**. Fixed only the test to use Playwright's ordinary DOM `expect(...).to_contain_text(...)` checks; the page CSP remains strict. The later C6 CI run passed both the browser and pure Auth test jobs. This was a test harness issue, not a hosted account problem.
+
+**Do not overclaim:** Passing three fake identities does not prove that the real project sends six-digit codes, that inbox owners receive them, that the dev project's CORS and email templates are compatible, or that an individual user has logged into the app. Those are the next externally controlled verification gates. C5 remains unapplied and all scoring/reconnect RPCs remain unavailable.
+
+## Existing production and future gates
 
 C6 does **not** update `main`, `index.html`, GitHub Pages, existing localStorage/JSON backups, live Supabase SQL/RPCs, C5's **unapplied** snapshot proposal, B2i's completed synthetic match/audit, or FFTT3 registrations. The C3 backend read adapter still refuses all score submissions and authoritative reconnect snapshots. Real hosted C6 browser reads remain an **optional organizer/test-account-owner controlled step**, not claimed completed. Expired or missing account grant must show denial.
 
