@@ -1,0 +1,25 @@
+name: B2g synthetic fixture safety guards
+
+on:
+  pull_request:
+    paths:
+      - docs/B2G_TRUSTED_SYNTHETIC_FIXTURE_TEMPLATE.sql
+      - docs/PHASE1B_B2G_SYNTHETIC_SCORE_REHEARSAL.md
+      - tests/test_b2g_synthetic_fixture.py
+      - .github/workflows/b2g-synthetic-fixture-guards.yml
+  workflow_dispatch:
+
+jobs:
+  verify-unapproved-template-safe:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile offline guards
+        run: python -m py_compile tests/test_b2g_synthetic_fixture.py
+      - name: Test fail-closed synthetic fixture SQL without hosted DB access
+        run: python -m unittest discover -s tests -p 'test_b2g_synthetic_fixture.py' -v
