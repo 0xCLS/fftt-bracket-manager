@@ -45,8 +45,13 @@ function checkEventId(value) {
   return value;
 }
 function checkPublicId(value) {
-  guard(value === null || (typeof value === "string" && UUID.test(value)),
-    "Expected opaque public UUID or null");
+  guard(typeof value === "string" && UUID.test(value),
+    "Expected opaque public event UUID");
+}
+function checkPublicMatchId(value) {
+  // The published match_id column is TEXT, not a private match UUID.
+  guard(typeof value === "string" && /^[a-z0-9][a-z0-9_.:-]{0,99}$/i.test(value),
+    "Expected opaque published match label, never private match identity");
 }
 function freezeRow(raw, fields, name) {
   guard(raw && typeof raw === "object" && !Array.isArray(raw),
@@ -72,7 +77,7 @@ function validateDesk(rows, eventId) {
 function validatePublicMatch(raw) {
   const row=freezeRow(raw, PUBLIC_MATCH_FIELDS, "Published match");
   checkPublicId(row.event_id);
-  checkPublicId(row.match_id);
+  checkPublicMatchId(row.match_id);
   guard(nonNegativeInt(row.round) && nonNegativeInt(row.slot),
     "Invalid public match round/slot");
   return row;
