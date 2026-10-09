@@ -21,7 +21,7 @@ jobs:
         with:
           version: latest
       - name: Start isolated local Supabase
-        run: supabase start
+        run: supabase start >/dev/null
       - name: Validate PostgreSQL migrations and tests
         run: supabase test db
       - name: Test signed synthetic Auth sessions and conflicting HTTP requests
