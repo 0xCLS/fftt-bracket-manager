@@ -97,7 +97,7 @@ Draft [PR #4](https://github.com/0xCLS/fftt-bracket-manager/pull/4) builds on B2
 - **Security advisors:** only 9 informational `rls_enabled_no_policy` notices on private intentionally deny-all tables, no new warning findings. No production cutover, real participants, Auth test accounts, or client integration.
 - **Not yet validated:** signed JWT/Auth session verification with real organizer-authorized accounts; simultaneous independent PostgreSQL sessions with conflicting submissions; dynamic byes and bracket build/rebuild/correction flows; strict server-side publication and recovery. Keep the app browser-local.
 
-## B2c — real local signed Auth and concurrent HTTP requests (in review)
+## B2c — real local signed Auth and concurrent HTTP requests (CI passed; hosted test accounts pending)
 
 Draft [PR #5](https://github.com/0xCLS/fftt-bracket-manager/pull/5) extends the *existing B2b contract* without changing deployed SQL or `index.html`. A dedicated GitHub Actions workflow starts the full **local** Supabase Auth/PostgREST/PostgreSQL stack and runs `tests/b2c_auth_concurrency.py` with only Python standard-library HTTP clients, PostgreSQL CLI, and ephemeral synthetic identities.
 
@@ -105,7 +105,7 @@ Draft [PR #5](https://github.com/0xCLS/fftt-bracket-manager/pull/5) extends the 
 - The local database assigns organizer and event-scoped scorekeeper grants. Requests use the same PostgREST RPCs the future client would use. Cross-event, anonymous, unaffiliated-user, non-public field access, and revocation behavior are checked.
 - Separate HTTP clients issue opposing submissions concurrently against one unresolved match. Tests require exactly one accepted result, one rejected conflict, a single persistent winner/version/audit/receipt, exact idempotent replay, tampered-retry denial, and rejection of previously accepted retries **after** staff revocation.
 - Local test accounts, passwords, scores and JWTs never enter the hosted development project. The tests reject any non-loopback API/database URL. Credentials are generated at runtime and are never committed. This is not a hosted volunteer onboarding path.
-- **Acceptance still pending CI:** B2c is unverified until full local Auth stack and the existing 70 pgTAP regression checks pass. Even after green CI, organizer-approved hosted account bootstrap, actual hosted multiple-client tests, full byes/corrections, controlled publication and frontend sync remain separate security gates.
+- **Verified October 9, 2026:** [B2c full local Supabase workflow](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/37883186264) **PASSED**. Four real local Auth accounts independently signed in with verified signed JWTs; unauthorized/cross-event and privacy checks passed; two simultaneous HTTP score submissions produced exactly one accepted winner, one conflict and one authoritative audit/receipt; exact retries, tampered retries, revocation and read-only public projections behaved as specified. All **70 existing pgTAP checks** passed in the same full-stack job. Browser regressions also passed ([run](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/37883186262)). Hosted organizer-approved account bootstrap, hosted multi-client tests, full byes/corrections, controlled publication and frontend sync remain separate security gates.
 
 ## Increment sequence and gates
 
