@@ -14,6 +14,27 @@
 6. **Evidence + next gate:** Inspect the private counts, audit records, RLS/API grants and Supabase security advisor via the connected tool. Capture pass/fail and dated commit in the private changelog without recording identities, emails, secrets or signed tokens. A **separate, explicitly approved** fixture and an event-day-compatible remote score concurrency/recovery test will follow. Never treat successful local CI alone as a hosted signed-Auth pass.
 
 
+### Hosted SQL-context authorization preflight — October 9, 2026 (read-only, PASS)
+
+The isolated hosted database was tested directly in independent **read-only PostgreSQL transactions**. Each allowed-role test used `SET LOCAL ROLE authenticated` plus a temporary `request.jwt.claims` session value representing one of the *already-confirmed, preexisting synthetic* identities, then called the actual hosted `public.fftt_staff_role_v1` and `public.fftt_matchdesk_v1` functions. Those SQL session values are **simulated claims, NOT a cryptographically signed Supabase JWT**; these results do **not** validate GoTrue login, PostgREST JWT verification, cross-device sessions, or HTTP API behavior.
+
+| Check | Observed hosted database result |
+| --- | --- |
+| Approved organizer role | `organizer` returned |
+| Both assigned scorekeeper roles | `scorekeeper` returned individually |
+| Organizer and each scorekeeper matchdesk | Allowed; zero matches, as fixture is empty |
+| Unassigned outsider role and matchdesk | Each rejected `42501 forbidden` |
+| Organizer querying a different event UUID | Rejected `42501 forbidden` |
+| Authenticated database context lacking JWT claims | Rejected `42501 forbidden` |
+| SQL role `anon` invoking role RPC | Rejected `42501 permission denied for function` |
+| SQL role `authenticated` reading private staff table | Rejected `42501 permission denied for table` |
+| SQL role `anon` public results projection | Allowed; zero public events/matches |
+| Matchdesk return-field inspection | Only 14 allowlisted match fields; no emails, phone numbers, ratings, audit or private staffing fields |
+| SQL grants/RPC privileges | Anonymous staff/matchdesk/grant RPC execution denied; authenticated has no direct private staff SELECT/INSERT |
+| Data mutation | None: tests performed no score, role, event, account, or schema writes |
+
+The Supabase security advisor remained at **nine expected INFO** `rls_enabled_no_policy` findings on inaccessible private tables and **one WARN** `auth_leaked_password_protection` (not enabled in the Free prototype). This confirms useful hosted SQL privilege behavior **but not the full B2e hosted signed-Auth acceptance gate**. That gate still requires genuine signed credentials for the four controlled accounts and remains pending; no password recovery, Auth settings, external services, or production cutover was authorized by this preflight.
+
 ### Source conflict / resolution — synthetic administrative grants versus signed-in organizer grants
 
 The initial B2e procedure required staff grants through a genuine authenticated organizer session. The organizer subsequently requested progression **without resetting passwords** and explicitly approved an alternative, **administrator-controlled synthetic-only assignment** for the two identified scorekeepers. The role assignments have been applied with explicit audit provenance. This is valid fixture setup for inspecting database role state but is **not an authenticated user-access integration test** and does **not** establish that the production organizer workflow succeeds. Retain the original signed-Auth probes and scorekeeper-grant script as **pending**, and never silently reinterpret administrative fixture setup as their passing result.
