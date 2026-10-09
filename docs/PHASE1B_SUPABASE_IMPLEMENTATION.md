@@ -97,6 +97,16 @@ Draft [PR #4](https://github.com/0xCLS/fftt-bracket-manager/pull/4) builds on B2
 - **Security advisors:** only 9 informational `rls_enabled_no_policy` notices on private intentionally deny-all tables, no new warning findings. No production cutover, real participants, Auth test accounts, or client integration.
 - **Not yet validated:** signed JWT/Auth session verification with real organizer-authorized accounts; simultaneous independent PostgreSQL sessions with conflicting submissions; dynamic byes and bracket build/rebuild/correction flows; strict server-side publication and recovery. Keep the app browser-local.
 
+## B2c — real local signed Auth and concurrent HTTP requests (in review)
+
+Draft [PR #5](https://github.com/0xCLS/fftt-bracket-manager/pull/5) extends the *existing B2b contract* without changing deployed SQL or `index.html`. A dedicated GitHub Actions workflow starts the full **local** Supabase Auth/PostgREST/PostgreSQL stack and runs `tests/b2c_auth_concurrency.py` with only Python standard-library HTTP clients, PostgreSQL CLI, and ephemeral synthetic identities.
+
+- Four disposable synthetic email/password accounts are registered and then independently signed in through real local GoTrue to obtain signed access JWTs. Email confirmations are disabled **only in local `supabase/config.toml`**, not on the hosted project.
+- The local database assigns organizer and event-scoped scorekeeper grants. Requests use the same PostgREST RPCs the future client would use. Cross-event, anonymous, unaffiliated-user, non-public field access, and revocation behavior are checked.
+- Separate HTTP clients issue opposing submissions concurrently against one unresolved match. Tests require exactly one accepted result, one rejected conflict, a single persistent winner/version/audit/receipt, exact idempotent replay, tampered-retry denial, and rejection of previously accepted retries **after** staff revocation.
+- Local test accounts, passwords, scores and JWTs never enter the hosted development project. The tests reject any non-loopback API/database URL. Credentials are generated at runtime and are never committed. This is not a hosted volunteer onboarding path.
+- **Acceptance still pending CI:** B2c is unverified until full local Auth stack and the existing 70 pgTAP regression checks pass. Even after green CI, organizer-approved hosted account bootstrap, actual hosted multiple-client tests, full byes/corrections, controlled publication and frontend sync remain separate security gates.
+
 ## Increment sequence and gates
 
 **B1 — isolated schema and privilege foundation** (PR #2; deployed to synthetic hosted development)
