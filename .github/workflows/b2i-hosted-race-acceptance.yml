@@ -5,6 +5,8 @@ on:
     paths:
       - tests/b2i_hosted_race_oracle.py
       - tests/test_b2i_hosted_race_oracle.py
+      - tests/b2i_hosted_race_operator_DISABLED.py
+      - tests/test_b2i_hosted_race_operator_DISABLED.py
       - docs/PHASE1B_B2I_HOSTED_SCORE_RACE.md
       - .github/workflows/b2i-hosted-race-acceptance.yml
   workflow_dispatch:
@@ -21,6 +23,8 @@ jobs:
         with:
           python-version: '3.11'
       - name: Compile pure B2i acceptance validator
-        run: python -m py_compile tests/b2i_hosted_race_oracle.py tests/test_b2i_hosted_race_oracle.py
+        run: python -m py_compile tests/b2i_hosted_race_oracle.py tests/test_b2i_hosted_race_oracle.py tests/b2i_hosted_race_operator_DISABLED.py tests/test_b2i_hosted_race_operator_DISABLED.py
       - name: Test fail-closed race and independent persisted-state evidence
-        run: python -m unittest discover -s tests -p 'test_b2i_hosted_race_oracle.py' -v
+        run: |
+          python -m unittest discover -s tests -p 'test_b2i_hosted_race_oracle.py' -v
+          python -m unittest discover -s tests -p 'test_b2i_hosted_race_operator_DISABLED.py' -v
