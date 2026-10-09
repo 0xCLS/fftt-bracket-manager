@@ -208,13 +208,12 @@ def run() -> None:
            and not (forbidden & set(desk.body[0])),
            "Signed-in scorekeeper sees only one eligible match with no rating/contact fields")
 
-    no_access = request(api, anon, "GET", "/rest/v1/players",
-                        token=keeper_b)
-    # Even if another schema's table were created in the future, this exact
-    # private-schema request must never be exposable through the Data API.
+    # Explicit schema request must fail: fftt_private must not be exposed.
     ensure(denied(request(api, anon, "GET", "/rest/v1/players",
                           token=keeper_b)) and
-           no_access.code >= 400, "No directly exposed private player endpoint")
+           denied(request(api, anon, "GET", "/rest/v1/players?select=*",
+                          token=keeper_b)),
+           "No directly exposed private player endpoint")
 
     public = request(api, anon, "GET", "/rest/v1/fftt_public_results_v1")
     ensure(public.code == 200 and public.body == [],
@@ -300,10 +299,10 @@ def run() -> None:
     ensure(audit_count == "1|1|1",
            "Concurrent conflict created one audit, one receipt and one review candidate")
 
+    revoked_id = [keeper_a_id, keeper_b_id][winning_index]
     sql(db_url, f"""
       update fftt_private.event_staff set active=false,revoked_at=now()
-      where event_id='{event}' and user_id='{
-        [keeper_a_id, keeper_b_id][winning_index]}';
+      where event_id='{event}' and user_id='{revoked_id}';
     """)
     ensure(denied(request(api, anon, "POST", score_path,
                           token=winning_token, body=winning_body)),
