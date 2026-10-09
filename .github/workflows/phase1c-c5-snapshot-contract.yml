@@ -7,6 +7,8 @@ on:
       - contracts/phase1c_c5_snapshot_wire.mjs
       - tests/phase1c_c5_snapshot_wire.test.mjs
       - tests/test_phase1c_c5_snapshot_sql_static.py
+      - tests/c5_disposable_pg_fixture.sql
+      - tests/c5_disposable_pg_assertions.sql
       - docs/PHASE1C_C5_TRUSTED_SNAPSHOT_CONTRACT.md
       - .github/workflows/phase1c-c5-snapshot-contract.yml
   workflow_dispatch:
@@ -36,3 +38,36 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_phase1c_c5_snapshot_sql_static.py' -v
       - name: Validate receipt/reconnect wire responses without a real server
         run: node --test tests/phase1c_c5_snapshot_wire.test.mjs
+
+  disposable-postgres-security:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: synthetic_ci_only
+          POSTGRES_DB: fftt_c5_disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d fftt_c5_disposable"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: synthetic_ci_only
+      PGDATABASE: fftt_c5_disposable
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check isolated disposable Postgres client
+        run: psql --version
+      - name: Execute C5 proposed SQL ONLY on ephemeral synthetic service
+        run: |
+          psql -X -v ON_ERROR_STOP=1 \
+            -f tests/c5_disposable_pg_fixture.sql \
+            -f supabase/proposals/PHASE1C_C5_SNAPSHOT_DRAFT_DO_NOT_APPLY.sql \
+            -f tests/c5_disposable_pg_assertions.sql
