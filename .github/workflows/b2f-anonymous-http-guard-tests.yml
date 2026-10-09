@@ -1,0 +1,25 @@
+name: B2f anonymous HTTP boundary guard tests
+
+on:
+  pull_request:
+    paths:
+      - tests/b2f_anonymous_http_probe.py
+      - tests/test_b2f_anonymous_http_probe.py
+      - docs/PHASE1B_B2F_ANONYMOUS_HTTP.md
+      - .github/workflows/b2f-anonymous-http-guard-tests.yml
+  workflow_dispatch:
+
+jobs:
+  b2f-no-network-guards:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile read-only probe and tests
+        run: python -m py_compile tests/b2f_anonymous_http_probe.py tests/test_b2f_anonymous_http_probe.py
+      - name: Run twelve no-network fail-closed tests
+        run: python -m unittest discover -s tests -p 'test_b2f_anonymous_http_probe.py' -v
