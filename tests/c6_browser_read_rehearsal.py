@@ -120,10 +120,16 @@ def case(browser, role):
 
     context.route(f"{SUPA}/**",mock_route)
     # Browser must not make any additional remote requests.
-    context.route("**/*", lambda route: route.continue_()
-                  if route.request.url.startswith(f"http://{HOST}:{server.server_port}/")
-                  or route.request.url.startswith(SUPA+"/")
-                  else (leaks.append(route.request.url), route.abort()))
+    def deny_or_dispatch(route):
+        url=route.request.url
+        if url.startswith(SUPA+"/"):
+            route.fallback()  # pass to the strict synthetic Supabase interceptor
+        elif url.startswith(f"http://{HOST}:{server.server_port}/"):
+            route.continue_()
+        else:
+            leaks.append(url)
+            route.abort()
+    context.route("**/*", deny_or_dispatch)
 
     page.goto(URL,wait_until="networkidle")
     page.get_by_role("heading",name="Authorized matchdesk read rehearsal").wait_for()
@@ -142,7 +148,9 @@ def case(browser, role):
           "Requesting an OTP does not grant access")
     page.locator("#code").fill("123456")
     page.locator("#verifyCode").click()
-    page.locator("#authBadge").get_by_text("SIGNED IN",exact=False).wait_for()
+    page.wait_for_function(
+        "document.getElementById('authBadge').textContent.includes('SIGNED IN')"
+    )
     check(page.locator("#staffControls").is_visible(),
           "Signed session permits attempting real role-gated read")
     page.locator("#eventId").fill(EVENT)
