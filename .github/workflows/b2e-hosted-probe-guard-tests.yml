@@ -1,0 +1,30 @@
+name: B2e hosted Auth probe guard tests
+
+on:
+  pull_request:
+    paths:
+      - tests/b2e_hosted_auth_probe.py
+      - tests/b2e_hosted_grant_staff.py
+      - tests/test_b2e_hosted_probe.py
+      - docs/PHASE1B_B2E_HOSTED_AUTH_REHEARSAL.md
+      - docs/B2E_TRUSTED_BOOTSTRAP_TEMPLATE.sql
+      - .github/workflows/b2e-hosted-probe-guard-tests.yml
+  workflow_dispatch:
+
+jobs:
+  fail-closed-probe-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check syntax; do not contact hosted Supabase
+        run: |
+          python -m py_compile tests/b2e_hosted_auth_probe.py tests/b2e_hosted_grant_staff.py tests/test_b2e_hosted_probe.py
+      - name: Run isolated no-network unit guards
+        run: python -m unittest discover -s tests -p test_b2e_hosted_probe.py -v
