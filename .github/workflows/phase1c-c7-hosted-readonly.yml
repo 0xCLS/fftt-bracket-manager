@@ -1,0 +1,37 @@
+name: Phase 1C C7 live anonymous preflight (GET and OPTIONS only)
+
+on:
+  pull_request:
+    paths:
+      - tests/c7_live_readonly_preflight.mjs
+      - tests/test_c7_preflight_source.py
+      - tests/test_c7_mac_launcher.py
+      - tools/c7/**
+      - docs/PHASE1C_C7_READONLY_PREFLIGHT.md
+      - .github/workflows/phase1c-c7-hosted-readonly.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-anonymous-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Syntax/allowlist guard (no writes or signed account sessions)
+        run: |
+          node --check tests/c7_live_readonly_preflight.mjs
+          python -m unittest discover -s tests -p 'test_c7_preflight_source.py' -v
+          python -m unittest discover -s tests -p 'test_c7_mac_launcher.py' -v
+          python -m py_compile tools/c7/C7_Readonly_Local_Server.py
+          bash -n tools/c7/Run_C7_Readonly_Login_Rehearsal.command
+      - name: Hosted dev public GET + Auth/read CORS OPTIONS only
+        run: node tests/c7_live_readonly_preflight.mjs
