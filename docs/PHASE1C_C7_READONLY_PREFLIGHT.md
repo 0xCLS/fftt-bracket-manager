@@ -36,4 +36,19 @@ Once the owner personally decides to test the existing synthetic organizer accou
 
 Real email template markup and delivery, actual Auth/CORS browser sign-in, full organizer/scorekeeper/outsider device rehearsals, the not-deployed C5 RPC, durable **rejected** submission decisions for safe reconnect, physical controlled offline fallback, and production event-day user onboarding remain unproven. Every hosted score write/new fixture, grant/revoke, SQL migration, email template configuration change, or production change requires its own review and express organizer approval. Do not rerun the consumed B2i match or merge C7 as a production-ready feature.
 
-This source should be updated with exact CI evidence only after the live preflight succeeds.
+## Verified C7 live hosted HTTP evidence and Mac handoff — October 9, 2026
+
+[GitHub Actions C7 live public preflight #38008227033](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/38008227033) **PASSED**, using Node 22 and the deliberately public publishable key:
+
+- All **three** real `fftt_public_results_v1`, `fftt_published_events` and `fftt_published_matches` GET projections returned **zero** rows. Their contents were never logged or reproduced.
+- `GET /auth/v1/settings` returned HTTP 200. It **does not prove anything about the actual email template**; the six-digit-code question is unresolved.
+- All **five** required browser-oriented `OPTIONS` preflights accepted the localhost origin and intended method for `/auth/v1/otp`, `/auth/v1/verify`, `/auth/v1/user`, `fftt_staff_role_v1`, `fftt_matchdesk_v1`. No POST or Auth request was made.
+- Five static test guards passed. The existing application browser regression suite remained independent and was not used to claim real signed-in usage.
+
+To preserve reproducibility, committed the exact local Mac handoff **source** in `tools/c7/`: `C7_Readonly_Local_Server.py`, `Run_C7_Readonly_Login_Rehearsal.command` and `README_C7.txt`. The Python launcher fetches **seven reviewed public source files** pinned to immutable Git commit `355b916cf3e2905d1aa89a144e08da43e311b39a`, checks their exact Git blob SHA-1 values, serves only at `127.0.0.1`, opens the C6 page and clears downloaded files on exit. The terminal does not accept an email, OTP, admin key or private event ID. It does **not** request an OTP: only the actual user's explicit browser click can do that. Source tests mock downloads and verify digest/redirect/path behavior.
+
+The user-delivered `FFTT_C7_Readonly_Login_Rehearsal_Mac.zip` contains those **exact three** text sources and was checked for valid ZIP integrity, `755` executable permission, Python compilation, shell syntax and a known Git-blob SHA test vector. Local artifact SHA-256: `15be3b304c422dd8ac51913d1b7241dd86d67fac343f6b0469907ec7e3dd7daa`. The ZIP was **not** published on a public release page, and the source-code checksum protects file integrity but is **not a code-signing certificate**. No Mac GUI/inbox user test has yet been performed by ChatGPT.
+
+**C7 network preflight PASS ≠ real email-code/login PASS.** Any actual individual test requires the owner to run the launcher and click the OTP request button manually. Do not ask them to paste code, JWT or magic-link URL back into chat. An email template change or hosted Auth configuration change is a separate organizer gate.
+
+
