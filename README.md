@@ -13,7 +13,13 @@ A lightweight, single-file tournament desk for **Forging Fellowship Table Tennis
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the current feature inventory and proposed sequence. **The current design is approved. Phase 1 now focuses on a secure, authoritative shared event database and permission model** before adding multiple scorekeeping devices or spectator feeds. Start with [the architecture proposal](docs/PHASE1_SHARED_EVENT_ARCHITECTURE.md). Christopher has approved Supabase **for an isolated synthetic-data prototype only**; no backend has been provisioned or activated. The provider-neutral [Phase 1A contract](docs/PHASE1A_SHARED_EVENT_CONTRACT.md) and [machine-readable permission/field policy](contracts/phase1a_v1.json) define the next security gates.
+Christopher approved a **three-milestone delivery plan** on October 12, 2026. See [ROADMAP.md](ROADMAP.md) for scope, sequencing, original phase-number mapping and explicit approval gates:
+
+1. **Secure Shared Foundation (in progress):** trustworthy central state, organizer-authorized accounts, privacy-safe public projections, score conflicts, audit and offline recovery.
+2. **Player & Tournament Preparation:** organizer-reviewed private Google Sheets registration intake, provisional rating suggestions, check-in, deduplication and bracket seeding.
+3. **Live Tournament Operations & Results:** mobile volunteer scoring, synchronized bracket/Now Playing views, public spectator/TV displays, table tracking, doubles-result recording, exports and basic event history.
+
+**Phase 0 design is approved.** Supabase is authorized **only for isolated synthetic development**. An organizer-owned Free development project has been used for hosted synthetic tests in **unmerged** Phase 1B/1C draft branches. The public `main` application is still **browser-local, not a shared scoring service**. The [architecture proposal](docs/PHASE1_SHARED_EVENT_ARCHITECTURE.md), [Phase 1A contract](docs/PHASE1A_SHARED_EVENT_CONTRACT.md) and [machine-readable policies](contracts/phase1a_v1.json) remain security references. The development milestone consolidation **does not approve real participant migration, production infrastructure, public participant-name publication or live cutover**.
 
 ## Run it
 
