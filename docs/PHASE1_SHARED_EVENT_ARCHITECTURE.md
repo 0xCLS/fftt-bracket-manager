@@ -1,6 +1,6 @@
 # Phase 1 — Shared Event State and Access Architecture
 
-_Status: architecture proposal, October 8, 2026. **Update:** Christopher has now approved Supabase **for a synthetic-only prototype**, individual organizer-authorized accounts, public restricted-field spectator results and pause-on-disconnect single-device fallback. No provider has been provisioned and no shared backend is implemented. See [Phase 1A contract](PHASE1A_SHARED_EVENT_CONTRACT.md). Earlier unapproved-state descriptions below are historical._
+_Historical architecture proposal (October 8, 2026); amended October 12, 2026 for roadmap consistency. The decisions for the synthetic prototype are approved: Supabase, individual organizer-authorized staff accounts, restricted public spectator/TV results, and pause-on-disconnect with controlled single-device fallback. **Later Phase 1B/1C unmerged branches have used an isolated organizer-owned Supabase Free development project for synthetic tests**; earlier "not provisioned" statements below are historical, not present-day status. The released GitHub Pages app remains browser-local, and production deployment, real player migration, name-publication policy and cutover remain unapproved. See [the current consolidated roadmap](../ROADMAP.md) and [Phase 1A contract](PHASE1A_SHARED_EVENT_CONTRACT.md)._
 
 ## Why this milestone comes first
 
@@ -77,7 +77,10 @@ A single validated transaction or equivalent server-authoritative operation shou
 
 Use stable submission IDs for retries/idempotency. Do not allow two phones to silently overwrite the same score, or allow a stale browser's local snapshot to overwrite a newer full event state.
 
-## Phased engineering delivery
+## Historical Phase 1 engineering substeps (retained for PR traceability)
+
+**October 12 roadmap consolidation:** Phase 1A/1B/1C remain valid *technical checkpoint names within Milestone 1 — Secure Shared Foundation*. The earlier "1D volunteer and public interfaces" heading below is now **Milestone 3 — Live Tournament Operations & Results**. New Milestone 2 handles organizer registration, rating review and check-in. See the [current roadmap](../ROADMAP.md) for active priorities and acceptance gates. This historical substep sequence does not itself authorize deployment or indicate that these tasks have passed hosted acceptance.
+
 
 **1A. Architecture approval / sandbox** (next checkpoint)
 - Confirm Supabase vs Firebase; staff login/invitation approach; whether spectator views are public without login; event-day offline/degraded policy.
@@ -93,7 +96,7 @@ Use stable submission IDs for retries/idempotency. Do not allow two phones to si
 - Label offline/online/sync/error states accurately; never display 'saved' for an unacknowledged cloud write.
 - Keep browser-only mode and existing manual JSON export/restore as a recovery path until a live cutover is approved.
 
-**1D. Volunteer and public interfaces (Phase 2)**
+**Legacy 1D. Volunteer and public interfaces (now Milestone 3)**
 - After reliable shared state, add mobile volunteer scoring; then spectator read-only links and a large TV/projector view.
 - Verify results on two volunteer devices plus a separate spectator/TV device under realistic delayed connection conditions.
 
