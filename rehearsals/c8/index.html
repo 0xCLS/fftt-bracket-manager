@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src https://copmkalfkkrkzheohwuc.supabase.co; img-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer"><title>FFTT C8 — Local Magic Link read-only test</title>
+<link rel="stylesheet" href="../c4/rehearsal.css"><link rel="stylesheet" href="../c6/read-only.css">
+<script type="module" src="./read-only.mjs"></script></head><body>
+<div class="simulation-band">C8 SYNTHETIC DEVELOPMENT ONLY · READ ONLY · NO FFTT3 DATA</div>
+<main class="shell"><header class="intro"><div><p class="eyebrow">Forging Fellowship · Phase 1C C8</p><h1>Individual Magic Link rehearsal</h1><p>Only existing synthetic accounts. No new users, scoring, staff changes or session storage.</p></div><span id="authBadge" class="state-tag paused">SIGNED OUT</span></header>
+<section class="warning"><strong>Trusted Mac and browser only.</strong><span>Request one Magic Link, open it in the SAME browser on this Mac while the local server is running, then enter that same existing account email to confirm identity. Never share or paste login links or URL fragments. Supabase may rate-limit repeated requests.</span></section>
+<div class="desk"><section class="panel"><h2>Read-only sign-in</h2>
+<form id="requestForm" autocomplete="off"><label for="email">Existing synthetic account email</label><input id="email" type="email" maxlength="254" required autocomplete="off"><button id="requestLink" type="submit">Request Magic Link</button></form>
+<form id="confirmForm" autocomplete="off" hidden><label for="confirmEmail">Re-enter the same existing account email</label><input id="confirmEmail" type="email" maxlength="254" required autocomplete="off"><button type="submit">Verify returning account</button></form>
+<button type="button" id="end" hidden>Clear local session</button>
+<p class="muted" id="authStatus" role="status" aria-live="polite">No authentication request has been sent.</p></section>
+<section class="panel"><h2>Authorized staff matchdesk</h2><div id="staffControls" hidden><label for="eventId">Existing private synthetic event UUID</label><input id="eventId" autocomplete="off" spellcheck="false"><button id="readStaff" type="button">Read authorized matchdesk</button></div><p class="muted" id="staffStatus" role="status" aria-live="polite">No staff data. Sign in first.</p><div id="staffMatches" class="match-list"></div></section></div>
+<section class="panel public"><h2>Anonymous published results</h2><p class="muted" id="publicStatus">Checking allowlisted public result projection.</p><button id="publicRefresh" type="button">Refresh public results</button></section>
+<section class="policy"><h2>Test boundaries</h2><p>Real Supabase signed identity and event-role checks; no scores, grants, publication, account creation, refresh token usage, or recovery/write authorization. JWTs are memory-only and cleared on tab close/reload. Clearing local memory does not revoke the server access token.</p><output>Score writes: 0 · Admin changes: 0</output></section></main></body></html>
