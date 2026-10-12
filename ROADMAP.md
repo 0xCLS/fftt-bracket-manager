@@ -1,12 +1,12 @@
 # FFTT Bracket Manager — Product Roadmap
 
-_Last organized: October 8, 2026. This roadmap is a planning record, **not** a claim that proposed features are implemented or approved for delivery. Christopher's latest explicit instructions supersede this document._
+_Last organized: October 12, 2026. This roadmap is a planning record, **not** a claim that proposed features are implemented or approved for delivery. Christopher's latest explicit instructions supersede this document._
 
 ## Product direction and sequencing
 
-**Current decision (October 8, 2026):** Christopher explicitly accepted the current UI ("I'm satisfied with the design for now. Let's move on"). **Phase 0 visual approval is complete. Phase 1 is active: plan secure shared state, roles, and sync before implementing cross-device scoring.** The format remains Championship Bracket + Consolation Bracket with one Mixed-Skill Doubles finale, preserving fellowship and at least two competitive matches per player when practical.
+**Design decision (October 8, 2026):** Christopher explicitly accepted the current UI ("I'm satisfied with the design for now. Let's move on"). **Phase 0 visual approval is complete. On October 12, Christopher approved consolidating the remaining work into three milestones (1–3), while keeping Phase 1 security and production authorization gates intact.** The format remains Championship Bracket + Consolation Bracket with one Mixed-Skill Doubles finale, preserving fellowship and at least two competitive matches per player when practical.
 
-**Requested future capabilities:** Multiple volunteers able to enter scores from separate devices, with live bracket updates visible to spectators on phones and a TV/projector. A secure, central, authoritative event database will be needed; GitHub Pages alone only serves the application. **Supabase is approved for an isolated synthetic-data prototype only.** Production provider selection, infrastructure and cutover remain unapproved.
+**Requested future capabilities:** Multiple volunteers able to enter scores from separate devices, with live bracket updates visible to spectators on phones and a TV/projector. A secure, central, authoritative event database will be needed; GitHub Pages alone only serves the application. **Supabase is approved for an isolated synthetic-data prototype only.** An organizer-owned synthetic Free development project has subsequently been used for limited hosted tests on unmerged Phase 1 branches; **the released app remains browser-local**, and production service, real participant migration, and cutover are not approved.
 
 **Engineering principles:** Prefer a maintainable, small codebase; reuse the existing single-file deployment where sensible; avoid risking event-day result integrity; privacy and access control are non-negotiable for any public spectator or multi-device access. Keep backups and an offline contingency.
 
@@ -142,60 +142,79 @@ The rollout is CSS-only: it does not modify tournament logic, match handling, da
 - Preserve the previously approved charcoal/pastel palette, compact rating appearance in the roster, numeric values and keyboard operation; retain the approved 16px/12px responsive spacing around **Save teams**.
 - This supersedes the preceding full-width rating-row experiment. Visual approval of these precise refinements remains with Christopher.
 
-## Phase 1 onward — Feature roadmap
+## Phase 1 onward — Consolidated development roadmap (approved October 12, 2026)
 
-The design approval gate is satisfied. Phase sequencing is provisional and subject to technical and scope decisions. **Next decision: backend provider and access approach**, not a unilateral live-data cutover. See [Phase 1 Shared Event Architecture](docs/PHASE1_SHARED_EVENT_ARCHITECTURE.md).
+Christopher approved **three remaining milestones**, replacing the previous four-phase feature sequence. Phase 0 is already complete. The consolidation batches closely related implementation and testing work; **it does not waive independently verified security, score-integrity, recovery, publication/consent, or production-cutover gates**. This is a planning decision, not authorization to ship cloud features or ingest actual participants.
 
-### Phase 1 — Shared, reliable event state and access (current)
+| Milestone | Scope | Status |
+| --- | --- | --- |
+| **1 — Secure Shared Foundation** | Authoritative shared data, individual staff access, restricted public results, concurrency, audit, backups, offline authority and recovery | **In progress**, synthetic prototype only |
+| **2 — Player & Tournament Preparation** | Organizer-controlled registration intake, reviewed player identity/ratings, check-in/no-shows and fair bracket creation | Planned; may prototype UI with fictional data during Phase 1 |
+| **3 — Live Tournament Operations & Results** | Volunteer match scoring, synchronized brackets, spectators/TV, table coordination, organizer dashboard, doubles finale scoring, exports and basic event history | Planned; end-to-end release requires Phase 1 acceptance |
 
-- [x] Analyze the existing app's local-state limitations and prepare a provider-neutral shared-state architecture with recommendation and security/test gates — [Phase 1 proposal](docs/PHASE1_SHARED_EVENT_ARCHITECTURE.md).
-- [x] October 8, 2026: Christopher approved **Supabase for a synthetic-only prototype**; individual organizer-authorized staff accounts; public field-restricted read-only results/TV; pause cloud writes on disconnection with a controlled single-device fallback. No service provisioned, production provider plan or production cutover approved.
-- [x] Define provider-neutral shared-state contract, role permissions, public field allowlist, command/version/error semantics and executable **in-memory synthetic reference tests** — [Phase 1A contract](docs/PHASE1A_SHARED_EVENT_CONTRACT.md). This is **not** a deployed sandbox or backend security verification.
-- [ ] Provision (after separate approval), implement and security-test an isolated **Supabase** synthetic-event sandbox before touching real event data.
-- [ ] Set up authoritative event records, secure access, persistence and backups without publishing private player contact information or keys in the public repository.
-- [ ] Define roles: organizer/admin (full tournament control), volunteer scorekeeper (authorized score submission), spectator (read-only public results), and TV display (read-only).
-- [ ] Handle concurrent score entry, stale clients, retry/deduplication, corrections/auditability and device reconnection.
-- [ ] Define offline/degraded-mode behavior and a rehearsed recovery plan; retain private JSON export where practical.
+### Milestone 1 — Secure Shared Foundation (current)
 
-### Phase 2 — Live volunteer scoring and spectators
+Deliver the smallest trustworthy shared backend and explicit local/cloud separation before enabling real multi-device operation.
 
-- [ ] Mobile-friendly volunteer score-entry view with assigned/eligible matches, game scores and confirmation.
-- [ ] Instant propagation of results, bracket advancement and current-match information to every connected device.
-- [ ] Public read-only bracket/result views via shareable links or QR codes; exclude internal ratings, emails, phone numbers and admin controls.
-- [ ] TV/projector mode optimized for a large, distant display and automatically updating content.
-- [ ] Organizer monitoring of score submissions, active tables and match progress.
+- [x] Provider-neutral contract, role/field allowlists, authoritative score semantics, offline rules and in-memory synthetic reference tests — [Phase 1A contract](docs/PHASE1A_SHARED_EVENT_CONTRACT.md).
+- [x] Supabase authorized **for synthetic prototyping only**; separate organizer-authorized accounts, public allowlisted read-only results and controlled single-device fallback agreed.
+- [ ] Complete and verify all hosted synthetic Phase 1B/1C branches and integration gates: schema/RLS, authenticated individual staff access, public projections, transactional score submission, race and retry handling, trusted snapshot/receipt reconciliation, audit, authorization revocation, client adapter, recovery and multi-device rehearsal.
+- [ ] Prove that unauthenticated or revoked users cannot read protected data or submit scores; two competing submissions cannot both win; published projections contain no private contacts, ratings, raw player IDs, staff grants or backups.
+- [ ] Keep local browser operation, manual JSON backup/restore and printed fallback valid; pause cloud writes on disconnect with no automatic local-to-cloud merge.
+- [ ] Design **forward-compatible** player identity, event history, match results, table assignments and doubles-result relationships now, without implementing speculative analytics or moving live participant records.
+- [ ] Obtain a **separate explicit production approval** after synthetic end-to-end security, disaster-recovery and device rehearsal. No real player migration or cloud-score cutover is included in this planning approval.
 
-### Phase 3 — Registration intake and smarter match suggestions
+**Source/status reconciliation (October 12, 2026):** The October 8 descriptions in the README and initial Phase 1 proposal saying that no Supabase project existed are historical. The private project changelog and open draft PRs show later synthetic Free development-project tests, including a hosted score-race trial and Phase 1C read-only browser/CORS work. In particular, [draft PR #18](https://github.com/0xCLS/fftt-bracket-manager/pull/18) is **not merged into `main`**. The user's subsequent login rehearsal received an email **without the required six-digit code**, so successful individually authenticated browser read-back is **not established**. The public GitHub Pages app is not a shared live scoring system. Before advancing, audit the actual stacked PR heads and hosted evidence; do not treat proposed SQL, synthetic mocks or preflight success as a completed production integration.
 
-- [ ] Read the private `FFTT3 Registration` Google Sheet through an organizer-controlled workflow. Its responses include skill-assessment answers; avoid importing emails/phone numbers into public or unnecessary event views.
-- [ ] Map playing-profile/experience answers to **suggested provisional** Level 1–5 ratings; organizer reviews and approves changes.
-- [ ] Use returning-player evidence and observation to refine ratings rather than relying on self-description alone.
-- [ ] Suggest balanced opening matchups: spread stronger players, avoid severe skill mismatches where practical, respect fair byes and let the organizer override.
-- [ ] Make checked-in/no-show reconciliation predictable; avoid unintentional duplicate player entries.
+### Milestone 2 — Player & Tournament Preparation
 
-### Phase 4 — Event-day operations and results
+One organizer workflow spanning registration through a reviewed championship draw:
 
-- [ ] Active table assignment and availability tracking to avoid simultaneous table conflicts.
-- [ ] Dashboard of completed/remaining/ready matches and tournament progression.
-- [ ] Record final **Mixed-Skill Doubles** result in addition to team selection.
-- [ ] Polished, privacy-appropriate PDF/CSV export for brackets, scores, awards and post-event records; preserve existing text/print outputs.
-- [ ] Record tournament outcomes and useful lessons for future FFTT installments.
+- [ ] Import names and relevant playing-assessment answers from the **private FFTT3 Registration Google Sheet** via an authorized organizer-controlled, review-before-commit workflow; support validated manual/paper entries and de-duplication.
+- [ ] Keep contact data outside public projections and outside any unnecessary bracket/player model. Never embed private Sheet credentials in GitHub Pages.
+- [ ] Recognize returning players using stable organizer-reviewed player identities; present provisional Level 1–5 suggestions from registration, previous verified play and observations. **Organizer approves ratings**; do not infer missing historical player-level evidence.
+- [ ] Reconcile registered, checked-in and no-show players before finalizing brackets; prevent unintended duplicates.
+- [ ] Use existing rating-aware seeding and bye logic to propose fair opening matchups, spread stronger entrants, avoid severe mismatches when practical and permit documented organizer overrides.
+- [ ] Preserve Championship + reviewed first-match-loser Consolation + one Mixed-Skill Doubles finale. Maintain the aim of at least two real matches per player when the field permits.
 
-### Later / optional: format flexibility and historical tracking
+**Batching rule:** Implement registration parsing, preview, rating review, check-in and bracket-setup UX together, with synthetic fixtures first. Work may proceed alongside remaining Phase 1 backend verification, but **real Sheets data access/import into the app requires a separately authorized, privacy-reviewed integration**.
 
-- [ ] Round robin for very small fields and optional pool play / playoffs.
-- [ ] Three-match-guarantee or other formats when table count and time budget make them feasible.
-- [ ] Explore full double elimination only if event constraints justify it.
-- [ ] Prior-event match history and rating calibration over time, with organizer oversight.
-- [ ] Optional additional scorekeeper delegation and deeper spectator presentation features as needs become clear.
+### Milestone 3 — Live Tournament Operations & Results
 
-## Explicit boundaries and unresolved decisions
+One end-to-end, authoritative match lifecycle, instead of independent feature launches:
 
-- Current FFTT3 event rules are not changing merely because another bracket-making product offers other formats.
-- Do not use public GitHub files as an event results database.
-- Do not embed Google credentials, private sign-up responses, phone numbers, email addresses or raw JSON event backups in the public front end.
-- Product-specific sign-in method, backend provider, exact sync behavior, offline policy, spectator access policy and eventual delivery scope **need confirmation**.
-- **Next action:** Validate [Phase 1A's provider-neutral contract](docs/PHASE1A_SHARED_EVENT_CONTRACT.md) and isolated synthetic reference suite; request separate permission before provisioning a Supabase sandbox. Then implement real SQL/RLS/transaction and multi-client tests. Production plans, fees, real-data migration and cutover remain unapproved. Do not deploy a live write path or migrate actual player data before approval.
+- [ ] Volunteer phone-friendly eligible-match list and score entry with winner/game confirmation; organizer-authorized accounts only.
+- [ ] Single trusted server score acceptance and bracket advancement, then fresh synchronized organizer, volunteer and restricted public results/TV views; do not broadcast private state.
+- [ ] Organizer overview of ready/playing/completed matches, accurate **table assignment and availability** (not merely previously recorded table number), plus public **Now Playing / Up Next**.
+- [ ] Public read-only responsive bracket/results link or QR, and large-screen TV/projector presentation with automatic updates and no internal FFTT ratings or participant contacts.
+- [ ] Complete the **Mixed-Skill Doubles finale result** using appropriate, independently tested rules; maintain the existing team-selection flow.
+- [ ] Add export of verified brackets, scores, awards and results in useful privacy-appropriate PDF/CSV or equivalent formats; preserve the original text/print and private JSON backup workflows.
+- [ ] Persist basic per-event tournament and match history suitable for future ratings and operational lessons, without publishing private cross-event profiles by default.
+- [ ] Rehearse the full lifecycle with fictional players on **two scorekeeper devices plus organizer and spectator/TV**, including contested submissions, delayed/failed connectivity, audited correction, recovery, consolation and doubles.
+
+**Release rule:** A pretty spectator dashboard or a passing synthetic UI test is not acceptance of secure live scoring. Cloud result submission, realtime publication and real-event deployment remain gated by Milestone 1 and a specific authorized production cutover.
+
+### Later / optional enhancements (not event-day blockers)
+
+- Advanced cross-event performance/rating analytics, streaks, rivalries and personalized player history; ratings remain organizer-reviewed and internal.
+- Personalized spectator notifications, richer branded TV rotations, optional approved player introductions and optional delegated scorekeeper assignment.
+- Small-field round robin, pool play/playoffs, extra match guarantees or full double elimination **only after** validating time/table constraints and preserving current FFTT3 rules.
+
+### Historical phase-number mapping (supersedes the October 8 feature sequence)
+
+- **Old Phase 1** → **Milestone 1**; Phase 1A/1B/1C technical substeps retain their names and historical PR references.
+- **Old Phase 3** + registration-adjacent pieces of **old Phase 4** → **Milestone 2**.
+- **Old Phase 2** + remaining live-operations/results pieces of **old Phase 4** → **Milestone 3**.
+- **Old Phase 0** remains closed. Historical detailed design notes and existing source artifacts are preserved, not rewritten.
+
+## Delivery discipline and boundaries
+
+- Optimize for coherent vertical slices and batched regression tests, not unnecessary per-button approvals. Keep explicit checkpoints for security-sensitive actions, real participant information, production services and event-day cutover.
+- Phase 1 synthetic security, reliable event authority and recovery are release prerequisites even when Milestone 2's offline/mock preparation is developed in parallel.
+- Never commit real registration responses, email/phone, private backups or privileged keys to the public repository, and never use public GitHub files as a live results database.
+- Do not change the current FFTT3 bracket format, seeding invariants or approved visual identity just because roadmap items are merged.
+- Do not interpret this consolidation as approving a paid plan, deploying a production backend, publishing real participant names, changing staff access, migrating player data or turning on multi-device scoring.
+- **Immediate next engineering action:** Reconcile the open synthetic Phase 1B/1C PR stack, the real hosted dev state, the unresolved six-digit OTP/read-only login flow, and remaining score/snapshot/recovery integration gates. Advance only with independently evidenced tests, preserving the single-device fallback.
 
 ## Related canonical sources
 
