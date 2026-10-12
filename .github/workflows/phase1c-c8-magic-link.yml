@@ -1,0 +1,17 @@
+name: C8 isolated Magic Link mock regression
+on:
+  push:
+    branches: [phase1c/c8-magic-link-local-rehearsal]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mocked-auth:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/phase1c_c8_magic_link.test.mjs
+      - run: python3 -m py_compile tools/c8/local_readonly_server.py
