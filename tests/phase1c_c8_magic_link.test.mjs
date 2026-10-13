@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {C8MagicLinkAuth,C8_REDIRECT} from "../contracts/phase1c_c8_magic_link.mjs";
+import {C8MagicLinkAuth,C8_REDIRECT,safeRequestCategory} from "../contracts/phase1c_c8_magic_link.mjs";
 const KEY="sb_publishable_testclientpublic1234";
 const TOKEN=["abc","def","ghi"].join(".");
 function response(status,payload){return {status,json:async()=>payload};}
@@ -50,4 +50,19 @@ test("expiration blocks use and avoids session renewal",async()=>{
  a.consumeLocation(callback({expires_in:"60"}),history());
  current+=61000;await assert.rejects(()=>a.verifyReturningEmail("tester@example.org"));
  assert.equal(a.status.authenticated,false);
+});
+
+test("failed requests disclose only predefined HTTP category; no response contents",async()=>{
+ for(const [status,expected] of [[429,"rate-limited (HTTP 429)"],[400,"invalid request (HTTP 400)"],[401,"authentication denied (HTTP 401)"],[500,"service unavailable (HTTP 5xx)"]]){
+  const a=new C8MagicLinkAuth({publishableKey:KEY,fetchImpl:async()=>({status,json:async()=>({secret:"DO-NOT-RENDER"})})});
+  await assert.rejects(a.requestLink("test@example.org"),e=>e.name==="C8RequestFailure"&&e.category===expected&&!String(e).includes("DO-NOT-RENDER"));
+  assert.equal(a.status.authenticated,false);
+ }
+ assert.equal(safeRequestCategory(undefined),"request failed (HTTP unknown)");
+});
+test("network failures produce a safe category, no auto retries",async()=>{
+ let count=0;
+ const a=new C8MagicLinkAuth({publishableKey:KEY,fetchImpl:async()=>{count++;throw Error("private service response");}});
+ await assert.rejects(a.requestLink("test@example.org"),e=>e.category==="network or browser request failure"&&!String(e).includes("private"));
+ assert.equal(count,1);
 });
