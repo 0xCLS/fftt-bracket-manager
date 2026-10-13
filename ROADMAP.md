@@ -172,6 +172,8 @@ Deliver the smallest trustworthy shared backend and explicit local/cloud separat
 
 **Browser integration progress (October 13):** [Connected browser read rehearsal](docs/MILESTONE1_CONNECTED_BROWSER.md) adds a real signed role/Match Desk/V2 revision double-read to the existing localhost C8 demo, conservative privacy cleanup, and an intercepted two-device/outsider Chromium regression. This is **manual-refresh read-only integration**, not authorized cloud scoring or completed live synchronization. Controlled writer/recovery adapter and multi-device operational rehearsal remain necessary.
 
+**Signed scoring/recovery client preparation (October 13):** [Integrated Score & Recovery Lab](docs/MILESTONE1_SCORE_RECOVERY_LAB.md) adds a **strictly loopback-only** local signed V2 score transport, one-attempt-only score IDs with advance incident logging, an own-receipt recovery state machine that never retries unknown outcomes, an organizer fallback checklist, and a browser rehearsal with two in-memory fictional scorekeepers and privacy-safe spectator display. The actual hosted C8 browser remains read-only; **no additional hosted fixture, database edit, or production scoring is authorized**. A fresh separately approved fictional fixture, production-safe individual Auth, trusted recovery after tab loss, and real multi-device/browser synchronization are still required.
+
 ### Milestone 2 — Player & Tournament Preparation
 
 One organizer workflow spanning registration through a reviewed championship draw:

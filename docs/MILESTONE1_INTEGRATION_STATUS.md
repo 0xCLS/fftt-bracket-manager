@@ -44,6 +44,8 @@ The C5 proposal returns accepted receipts but does not durably record rejection.
 
 Milestones 2 and 3 retain their approved scope; no more invented C-number milestones or routine piecemeal approval requests.
 
+**Additional cohesive client-development batch (October 13):** [Score & Recovery Lab](MILESTONE1_SCORE_RECOVERY_LAB.md) implements a local-only signed V2 score POST and read adapter, two-step human incident record before one-time submission, strict owner-receipt recovery on unknown/rejected/accepted outcomes, mock multi-scorekeeper browser exercises, and a never-authoritative organizer fallback checklist. This batch does **not** send hosted score POSTs and does **not** enable scoring in C8 or the production app. All historical hosted fixtures stay consumed; local tests and browser UI do not establish production readiness.
+
 ## Current branch validation and safeguards
 
 - New strict public-result view model has **six local Node zero-network tests PASS**; it strips raw private identifiers from display, rejects added/private fields, inconsistent event/bracket/winner, oversized rows and malformed projection shapes.
