@@ -31,6 +31,8 @@ jobs:
           python -m playwright install chromium --with-deps
       - name: Check Phase 1A shared-event reference contract
         run: python -m unittest discover -s tests -p 'test_phase1a_contract.py' -v
+      - name: Check consolidated synthetic Milestone 1 JavaScript safeguards (zero network)
+        run: node --test tests/phase1c*.test.mjs tests/milestone1_public_results.test.mjs
       - name: Check UI, labels and dropdowns
         run: python tests/ui_smoke.py
       - name: Check tournament safety
