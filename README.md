@@ -19,7 +19,7 @@ Christopher approved a **three-milestone delivery plan** on October 12, 2026. Se
 2. **Player & Tournament Preparation:** organizer-reviewed private Google Sheets registration intake, provisional rating suggestions, check-in, deduplication and bracket seeding.
 3. **Live Tournament Operations & Results:** mobile volunteer scoring, synchronized bracket/Now Playing views, public spectator/TV displays, table tracking, doubles-result recording, exports and basic event history.
 
-**Latest integrated backend/client candidate:** [Atomic decision and recovery implementation with verification boundaries](docs/MILESTONE1_BACKEND_CLIENT_CANDIDATE.md). SQL remains **unapplied**; only isolated synthetic in-memory scoring and a disabled-write signed snapshot adapter are included. No hosted deployment or real data transfer.
+**Latest integrated backend/client candidate:** [Atomic decision and recovery implementation with verification boundaries](docs/MILESTONE1_BACKEND_CLIENT_CANDIDATE.md). V2 SQL remains **unapplied on hosted Supabase**; disposable PostgreSQL and independently signed local Supabase HTTP scoring have passed, but only a disabled-write browser adapter and isolated synthetic coordinator are included. No hosted deployment or real data transfer.
 
 **Synthetic integration status:** [Milestone 1 evidence and remaining integrated delivery batches](docs/MILESTONE1_INTEGRATION_STATUS.md). The production GitHub Pages app is unchanged, while an isolated localhost rehearsal can display allowlisted synthetic public results.
 
