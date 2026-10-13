@@ -19,6 +19,8 @@ Christopher approved a **three-milestone delivery plan** on October 12, 2026. Se
 2. **Player & Tournament Preparation:** organizer-reviewed private Google Sheets registration intake, provisional rating suggestions, check-in, deduplication and bracket seeding.
 3. **Live Tournament Operations & Results:** mobile volunteer scoring, synchronized bracket/Now Playing views, public spectator/TV displays, table tracking, doubles-result recording, exports and basic event history.
 
+**Synthetic integration status:** [Milestone 1 evidence and remaining integrated delivery batches](docs/MILESTONE1_INTEGRATION_STATUS.md). The production GitHub Pages app is unchanged, while an isolated localhost rehearsal can display allowlisted synthetic public results.
+
 **Phase 0 design is approved.** Supabase is authorized **only for isolated synthetic development**. An organizer-owned Free development project has been used for hosted synthetic tests in **unmerged** Phase 1B/1C draft branches. The public `main` application is still **browser-local, not a shared scoring service**. The [architecture proposal](docs/PHASE1_SHARED_EVENT_ARCHITECTURE.md), [Phase 1A contract](docs/PHASE1A_SHARED_EVENT_CONTRACT.md) and [machine-readable policies](contracts/phase1a_v1.json) remain security references. The development milestone consolidation **does not approve real participant migration, production infrastructure, public participant-name publication or live cutover**.
 
 ## Run it
