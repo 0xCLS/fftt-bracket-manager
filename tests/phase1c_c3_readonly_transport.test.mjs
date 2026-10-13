@@ -29,8 +29,9 @@ const pubEvent=()=>({
   event_id:PUBLIC,event_name:"Synthetic Public Projection",event_date:"2099-01-01",
   status:"complete",updated_at:"2099-01-01T00:00:00Z",
 });
+const nestedPubMatch=()=>{const m=pubMatch();delete m.event_id;return m;};
 const pubResult=()=>({...pubEvent(),
-  brackets:[{name:"championship",matches:[pubMatch()]}],
+  brackets:[{name:"championship",matches:[nestedPubMatch()]}],
 });
 function harness(payload, opts={}) {
   const calls=[];
@@ -156,14 +157,24 @@ test("public results use anonymous GET and explicit allowlisted projection",asyn
 test("public nested bracket or match private fields rejected",async()=>{
   const cases=[
     [{...pubResult(),email:"SECRET"}],
-    [{...pubResult(),brackets:[{name:"championship",matches:[{...pubMatch(),rating:5}]}]}],
-    [{...pubResult(),brackets:[{name:"championship",matches:[pubMatch()],notes:"private"}]}],
+    [{...pubResult(),brackets:[{name:"championship",matches:[{...nestedPubMatch(),rating:5}]}]}],
+    [{...pubResult(),brackets:[{name:"championship",matches:[nestedPubMatch()],notes:"private"}]}],
     [{...pubResult(),brackets:[{name:"championship",matches:"wrong"}]}],
   ];
   for(const sample of cases){
     const h=harness(sample);
     await fail(()=>h.transport.readPublicResults());
   }
+});
+test("nested aggregate matches omit event_id per deployed SQL, while standalone rows require it",async()=>{
+ const nested=nestedPubMatch();
+ const h=harness([pubResult()]);
+ const rows=await h.transport.readPublicResults();
+ assert.equal(Object.hasOwn(rows[0].brackets[0].matches[0],"event_id"),false);
+ const invalid=harness([{...pubResult(),brackets:[{name:"championship",matches:[{...nested,event_id:PUBLIC}]}]}]);
+ await fail(()=>invalid.transport.readPublicResults());
+ const badStandalone=harness([nested]);
+ await fail(()=>badStandalone.transport.readPublicMatches());
 });
 test("public result handles empty projection without auto publishing",async()=>{
   const h=harness([]);
