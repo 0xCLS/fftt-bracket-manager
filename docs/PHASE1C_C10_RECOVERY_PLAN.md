@@ -28,7 +28,7 @@
 
 ## Verification
 
-`tests/phase1c_c10_recovery_plan.test.mjs` simulates network interruption, stale/cache revisions, ambiguous submissions, accepted-but-unproven receipts, cross-event leaks, rejected/forged response fields, revision regression, completed events, organizer checklist, and privacy-safe decisions. Branch-only mock CI runs with no Supabase credentials; its status must be independently checked before claiming PASS.
+`tests/phase1c_c10_recovery_plan.test.mjs` simulates network interruption, stale/cache revisions, ambiguous submissions, accepted-but-unproven receipts, cross-event leaks, rejected/forged response fields, revision regression, completed events, organizer checklist, and privacy-safe decisions. **Verified PASS:** [GitHub Actions C10 mock-only #38366245094](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/38366245094) completed successfully on October 13, 2026 against implementation commit `128853bb629feb1335938833fc15a470038961e1`. This is a synthetic-code check only, not a hosted Supabase, real-auth or recovery validation.
 
 ## Remaining gates — not authorized here
 
