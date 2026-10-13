@@ -1,0 +1,17 @@
+name: C11 synthetic durable-decision protocol
+on:
+  push:
+    branches: [phase1c/c11-durable-decision-draft]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Pure recovery and decision contract tests
+        run: node --test tests/phase1c_disconnect_reference.test.mjs tests/phase1c_c5_snapshot_wire.test.mjs tests/phase1c_c10_recovery_plan.test.mjs tests/phase1c_c11_durable_decision.test.mjs
