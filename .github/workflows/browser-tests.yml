@@ -7,11 +7,13 @@ on:
       - index.html
       - tests/**
       - .github/workflows/browser-tests.yml
+      - supabase/**
   pull_request:
     paths:
       - index.html
       - tests/**
       - .github/workflows/browser-tests.yml
+      - supabase/**
   workflow_dispatch:
 
 jobs:
@@ -31,9 +33,51 @@ jobs:
           python -m playwright install chromium --with-deps
       - name: Check Phase 1A shared-event reference contract
         run: python -m unittest discover -s tests -p 'test_phase1a_contract.py' -v
+      - name: Check consolidated synthetic Milestone 1 JavaScript safeguards (zero network)
+        run: node --test tests/phase1c*.test.mjs tests/milestone1_*.test.mjs
+      - name: Check unapplied Milestone 1 SQL safety proposal (static only)
+        run: python -m unittest discover -s tests -p 'test_milestone1_v2_proposal.py' -v
+      - name: Verify one-time hosted operator source guards (offline only)
+        run: python -m unittest discover -s tests -p 'test_milestone1_v2_hosted_once.py' -v
+      - name: Verify connected two-browser synthetic Match Desk and outsider denial
+        run: python tests/milestone1_connected_browser.py
+      - name: Verify synthetic two-scorekeeper score/recovery lab and protected fallback (zero network)
+        run: python tests/milestone1_score_lab_browser.py
       - name: Check UI, labels and dropdowns
         run: python tests/ui_smoke.py
       - name: Check tournament safety
         run: python tests/safety.py
       - name: Rehearse tournament brackets
         run: python tests/rehearsal.py
+
+  disposable-db:
+    name: Disposable synthetic PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Install Supabase CLI (local only)
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.79.0
+      - name: Start isolated local Supabase PostgreSQL and GoTrue (no remote link)
+        run: supabase start
+      - name: Verify existing B1-B2d migrations before v2
+        run: supabase test db
+      - name: Apply v2 candidate ONLY to ephemeral local PostgreSQL
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres \
+            -f supabase/proposals/MILESTONE1_DURABLE_SCORING_V2_DO_NOT_APPLY.sql
+      - name: Assert real PostgreSQL accepted/rejected receipt and revocation behavior
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres \
+            -f tests/milestone1_v2_disposable.sql
+      - name: Verify independently signed local Auth and simultaneous V2 HTTP score race
+        run: |
+          python -m py_compile tests/milestone1_v2_signed_http.py
+          python tests/milestone1_v2_signed_http.py
