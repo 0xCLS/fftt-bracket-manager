@@ -14,7 +14,7 @@ import {AuthorityGateError} from './phase1c_disconnect_reference.mjs';
 const HOST='http://127.0.0.1:54321';
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const JWT=/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
-const KEY=/^(sb_publishable_[A-Za-z0-9_-]{8,}|[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)$/;
+const KEY=/^sb_publishable_[A-Za-z0-9_-]{8,}$/;
 const terminal=['submission_id','status','match_id','match_version','event_revision','generation','reason'];
 const snapFields=['event_id','revision','generation','lifecycle','submission_id','decision'];
 const snapDecision=['id','status','match_id','match_version','event_revision','generation','reason'];

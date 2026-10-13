@@ -30,6 +30,10 @@ test('fixed disposable loopback, public key and injected identity; hosted blocke
  assert.throws(()=>createMilestone1LocalSignedScoreTransport({
   publishableKey:'sb_secret_adminkey',getAccessToken:()=>JWT,fetchImpl:async()=>{}}));
  assert.throws(()=>createMilestone1LocalSignedScoreTransport({
+  publishableKey:'legacy.header.signature',getAccessToken:()=>JWT,fetchImpl:async()=>{}}));
+ assert.throws(()=>createMilestone1LocalSignedScoreTransport({
+  publishableKey:'sb_service_role_legacy123456',getAccessToken:()=>JWT,fetchImpl:async()=>{}}));
+ assert.throws(()=>createMilestone1LocalSignedScoreTransport({
   publishableKey:KEY,getAccessToken:null,fetchImpl:async()=>{}}));
 });
 test('explicit exact signed V2 POST maps all eight score fields; one request',async()=>{
