@@ -17,7 +17,10 @@ function render(){const signed=auth.status.authenticated;
 function clear(){epoch++;auth.end();$("eventId").value="";$("email").value="";$("confirmEmail").value="";$("staffMatches").replaceChildren();say("staffStatus","No staff data. Sign in first.");render();}
 $("requestForm").addEventListener("submit",async ev=>{ev.preventDefault();$("requestLink").disabled=true;
  try{await auth.requestLink($("email").value);say("authStatus","Magic Link requested. Open the email on this same Mac in this browser. No account was created.");}
- catch{say("authStatus","Request denied or limited. No session established.");}
+ catch(error){
+  const category=error?.name==="C8RequestFailure"?error.category:"request could not be completed";
+  say("authStatus","Magic Link not requested successfully: "+category+". No session established. Do not retry immediately.");
+ }
  finally{$("requestLink").disabled=false;render();}});
 $("confirmForm").addEventListener("submit",async ev=>{ev.preventDefault();
  try{await auth.verifyReturningEmail($("confirmEmail").value);$("confirmEmail").value="";say("authStatus","Supabase verified existing individual account. Read-only access available.");}
