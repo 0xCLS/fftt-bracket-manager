@@ -35,6 +35,6 @@ For each submitted score on one event/match, the server should enforce:
 
 ## Verification and approval gate
 
-C11 automated tests must run successfully before any PASS claim. These only establish soundness of the **simulated protocol**, not real client/server trusted snapshot implementation.
+**Synthetic C11 contract CI PASS:** [GitHub Actions #38367053633](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/38367053633) completed successfully on October 13, 2026 for commit `d839c24995297607bd9d9e6d2d8c1cd9214daa8a`. This establishes only correctness of the **simulated protocol** and pre-existing C1/C5/C10 tests, not an actual signed/Auth or database-backed trusted snapshot implementation.
 
 Before a hosted dev schema proposal: inspect existing Auth/role helper, score RPC, table constraints, triggers and grants; produce independent SQL/transaction/security review, rollback preserving B2i evidence, a fresh isolated synthetic test fixture proposal, and explicit permission for exact migrations and tests. **No database changes in C11.**
