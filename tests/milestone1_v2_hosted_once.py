@@ -5,7 +5,7 @@ RUN ON TRUSTED MAC ONLY. No automatic score retry, no fixture reset, no
 account creation/grant/revoke, no production API or public publication.
 ONLY the new 2099 V2 fixture is permitted; consumed B2i fixture is refused.
 Privileged Supabase sb_secret_ key, JWTs, Magic Links and UUIDs remain in
-operator process memory and are never written to disk or printed.
+operator process memory and are never written to disk or printed. A separate\nnon-secret one-time attempt marker prevents accidental manual replay.
 Auth Admin generate_link issues fresh existing-user sessions; it is NOT
 ordinary volunteer inbox authentication and does not modify staff grants.
 """
@@ -15,6 +15,8 @@ import getpass
 import hashlib
 import hmac
 import json
+import os
+from pathlib import Path
 import sys
 import threading
 import urllib.error
@@ -132,6 +134,27 @@ def one_score(jwt: str,payload: dict,barrier: threading.Barrier) -> tuple[int,di
     barrier.wait(timeout=15)
     return rpc(SCORE_RPC,jwt,payload)
 
+def irreversible_once_marker() -> None:
+    """Fail-closed before score POST if this Mac previously attempted the race.
+
+    Only the public SHA-256 pin is in the marker filename; no UUID, email,
+    secret key, JWT or response is stored. The marker is intentionally
+    retained after success, timeout or any ambiguous HTTP outcome.
+    """
+    marker=Path.home()/(".fftt_m1_v2_hosted_once_"+EVENT_DIGEST[:18])
+    try:
+        fd=os.open(str(marker),os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
+    except FileExistsError:
+        raise Stop("Previously attempted on this Mac; STOP. No repeat/replay.") from None
+    except OSError:
+        raise Stop("Cannot establish one-time score safety marker. No score sent.") from None
+    try:
+        with os.fdopen(fd,"w") as handle:
+            handle.write("One V2 fictional hosted race was attempted. Never repeat.\n")
+    except OSError:
+        raise Stop("Cannot persist one-time score marker. No score sent.") from None
+
+
 def run(secret: str,organizer_email: str,event: str,match: str) -> None:
     expected_users=auth.preflight_users(secret,organizer_email)
     emails={"ORGANIZER":organizer_email.casefold(),**auth.TEST_ONLY}
@@ -140,7 +163,8 @@ def run(secret: str,organizer_email: str,event: str,match: str) -> None:
     ensure(len(set(tokens.values()))==4,"Four distinct server-issued JWTs authenticated")
     row=preflight(tokens,event,match)
     submissions=payloads(row,event,match)
-    print("Preflight PASS. Sending exactly TWO simultaneous irreversible synthetic V2 score POSTs.")
+    irreversible_once_marker()
+    print("Preflight PASS. One-time Mac safety marker written. Sending exactly TWO simultaneous synthetic score POSTs.")
     barrier=threading.Barrier(2)
     try:
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
