@@ -20,10 +20,13 @@ Historic per-step workflow files are deliberately **not imported** to avoid mult
 | C5 snapshot proposal | SQL proposal and disposable/static checks only | **Unapplied; requires approval and transactional/security review before deployment** |
 | Read-only projection | C3 public projection transport + C8 isolated UI now show event/bracket/match summaries, with a strict data allowlist and manual refresh | Device/browser verification and permission review; no public real-player names |
 | Connected cloud scoring | **Not implemented/authorized for live UI** | Authenticated write adapter, server-proven revision/decision and safe recovery before any rollout |
+| Integrated backend/client candidate (Oct 13) | Unapplied SQL v2 proposal for durable accepted/rejected decisions and owner-consistent snapshot; isolated signed read-only adapter and executable synthetic coordinator | Disposable PostgreSQL + signed Auth concurrency/revocation/receipt verification, then separately authorized hosted schema/role cutover |
 
 The C5 proposal returns accepted receipts but does not durably record rejection. An absent receipt is **unknown**, never proof of rejection; C11 simulates a future durable decision but does not make it a trusted server. Reconnection may never silently retry, replay or merge scores. This is the principal server/client integration blocker, alongside normal organizer-authorized volunteer authentication.
 
 **October 13 completed browser-observation sequence:** Organizer and Scorekeeper A signed in and received event-authorized empty Match Desk results. A subsequent screenshot of the previously ungranted outsider rehearsal showed a signed-in state and `Denied, expired or unavailable. No private result shown.` after the staff read, with zero published events. No private Match Desk data was displayed. The generic message is fail-closed, but does not conclusively identify the underlying HTTP/authorization cause or prove profile isolation. No further manual login is requested; validate negative-role security through the remaining consolidated synthetic security/integration suite. No account, private event UUID or credential is preserved here.
+
+**Substantive implementation added:** [Milestone 1 backend/client candidate](MILESTONE1_BACKEND_CLIENT_CANDIDATE.md) reuses B2b scoring, adds a private append-only terminal decision ledger proposal and a consistent own-decision snapshot, plus a signed read-only transport and synthetic multi-client scoring coordinator. No v2 SQL was applied. The proposed v1→v2 endpoint cutover, RLS, race and receipt behavior must pass disposable PostgreSQL and real signed-Auth tests before a hosted authorization request.
 
 ## Coherent remaining Milestone 1 development batches
 
