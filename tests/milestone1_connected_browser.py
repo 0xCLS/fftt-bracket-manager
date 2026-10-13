@@ -147,10 +147,15 @@ try:
                 'HTTP 503 clears old private view and never claims cached results')
         live['fail']=None
         read(pa);expect(pa.locator('#connectedStatus')).to_contain_text('event revision 2')
+        pa.locator('#readStaff').click()
+        expect(pa.locator('#staffStatus')).to_contain_text('Authorized organizer')
+        require(pa.locator('#staffMatches .match').count()==1,
+                'Legacy private Match Desk can be loaded before disconnect')
         pa.evaluate("window.dispatchEvent(new Event('offline'))")
         expect(pa.locator('#connectedStatus')).to_contain_text('Connection lost')
-        require(pa.locator('#connectedMatches .match').count()==0,
-                'Offline event removes private rows; no offline score queue')
+        require(pa.locator('#connectedMatches .match').count()==0
+                and pa.locator('#staffMatches .match').count()==0,
+                'Offline event removes BOTH legacy and connected private views; no queue')
         pa.locator('#end').click()
         require(pa.locator('#connectedControls').is_hidden()
                 and pa.locator('#connectedMatches .match').count()==0,

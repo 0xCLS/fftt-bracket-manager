@@ -22,7 +22,9 @@ const connected=createMilestone1ConnectedDesk({
  isAuthenticated:()=>auth.status.authenticated,
 });
 const resetConnected=(message='No connected event loaded.')=>{
- connected.pause();$('connectedMatches').replaceChildren();
+ epoch++;connected.pause();$('connectedMatches').replaceChildren();
+ $('staffMatches').replaceChildren();
+ say('staffStatus','Private Match Desk cleared; refresh signed role to view current data.');
  say('connectedStatus',message);
 };
 function render(){const signed=auth.status.authenticated;
@@ -45,6 +47,7 @@ $("confirmForm").addEventListener("submit",async ev=>{ev.preventDefault();
 $("readStaff").addEventListener("click",async()=>{
  const id=$("eventId").value.trim();
  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)){say("staffStatus","Enter an exact private synthetic event UUID.");return;}
+ resetConnected("Connected revision view cleared by legacy desk refresh.");
  const prior=epoch;$("readStaff").disabled=true;$("staffMatches").replaceChildren();
  try{const role=await read.readStaffRole({eventId:id});const matches=await read.readMatchdesk({eventId:id});
   if(prior!==epoch||!auth.status.authenticated)return;
@@ -55,6 +58,8 @@ $("readStaff").addEventListener("click",async()=>{
 $("readConnected").addEventListener("click",async()=>{
  const id=$("eventId").value.trim(),at=epoch;
  $("readConnected").disabled=true;$("connectedMatches").replaceChildren();
+ $("staffMatches").replaceChildren();
+ say("staffStatus","Legacy Match Desk cleared; connected revision read is active.");
  say("connectedStatus","Reading signed V2 event revision and Match Desk…");
  try{
    const view=await connected.refresh(id);
