@@ -5,7 +5,8 @@
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EVENT_FIELDS = ['event_id','event_name','event_date','status','brackets','updated_at'];
 const BRACKET_FIELDS = ['name','matches'];
-const MATCH_FIELDS = ['event_id','match_id','bracket','round','slot','player_1_name','player_2_name','winner_name','game_scores','status'];
+// Deployed SQL nested aggregate excludes event_id; C3 validates the containing event.
+const MATCH_FIELDS = ['match_id','bracket','round','slot','player_1_name','player_2_name','winner_name','game_scores','status'];
 const EVENT_STATES = new Set(['draft','active','complete','archived']);
 const MATCH_STATES = new Set(['pending','complete','bye','empty']);
 const BRACKET_NAMES = new Set(['championship','consolation']);
@@ -23,8 +24,8 @@ function text(value, limit, nullable=false) {
   return value === null ? '' : value;
 }
 function number(value) { requireSafe(Number.isSafeInteger(value) && value >= 0); return value; }
-function matchView(m, eventId, bracket) {
-  requireSafe(keys(m, MATCH_FIELDS) && m.event_id === eventId &&
+function matchView(m, bracket) {
+  requireSafe(keys(m, MATCH_FIELDS) &&
     typeof m.match_id === 'string' && /^[a-z0-9][a-z0-9_.:-]{0,99}$/i.test(m.match_id) &&
     m.bracket === bracket && MATCH_STATES.has(m.status));
   const first = text(m.player_1_name, 120, true);
@@ -50,7 +51,7 @@ export function projectPublishedResults(rows) {
       requireSafe(keys(b, BRACKET_FIELDS) && BRACKET_NAMES.has(b.name) &&
         Array.isArray(b.matches) && b.matches.length <= MAX_MATCHES);
       return Object.freeze({name: b.name,
-        matches: Object.freeze(b.matches.map(m => matchView(m,e.event_id,b.name))) });
+        matches: Object.freeze(b.matches.map(m => matchView(m,b.name))) });
     });
     requireSafe(new Set(brackets.map(b => b.name)).size === brackets.length);
     return Object.freeze({name, date:e.event_date, status:e.status,
