@@ -1,5 +1,7 @@
 # Milestone 1 — Approved hosted V2 synthetic integration (October 13, 2026)
 
+**COMPLETED / DO NOT EXECUTE AGAIN.** The one-time signed hosted V2 race **PASSED** and the independent read-only SQL audit **PASSED** on October 13. [Verified result and remaining milestones](MILESTONE1_HOSTED_V2_AUDIT.md). This file retains the **historical instructions as provenance only**. The V2 test fixture and the earlier B2i fixture are both permanently consumed. Keep the Mac one-time marker. Do not rerun the operator, create a substitute fixture, reset scores, issue new score POSTs or change permissions without separate authorization.
+
 ## Explicit authorization and what was changed
 
 Christopher approved a **one-time, synthetic-only hosted integration exercise** in the preexisting `fftt-bracket-manager-dev` Supabase project (`copmkalfkkrkzheohwuc`). No FFTT3 player data, real results, public publication or production GitHub Pages changes are authorized.
@@ -17,7 +19,7 @@ Read-only post-migration verification confirmed:
 
 **Fixture identification:** private UUIDs are intentionally omitted from public code, documentation, chat, screenshots and logs. The new event and match are hard-pinned **only by SHA-256 digests** inside `tests/milestone1_v2_hosted_once.py`; their unguessable raw identifiers must remain on the trusted Mac.
 
-## Next authorized operation — exactly two irreversible signed V2 score POSTs
+## Historical authorized operation — COMPLETED (do not repeat)
 
 `tests/milestone1_v2_hosted_once.py` is the **new** one-time, Mac-local operator. **DO NOT RUN** the historical B2i launcher or old operator source. The new runner:
 1. Defaults to dry-run, with no network or Auth session, unless the exact new execution flag is passed.
@@ -28,7 +30,7 @@ Read-only post-migration verification confirmed:
 6. Issues **exactly two simultaneous POSTs** to `fftt_submit_match_result_v2` using the existing two scorekeeper identities and incompatible valid fictional final scores. **No retry**, reset, correction or extra write.
 7. Performs **read-only** `fftt_score_decision_snapshot_v2` requests to verify own accepted/rejected committed results, foreign-actor isolation, outsider denial and zero publication. The script prints only safe status counts/labels, never credentials, request bodies or private IDs.
 
-### Operator instructions (trusted Mac; do not paste private data into this chat)
+### Historical operator instructions (already executed, DO NOT RUN AGAIN)
 
 1. Open the existing Supabase project **SQL Editor** on the trusted Mac. Run this **read-only** query. Copy the two results locally; do not send them in ChatGPT or commit them to GitHub:
 
@@ -68,10 +70,10 @@ Enter only the requested private new event ID, private new match ID, existing sy
 
 **On any unexpected denial, HTTP 429, timeout, disconnection, wrong count or missing response: STOP. Do not rerun even if only one result appears.** Report only the non-secret status lines to ChatGPT. Independently inspect the DB audit/decision counts before any further operation. The one-time marker must be kept.
 
-## Post-race independent audit (read-only)
+## Historical post-race audit procedure (completed and verified)
 
 After the operator completes, the maintainer should use the connected Supabase project's **read-only SQL** to verify: one complete new match with version 1 and a matching winner, event revision 1, exactly one accepted v1 legacy submission receipt, one accepted audit, one first-loss consolation eligibility row, and **two v2 decisions (accepted and stale-rejected)**. Verify no old B2i data changes, no staff grants altered, zero public publications, and no unrelated event records.
 
-Do not mark the hosted race complete before seeing the operator output AND this independent database audit. Even a hosted signed-HTTP race does not establish complete event-day browser scoring, production Auth UX, multi-device recovery/fallback, or approval to migrate FFTT3 data.
+The operator output and the independent database audit were both obtained and match: **hosted synthetic V2 race verified PASS**. Do not repeat either scoring fixture. Even a hosted signed-HTTP race does not establish complete event-day browser scoring, production Auth UX, multi-device recovery/fallback, or approval to migrate FFTT3 data.
 
 The application `main:index.html` and production GitHub Pages deployment remain unchanged. This is **only** Milestone 1 Secure Shared Foundation's approved synthetic hosted backend checkpoint.
