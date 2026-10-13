@@ -1,0 +1,18 @@
+name: C9 synthetic mock-only role checks
+on:
+  push:
+    branches:
+      - phase1c/c9-individual-role-rehearsal
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mocked-roles:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Mock-only identity, role and denial tests
+        run: node --test tests/phase1c_c8_magic_link.test.mjs tests/phase1c_c9_independent_roles.test.mjs
