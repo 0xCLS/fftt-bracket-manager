@@ -24,6 +24,12 @@ _2026-10-13 · single cohesive implementation batch in draft PR #19 · synthetic
 - `tests/milestone1_connected_browser.py`: **real Chromium with three isolated browser contexts and all remote Supabase requests intercepted**. Exercises organizer + scorekeeper revised event reads, outsider denial, mid-read revision race, network failure, deliberate offline pause, sign-out and mobile layout. No live Auth OTPs or hosted writes.
 - Both are added to the existing consolidated PR workflow; no new workflow or automatic production deployment.
 
+## Verified consolidated CI result
+
+[GitHub Actions run #38430476452](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/38430476452) **PASS on first attempt** at executable commit `e062a77fa0912953b18f0e8cc93cd5b71ee83e04`. Both existing CI jobs passed: **165/165** synthetic Node tests (including nine new connected-controller tests), eight static v2 SQL checks, seven hosted-runner source guards, a real Chromium rehearsal of two independent signed browser contexts plus outsider (all Supabase traffic mocked/intercepted; **no hosted requests**), and existing browser UI/tournament suites. The disposable job passed **81/81** base PostgreSQL pgTAP assertions, actual local V2 SQL decision/revision/authorization checks and the independently signed local GoTrue/PostgREST concurrent-score race. Browser test explicitly confirmed mobile layout, stale revision denial, network outage clearing, signed-role privacy, no JWT browser storage, and **zero browser score/admin calls**.
+
+Documentation certification was added **after** the green execution and does not change executable source. This is not a production cutover or proof of actual real-device synchronization.
+
 ## Evidence limitations and next integrated work
 
 This verifies a meaningful **read-only shared-state browser path**, not a full event snapshot or authoritative bracket history: the existing server Match Desk lists only pending matches; the consumed hosted fixture has no pending matches and public results remain unpublished. A stable revision across two reads **does not guarantee** the desk data and revision were produced by one atomic PostgreSQL snapshot, and it must **never** authorize a score write. The V2 own-decision parser intentionally reports `cloudWritesEnabled:false`.
