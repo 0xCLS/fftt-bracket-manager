@@ -14,7 +14,7 @@ import {validateLocalScoreIntent} from './milestone1_signed_local_score_transpor
 import {previewC10SingleDeviceFallback} from './phase1c_c10_recovery_plan.mjs';
 import {PHASE} from './phase1c_disconnect_reference.mjs';
 
-const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const nonnegative=x=>Number.isSafeInteger(x)&&x>=0;
 const fail=s=>{throw new AuthorityGateError(s);};
 const roles=['organizer','scorekeeper'];
