@@ -3,7 +3,11 @@ import {createC3ReadOnlySupabaseTransport} from "../../contracts/phase1c_c3_read
 const KEY="sb_publishable_lupD9JDsWFQ_65LuwVL1Fg_O-V5Era0";
 const $=id=>document.getElementById(id),say=(id,text)=>{$(id).textContent=text;};
 const auth=new C8MagicLinkAuth({publishableKey:KEY,fetchImpl:(url,init)=>fetch(url,init)});
+const callbackInput={hash:window.location.hash,search:window.location.search,pathname:window.location.pathname};
 const callback=auth.consumeLocation(window.location,window.history);
+const callbackDiagnostic=callback?"callback-ready":
+ callbackInput.search?"query-callback-unsupported":
+ callbackInput.hash?"fragment-callback-rejected":"no-authentication-callback";
 const read=createC3ReadOnlySupabaseTransport({publishableKey:KEY,getAccessToken:()=>auth.accessToken(),fetchImpl:(url,init)=>fetch(url,init)});
 let epoch=0;
 function render(){const signed=auth.status.authenticated;
@@ -34,4 +38,10 @@ $("end").addEventListener("click",()=>{clear();say("authStatus","Local memory cl
 async function publicRead(){try{const rows=await read.readPublicResults();say("publicStatus",rows.length+" published public event(s); no private data exposed.");}catch{say("publicStatus","Public projection unavailable.");}}
 $("publicRefresh").addEventListener("click",publicRead);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!auth.status.authenticated&&$("end").hidden===false)clear();});
-render();say("authStatus",callback?"Magic Link received; re-enter the same existing test account email to validate it.":"Signed out. Request a Magic Link using your existing synthetic account.");await publicRead();
+render();say("authStatus",callback?
+ "Magic Link session received; re-enter the existing test account email to validate it.":
+ callbackDiagnostic==="query-callback-unsupported"?
+ "Sign-in redirect reached C8, but provided a query-style callback instead of the expected session fragment. No credentials were stored; report QUERY CALLBACK to the developer.":
+ callbackDiagnostic==="fragment-callback-rejected"?
+ "Sign-in redirect reached C8, but its session fragment did not pass strict validation. No credentials were stored; report FRAGMENT REJECTED to the developer.":
+ "No authentication callback received. If you just clicked an email link, check whether the link opened in a different browser profile and report NO CALLBACK.");await publicRead();
