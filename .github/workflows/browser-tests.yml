@@ -37,6 +37,8 @@ jobs:
         run: node --test tests/phase1c*.test.mjs tests/milestone1_*.test.mjs
       - name: Check unapplied Milestone 1 SQL safety proposal (static only)
         run: python -m unittest discover -s tests -p 'test_milestone1_v2_proposal.py' -v
+      - name: Verify one-time hosted operator source guards (offline only)
+        run: python -m unittest discover -s tests -p 'test_milestone1_v2_hosted_once.py' -v
       - name: Check UI, labels and dropdowns
         run: python tests/ui_smoke.py
       - name: Check tournament safety
