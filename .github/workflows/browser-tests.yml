@@ -7,11 +7,13 @@ on:
       - index.html
       - tests/**
       - .github/workflows/browser-tests.yml
+      - supabase/**
   pull_request:
     paths:
       - index.html
       - tests/**
       - .github/workflows/browser-tests.yml
+      - supabase/**
   workflow_dispatch:
 
 jobs:
@@ -41,3 +43,31 @@ jobs:
         run: python tests/safety.py
       - name: Rehearse tournament brackets
         run: python tests/rehearsal.py
+
+  disposable-db:
+    name: Disposable synthetic PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Install Supabase CLI (local only)
+        uses: supabase/setup-cli@v3
+        with:
+          version: 2.79.0
+      - name: Start isolated disposable local PostgreSQL
+        run: supabase db start
+      - name: Verify existing B1-B2d migrations before v2
+        run: supabase test db
+      - name: Apply v2 candidate ONLY to ephemeral local PostgreSQL
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres \
+            -f supabase/proposals/MILESTONE1_DURABLE_SCORING_V2_DO_NOT_APPLY.sql
+      - name: Assert real PostgreSQL accepted/rejected receipt and revocation behavior
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres \
+            -f tests/milestone1_v2_disposable.sql

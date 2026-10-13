@@ -28,6 +28,8 @@ The C5 proposal returns accepted receipts but does not durably record rejection.
 
 **Substantive implementation added:** [Milestone 1 backend/client candidate](MILESTONE1_BACKEND_CLIENT_CANDIDATE.md) reuses B2b scoring, adds a private append-only terminal decision ledger proposal and a consistent own-decision snapshot, plus a signed read-only transport and synthetic multi-client scoring coordinator. No v2 SQL was applied. The proposed v1→v2 endpoint cutover, RLS, race and receipt behavior must pass disposable PostgreSQL and real signed-Auth tests before a hosted authorization request.
 
+**Expanded validation:** The same PR workflow includes a new local-only disposable PostgreSQL job that runs the original B1–B2d security assertions, then applies v2 in that container and checks actual accepted/rejected decisions, access control, idempotency, revision and audit. This local verification is **not** a hosted migration; the signed multi-connection Auth/reconnect rehearsal remains gated.
+
 ## Coherent remaining Milestone 1 development batches
 
 **Backend and signed client batch (approval-gated for hosted changes):** Build the durable per-actor score decision ledger, consistent event revision/own-decision snapshot, denied/revoked access handling, and signed score/read/recovery adapter as one integrated piece. Verify with disposable Postgres, authenticated synthetic concurrency, idempotency, lost acknowledgments, stale generations, revocation, wrong-user reads, and outage tests. Migration, Auth/account, staff grant and backend setting changes require separate explicit authorization.

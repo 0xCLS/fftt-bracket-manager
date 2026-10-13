@@ -19,6 +19,13 @@ This is **one cohesive backend/client development batch** within the October 12 
 - \`contracts/milestone1_synthetic_score_coordinator.mjs\`: executable, provider-neutral **synthetic in-memory** score/recovery coordinator around the C1 offline-authority state machine and C11 decision shape. This has no real HTTP, browser storage, Supabase keys or imported app UI; all mock scoring happens through an explicitly injected fake transport. A 4xx response, timeout, missing/invalid decision, role denial or in-flight disconnect cannot silently claim saved scores. Reconnect inspection cannot produce \`verifiedFromServer:true\` or resume cloud writes.
 - Existing public \`index.html\`, C8 test sign-in flow, browser-local backups, scoring engine, published projections and historical PRs remain untouched.
 
+## Disposable PostgreSQL integration fixture
+
+- `tests/milestone1_v2_disposable.sql` is a **transaction-rolled-back** fixture for ephemeral Postgres. It creates only fictional 2099 actors, players, one event and one match within a temporary test transaction.
+- The existing consolidated PR workflow now starts **local-only Supabase PostgreSQL**, verifies baseline B1–B2d pgTAP first, applies the unapplied v2 proposal **only to the disposable local container**, and runs the v2 fixture. It never links or connects to the organizer's hosted Supabase project.
+- The fixture exercises sequential competing staff decisions, stable replay/tamper denial, own accepted/rejected snapshots, unrelated actor isolation, outsider/revoked denial, no direct private table rights, v1 cutover, one audited match advance and correct event revision. It is **NOT equivalent to a simultaneous two-connection race or independently signed GoTrue HTTP authorization**; both remain future tests.
+- The local CI outcome must be recorded before claiming even disposable PostgreSQL validation.
+
 ## Validation boundaries
 
 - Run the consolidated zero-network Node suite including synthetic race, accepted/rejected decisions, ambiguous ACKs, non-retry, role denial, delayed responses, signed snapshot allowlist and privacy.
