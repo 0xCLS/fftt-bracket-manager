@@ -1,3 +1,4 @@
+import {projectPublishedResults} from "../../contracts/milestone1_public_results.mjs";
 import {C8MagicLinkAuth} from "../../contracts/phase1c_c8_magic_link.mjs";
 import {createC3ReadOnlySupabaseTransport} from "../../contracts/phase1c_c3_readonly_supabase_transport.mjs";
 const KEY="sb_publishable_lupD9JDsWFQ_65LuwVL1Fg_O-V5Era0";
@@ -33,10 +34,46 @@ $("readStaff").addEventListener("click",async()=>{
   if(prior!==epoch||!auth.status.authenticated)return;
   say("staffStatus","Authorized "+role+" · "+matches.length+" eligible pending matchdesk rows. READ ONLY.");
   for(const m of matches){const article=document.createElement("article");article.className="match";article.textContent=m.match_code+" · "+[m.player_1_name,m.player_2_name].filter(Boolean).join(" vs. ");$("staffMatches").append(article);}
- }catch{say("staffStatus","Denied, expired or unavailable. No private result shown.");}
+ }catch{if(prior===epoch)say("staffStatus","Denied, expired or unavailable. No private result shown.");}
  finally{$("readStaff").disabled=false;if(!auth.status.authenticated){clear();say("authStatus","Session expired.");}}});
 $("end").addEventListener("click",()=>{clear();say("authStatus","Local memory cleared; server token expires separately.");});
-async function publicRead(){try{const rows=await read.readPublicResults();say("publicStatus",rows.length+" published public event(s); no private data exposed.");}catch{say("publicStatus","Public projection unavailable.");}}
+let publicRequest = 0;
+function renderPublishedEvents(events) {
+ const parent=$("publicEvents");parent.replaceChildren();
+ for(const event of events){
+  const section=document.createElement("section");section.className="public-event";
+  const title=document.createElement("h3");title.textContent=event.name;section.append(title);
+  const meta=document.createElement("p");meta.className="muted";
+  meta.textContent=event.date+" · "+event.status+" · SYNTHETIC READ ONLY";section.append(meta);
+  if(!event.brackets.length){
+   const empty=document.createElement("p");empty.textContent="No published matches yet.";section.append(empty);
+  }
+  for(const bracket of event.brackets){
+   const heading=document.createElement("h4");heading.textContent=bracket.name;section.append(heading);
+   if(!bracket.matches.length){const empty=document.createElement("p");empty.textContent="No published matches.";section.append(empty);}
+   for(const match of bracket.matches){
+    const line=document.createElement("div");line.className="public-match";
+    const pairing=document.createElement("p");pairing.textContent="Round "+match.round+" · "+match.players;line.append(pairing);
+    const summary=document.createElement("p");summary.className="muted";
+    summary.textContent=match.status+(match.winner?" · Winner: "+match.winner:"")+
+      (match.scores?" · Games: "+match.scores:"");line.append(summary);section.append(line);
+   }
+  }
+  parent.append(section);
+ }
+}
+async function publicRead(){
+ const request=++publicRequest;const button=$("publicRefresh");button.disabled=true;
+ $("publicEvents").replaceChildren();say("publicStatus","Refreshing public synthetic projection…");
+ try{
+  const events=projectPublishedResults(await read.readPublicResults());
+  if(request!==publicRequest)return;
+  renderPublishedEvents(events);
+  say("publicStatus",events.length+" published synthetic event(s). Manual refresh only; no private staff state.");
+ }catch{
+  if(request===publicRequest){$("publicEvents").replaceChildren();say("publicStatus","Public projection unavailable or invalid; no results displayed.");}
+ }finally{if(request===publicRequest)button.disabled=false;}
+}
 $("publicRefresh").addEventListener("click",publicRead);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!auth.status.authenticated&&$("end").hidden===false)clear();});
 render();
