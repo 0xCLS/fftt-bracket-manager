@@ -41,8 +41,11 @@ export class C8MagicLinkAuth {
      "supabase-error-"+c:"supabase-error-other";
    return false;
   }
-  const allowed=new Set(["access_token","token_type","expires_in","expires_at","refresh_token","type","provider_token","provider_refresh_token"]);
-  if([...p.keys()].some(k=>!allowed.has(k))){this.#callbackStatus="unexpected-fragment-field";return false;}
+  // Supabase may append non-authoritative metadata. Never trust, store, display,
+  // forward or act upon those values. The bearer token must still pass /auth/v1/user.
+  if([...p.keys()].length>20){this.#callbackStatus="excessive-fragment-fields";return false;}
+  const mandatory=["access_token","token_type","expires_in"];
+  if(mandatory.some(k=>p.getAll(k).length!==1)){this.#callbackStatus="invalid-core-fragment-fields";return false;}
   const token=p.get("access_token"),kind=p.get("type"),lifetime=Number(p.get("expires_in"));
   if(p.getAll("access_token").length!==1||!JWT.test(token||"")||token.length>10000){
    this.#callbackStatus="missing-or-invalid-access-token";return false;
