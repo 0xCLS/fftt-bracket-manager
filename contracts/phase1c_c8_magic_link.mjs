@@ -4,6 +4,19 @@ const KEY_RE=/^sb_publishable_[A-Za-z0-9_-]{8,}$/;
 const JWT=/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 const EMAIL=/^[^\s@<>]{1,64}@[^\s@<>]{1,190}$/;
 export const C8_REDIRECT="http://localhost:3000/rehearsals/c8/index.html";
+// Fixed categories only: never propagate Supabase response bodies, headers or URL values.
+export class C8RequestFailure extends Error {
+ constructor(category){super(category);this.name="C8RequestFailure";this.category=category;}
+}
+export function safeRequestCategory(status) {
+ if(status===429)return "rate-limited (HTTP 429)";
+ if(status===400)return "invalid request (HTTP 400)";
+ if(status===401||status===403)return "authentication denied (HTTP "+status+")";
+ if(status===422)return "request rejected (HTTP 422)";
+ if(status>=500&&status<=599)return "service unavailable (HTTP 5xx)";
+ if(status>=300&&status<=399)return "unexpected redirect (HTTP 3xx)";
+ return "request failed (HTTP "+(Number.isInteger(status)&&status>=100&&status<=599?status:"unknown")+")";
+}
 export class C8MagicLinkAuth {
  #fetch;#key;#session=null;#pending=null;#busy=false;#now;#callbackStatus="no-callback";
  constructor({publishableKey,fetchImpl,now=()=>Date.now()}) {
@@ -47,10 +60,13 @@ export class C8MagicLinkAuth {
   this.#busy=true;
   try {
    const url=C3_HOST+"/auth/v1/otp?redirect_to="+encodeURIComponent(C8_REDIRECT);
-   const res=await this.#fetch(url,{method:"POST",redirect:"error",credentials:"omit",cache:"no-store",
-    headers:{apikey:this.#key,Accept:"application/json","Content-Type":"application/json"},
-    body:JSON.stringify({email:email.trim().toLowerCase(),create_user:false})});
-   if(res?.status!==200)throw Error("Login request unavailable or limited");
+   let res;
+   try{
+    res=await this.#fetch(url,{method:"POST",redirect:"error",credentials:"omit",cache:"no-store",
+     headers:{apikey:this.#key,Accept:"application/json","Content-Type":"application/json"},
+     body:JSON.stringify({email:email.trim().toLowerCase(),create_user:false})});
+   }catch{throw new C8RequestFailure("network or browser request failure");}
+   if(res?.status!==200)throw new C8RequestFailure(safeRequestCategory(res?.status));
    return true;
   }finally{this.#busy=false;}
  }
