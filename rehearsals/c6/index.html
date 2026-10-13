@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src https://copmkalfkkrkzheohwuc.supabase.co; img-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>FFTT C6 — Existing Account Read-Only Sign-In Test</title>
+  <link rel="stylesheet" href="../c4/rehearsal.css">
+  <link rel="stylesheet" href="read-only.css">
+  <script type="module" src="read-only.mjs"></script>
+</head>
+<body>
+  <div class="simulation-band" role="note">C6 DEVELOPMENT TEST · INDIVIDUAL EMAIL CODE REQUIRED · READ ONLY · NOT FFTT3</div>
+  <main class="shell">
+    <header class="intro">
+      <div>
+        <p class="eyebrow">Forging Fellowship · Phase 1C C6</p>
+        <h1>Authorized matchdesk read rehearsal</h1>
+        <p>Only existing synthetic development accounts. The page never creates users, submits scores, changes staff or stores signed sessions in browser storage.</p>
+      </div>
+      <span class="state-tag paused" id="authBadge">SIGNED OUT</span>
+    </header>
+    <section class="warning" role="note">
+      <strong>Code delivery depends on the development email template.</strong>
+      <span>Use an existing synthetic account only. This flow needs a six-digit email code. If the message contains a magic link instead, do not click it for this rehearsal; stop and request an approved template review. Sending a code is initiated only when you click the button.</span>
+    </section>
+    <div class="desk">
+      <section class="panel" aria-label="Individual test account sign-in">
+        <p class="eyebrow">One existing individual account</p>
+        <h2>Sign in to read only</h2>
+        <form id="requestForm" autocomplete="off">
+          <label for="email">Existing synthetic account email</label>
+          <input id="email" name="email" type="email" inputmode="email" autocomplete="off" required maxlength="254" placeholder="Existing test account email">
+          <button type="submit" id="requestCode">Request six-digit code</button>
+        </form>
+        <form id="verifyForm" autocomplete="off" hidden>
+          <label for="code">Email code (six digits)</label>
+          <input id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="one-time-code" required>
+          <button type="submit" id="verifyCode">Verify and sign in</button>
+        </form>
+        <button type="button" id="end" hidden>Clear local session</button>
+        <p class="muted" id="authStatus" role="status" aria-live="polite">Signed out. No authentication request has been sent.</p>
+      </section>
+      <section class="panel" aria-label="Read-only authorized staff information">
+        <p class="eyebrow">Signed account and real server authorization</p>
+        <h2>Staff matchdesk</h2>
+        <div id="staffControls" hidden>
+          <label for="eventId">Private synthetic test-event UUID</label>
+          <input id="eventId" name="eventId" autocomplete="off" spellcheck="false" placeholder="Enter the existing private synthetic event UUID">
+          <button type="button" id="readStaff">Read authorized matchdesk</button>
+        </div>
+        <p class="muted" id="staffStatus" role="status" aria-live="polite">No staff data. Sign in with an existing authorized test account first.</p>
+        <div id="staffMatches" class="match-list"></div>
+      </section>
+    </div>
+    <section class="panel public" aria-label="Public read-only projection">
+      <p class="eyebrow">Anonymous public projection only</p>
+      <h2>Published results</h2>
+      <p class="muted" id="publicStatus">Only the backend-approved public result projection appears here.</p>
+      <div id="published" class="match-list"></div>
+      <button id="publicRefresh" type="button">Refresh public results</button>
+    </section>
+    <section class="policy">
+      <h2>Hard limits of this prototype</h2>
+      <p>No scores, publication, volunteer invitations, Auth administration, private player registration, refresh tokens or automatic login. Signed JWTs remain in the page's memory only and are not logged. Closing or refreshing this page clears the local session. Local sign-out does not revoke an already issued server token; its short-lived expiry is enforced locally.</p>
+      <output id="operations">Score writes: 0 · Admin changes: 0</output>
+    </section>
+  </main>
+</body>
+</html>
