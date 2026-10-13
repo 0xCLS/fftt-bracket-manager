@@ -26,6 +26,9 @@ const PUBLIC_MATCH_FIELDS = Object.freeze([
   "player_2_name", "winner_name", "game_scores", "status",
 ]);
 
+// The SQL JSON aggregate nests matches without event_id; standalone match rows include it.
+const NESTED_PUBLIC_MATCH_FIELDS = Object.freeze(PUBLIC_MATCH_FIELDS.filter(x => x !== "event_id"));
+
 const ROUTES = Object.freeze({
   role: "/rest/v1/rpc/fftt_staff_role_v1",
   desk: "/rest/v1/rpc/fftt_matchdesk_v1",
@@ -74,9 +77,10 @@ function validateDesk(rows, eventId) {
   }
   return list;
 }
-function validatePublicMatch(raw) {
-  const row=freezeRow(raw, PUBLIC_MATCH_FIELDS, "Published match");
-  checkPublicId(row.event_id);
+function validatePublicMatch(raw, {nested=false}={}) {
+  const row=freezeRow(raw, nested ? NESTED_PUBLIC_MATCH_FIELDS : PUBLIC_MATCH_FIELDS, "Published match");
+  if (nested) guard(!Object.hasOwn(row,"event_id"), "Nested public match exposed unexpected field");
+  else checkPublicId(row.event_id);
   checkPublicMatchId(row.match_id);
   guard(nonNegativeInt(row.round) && nonNegativeInt(row.slot),
     "Invalid public match round/slot");
@@ -93,7 +97,7 @@ function validatePublicResults(json) {
       guard(typeof b.name==="string" && Array.isArray(b.matches) &&
         b.matches.length<=1000, "Invalid public bracket shape");
       return Object.freeze({name:b.name,
-        matches:Object.freeze(b.matches.map(validatePublicMatch))});
+        matches:Object.freeze(b.matches.map(m => validatePublicMatch(m,{nested:true})))});
     });
     return Object.freeze({...entry,brackets:Object.freeze(brackets)});
   }));
@@ -105,7 +109,7 @@ function validatePublicEvents(json) {
 }
 function validatePublicMatches(json) {
   return Object.freeze(parseRows(json,PUBLIC_MATCH_FIELDS,
-    "Public matches").map(validatePublicMatch));
+    "Public matches").map(m => validatePublicMatch(m)));
 }
 function assertJwt(token) {
   guard(typeof token==="string" && token.split(".").length===3
