@@ -5,26 +5,39 @@ const JWT=/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 const EMAIL=/^[^\s@<>]{1,64}@[^\s@<>]{1,190}$/;
 export const C8_REDIRECT="http://localhost:3000/rehearsals/c8/index.html";
 export class C8MagicLinkAuth {
- #fetch;#key;#session=null;#pending=null;#busy=false;#now;
+ #fetch;#key;#session=null;#pending=null;#busy=false;#now;#callbackStatus="no-callback";
  constructor({publishableKey,fetchImpl,now=()=>Date.now()}) {
   if(!KEY_RE.test(publishableKey)||typeof fetchImpl!=="function")throw Error("Invalid public authentication configuration");
   this.#key=publishableKey;this.#fetch=fetchImpl;this.#now=now;
  }
- get status(){return {authenticated:!!this.#session&&this.#now()<this.#session.expires,busy:this.#busy,hasCallback:!!this.#pending};}
+ get status(){return {authenticated:!!this.#session&&this.#now()<this.#session.expires,busy:this.#busy,hasCallback:!!this.#pending,callbackStatus:this.#callbackStatus};}
  consumeLocation(loc,history){
   // Erase URL fragment BEFORE any asynchronous operation, network read or UI rendering.
   const hash=loc.hash||"";const search=loc.search||"";
   history.replaceState(null,"",loc.pathname);
   this.#pending=null;this.#session=null;
-  if(search||!hash)return false;
-  if(hash.length>16000||!hash.startsWith("#"))return false;
+  this.#callbackStatus="no-callback";
+  if(search){this.#callbackStatus="query-style-callback";return false;}
+  if(!hash)return false;
+  if(hash.length>16000||!hash.startsWith("#")){this.#callbackStatus="invalid-fragment";return false;}
   const p=new URLSearchParams(hash.slice(1));
+  // Only expose recognized non-sensitive error categories, never raw descriptions or callback values.
+  if(p.has("error")||p.has("error_code")){
+   const c=p.get("error_code")||"";
+   this.#callbackStatus=["otp_expired","access_denied","otp_disabled","over_email_send_rate_limit","invalid_request"].includes(c)?
+     "supabase-error-"+c:"supabase-error-other";
+   return false;
+  }
   const allowed=new Set(["access_token","token_type","expires_in","expires_at","refresh_token","type","provider_token","provider_refresh_token"]);
-  if([...p.keys()].some(k=>!allowed.has(k)))return false;
+  if([...p.keys()].some(k=>!allowed.has(k))){this.#callbackStatus="unexpected-fragment-field";return false;}
   const token=p.get("access_token"),kind=p.get("type"),lifetime=Number(p.get("expires_in"));
-  if(p.getAll("access_token").length!==1||!JWT.test(token||"")||token.length>10000||
-    (kind && kind!=="magiclink" && kind!=="email") || (p.get("token_type")||"").toLowerCase()!=="bearer" ||
-    !Number.isSafeInteger(lifetime)||lifetime<60||lifetime>7200)return false;
+  if(p.getAll("access_token").length!==1||!JWT.test(token||"")||token.length>10000){
+   this.#callbackStatus="missing-or-invalid-access-token";return false;
+  }
+  if(kind && kind!=="magiclink" && kind!=="email"){this.#callbackStatus="unexpected-auth-type";return false;}
+  if((p.get("token_type")||"").toLowerCase()!=="bearer"){this.#callbackStatus="unexpected-token-type";return false;}
+  if(!Number.isSafeInteger(lifetime)||lifetime<60||lifetime>7200){this.#callbackStatus="invalid-session-lifetime";return false;}
+  this.#callbackStatus="callback-ready";
   this.#pending={token,expires:this.#now()+lifetime*1000};
   return true;
  }
