@@ -15,13 +15,15 @@ Historic per-step workflow files are deliberately **not imported** to avoid mult
 | Local app baseline | Approved `main` UI, offline single-device data and backup paths retained unchanged | Comprehensive regression on the integrated candidate |
 | B1/B2 security and scoring | Isolated synthetic hosted backend; B2i genuine two-scorekeeper race passed for one fictional match | Full event lifecycle, signed adapter and multiple active-device rehearsal |
 | C8 organizer authentication | Organizer Magic Link, `/auth/v1/user`, staff-role and private Match Desk lookup observed passing; zero eligible matches after B2i is expected | Production-safe account flow, volunteer and outsider independent verification |
-| C9 volunteer | Mock role/access tests passed; real volunteer login blocked by HTTP 429 | Authorized independent scorekeeper sign-in, without repeated rate-limited requests |
+| C9 volunteer | Mock role/access tests passed; October 13 user screenshot shows successful scorekeeper-A Magic Link sign-in after an earlier HTTP 429 | Private event-role/Match Desk check and independent outsider denial are still required; login alone does not establish event-scoped authority |
 | C10/C11 recovery and durability | Pure synthetic decision models and fail-closed tests passed | Genuinely durable accepted **and rejected** decisions and trusted, actor-scoped reconnect snapshot |
 | C5 snapshot proposal | SQL proposal and disposable/static checks only | **Unapplied; requires approval and transactional/security review before deployment** |
 | Read-only projection | C3 public projection transport + C8 isolated UI now show event/bracket/match summaries, with a strict data allowlist and manual refresh | Device/browser verification and permission review; no public real-player names |
 | Connected cloud scoring | **Not implemented/authorized for live UI** | Authenticated write adapter, server-proven revision/decision and safe recovery before any rollout |
 
 The C5 proposal returns accepted receipts but does not durably record rejection. An absent receipt is **unknown**, never proof of rejection; C11 simulates a future durable decision but does not make it a trusted server. Reconnection may never silently retry, replay or merge scores. This is the principal server/client integration blocker, alongside normal organizer-authorized volunteer authentication.
+
+**October 13 user-observed update:** The scorekeeper-A account's isolated C8 UI displayed a verified individual login and read-only badge, with zero published events and zero intentional writes/admin changes. The event UUID input was empty and the Match Desk action had not run, so this is an **authentication-only** observation. Browser profile independence and outsider denial remain unverified. No account email or private UUID is recorded here.
 
 ## Coherent remaining Milestone 1 development batches
 
