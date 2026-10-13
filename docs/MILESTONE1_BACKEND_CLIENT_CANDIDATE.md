@@ -41,6 +41,8 @@ This is **one cohesive backend/client development batch** within the October 12 
   7. v1 legacy accepted receipt preservation; no replay or reset of the consumed B2i hosted fixture
   8. snapshot consistency at READ COMMITTED with event-lock ordering; no private data/public publication
 
+**Signed concurrent HTTP rehearsal:** `tests/milestone1_v2_signed_http.py` reuses the previously validated **local-only** GoTrue helper. It creates four throwaway synthetic Auth identities with independently verified JWTs and tests organizer-issued grants, signed simultaneous scorekeeper v2 submissions, one persisted accepted and one persisted rejected decision, actor-scoped snapshot reads, unauthorized actor failures, no v1 bypass, score audit integrity and immediate revocation despite older signed tokens. It refuses non-loopback hosts. This uses only the freshly started CI Supabase stack, never hosted credentials, events or B2i fixture. Execution must pass before signed local validation is claimed.
+
 **Review issue:** A transaction-wide event lock serializes v2 scoring, staff revocation, and snapshot reads, but this needs actual isolation/concurrency testing on disposable PostgreSQL. No future production authorization can be inferred from the parser's field shape alone. The implicit C8 Magic Link rehearsal is not a PKCE/CSRF production login.
 
 ## Approvals still required

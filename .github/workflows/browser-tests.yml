@@ -47,7 +47,7 @@ jobs:
   disposable-db:
     name: Disposable synthetic PostgreSQL
     runs-on: ubuntu-latest
-    timeout-minutes: 24
+    timeout-minutes: 30
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -55,8 +55,8 @@ jobs:
         uses: supabase/setup-cli@v3
         with:
           version: 2.79.0
-      - name: Start isolated disposable local PostgreSQL
-        run: supabase db start
+      - name: Start isolated local Supabase PostgreSQL and GoTrue (no remote link)
+        run: supabase start
       - name: Verify existing B1-B2d migrations before v2
         run: supabase test db
       - name: Apply v2 candidate ONLY to ephemeral local PostgreSQL
@@ -71,3 +71,7 @@ jobs:
         run: |
           psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres \
             -f tests/milestone1_v2_disposable.sql
+      - name: Verify independently signed local Auth and simultaneous V2 HTTP score race
+        run: |
+          python -m py_compile tests/milestone1_v2_signed_http.py
+          python tests/milestone1_v2_signed_http.py
