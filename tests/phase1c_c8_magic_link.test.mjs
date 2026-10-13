@@ -42,7 +42,8 @@ test("wrong account, unknown URL parameter, query, and invalid key fail closed",
  const h=history();assert.equal(a.consumeLocation(callback(),h),true);
  await assert.rejects(()=>a.verifyReturningEmail("tester@example.org"));assert.equal(a.status.authenticated,false);
  const q=callback();q.search="?unexpected=1";assert.equal(a.consumeLocation(q,history()),false);
- assert.equal(a.consumeLocation(callback({not_allowed:"oops"}),history()),false);
+ assert.equal(a.consumeLocation(callback({extra_metadata:"ignored"}),history()),true);
+ assert.equal(a.status.authenticated,false);
 });
 test("expiration blocks use and avoids session renewal",async()=>{
  let current=1000000;
@@ -65,4 +66,22 @@ test("network failures produce a safe category, no auto retries",async()=>{
  const a=new C8MagicLinkAuth({publishableKey:KEY,fetchImpl:async()=>{count++;throw Error("private service response");}});
  await assert.rejects(a.requestLink("test@example.org"),e=>e.category==="network or browser request failure"&&!String(e).includes("private"));
  assert.equal(count,1);
+});
+
+test("extra callback metadata is ignored but never grants a session without independent identity proof",async()=>{
+ const a=new C8MagicLinkAuth({publishableKey:KEY,fetchImpl:async()=>response(403,{secret:"unused"})});
+ const h=history();
+ assert.equal(a.consumeLocation(callback({new_go_true_metadata:"untrusted"}),h),true);
+ assert.equal(h.path,"/rehearsals/c8/index.html");
+ assert.equal(a.status.authenticated,false);
+ await assert.rejects(()=>a.verifyReturningEmail("test@example.org"));
+ assert.equal(a.status.authenticated,false);
+});
+test("invalid core callback, duplicate token and explicit errors still fail closed",()=>{
+ const a=new C8MagicLinkAuth({publishableKey:KEY,fetchImpl:async()=>response(200,{})});
+ const dup=callback();dup.hash+="&access_token=another";
+ assert.equal(a.consumeLocation(dup,history()),false);
+ assert.equal(a.consumeLocation(callback({token_type:"basic"}),history()),false);
+ assert.equal(a.consumeLocation(callback({error:"access_denied"}),history()),false);
+ assert.equal(a.status.authenticated,false);
 });
