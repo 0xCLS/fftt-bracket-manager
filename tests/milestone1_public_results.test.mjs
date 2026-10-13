@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {projectPublishedResults,PublicProjectionError} from '../contracts/milestone1_public_results.mjs';
 const E='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-const M=()=>({event_id:E,match_id:'C-0-0',bracket:'championship',round:0,slot:0,player_1_name:'Synthetic Alpha',player_2_name:'Synthetic Beta',winner_name:'Synthetic Alpha',game_scores:'11-8,11-9',status:'complete'});
+const M=()=>({match_id:'C-0-0',bracket:'championship',round:0,slot:0,player_1_name:'Synthetic Alpha',player_2_name:'Synthetic Beta',winner_name:'Synthetic Alpha',game_scores:'11-8,11-9',status:'complete'});
 const V=()=>({event_id:E,event_name:'Synthetic event',event_date:'2099-11-22',status:'active',updated_at:'2099-11-22T14:00:00Z',brackets:[{name:'championship',matches:[M()]}]});
 const fail=x=>assert.throws(()=>projectPublishedResults(x),PublicProjectionError);
 test('safe public presentation strips all IDs, displays results, and freezes records',()=>{
