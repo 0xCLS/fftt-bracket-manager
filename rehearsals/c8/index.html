@@ -7,7 +7,7 @@
 <div class="simulation-band">MILESTONE 1 SYNTHETIC DEVELOPMENT ONLY · READ ONLY · NO FFTT3 DATA</div>
 <main class="shell"><header class="intro"><div><p class="eyebrow">Forging Fellowship · Phase 1C C8</p><h1>Connected Match Desk rehearsal</h1><p>Individual synthetic staff sessions, authoritative V2 revision reads and manual multi-device refresh. No scoring or session storage.</p></div><span id="authBadge" class="state-tag paused">SIGNED OUT</span></header>
 <section class="warning"><strong>Trusted Mac and browser only.</strong><span>Request one Magic Link, open it in the SAME browser on this Mac while the local server is running, then enter that same existing account email to confirm identity. Never share or paste login links or URL fragments. Supabase may rate-limit repeated requests.</span></section>
-<div class="desk"><section class="panel"><h2>Read-only sign-in</h2>
+<div class="desk"><section class="panel"><h2>Existing individual synthetic sign-in</h2>
 <form id="requestForm" autocomplete="off"><label for="email">Existing synthetic account email</label><input id="email" type="email" maxlength="254" required autocomplete="off"><button id="requestLink" type="submit">Request Magic Link</button></form>
 <form id="confirmForm" autocomplete="off" hidden><label for="confirmEmail">Re-enter the same existing account email</label><input id="confirmEmail" type="email" maxlength="254" required autocomplete="off"><button type="submit">Verify returning account</button></form>
 <button type="button" id="end" hidden>Clear local session</button>
@@ -20,5 +20,28 @@
   <p id="connectedStatus" class="muted" role="status" aria-live="polite">No connected event loaded.</p>
   <div id="connectedMatches" class="match-list"></div>
  </div></section></div>
+<section class="panel hosted-synthetic" id="hostControls" hidden>
+<h2>Approved Hosted Browser Scoring · Synthetic Fixture #3</h2>
+<p><strong>One fresh fictional 2099 match only.</strong> Existing B2i and V2 fixtures are consumed and prohibited. This isolated C8 rehearsal uses signed individual test accounts and makes an actual hosted score write <em>only</em> after a scorekeeper records a one-time submission ID and explicitly confirms. No real FFTT3 scores or public results.</p>
+<p class="muted">Enter the private new event UUID in the Match Desk field above. The client checks the event and match against pinned one-way fingerprints. Organizers may read but only the two authorized synthetic scorekeepers may submit in this rehearsal.</p>
+<button id="hostRead" type="button">Verify fresh hosted scorekeeper desk</button>
+<div id="hostPrepareArea" hidden>
+ <label for="hostWinner">Choose fictional winner</label><select id="hostWinner" autocomplete="off"></select>
+ <label for="hostScores">Game scores (three or five sets as appropriate)</label><input id="hostScores" value="11-7, 11-8, 11-9" autocomplete="off" maxlength="128" spellcheck="false">
+ <button id="hostPrepare" type="button" disabled>Prepare one score (no write yet)</button>
+ <div class="host-incident">
+  <strong>PRIVATE ONE-TIME SUBMISSION ID — COPY TO A SECURE LOCAL NOTE</strong>
+  <code id="hostPrepared"></code>
+  <label class="host-check"><input id="hostRecorded" type="checkbox"> I separately recorded this exact ID and the fictional match score BEFORE sending.</label>
+ </div>
+ <button id="hostSend" type="button" disabled>Send approved fictional score ONCE — irreversible</button>
+</div>
+<h3>Own-decision recovery · read-only</h3>
+<p class="muted">After a lost acknowledgment or browser reload, sign in again as the same scorekeeper and enter the submission ID from your separate private note. An absent decision is <strong>UNKNOWN</strong>, never automatic rejection. This section never sends scores.</p>
+<label for="hostRecoveryId">Previously recorded private submission UUID</label>
+<input id="hostRecoveryId" type="text" spellcheck="false" autocomplete="off" placeholder="Private one-time submission ID">
+<button id="hostRecover" type="button">Read only MY committed decision</button>
+<p class="muted" id="hostStatus" role="status" aria-live="polite">No hosted score submitted.</p>
+</section>
 <section class="panel public"><h2>Anonymous published results (synthetic only)</h2><p class="muted" id="publicStatus">Checking allowlisted public result projection.</p><button id="publicRefresh" type="button">Refresh public results</button><div id="publicEvents" class="public-events" aria-label="Published synthetic results"></div></section>
-<section class="policy"><h2>Test boundaries</h2><p>Real Supabase signed identity and event-role checks and the deployed V2 revision RPC. This is a manual-refresh, read-only rehearsal: not live scoring, no automatic sync, grants, publication, account creation, token storage, refresh-token usage or recovery/write authorization. Browser tabs never merge offline changes. JWTs are memory-only and cleared on tab close/reload. Clearing local memory does not revoke the server access token.</p><output>Score writes: 0 · Admin changes: 0</output></section></main></body></html>
+<section class="policy"><h2>Test boundaries</h2><p>Real signed identity, event roles and V2 revision. The C8 Connected Match Desk is manual-refresh and read-only. The isolated synthetic fixture #3 section above allows exactly one human-confirmed hosted score attempt per browser profile; all other matches remain blocked. No live event scoring, automatic synchronization, grants, publication, account creation, token storage, refresh-token usage or offline merging is authorized. The new browser-scoring fixture is synthetic-only, and submitted test scores require a separate signed receipt check. JWTs are memory-only and cleared on tab close/reload. Clearing local memory does not revoke the server access token.</p><output>Production score writes: 0 · Admin changes: 0 · New fictional fixture: score only by explicit confirmation</output></section></main></body></html>

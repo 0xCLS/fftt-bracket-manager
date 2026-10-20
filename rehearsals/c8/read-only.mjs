@@ -1,6 +1,7 @@
 import {projectPublishedResults} from "../../contracts/milestone1_public_results.mjs";
 import {createMilestone1ConnectedDesk} from "../../contracts/milestone1_connected_desk.mjs";
 import {createMilestone1ReadOnlySnapshotTransport} from "../../contracts/milestone1_signed_snapshot_transport.mjs";
+import {installHostedSyntheticScore} from "./hosted-score.mjs";
 import {C8MagicLinkAuth} from "../../contracts/phase1c_c8_magic_link.mjs";
 import {createC3ReadOnlySupabaseTransport} from "../../contracts/phase1c_c3_readonly_supabase_transport.mjs";
 const KEY="sb_publishable_lupD9JDsWFQ_65LuwVL1Fg_O-V5Era0";
@@ -10,6 +11,7 @@ const callbackInput={hash:window.location.hash,search:window.location.search,pat
 const callback=auth.consumeLocation(window.location,window.history);
 const callbackDiagnostic=auth.status.callbackStatus;
 const read=createC3ReadOnlySupabaseTransport({publishableKey:KEY,getAccessToken:()=>auth.accessToken(),fetchImpl:(url,init)=>fetch(url,init)});
+const hosted=installHostedSyntheticScore({auth,read,publishableKey:KEY});
 let epoch=0;
 const snapshotTransport=createMilestone1ReadOnlySnapshotTransport({
  publishableKey:KEY,getAccessToken:()=>auth.accessToken(),
@@ -28,12 +30,13 @@ const resetConnected=(message='No connected event loaded.')=>{
  say('connectedStatus',message);
 };
 function render(){const signed=auth.status.authenticated;
- $("authBadge").textContent=signed?"SIGNED IN · READ ONLY":"SIGNED OUT";
+ $("authBadge").textContent=signed?"SIGNED IN · SYNTHETIC ONLY":"SIGNED OUT";
  $("authBadge").className="state-tag "+(signed?"ready":"paused");
  $("confirmForm").hidden=!auth.status.hasCallback;$("requestForm").hidden=signed||auth.status.hasCallback;
  $("staffControls").hidden=!signed;$("connectedControls").hidden=!signed;$("end").hidden=!signed;
+ hosted.onAuthChanged();
 }
-function clear(){epoch++;connected.signOut();$("connectedMatches").replaceChildren();say("connectedStatus","No connected event loaded.");auth.end();$("eventId").value="";$("email").value="";$("confirmEmail").value="";$("staffMatches").replaceChildren();say("staffStatus","No staff data. Sign in first.");render();}
+function clear(){epoch++;hosted.invalidate("Session cleared; hosted score must never retry.");connected.signOut();$("connectedMatches").replaceChildren();say("connectedStatus","No connected event loaded.");auth.end();$("eventId").value="";$("email").value="";$("confirmEmail").value="";$("staffMatches").replaceChildren();say("staffStatus","No staff data. Sign in first.");render();}
 $("requestForm").addEventListener("submit",async ev=>{ev.preventDefault();$("requestLink").disabled=true;
  try{await auth.requestLink($("email").value);say("authStatus","Magic Link requested. Open the email on this same Mac in this browser. No account was created.");}
  catch(error){
@@ -42,11 +45,12 @@ $("requestForm").addEventListener("submit",async ev=>{ev.preventDefault();$("req
  }
  finally{$("requestLink").disabled=false;render();}});
 $("confirmForm").addEventListener("submit",async ev=>{ev.preventDefault();
- try{await auth.verifyReturningEmail($("confirmEmail").value);$("confirmEmail").value="";say("authStatus","Supabase verified existing individual account. Read-only access available.");}
+ try{await auth.verifyReturningEmail($("confirmEmail").value);$("confirmEmail").value="";say("authStatus","Supabase verified existing individual test account. Approved fictional fixture access only.");}
  catch{clear();say("authStatus","Callback expired, account mismatched or validation denied. Request a fresh link when appropriate.");}render();});
 $("readStaff").addEventListener("click",async()=>{
  const id=$("eventId").value.trim();
  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)){say("staffStatus","Enter an exact private synthetic event UUID.");return;}
+ hosted.invalidate("Legacy desk refresh: hosted preparation cleared.");
  resetConnected("Connected revision view cleared by legacy desk refresh.");
  const prior=epoch;$("readStaff").disabled=true;$("staffMatches").replaceChildren();
  try{const role=await read.readStaffRole({eventId:id});const matches=await read.readMatchdesk({eventId:id});
@@ -57,6 +61,7 @@ $("readStaff").addEventListener("click",async()=>{
  finally{$("readStaff").disabled=false;if(!auth.status.authenticated){clear();say("authStatus","Session expired.");}}});
 $("readConnected").addEventListener("click",async()=>{
  const id=$("eventId").value.trim(),at=epoch;
+ hosted.invalidate("Connected desk refresh: hosted preparation cleared.");
  $("readConnected").disabled=true;$("connectedMatches").replaceChildren();
  $("staffMatches").replaceChildren();
  say("staffStatus","Legacy Match Desk cleared; connected revision read is active.");

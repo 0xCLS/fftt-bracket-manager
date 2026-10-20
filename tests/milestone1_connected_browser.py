@@ -102,6 +102,8 @@ def sign_in(page,role):
     require('#' not in page.url and 'access_token=' not in page.url,
             'Callback bearer token scrubbed from browser address')
     require(page.locator('#connectedControls').is_visible(),'Connected controls require signed account')
+    require(page.locator('#hostControls').is_visible(),'Synthetic hosted scoring area visible ONLY after signed login')
+    require(page.locator('#hostSend').is_disabled(),'Hosted score cannot transmit without authorized prepared match')
 def read(page):
     page.locator('#eventId').fill(EVENT)
     page.locator('#readConnected').click()
@@ -117,6 +119,12 @@ try:
             sign_in(page,role)
         require(not any(path=='/auth/v1/otp' for _,_,path in calls),
                 'No unsolicited Magic Link email or account creation')
+        # Old mock/consumed fixture must never be eligible for a hosted score
+        pb.locator('#eventId').fill(EVENT)
+        pb.locator('#hostRead').click()
+        expect(pb.locator('#hostStatus')).to_contain_text('NO hosted score sent')
+        check_hosted=pb.locator('#hostPrepare').is_disabled() and pb.locator('#hostSend').is_disabled()
+        require(check_hosted,'Unknown/consumed event blocked BEFORE hosted score preparation')
         read(pa);read(pb)
         expect(pa.locator('#connectedStatus')).to_contain_text('event revision 1')
         expect(pb.locator('#connectedStatus')).to_contain_text('event revision 1')

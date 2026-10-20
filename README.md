@@ -11,6 +11,8 @@ A lightweight, single-file tournament desk for **Forging Fellowship Table Tennis
 - Select mixed-skill doubles finale partners for the championship finalists.
 - Print the current view, export a JSON event backup, restore a backup, and export a text results summary.
 
+**Approved hosted browser rehearsal (October 19, 2026):** [One new pinned fictional fixture and signed C8 browser scoring workflow](docs/MILESTONE1_HOSTED_BROWSER_REHEARSAL_2026-10-19.md) are staged for the separately authorized one-time dual-scorekeeper browser test. The two previous hosted fixtures are consumed and cannot be selected. No new score has been submitted; no production deployment or participant migration. 
+
 ## Roadmap
 
 Christopher approved a **three-milestone delivery plan** on October 12, 2026. See [ROADMAP.md](ROADMAP.md) for scope, sequencing, original phase-number mapping and explicit approval gates:

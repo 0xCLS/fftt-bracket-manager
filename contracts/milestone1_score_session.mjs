@@ -45,13 +45,15 @@ const safeStatus=(status,fields={})=>Object.freeze({
 });
 export function createMilestone1ScoreSession({
   eventId,readRole,readMatchdesk,readOwnSnapshot,sendScore,
-  getSubmissionId,isAuthenticated,allowDisposableLocalSimulation=false
+  getSubmissionId,isAuthenticated,allowDisposableLocalSimulation=false,
+  allowApprovedHostedSyntheticFixture=false
 }={}){
  if(typeof eventId!=='string'||!UUID.test(eventId)
    ||[readRole,readMatchdesk,readOwnSnapshot,sendScore,getSubmissionId,isAuthenticated]
       .some(x=>typeof x!=='function'))fail('Invalid explicit synthetic score session');
  let view=blank(),epoch=0,pending=null,prepared=null,ack=null,busy=false,disposed=false;
  let lastVerified=null;
+ const syntheticWriteGate=allowDisposableLocalSimulation===true||allowApprovedHostedSyntheticFixture===true;
  const alive=stamp=>!disposed&&stamp===epoch&&isAuthenticated();
  const lock=(status='paused')=>{
    epoch++;prepared=null;
@@ -64,7 +66,7 @@ export function createMilestone1ScoreSession({
    busy=false;
    return view;
  };
- const requireReady=()=>{if(disposed||!isAuthenticated()||!allowDisposableLocalSimulation
+ const requireReady=()=>{if(disposed||!isAuthenticated()||!syntheticWriteGate
    ||view.status!=='ready'||pending!==null||busy)
    fail('Score write unavailable; synthetic local gate and fresh role required');};
  async function load(){
@@ -90,7 +92,7 @@ export function createMilestone1ScoreSession({
        ||s2.generation!==s1.generation||s2.lifecycle!=='active'
        ||s2.decision!==null)fail('Event changed during role and Match Desk read');
      lastVerified=Object.freeze({revision:s2.revision,generation:s2.generation});
-     view=safeStatus(allowDisposableLocalSimulation?'ready':'read-only',{
+     view=safeStatus(syntheticWriteGate?'ready':'read-only',{
        role,revision:s2.revision,generation:s2.generation,matches});
      return view;
    }catch{
@@ -122,7 +124,7 @@ export function createMilestone1ScoreSession({
    return lock('needs-refresh'); // a new signed Match Desk is needed
  }
  async function submitPrepared({submissionId,manualIncidentLogConfirmed=false}={}){
-   if(disposed||busy||!isAuthenticated()||!allowDisposableLocalSimulation
+   if(disposed||busy||!isAuthenticated()||!syntheticWriteGate
      ||view.status!=='prepared'||prepared===null||pending!==null
      ||prepared.submissionId!==submissionId)fail('No authorized prepared local score');
    if(manualIncidentLogConfirmed!==true)

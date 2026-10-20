@@ -46,6 +46,8 @@ Milestones 2 and 3 retain their approved scope; no more invented C-number milest
 
 **Additional cohesive client-development batch (October 13):** [Score & Recovery Lab](MILESTONE1_SCORE_RECOVERY_LAB.md) implements a local-only signed V2 score POST and read adapter, two-step human incident record before one-time submission, strict owner-receipt recovery on unknown/rejected/accepted outcomes, mock multi-scorekeeper browser exercises, and a never-authoritative organizer fallback checklist. This batch does **not** send hosted score POSTs and does **not** enable scoring in C8 or the production app. All historical hosted fixtures stay consumed; local tests and browser UI do not establish production readiness.
 
+**New explicitly approved hosted browser rehearsal (October 19, 2026):** Created one brand-new 2099 synthetic event and pending match with three new-event-only staff grants. Original two completed fixtures, decisions and publication remained unchanged. The C8 individual signed browser is extended by an isolated fixture-pinned write + own-decision recovery area. The code is **pending consolidated CI and actual dual-scorekeeper browser acceptance**. [Scoped runbook](MILESTONE1_HOSTED_BROWSER_REHEARSAL_2026-10-19.md). No score POST has yet been sent to this fixture, no real FFTT3 data, no production release.
+
 ## Current branch validation and safeguards
 
 - New strict public-result view model has **six local Node zero-network tests PASS**; it strips raw private identifiers from display, rejects added/private fields, inconsistent event/bracket/winner, oversized rows and malformed projection shapes.
