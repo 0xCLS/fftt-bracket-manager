@@ -97,7 +97,8 @@ def open_context(browser,role):
   route.fulfill(status=status,headers=headers,body=json.dumps(body))
  ctx.route('**/*',serve)
  page=ctx.new_page();errors=[]
- page.on('pageerror',lambda e:errors.append(str(e)))
+ page.on('pageerror',lambda e:(errors.append(str(e)),print('LOCAL MOCK BROWSER MODULE ERROR:',str(e),flush=True)))
+ page.on('requestfailed',lambda r:print('LOCAL MOCK FAILED RESOURCE:',r.url.split('?')[0],flush=True) if r.url.startswith(BASE+'/') else None)
  return ctx,page,session,errors
 def request_link(page,email):
  page.goto(PAGE)
