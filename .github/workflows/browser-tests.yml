@@ -43,6 +43,10 @@ jobs:
         run: python tests/milestone1_connected_browser.py
       - name: Verify synthetic two-scorekeeper score/recovery lab and protected fallback (zero network)
         run: python tests/milestone1_score_lab_browser.py
+      - name: Verify guarded hosted browser operator source and exclusive incident marker (offline only)
+        run: python -m unittest discover -s tests -p 'test_milestone1_hosted_browser_once.py' -v
+      - name: Verify two Chromium signed browser contexts, lost ACK, stale rejection and tab recovery (mocked host)
+        run: python tests/milestone1_hosted_browser_mock.py
       - name: Check UI, labels and dropdowns
         run: python tests/ui_smoke.py
       - name: Check tournament safety

@@ -176,6 +176,8 @@ Deliver the smallest trustworthy shared backend and explicit local/cloud separat
 
 **Approved hosted browser rehearsal (October 19, 2026):** [One new pinned fictional fixture and signed C8 browser scoring workflow](docs/MILESTONE1_HOSTED_BROWSER_REHEARSAL_2026-10-19.md) are staged for the separately authorized one-time dual-scorekeeper browser test. The two previous hosted fixtures are consumed and cannot be selected. No new score has been submitted; no production deployment or participant migration. 
 
+**October 20 guarded browser automation:** A new [one-command hosted browser acceptance runner](docs/MILESTONE1_HOSTED_BROWSER_AUTOMATION_2026-10-20.md) replaces repeated individual Yahoo Magic Links and manual browser switching with existing-user, real Supabase Auth sessions created privately on the operator's trusted Mac; two isolated real Chromium contexts run the exact approved, still-unconsumed synthetic Fixture #3. Dry run is default. The irreversible one-time scoring gate is separate and records recovery IDs in a local mode-0600 incident marker. Zero-retry behavior and post-tab-loss signed own-decision reads are required. The previously verified production app remains unchanged. **This commit stages code/tests only; no hosted scoring is performed by CI or by this repository update.**
+
 ### Milestone 2 — Player & Tournament Preparation
 
 One organizer workflow spanning registration through a reviewed championship draw:
