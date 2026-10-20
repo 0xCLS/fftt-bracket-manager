@@ -28,7 +28,7 @@ class TestOneTimeBrowserOperator(unittest.TestCase):
   with self.assertRaisesRegex(runner.Stop,"invalid"):
    runner.pin("not-a-uuid",runner.MATCH_DIGEST)
   self.assertNotEqual(runner.EVENT_DIGEST,runner.MATCH_DIGEST)
-  self.assertIn("2099",runner.__doc__)
+  self.assertIn("fictional hosted fixture #3",runner.__doc__)
 
  def test_private_incident_record_is_exclusive_0600_and_no_credentials(self):
   with tempfile.TemporaryDirectory() as td:
