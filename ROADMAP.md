@@ -178,6 +178,8 @@ Deliver the smallest trustworthy shared backend and explicit local/cloud separat
 
 **October 20 guarded browser automation:** A new [one-command hosted browser acceptance runner](docs/MILESTONE1_HOSTED_BROWSER_AUTOMATION_2026-10-20.md) replaces repeated individual Yahoo Magic Links and manual browser switching with existing-user, real Supabase Auth sessions created privately on the operator's trusted Mac; two isolated real Chromium contexts run the exact approved, still-unconsumed synthetic Fixture #3. Dry run is default. The irreversible one-time scoring gate is separate and records recovery IDs in a local mode-0600 incident marker. Zero-retry behavior and post-tab-loss signed own-decision reads are required. The previously verified production app remains unchanged. **This commit stages code/tests only; no hosted scoring is performed by CI or by this repository update.**
 
+**Testing-workflow consolidation (October 20):** Replaced manual two-inbox hosted browser acceptance with a [guarded one-command Mac runner](docs/MILESTONE1_HOSTED_BROWSER_AUTOMATION_2026-10-20.md) that uses distinct existing-user temporary JWTs, isolated Chromium scorekeepers, a 0600 private incident recovery record and no replay. [CI #39445817756](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/39445817756) PASSED full mock-browser and disposable database regression. The **one-time real hosted browser run** is still pending; production/Auth UX/device-sync/offline acceptance still gated. Old manual runbook retained as superseded provenance.
+
 ### Milestone 2 — Player & Tournament Preparation
 
 One organizer workflow spanning registration through a reviewed championship draw:

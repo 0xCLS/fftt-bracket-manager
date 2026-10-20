@@ -40,6 +40,12 @@ File permissions are **0600** and it contains only the two private fictional *su
 
 On completion the runner asserts exactly **one signed score POST per browser**, one accepted and one stale rejected result, browser tab-loss own-receipt reads using the original actor's JWT, cross-actor decision denial, outsider denial and no public spectator publication. Report only sanitized `PASS`/`RESULT`/`STOP` lines; do not copy private IDs or keys.
 
+## Verified consolidated regression and hosted fixture state
+
+[GitHub Actions run #39445817756](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/39445817756) **PASS on the first run after one test-assertion correction**, executable commit `d1dce18f874e3fe04d12bd398be3a1e25f391a35`: **190/190** JavaScript, **5/5** new operator-safety unittest checks, mock-backed real Chromium dual-scorekeeper/lost-ACK/stale-decision/tab-recovery/outsider checks, **81/81** baseline PostgreSQL assertions, local GoTrue signed score race, original UI/tournament suites. All external hosted requests in Chromium mocks were intercepted.
+
+An independent connected **read-only** Supabase audit after CI confirmed exactly one approved new fictional event, event revision **0**, one pending version-0 match, **zero** fixture V2 decisions and acceptance receipts, and zero public results. The two older consumed fixture records are unaffected. **No irreversible hosted browser score was executed**. The new executable operator is staged and awaits a user-run, one-time Mac invocation; the production `main/index.html` is byte-identical.
+
 ## Test harness, what it proves and what remains
 
 - `tests/test_milestone1_hosted_browser_once.py`: no-network safety tests for default dry-run, hard fixture pin and *exclusive* permission-restricted incident marker.

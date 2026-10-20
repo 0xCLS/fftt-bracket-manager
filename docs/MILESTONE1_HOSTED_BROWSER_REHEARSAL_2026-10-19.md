@@ -23,6 +23,10 @@ Preflight verified two existing consumed fictional events (each one match), two 
 - An HTTP 200 ACK is only provisional. The operator uses a **separate signed own-decision read** to verify committed accepted or stale-rejected results. A lost response, expired session, missing decision, mismatch or browser crash is **UNKNOWN** until inspected; it must never trigger automatic retry. A scorekeeper can sign in again and manually enter their saved submission ID to recover **their own** decision even after tab loss. An absent decision is not evidence of rejection.
 - The existing C8 staff reader and public results projection remain read-only; the production application `main/index.html` is untouched. No real FFTT3 names or registration records are used.
 
+## Historical manual operator steps — SUPERSEDED by automation
+
+**STOP: Do not restart the two Yahoo Magic Link and manual browser-session process.** The newer [October 20 automated browser acceptance operator](MILESTONE1_HOSTED_BROWSER_AUTOMATION_2026-10-20.md) replaces these steps, and its tests [passed consolidated CI #39445817756](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/39445817756). Use the guarded automated runner, not the manual workflow; one still-pending fictional Fixture #3 is allowed and must only be consumed **once**. These instructions are retained for historical design provenance only.
+
 ## Private operator steps — NOT yet executed
 
 1. On the trusted Mac, open the development Supabase SQL Editor. Run this **read-only** query. Copy the two UUIDs privately to a secure note; do **not** paste them in ChatGPT or GitHub:
