@@ -22,4 +22,12 @@ All three earlier hosted synthetic score fixtures are permanently consumed. No n
 - `tests/milestone1_continuity_browser.py` uses real Chromium with all external network requests aborted; never creates an account, event, backend write or score.
 - Existing CI additionally re-tests PostgreSQL security, GoTrue signed local race, spectator privacy, independent scored-browser recovery and baseline tournament UI.
 
+## Independent consolidated CI acceptance — October 20
+
+[GitHub Actions #39486552275](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/39486552275) **PASS** on executable commit `a1e45c0849bf30f6a8d54be94aefa7babdd81e0f`: **220/220 JavaScript** tests; real Chromium zero-network organizer continuity exercise (unknown-score and protected fallback, role denial, manual reconciliation and no cloud writes); original three-context spectator/volunteer tests and hosted-browser score/recovery mock; **81/81 PostgreSQL pgTAP**; independently signed local Supabase/GoTrue race and old UI/tournament regressions. This CI creates **no** remotely hosted scores, staff accounts, events, Auth configuration or publication.
+
+Separate **read-only hosted Supabase verification after CI**: all three synthetic test events/matches remain, the one-time hosted fixture #3 stays revision **1**, its sole match status `complete` version 1; exactly four historic V2 decisions, three accepted submissions, four existing Auth users, **zero** public event/match rows. No real FFTT3 data, schema or production change.
+
+**Acceptance:** Local synthetic PKCE/role-gate and offline-authority training checks **PASSED**, but real PKCE provider redirects/session lifecycle and physical organizer + two volunteer devices + spectator/TV failover **NOT YET ACCEPTED**.
+
 **Remaining release gates:** actual independently verified PKCE login in a separately approved development Auth configuration; two physical volunteers plus organizer and spectator TV read/scoring; controlled offline backup/fallback and reconciliation; explicit real FFTT3/production approval. These cannot be inferred from mocked tests, and draft PR #19 must remain unmerged.
