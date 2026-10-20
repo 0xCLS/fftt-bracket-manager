@@ -77,3 +77,10 @@ test('manual cancel clears pending transaction without any Auth session',async()
  assert.equal(h.vault.hasPending,false);
  await assert.rejects(()=>h.guard.complete(url(),safe));
 });
+
+test('loopback 127.0.0.1 on arbitrary temporary port is permitted for isolated browser mock',async()=>{
+ const h=build({redirectUri:'http://127.0.0.1:38217/rehearsals/m1/staff-pkce.html'});
+ const p=await h.guard.begin();
+ assert.equal(p.codeChallengeMethod,'s256');
+ assert.equal(h.vault.hasPending,true);
+});
