@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src https://copmkalfkkrkzheohwuc.supabase.co; img-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<title>FFTT · Synthetic PKCE Staff Rehearsal</title>
+<link rel="stylesheet" href="./continuity.css">
+<script type="module" src="./staff-pkce.mjs"></script></head><body>
+<main><header>
+<p class="eyebrow">FORGING FELLOWSHIP · MILESTONE 1</p>
+<h1>Volunteer sign-in rehearsal</h1>
+<p class="intro">Test-only Supabase-shaped email PKCE, current-user verification and fresh event-scoped Match Desk access. The network is disabled outside the isolated automated mock harness.</p>
+<p class="warning">SYNTHETIC TEST HARNESS ONLY · NO ACTUAL EMAILS OR AUTH SETTING CHANGES · NO SCORES</p>
+</header>
+<section><h2>1. Request existing-user email link</h2>
+<label for="email">Existing fictional volunteer email</label>
+<input id="email" type="email" autocomplete="off" value="" placeholder="fictional-scorekeeper@example.test">
+<button id="requestLink" type="button">Start PKCE sign-in (mock only)</button>
+<p id="requestStatus" role="status">Signed out. The real hosted development Auth provider is not enabled for this page.</p>
+</section>
+<section><h2>2. Verify returned code and current event role</h2>
+<p class="hint">A synthetic email return brings a one-time authorization code and matching CSRF state to this same browser. They are erased from the address before any network activity. A secure pending verifier—not an access token—survives only until callback processing.</p>
+<label for="eventId">Fictional event UUID (private rehearsal)</label>
+<input id="eventId" autocomplete="off" spellcheck="false">
+<button id="complete" type="button">Complete callback and verify staff</button>
+<p id="authStatus" role="status">No callback received.</p>
+</section>
+<section><h2>3. Read authorized Match Desk</h2>
+<button id="readDesk" type="button" disabled>Refresh signed event data</button>
+<button id="signOut" type="button">Clear all in-memory session data</button>
+<p id="deskStatus" role="status">No authorized event data.</p>
+<div id="matches"></div>
+<p class="hint">One-time callback, signed /auth/v1/user, event staff role recheck, two matching V2 revision snapshots. Score submission, publication and grant management are unavailable.</p></section>
+<footer>Separate simulated browser profiles · no local storage of JWTs or refresh tokens · production app untouched.</footer>
+</main></body></html>

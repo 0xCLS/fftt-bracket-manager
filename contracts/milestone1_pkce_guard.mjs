@@ -17,7 +17,7 @@ export function createMilestone1PkceGuard({
  let uri;
  try{uri=new URL(redirectUri)}catch{fail()}
  if(!uri||!['http:','https:'].includes(uri.protocol)||uri.username||uri.password
-   ||uri.hash||uri.search||uri.port&&!(uri.hostname==='localhost'&&uri.protocol==='http:')
+   ||uri.hash||uri.search||uri.port&&!((uri.hostname==='localhost'||uri.hostname==='127.0.0.1')&&uri.protocol==='http:')
    ||(uri.protocol==='http:'&&uri.hostname!=='localhost')
    ||typeof createVerifier!=='function'||typeof createState!=='function'
    ||typeof challengeFor!=='function'||typeof now!=='function'

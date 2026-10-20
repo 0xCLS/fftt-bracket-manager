@@ -180,6 +180,7 @@ Deliver the smallest trustworthy shared backend and explicit local/cloud separat
 
 **Milestone 1 staff Auth and organizer continuity candidate (October 20, synthetic only):** Implemented guarded PKCE verifier/state/S256 Web Crypto and callback/identity contract, fresh event-scoped staff authorization checks and a local zero-network organizer offline continuity/reconciliation drill. No hosted Auth redirects, user accounts, score fixtures, production changes, real FFTT3 records or publication. All browser and provider behavior remains test/simulation until separately approved Auth integration and physical device rehearsal. [Security and continuity runbook](docs/MILESTONE1_AUTH_CONTINUITY_2026-10-20.md).
 
+**Milestone 1 synthetic PKCE browser integration (October 20):** Integrated the existing S256/state Auth guards and event-scoped staff authorization with explicit Supabase-shaped existing-user /otp, one-time code exchange, current-user lookup and private signed V2 Match Desk, using a separate mock-gated local UI. The real Chromium test exercises two distinct signed fictional volunteers, outsider denial, role revocation, callback tampering and browser secret cleanup. **Network is disabled outside the injected test mock; no emails or live Auth settings were changed.** [Browser integration and future physical-device acceptance plan](docs/MILESTONE1_PKCE_STAFF_BROWSER_2026-10-20.md).
 ### Milestone 2 — Player & Tournament Preparation
 
 One organizer workflow spanning registration through a reviewed championship draw:

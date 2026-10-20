@@ -51,6 +51,8 @@ jobs:
         run: python tests/milestone1_live_read_browser.py
       - name: Verify browser-only organizer continuity training drill (zero network)
         run: python tests/milestone1_continuity_browser.py
+      - name: Verify two signed PKCE staff browser profiles, outsider, revocation and callback tampering (fully intercepted mock)
+        run: python tests/milestone1_pkce_staff_browser.py
       - name: Check UI, labels and dropdowns
         run: python tests/ui_smoke.py
       - name: Check tournament safety
