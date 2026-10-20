@@ -178,6 +178,8 @@ Deliver the smallest trustworthy shared backend and explicit local/cloud separat
 
 **Milestone 1 connected operations candidate (October 20, synthetic only):** Added opt-in 6-second signed Match Desk following and a separate anonymous public spectator-read page backed only by audited public projection. Both clear displayed information and stop upon offline, hidden tab, expired or denied session, or bad/private data; reads never enable scores or retries. [Operational readiness batch](docs/MILESTONE1_CONNECTED_READ_OPERATIONS_2026-10-20.md) includes deterministic supervisor tests and a three-context independent Chromium simulated-authority test, with all hosted requests intercepted. **These are not actual physical-device, realtime publication or production login acceptance.**
 
+**Milestone 1 staff Auth and organizer continuity candidate (October 20, synthetic only):** Implemented guarded PKCE verifier/state/S256 Web Crypto and callback/identity contract, fresh event-scoped staff authorization checks and a local zero-network organizer offline continuity/reconciliation drill. No hosted Auth redirects, user accounts, score fixtures, production changes, real FFTT3 records or publication. All browser and provider behavior remains test/simulation until separately approved Auth integration and physical device rehearsal. [Security and continuity runbook](docs/MILESTONE1_AUTH_CONTINUITY_2026-10-20.md).
+
 ### Milestone 2 — Player & Tournament Preparation
 
 One organizer workflow spanning registration through a reviewed championship draw:
