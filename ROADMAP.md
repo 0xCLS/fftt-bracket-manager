@@ -229,7 +229,7 @@ One end-to-end, authoritative match lifecycle, instead of independent feature la
 - Never commit real registration responses, email/phone, private backups or privileged keys to the public repository, and never use public GitHub files as a live results database.
 - Do not change the current FFTT3 bracket format, seeding invariants or approved visual identity just because roadmap items are merged.
 - Do not interpret this consolidation as approving a paid plan, deploying a production backend, publishing real participant names, changing staff access, migrating player data or turning on multi-device scoring.
-- **Immediate next engineering action:** Reconcile the open synthetic Phase 1B/1C PR stack, the real hosted dev state, the unresolved six-digit OTP/read-only login flow, and remaining score/snapshot/recovery integration gates. Advance only with independently evidenced tests, preserving the single-device fallback.
+- **Immediate next release-gated engineering action (October 20):** Scope a **separately authorized, narrowly configured synthetic development Auth PKCE email redirect/template test**, then coordinate the actual physical organizer + two individually authorized volunteer devices and spectator/TV exercise. Preserve all three consumed hosted scoring fixtures; do not use current public production, migrate FFTT3 contacts, enable live score writes or publish any result without distinct approvals. Browser mock acceptance alone does not establish live authentication or event-day resilience.
 
 ## Related canonical sources
 

@@ -16,7 +16,17 @@ Building on the successful one-time hosted synthetic browser scoring/recovery (p
 
 Relevant upstream Supabase contract references: [PKCE flow](https://supabase.com/docs/guides/auth/sessions/pkce-flow), [passwordless email](https://supabase.com/docs/guides/auth/auth-email-passwordless). Actual provider-managed email template and redirect behavior remains **unverified**; do not claim production Auth ready because the mocked provider behaves correctly.
 
-### Test run
+### Verified consolidated CI and independent hosted conservation (October 20)
+
+[Full GitHub Actions run #39490768682](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/39490768682) **PASS** for final executable SHA `ea4c0a61a6d9b67e93cb7ce5d3141887ed933cdc`: **225/225 JavaScript tests**, **81/81 PostgreSQL pgTAP assertions**, signed disposable local GoTrue concurrency, and all pre-existing UI/tournament/spectator/one-time scoring/recovery suites. The new real **four-profile Chromium browser harness** passed two independent fictional scorekeeper PKCE exchanges, outsider private-read denial, revoked staff account access clearing, callback state tampering caught before exchange, URL code scrub, and no bearer/refresh persistence or forbidden endpoint. **Every outbound request in that harness was intercepted and handled by the synthetic mock; zero hosted Auth, scoring, or publication requests were made.**
+
+Two initial CI builds exposed a missing unsigned-role client guard and an incomplete `127.0.0.1` callback loopback allowlist; both were corrected with explicit regression assertions before the all-green run. These are local browser safety fixes, not Supabase Auth setting changes.
+
+A **separate read-only hosted Supabase audit** after the green run confirmed exactly **three** existing synthetic events/matches, consumed Fixture #3 at event revision **1** and complete match version **1**, four total durable V2 decisions, three accepted submissions, **four** existing Auth test users, and **zero** public published event/match rows. No new hosted fixture, account, role/grant, score, publication or schema was created. Production `main/index.html` remains byte-identical; draft PR #19 remains unmerged.
+
+**Acceptance boundary:** The GoTrue-shaped PKCE **browser/mock integration is PASSED**. Actual email-link delivery/configuration, PKCE authorization-code redirect via Supabase's live Auth provider, verified role revocation on real devices, separately approved publication and organizer-directed offline device stand-down/reconciliation are **not yet accepted**. Do not interpret the mocked success as a production login or permission to run the old consumed scoring scripts.
+
+## Test run
 
 The consolidated CI executes:
 ```bash
@@ -34,4 +44,4 @@ One coordinated rehearsal should verify: independent real email PKCE login and e
 
 **Explicit future approvals remain required** before changing hosted Auth redirect URLs/email templates, granting access, creating a new hosted fixture, sending another hosted score, publishing synthetic/real results, moving code into production `index.html`, or merging draft PR #19. Prefer one carefully rehearsed batched operator session after provider integration is verified rather than another sequence of manual tests.
 
-**Status:** PKCE end-to-end browser integration against an intercepted provider is complete when consolidated CI is green; real provider/device acceptance is not.
+**Status: PASS — intercepted-provider browser integration.** The full suite and independent no-hosted-change audit passed on October 20. Live provider PKCE and physical-device acceptance remain blocked until separately approved.
