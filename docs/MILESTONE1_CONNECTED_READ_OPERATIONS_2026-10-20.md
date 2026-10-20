@@ -24,6 +24,12 @@ On the trusted Mac (same integration checkout), start the already available loca
 
 For automated acceptance, CI executes `node --test tests/milestone1_*.test.mjs` and `python tests/milestone1_live_read_browser.py`; the latter intercepts all hosted network, simulates data changes and uses **no real credentials**.
 
+## Independent consolidated CI acceptance (October 20)
+
+[GitHub Actions #39478921322](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/39478921322) **PASS** at integration SHA `93b53a64eb8e8d4b5a828051257091a2ada6b9c7`: **197/197** JavaScript tests (seven new read-supervisor lifecycle assertions), the real three-isolated-Chromium mock with spectator/staff revision following and private-field fail-closed checks, **81/81** PostgreSQL assertions, local signed Auth/score concurrency, existing hosted operator safeguards and tournament/UI regression suites. All hosted browser simulation requests were intercepted. No new hosted event, test user, scoring, publication or database edit was made.
+
+**Result:** simulated read-only connected operations gate PASS; physical multi-device sync, real publication, production Auth and organizer disconnected fallback remain outstanding. This does not authorize merging PR #19 or modifying production `main/index.html`.
+
 ## Non-negotiable remaining gates before FFTT production
 
 - Production-safe, organizer-authorized individual sign-in (PKCE/CSRF protections, account lifecycle, revocation and session expiration/recovery) rather than localhost-only C8 implicit Magic Link.
