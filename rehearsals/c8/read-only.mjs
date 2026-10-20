@@ -1,5 +1,6 @@
 import {projectPublishedResults} from "../../contracts/milestone1_public_results.mjs";
 import {createMilestone1ConnectedDesk} from "../../contracts/milestone1_connected_desk.mjs";
+import {createMilestone1ReadSupervisor} from "../../contracts/milestone1_read_supervisor.mjs";
 import {createMilestone1ReadOnlySnapshotTransport} from "../../contracts/milestone1_signed_snapshot_transport.mjs";
 import {installHostedSyntheticScore} from "./hosted-score.mjs";
 import {C8MagicLinkAuth} from "../../contracts/phase1c_c8_magic_link.mjs";
@@ -23,8 +24,47 @@ const connected=createMilestone1ConnectedDesk({
  readSnapshot:args=>snapshotTransport.readSnapshot(args),
  isAuthenticated:()=>auth.status.authenticated,
 });
+function showConnected(view){
+ say("connectedStatus","Authorized "+view.role+" · event revision "+view.revision+
+   " · generation "+view.generation+" · "+view.matches.length+
+   " pending matches · READ ONLY · scoring disabled.");
+ $('connectedMatches').replaceChildren();
+ for(const m of view.matches){
+   const card=document.createElement("article");card.className="match";
+   const title=document.createElement("strong");title.textContent=m.code+" · "+m.players;
+   const meta=document.createElement("small");meta.textContent=
+     m.bracket+" · round "+m.round+" · match version "+m.version+
+     (m.table?" · table "+m.table:"");
+   card.append(title,meta);$('connectedMatches').append(card);
+ }
+}
+const follow=createMilestone1ReadSupervisor({
+ read:()=>connected.refresh($('eventId').value.trim()),
+ accept:view=>view?.status==='ready'&&view.authoritativeForScoring===false,
+ present:view=>{
+   showConnected(view);
+   say("followStatus","Signed read-only updates active · every 6 seconds · no cloud score writes.");
+ },
+ clear:reason=>{
+   connected.pause();$('connectedMatches').replaceChildren();
+   say("connectedStatus","Private connected view cleared · "+reason+".");
+   say("followStatus","Read-only following stopped/refreshing · "+reason+".");
+ },
+ isAvailable:()=>auth.status.authenticated&&navigator.onLine&&!document.hidden,
+ intervalMs:6000,
+});
+$('followConnected').addEventListener('click',()=>{
+ hosted.invalidate("Read-only follow mode: hosted preparation cleared.");
+ $('staffMatches').replaceChildren();
+ if(!follow.start())say("followStatus","Already following, unavailable or signed out. No score writes.");
+});
+$('stopFollow').addEventListener('click',()=>follow.pause('manual pause'));
+$('eventId').addEventListener('input',()=>{
+ if(follow.running)follow.pause('event changed');
+ connected.pause();$('connectedMatches').replaceChildren();
+});
 const resetConnected=(message='No connected event loaded.')=>{
- epoch++;connected.pause();$('connectedMatches').replaceChildren();
+ epoch++;follow.pause('scope or connectivity changed');connected.pause();$('connectedMatches').replaceChildren();
  $('staffMatches').replaceChildren();
  say('staffStatus','Private Match Desk cleared; refresh signed role to view current data.');
  say('connectedStatus',message);
@@ -36,7 +76,7 @@ function render(){const signed=auth.status.authenticated;
  $("staffControls").hidden=!signed;$("connectedControls").hidden=!signed;$("end").hidden=!signed;
  hosted.onAuthChanged();
 }
-function clear(){epoch++;hosted.invalidate("Session cleared; hosted score must never retry.");connected.signOut();$("connectedMatches").replaceChildren();say("connectedStatus","No connected event loaded.");auth.end();$("eventId").value="";$("email").value="";$("confirmEmail").value="";$("staffMatches").replaceChildren();say("staffStatus","No staff data. Sign in first.");render();}
+function clear(){follow.pause("signed out");epoch++;hosted.invalidate("Session cleared; hosted score must never retry.");connected.signOut();$("connectedMatches").replaceChildren();say("connectedStatus","No connected event loaded.");auth.end();$("eventId").value="";$("email").value="";$("confirmEmail").value="";$("staffMatches").replaceChildren();say("staffStatus","No staff data. Sign in first.");render();}
 $("requestForm").addEventListener("submit",async ev=>{ev.preventDefault();$("requestLink").disabled=true;
  try{await auth.requestLink($("email").value);say("authStatus","Magic Link requested. Open the email on this same Mac in this browser. No account was created.");}
  catch(error){
@@ -60,6 +100,7 @@ $("readStaff").addEventListener("click",async()=>{
  }catch{if(prior===epoch)say("staffStatus","Denied, expired or unavailable. No private result shown.");}
  finally{$("readStaff").disabled=false;if(!auth.status.authenticated){clear();say("authStatus","Session expired.");}}});
 $("readConnected").addEventListener("click",async()=>{
+ follow.pause("manual refresh");
  const id=$("eventId").value.trim(),at=epoch;
  hosted.invalidate("Connected desk refresh: hosted preparation cleared.");
  $("readConnected").disabled=true;$("connectedMatches").replaceChildren();
@@ -73,17 +114,7 @@ $("readConnected").addEventListener("click",async()=>{
      say("connectedStatus","Signed event read denied, changed, or unavailable. Private view cleared; retry manually.");
      return;
    }
-   say("connectedStatus","Authorized "+view.role+" · event revision "+view.revision+
-     " · generation "+view.generation+" · "+view.matches.length+
-     " pending matches · READ ONLY · scoring disabled.");
-   for(const m of view.matches){
-     const card=document.createElement("article");card.className="match";
-     const title=document.createElement("strong");title.textContent=m.code+" · "+m.players;
-     const meta=document.createElement("small");meta.textContent=
-       m.bracket+" · round "+m.round+" · match version "+m.version+
-       (m.table?" · table "+m.table:"");
-     card.append(title,meta);$("connectedMatches").append(card);
-   }
+   showConnected(view);
  }catch{
    if(at===epoch){
      resetConnected("Invalid or unavailable signed event read. Private view cleared.");
