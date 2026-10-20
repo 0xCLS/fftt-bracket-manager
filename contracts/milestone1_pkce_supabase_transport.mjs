@@ -36,6 +36,9 @@ export function createMilestone1PkceSupabaseTransport({
     '/rest/v1/rpc/fftt_score_decision_snapshot_v2',
    ].includes(bare)&&path!=='/auth/v1/token?grant_type=pkce')deny();
    if(bare==='/auth/v1/token'&&path!=='/auth/v1/token?grant_type=pkce')deny();
+   const privateRead=bare==='/auth/v1/user'||bare.startsWith('/rest/v1/rpc/');
+   if(privateRead)checkedToken(token); // Fail BEFORE an unsigned private HTTP request.
+   else if(token!==null)deny();
    const headers={apikey:publishableKey,Accept:'application/json',
      ...(body!==null?{'Content-Type':'application/json'}:{}),
      ...(token!==null?{Authorization:'Bearer '+checkedToken(token)}:{})};
