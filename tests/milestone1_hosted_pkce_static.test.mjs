@@ -16,20 +16,20 @@ test('hosted trial is pinned to exact development localhost and manual opt-in',(
  assert.match(source,/\$\('requestLink'\)\.addEventListener\('click'/);
  assert.match(page,/id="requestLink" type="button" disabled/);
  assert.match(page,/id="consent" type="checkbox"/);
- assert.equal((source.match(/session\\.begin\\(/g)||[]).length,1);
+ assert.equal((source.match(/session\.begin\(/g)||[]).length,1);
  assert.ok(source.indexOf("session.begin(address)")>source.indexOf("addEventListener('click'"));
  assert.ok(source.includes("requested=true;$('requestLink').disabled=true"));
  assert.match(source,/allowSyntheticAuthNetwork:local/);
- assert.match(source,/history\\.replaceState\\(null,'',window\\.location\\.pathname\\)/);
- assert.doesNotMatch(source,/fftttesting-scorea@yahoo\\.com/);
- assert.doesNotMatch(page,/fftttesting-scorea@yahoo\\.com/);
+ assert.match(source,/history\.replaceState\(null,'',window\.location\.pathname\)/);
+ assert.doesNotMatch(source,/fftttesting-scorea@yahoo\.com/);
+ assert.doesNotMatch(page,/fftttesting-scorea@yahoo\.com/);
 });
 
 test('only the existing-account, read-only transport is reachable',()=>{
  assert.match(transport,/create_user:false/);
  assert.doesNotMatch(source,/submitScore|scoreSubmit|publish|createUser/);
  assert.match(page,/NO SCORES/);
- assert.match(page,/connect-src https:\/\/copmkalfkkrkzheohwuc\\.supabase\\.co/);
+ assert.match(page,/connect-src https:\/\/copmkalfkkrkzheohwuc\.supabase\.co/);
 });
 test('switching tabs does not cancel the pending PKCE email verifier',()=>{
  assert.match(source,/const privacyPause=\(\)=>\{/);
