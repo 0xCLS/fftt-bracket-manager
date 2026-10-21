@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src https://copmkalfkkrkzheohwuc.supabase.co; img-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<title>FFTT · Synthetic TV Display</title>
+<link rel="stylesheet" href="./tv-display.css">
+<script type="module" src="./tv-display.mjs"></script></head>
+<body><main>
+<header><p class="eyebrow">FORGING FELLOWSHIP · MILESTONE 1 · SYNTHETIC REHEARSAL</p>
+<h1>Tournament board</h1>
+<p id="banner" class="banner idle" role="status" aria-live="polite">NOT STARTED · press Start on this display</p></header>
+<div class="controls"><button id="start" type="button">Start public reads</button>
+<button id="stop" type="button" class="secondary">Stop and clear</button></div>
+<section id="events" class="events" aria-label="Published results"></section>
+<footer>Public, read-only and privacy-limited. Shows only explicitly published fictional results. Reads every 6 seconds; if updates stop, results are labelled STALE and removed after 2 minutes. No login, scores, publishing or private data.</footer>
+</main></body></html>

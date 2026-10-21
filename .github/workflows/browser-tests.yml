@@ -51,6 +51,14 @@ jobs:
         run: python tests/milestone1_live_read_browser.py
       - name: Verify browser-only organizer continuity training drill (zero network)
         run: python tests/milestone1_continuity_browser.py
+      - name: Verify organizer fallback operations rehearsal, stand-down evidence and manual reconciliation (zero network)
+        run: python tests/milestone1_fallback_ops_browser.py
+      - name: Verify TV/projector board freshness, stale labelling, recovery and private-field rejection (mock host, controlled clock)
+        run: python tests/milestone1_tv_display_browser.py
+      - name: Verify physical-device staff page origin gating, suspend/resume and revocation (intercepted provider, fake origins)
+        run: python tests/milestone1_device_staff_browser.py
+      - name: Verify device readiness page and origin policy (zero network)
+        run: python tests/milestone1_device_check_browser.py
       - name: Verify two signed PKCE staff browser profiles, outsider, revocation and callback tampering (fully intercepted mock)
         run: python tests/milestone1_pkce_staff_browser.py
       - name: Check UI, labels and dropdowns

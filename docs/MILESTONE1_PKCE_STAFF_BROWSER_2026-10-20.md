@@ -38,6 +38,8 @@ The Chromium test runs a temporary loopback static file server and intercepts al
 
 ### Separate, bundled physical-device acceptance plan (not yet authorized or run)
 
+> **Update October 21:** live provider PKCE has since passed once on localhost, and a more specific plan with approvals, order, stop conditions and cleanup is prepared in the [physical-device runbook](MILESTONE1_PHYSICAL_DEVICE_RUNBOOK_2026-10-21.md). The paragraph below is kept as the original plan.
+
 For a future **fictional nonproduction event** (NOT any consumed fixture), use one Mac organizer, two independent volunteer phones/tablets on distinct identities, and a phone plus TV/projector showing explicitly approved public-only results. Before testing, approve the exact controlled Auth provider configuration, isolated resettable synthetic fixtures, event-scoped grants, a confidential operator run sheet and staged publication policy. Do not copy existing real FFTT3 registrants to test data.
 
 One coordinated rehearsal should verify: independent real email PKCE login and expiry; scorekeeper A/B event authorization and outsider denial; two competing fictional submissions yield one accepted and one durably stale-rejected with own-receipt recovery; spectator/TV learns only approved public fields after organizer publication; background/resume/offline intervals clear stale views; physical stand-down of all scoring devices before protected single-device fallback; a dated incident log and **manual**, never automatic, reconciliation of individually reviewed offline results. Verify backup integrity and demonstrate fail-closed handling of an uncertain lost response and revoked staff account. Report sanitized result counts and no private contact data.

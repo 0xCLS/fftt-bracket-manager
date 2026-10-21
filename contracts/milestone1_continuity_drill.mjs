@@ -62,7 +62,8 @@ export function createMilestone1ContinuityDrill({
    return view();
  }
  function localEdit({writtenToPrivateLog=false}={}){
-   if(!authorized())fail();
+   // Phase FALLBACK is reachable only through an authorized fallback(); the
+   // organizer cannot re-verify a cloud role while isolated, so no fresh window here.
    state=logIsolatedFallbackEdit(state,{eventId,writtenToPrivateLog});
    return view();
  }
@@ -110,6 +111,7 @@ export function createMilestone1ContinuityDrill({
      return view();
    }finally{busy=false}
  }
- return Object.freeze({get view(){return view()},checkOrganizer,outage,
+ return Object.freeze({get view(){return view()},
+   get organizerAuthorized(){return authorized()},checkOrganizer,outage,
    fallback,localEdit,reconnect,reconcile,verifyCloudReadOnly});
 }

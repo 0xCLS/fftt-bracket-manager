@@ -14,7 +14,7 @@ export function createMilestone1StaffAccessGate({
  if([getAccessToken,readIdentity,readRole,isOnline,now].some(f=>typeof f!=='function'))deny();
  let epoch=0,active=null;
  const drop=()=>{epoch++;active=null;};
- async function verify({eventId,expiresAt}={}){
+ async function verify({eventId,expiresAt,expectedUserId}={}){
    drop();const stamp=epoch;
    if(!UUID.test(eventId||'')||!Number.isSafeInteger(expiresAt)
      ||expiresAt<=now()||expiresAt>now()+7200*1000||!isOnline())deny();
@@ -23,6 +23,8 @@ export function createMilestone1StaffAccessGate({
    const who=await readIdentity({token});
    if(stamp!==epoch)deny();
    if(!UUID.test(who?.id||'')||who?.is_anonymous===true)deny();
+   // A re-verification after suspension must be the SAME signed identity.
+   if(expectedUserId!==undefined&&who.id!==expectedUserId)deny();
    const role=await readRole({eventId,token});
    if(stamp!==epoch)deny();
    if(!['organizer','scorekeeper'].includes(role))deny();
