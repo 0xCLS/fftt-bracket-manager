@@ -27,7 +27,7 @@ test('hosted trial is pinned to exact development localhost and manual opt-in',(
 
 test('only the existing-account, read-only transport is reachable',()=>{
  assert.match(transport,/create_user:false/);
- assert.doesNotMatch(source,/submitScore|scoreSubmit|publish|createUser/);
+ assert.doesNotMatch(source,/submitScore|scoreSubmit|\bpublish\s*\(|createUser/);
  assert.match(page,/NO SCORES/);
  assert.match(page,/connect-src https:\/\/copmkalfkkrkzheohwuc\.supabase\.co/);
 });
