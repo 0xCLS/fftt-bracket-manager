@@ -45,7 +45,7 @@ show('authStatus',callbackURL?
 $('requestLink').addEventListener('click',async()=>{
  const address=$('email').value.trim().toLowerCase();
  if(requested||!local||!$('consent').checked||
-    !/^[^\\s@<>]{1,64}@[^\\s@<>]{1,190}$/.test(address)){
+    !/^[^\s@<>]{1,64}@[^\s@<>]{1,190}$/.test(address)){
   show('requestStatus','Not authorized: an existing fictional account address and operator confirmation are required.');
   return;
  }
