@@ -40,11 +40,25 @@ From the application repository root on the Mac, launch `python3 tools/c8/local_
 
 Success acceptance is **real PKCE token exchange**, independently verified `/auth/v1/user`, current event-scoped staff role, and authorized read-only Match Desk. The separate mock browser suite is not proof of hosted success. Yahoo spam placement remains an open deliverability item. No real FFTT3 data, staff edits, publication or scoring is approved by this document.
 
-## Current pass/fail
+## Live hosted PKCE acceptance — operator-observed (October 21, 2026)
 
-- Brevo sender/DKIM/DMARC: **PASS**.
-- Real email reaching existing synthetic Yahoo mailbox: **PASS, Spam folder**.
-- Existing C8 implicit Magic Link signed-in: **PASS**.
-- Live provider PKCE authorization-code redirect and token exchange: **NOT YET TESTED**.
-- Live signed role/Match Desk and real device revocation: **NOT YET TESTED**.
-- Production deployment, scoring or publication authorization: **NOT GRANTED**.
+**Verdict: PASS for the single real-provider, synthetic-only PKCE login and authorized read-only Match Desk gate.** This is an **operator-observed browser acceptance**, not a captured raw HTTP transcript or approval for physical devices, scoring, publication, or production.
+
+- **Environment:** local M1 hosted trial at `localhost:3000` against the existing development Supabase project; integration branch at tested commit `de1360f8fd2cb17dbb1517330e382fca045218d2`. The related [GitHub Actions run #39560369229](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/39560369229) completed successfully (233/233 Node checks, 81/81 baseline pgTAP checks, additional synthetic browser/SQL suites).
+- **Operator-confirmed sequence:** exactly one Scorekeeper A synthetic PKCE Magic Link requested successfully; email link opened by navigating the original M1 browser tab to preserve its tab-scoped verifier; callback page displayed `Return received and URL scrubbed`; operator entered the private existing 2099-11-23 synthetic event UUID locally and clicked validation once; UI displayed `SIGNED IN · verified scorekeeper · synthetic only · read-only`; one manual Match Desk refresh displayed `Verified scorekeeper · revision … · generation … · pending … · READ ONLY`. The operator confirmed success; the **exact revision, generation, and pending counts were not supplied** for this record and must not be invented.
+- **Interpretation:** successful staff-session UI state requires the PKCE authorization-code exchange, independent signed `/auth/v1/user` identity read, and current event-scoped staff-role verification; successful Match Desk status requires fresh role and V2 revision consistency checks. This evidence is operator-reported UI acceptance, not direct observation of raw tokens or network logs.
+- **Independent, aggregate-only Supabase read audit after rehearsal:** 3 synthetic events, 3 private matches, 9 staff-grant rows, 4 Auth users, 4 durable V2 scoring decisions, 3 accepted submission rows, 0 publicly published event rows, 0 publicly published match rows. These match the prior documented conservation baseline. Only aggregate counts were retrieved; no event UUID, email address, session secret, auth code, or one-time link is recorded here.
+- **No additional actions approved:** No hosted scoring attempt, fixture replay/reset, staff/account/grant mutation, schema/configuration change, new account, public result publication, real FFTT3 participant import, branch merge, or production rollout. Existing C8 flow was preserved but was not re-tested in this rehearsal.
+- **Operator cleanup:** click `Clear session` on the original M1 tab and close it, once the result is noted; do not reuse the one-time link. Session cleanup confirmation is **not yet recorded**.
+- **Still open:** live multi-device volunteer session and revocation tests; role and outsider denial on physical devices; controlled spectator/TV public synchronization and publication; organizer physical stand-down, protected fallback and manual reconciliation; explicit production authorization. A single staff PKCE PASS is not a full Milestone 1 gate.
+
+## Current pass/fail (updated October 21, 2026)
+
+- Brevo sender/DKIM/DMARC: **PASS** (existing evidence).
+- Real email delivered to existing synthetic Yahoo mailbox: **PASS** (previously observed in Spam).
+- Existing C8 implicit Magic Link signed-in: **PASS in earlier separate C8 rehearsal**; not re-run during this PKCE test.
+- Live provider PKCE authorization-code exchange, signed identity and event-scoped Scorekeeper A role: **PASS — operator-observed M1 UI**.
+- Live authorized, revision-checked read-only Match Desk: **PASS — operator-observed M1 UI**, exact displayed numeric values not transcribed.
+- Aggregate-only hosted database conservation: **PASS — independent read-only audit**, zero public publication.
+- Physical-device login, role revocation, spectator/TV, offline reconciliation: **NOT YET TESTED**.
+- Production deployment, scoring, publication authorization: **NOT GRANTED**.
