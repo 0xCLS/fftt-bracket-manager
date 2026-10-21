@@ -33,7 +33,7 @@ const session=createMilestone1PkceStaffSession({
  isOnline:()=>local&&navigator.onLine&&!document.hidden,
 });
 let requested=false;
-const permitted='fftttesting-scorea@yahoo.com';
+// Operator enters the pre-existing synthetic address locally; do not put it in this public repository.
 $('requestLink').disabled=!local;
 $('complete').disabled=!local||!callbackURL;
 show('requestStatus',local?
@@ -43,14 +43,15 @@ show('authStatus',callbackURL?
  'Return received and URL scrubbed. If the callback is code+state, enter the private event UUID and validate once.':
  'No callback. No hosted access or token exchange.');
 $('requestLink').addEventListener('click',async()=>{
+ const address=$('email').value.trim().toLowerCase();
  if(requested||!local||!$('consent').checked||
-    $('email').value.trim().toLowerCase()!==permitted){
-  show('requestStatus','Not authorized: exact existing synthetic Scorekeeper A account and confirmation required.');
+    !/^[^\\s@<>]{1,64}@[^\\s@<>]{1,190}$/.test(address)){
+  show('requestStatus','Not authorized: an existing fictional account address and operator confirmation are required.');
   return;
  }
  requested=true;$('requestLink').disabled=true;
  try{
-  await session.begin(permitted);
+  await session.begin(address);
   show('requestStatus','One dev Magic Link requested. Check synthetic Yahoo inbox/spam and open in this SAME browser profile. No repeats.');
  }catch{
   show('requestStatus','Request refused, unavailable or rate-limited. Do NOT retry. Check safe provider logs.');
@@ -87,5 +88,11 @@ const clear=()=>{
  show('deskStatus','Session cleared. No retained private rows.');
 };
 $('signOut').addEventListener('click',()=>{clear();show('authStatus','SIGNED OUT · synthetic only');});
-window.addEventListener('offline',clear);
-document.addEventListener('visibilitychange',()=>{if(document.hidden)clear();});
+// Navigating to Yahoo hides the tab: pause any authenticated session WITHOUT
+// cancelling the pending verifier. Only the explicit sign-out cancels PKCE.
+const privacyPause=()=>{
+ session.pause();$('matches').replaceChildren();$('readDesk').disabled=true;
+ show('deskStatus','Private session paused. No cached rows.');
+};
+window.addEventListener('offline',privacyPause);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)privacyPause();});
