@@ -72,7 +72,13 @@ export function evaluateMilestone1DeviceOrigin({href,approvedHttpsOrigins=[],app
  if(typeof pagePath!=='string'||!/^\/(rehearsals\/m1|app)\/[a-z0-9-]+\.html$/.test(pagePath))fail();
  let u;try{u=new URL(href)}catch{return Object.freeze({allowed:false,profile:null,environment:null,reasons:Object.freeze(['unparseable-url'])})}
  if(u.username||u.password)reasons.push('embedded-credentials');
- if(u.pathname!==pagePath)reasons.push('unexpected-page-path');
+ // Cloudflare Pages canonicalizes /app/staff.html to /app/staff (HTTP 308).
+ // Permit exactly this reviewed alias on a dedicated Pages HTTPS hostname; all
+ // other page paths and all origin/environment checks remain fail-closed.
+ const canonicalStaffPagesPath=pagePath==='/app/staff.html'&&u.pathname==='/app/staff'
+   &&u.protocol==='https:'&&DEDICATED_PLATFORM_HOST.test(u.hostname)
+   &&u.hostname.endsWith('.pages.dev');
+ if(u.pathname!==pagePath&&!canonicalStaffPagesPath)reasons.push('unexpected-page-path');
  let profile=null;
  if(u.origin===LOOPBACK_ORIGIN)profile=DEVICE_PROFILE.LOOPBACK;
  else if(u.protocol==='http:'&&(u.hostname==='localhost'||u.hostname==='127.0.0.1'))reasons.push('loopback-port-or-alias-not-allowlisted');

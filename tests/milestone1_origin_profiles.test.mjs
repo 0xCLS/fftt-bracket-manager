@@ -15,6 +15,28 @@ test('an exactly listed, attested origin is accepted only in its own environment
  const p=ev(PROD+PAGE,'production');
  assert.deepEqual([p.allowed,p.profile,p.environment],[true,DEVICE_PROFILE.PUBLIC_PRODUCTION,'production']);
 });
+test('Cloudflare Pages staff canonical URL is accepted without widening other paths or origins',()=>{
+ const pagePath='/app/staff.html';
+ const check=(href,environment='staging',approvedPublicStaticOrigins=LIST)=>
+  evaluateMilestone1DeviceOrigin({href,pagePath,approvedPublicStaticOrigins,expectedEnvironment:environment});
+ for(const path of ['/app/staff.html','/app/staff']){
+  const r=check(STAGING+path);
+  assert.deepEqual([r.allowed,r.profile,r.environment],[true,DEVICE_PROFILE.PUBLIC_STAGING,'staging'],path);
+ }
+ for(const path of ['/app/staff/','/app/staff/extra','/app/staff.htm','/app/other','/app/staff-login']){
+  const r=check(STAGING+path);
+  assert.equal(r.allowed,false,path);
+  assert.ok(r.reasons.includes('unexpected-page-path'),path+' '+r.reasons);
+ }
+ assert.equal(check(STAGING+'/app/staff','production').allowed,false,'staging build on wrong environment');
+ assert.equal(check('https://unlisted.pages.dev/app/staff').allowed,false,'unlisted dedicated host');
+ assert.equal(check('https://preview.fftt-staging-example.pages.dev/app/staff').allowed,false,'preview subdomain');
+ assert.equal(check('https://0xcls.github.io/app/staff').allowed,false,'shared GitHub Pages host');
+ assert.equal(check('http://localhost:3000/app/staff').allowed,false,'no loopback alias');
+ assert.equal(check('https://fftt-staff-example.github.io/app/staff','production').allowed,false,'no new alias on github.io');
+ assert.equal(check(STAGING+'/app/staff','staging',[]).allowed,false,'requires explicit approved origin');
+});
+
 test('a staging build cannot run on the production origin and vice versa',()=>{
  for(const [href,env] of [[PROD+PAGE,'staging'],[STAGING+PAGE,'production'],[STAGING+PAGE,null],[PROD+PAGE,undefined],[STAGING+PAGE,'preview']]){
   const r=ev(href,env);
