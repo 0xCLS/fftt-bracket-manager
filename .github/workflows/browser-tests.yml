@@ -25,7 +25,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 25
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -90,6 +90,10 @@ jobs:
         env:
           FFTT_CHROME_CHANNEL: none
         run: node --test tests/e2e/gameday_browser.test.mjs
+      - name: Game-day browser failure paths (background/resume, outage, stale TV, reload, renewal, wrong password)
+        env:
+          FFTT_CHROME_CHANNEL: none
+        run: node --test tests/e2e/gameday_browser_failures.test.mjs
       - name: Check UI, labels and dropdowns
         run: python tests/ui_smoke.py
       - name: Check tournament safety
@@ -124,6 +128,10 @@ jobs:
         run: |
           psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres \
             -f tests/milestone1_v2_disposable.sql
+      - name: Verify independently signed local Auth and simultaneous V2 HTTP score race
+        run: |
+          python -m py_compile tests/milestone1_v2_signed_http.py
+          python tests/milestone1_v2_signed_http.py
       - name: Apply game-day V3 ONLY to ephemeral local PostgreSQL
         env:
           PGPASSWORD: postgres
@@ -140,7 +148,3 @@ jobs:
         run: |
           python -m py_compile tests/gameday_signed_http.py
           python tests/gameday_signed_http.py
-      - name: Verify independently signed local Auth and simultaneous V2 HTTP score race
-        run: |
-          python -m py_compile tests/milestone1_v2_signed_http.py
-          python tests/milestone1_v2_signed_http.py

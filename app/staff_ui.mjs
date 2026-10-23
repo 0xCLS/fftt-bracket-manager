@@ -513,6 +513,13 @@ export function createStaffUi({core, els, config, signOut}) {
     fill(els.main, s.signedIn ? view() : loading());
   }
   document.addEventListener('input', () => { lastInputAt = Date.now(); }, true);
-  setInterval(() => { if (s.signedIn) renderChrome(); }, 1000);
+  let lastWritable = null;
+  setInterval(() => {
+    if (!s.signedIn) return;
+    renderChrome();
+    // a time-based change (the connection went stale, or came back) must disable/enable the buttons now
+    const writable = core.canWrite();
+    if (writable !== lastWritable) { lastWritable = writable; render(true); }
+  }, 1000);
   return Object.freeze({render, openTab: id => { tab = id; render(true); }});
 }
