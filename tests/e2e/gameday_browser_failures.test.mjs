@@ -77,7 +77,9 @@ test('network outage: writes pause with a clear banner, the last bracket stays v
     w.fake.setOffline('org', true);
     await org.page.locator('#banner:not([hidden])').waitFor({timeout: 45000});
     assert.match(await org.page.locator('#banner').textContent(), /paused/i);
-    assert.ok(await org.page.locator('.queue-card').count() > 0, 'the last known bracket stays on screen');
+    const diag = async () => JSON.stringify({signin: await org.page.locator('#signin:not([hidden])').count(), status: await org.page.locator('#signInStatus').textContent(),
+      main: (await org.page.locator('#main').innerText()).slice(0, 200), errors: w.consoleErrors.slice(-3), pageErrors: w.pageErrors});
+    assert.ok(await org.page.locator('.queue-card').count() > 0, 'the last known bracket stays on screen: ' + await diag());
     assert.equal(await org.page.locator('.queue-card button', {hasText: 'Record result'}).first().isDisabled(), true, 'recording is paused');
     assert.match(await org.page.locator('#statusline').innerText(), /changes paused/i);
     w.fake.setOffline('org', false);
