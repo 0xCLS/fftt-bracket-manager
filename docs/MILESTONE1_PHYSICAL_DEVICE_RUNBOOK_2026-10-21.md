@@ -1,5 +1,7 @@
 # Milestone 1 — Physical-device rehearsal runbook (PREPARED, NOT AUTHORIZED TO RUN)
 
+> **Superseded in part, October 23, 2026.** The organizer dropped the Tailscale-first approach and chose a $0 web-hosted architecture with email/password staff sign-in. Section 3 (private hosting) and the email-link steps are historical. The current plan is the [staging hosting assessment](MILESTONE1_STAGING_HOSTING_2026-10-23.md) with the device-test procedure in its section 9; the order of tests, stop conditions and cleanup here still apply in spirit.
+
 _October 21, 2026 · synthetic development project only · nothing here has been executed. Running any step that sends an email or changes a hosted setting needs Christopher's explicit approval of the exact item (see **Approvals**)._ Companion record: [implementation and design findings](MILESTONE1_MULTI_DEVICE_OPERATIONS_2026-10-21.md).
 
 ## 1. What can be tested now vs. later

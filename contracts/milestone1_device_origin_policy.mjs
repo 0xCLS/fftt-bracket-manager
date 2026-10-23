@@ -11,11 +11,20 @@
 import {AuthorityGateError} from './phase1c_disconnect_reference.mjs';
 export const DEVICE_PROFILE=Object.freeze({
  LOOPBACK:'loopback-dev',HTTPS:'https-dev',
+ PUBLIC_STAGING:'public-staging',PUBLIC_PRODUCTION:'public-production',
 });
 const LOOPBACK_ORIGIN='http://localhost:3000';
 // Public static hosts must not serve staff sign-in pages (preflight rule).
 const PUBLIC_STATIC=/(^|\.)(github\.io|pages\.dev|netlify\.app|vercel\.app|trycloudflare\.com|ngrok(-free)?\.(app|io|dev)|loca\.lt|workers\.dev)$/i;
 const HOST=/^[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?$/i;
+// Origins that already serve OTHER content (the public tournament app keeps event data in browser
+// storage there, and every project page of that account shares the origin). Never allowed for staff
+// sign-in, even if someone lists them.
+export const KNOWN_SHARED_ORIGINS=Object.freeze(['https://0xcls.github.io']);
+// Platforms whose per-site origin can be dedicated to ONE site: exactly one label before the suffix
+// (preview deployments like hash.site.pages.dev have two and are therefore refused).
+const DEDICATED_PLATFORM_HOST=/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.(github\.io|pages\.dev)$/;
+const ENVIRONMENTS=Object.freeze(['staging','production']);
 const fail=()=>{throw new AuthorityGateError('Device origin policy configuration invalid');};
 function parseOrigin(text){
  let u;try{u=new URL(text)}catch{return null}
@@ -33,12 +42,35 @@ export function normalizeApprovedHttpsOrigins(list=[]){
   return u.origin;
  }));
 }
+/** Narrow, individually attested public static origins for STAGING or PRODUCTION staff sign-in.
+ * Each entry must be {origin, environment, dedicatedOrigin:true}: the operator attests the origin serves
+ * only this application (so no other site can share its storage or frame its pages). One per environment.
+ * The general public-static-host denial is unchanged for everything not listed here. */
+export function normalizeApprovedPublicStaticOrigins(list=[]){
+ if(!Array.isArray(list)||list.length>2)fail();
+ const seen=new Set();
+ return Object.freeze(list.map(entry=>{
+  if(entry===null||typeof entry!=='object'||Array.isArray(entry)
+    ||Object.keys(entry).sort().join()!=='dedicatedOrigin,environment,origin'
+    ||entry.dedicatedOrigin!==true||!ENVIRONMENTS.includes(entry.environment)
+    ||typeof entry.origin!=='string'||/[*?\s]/.test(entry.origin))fail();
+  const u=parseOrigin(entry.origin);
+  if(!u||u.protocol!=='https:'||u.port!==''||u.origin!==entry.origin
+    ||!DEDICATED_PLATFORM_HOST.test(u.hostname)||KNOWN_SHARED_ORIGINS.includes(u.origin)
+    ||seen.has(u.origin)||seen.has('env:'+entry.environment))fail();
+  seen.add(u.origin);seen.add('env:'+entry.environment);
+  return Object.freeze({origin:u.origin,environment:entry.environment});
+ }));
+}
 /** Classify an origin. Returns reason codes only, never page contents. */
-export function evaluateMilestone1DeviceOrigin({href,approvedHttpsOrigins=[],pagePath}={}){
+export function evaluateMilestone1DeviceOrigin({href,approvedHttpsOrigins=[],approvedPublicStaticOrigins=[],
+ expectedEnvironment=null,pagePath}={}){
  const approved=normalizeApprovedHttpsOrigins(approvedHttpsOrigins);
+ const publicApproved=normalizeApprovedPublicStaticOrigins(approvedPublicStaticOrigins);
+ let environment=null;
  const reasons=[];
  if(typeof pagePath!=='string'||!/^\/rehearsals\/m1\/[a-z0-9-]+\.html$/.test(pagePath))fail();
- let u;try{u=new URL(href)}catch{return Object.freeze({allowed:false,profile:null,reasons:Object.freeze(['unparseable-url'])})}
+ let u;try{u=new URL(href)}catch{return Object.freeze({allowed:false,profile:null,environment:null,reasons:Object.freeze(['unparseable-url'])})}
  if(u.username||u.password)reasons.push('embedded-credentials');
  if(u.pathname!==pagePath)reasons.push('unexpected-page-path');
  let profile=null;
@@ -46,13 +78,23 @@ export function evaluateMilestone1DeviceOrigin({href,approvedHttpsOrigins=[],pag
  else if(u.protocol==='http:'&&(u.hostname==='localhost'||u.hostname==='127.0.0.1'))reasons.push('loopback-port-or-alias-not-allowlisted');
  else if(u.protocol==='http:')reasons.push('insecure-non-loopback-origin');
  else if(u.protocol==='https:'){
-  if(PUBLIC_STATIC.test(u.hostname))reasons.push('public-static-host-denied');
+  if(KNOWN_SHARED_ORIGINS.includes(u.origin))reasons.push('shared-origin-denied');
+  else if(PUBLIC_STATIC.test(u.hostname)){
+   const entry=u.port===''?publicApproved.find(e=>e.origin===u.origin):undefined;
+   if(!entry)reasons.push('public-static-host-denied');
+   else if(expectedEnvironment!==entry.environment)reasons.push('wrong-environment');
+   else{
+    profile=entry.environment==='staging'?DEVICE_PROFILE.PUBLIC_STAGING:DEVICE_PROFILE.PUBLIC_PRODUCTION;
+    environment=entry.environment;
+   }
+  }
   else if(u.port!=='')reasons.push('https-non-default-port-unsupported');
   else if(!approved.includes(u.origin))reasons.push('https-origin-not-approved');
   else profile=DEVICE_PROFILE.HTTPS;
  }else reasons.push('unsupported-scheme');
  const allowed=reasons.length===0&&profile!==null;
- return Object.freeze({allowed,profile:allowed?profile:null,reasons:Object.freeze(reasons)});
+ return Object.freeze({allowed,profile:allowed?profile:null,environment:allowed?environment:null,
+  reasons:Object.freeze(reasons)});
 }
 /** The exact allowlist entry an operator would have to approve in hosted Auth. */
 export function requiredRedirectAllowlistEntry({origin,pagePath}){
@@ -85,10 +127,11 @@ export function redirectWouldBeAccepted({siteUrl,allowlist=[],redirectTo}={}){
 }
 /** Device capability checklist. Probe key never carries a secret. */
 export function assessMilestone1DeviceReadiness({
- href,pagePath,approvedHttpsOrigins=[],isSecureContext,isTopLevel,
- cryptoImpl,tabStorage,isOnline,
+ href,pagePath,approvedHttpsOrigins=[],approvedPublicStaticOrigins=[],expectedEnvironment=null,
+ isSecureContext,isTopLevel,cryptoImpl,tabStorage,isOnline,
 }={}){
- const origin=evaluateMilestone1DeviceOrigin({href,approvedHttpsOrigins,pagePath});
+ const origin=evaluateMilestone1DeviceOrigin({href,approvedHttpsOrigins,approvedPublicStaticOrigins,
+  expectedEnvironment,pagePath});
  let storageWorks=false;
  try{
   const key='fftt.m1.device-probe';
@@ -107,7 +150,7 @@ export function assessMilestone1DeviceReadiness({
  ].map(([id,pass])=>Object.freeze({id,pass}));
  return Object.freeze({
   ready:checks.every(c=>c.pass),
-  profile:origin.profile,
+  profile:origin.profile,environment:origin.environment,
   checks:Object.freeze(checks),
   blockers:Object.freeze([...checks.filter(c=>!c.pass).map(c=>c.id),...origin.reasons]),
   // Not provable by a probe; the operator must observe it on the real phone.

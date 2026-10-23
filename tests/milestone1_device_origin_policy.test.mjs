@@ -31,7 +31,8 @@ test('phones need an operator-approved HTTPS origin; public static hosts are alw
  for(const host of ['0xcls.github.io','x.pages.dev','x.netlify.app','x.vercel.app',
   'abc.trycloudflare.com','abc.ngrok-free.app','x.workers.dev']){
   const r=evalOrigin('https://'+host+PAGE,['https://'+host]);
-  assert.equal(r.allowed,false,host);assert.ok(r.reasons.includes('public-static-host-denied'),host);
+  assert.equal(r.allowed,false,host);
+  assert.ok(r.reasons.includes(host==='0xcls.github.io'?'shared-origin-denied':'public-static-host-denied'),host+' '+r.reasons);
  }
  assert.equal(evalOrigin('https://other.example.invalid'+PAGE,[LAN]).allowed,false);
 });
