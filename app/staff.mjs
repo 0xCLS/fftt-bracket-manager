@@ -104,8 +104,11 @@ $('signIn').disabled = !networkAllowed; $('requestCode').disabled = !networkAllo
 async function enter(r, eventId) {
   try { localStorage.setItem('fftt.staff.lastEvent', eventId); } catch { /* optional */ }
   showApp();
-  await core.started({role: r.role, eventId});
+  // start() records the role synchronously; choose the landing tab BEFORE the slow first load so a tab the
+  // person taps while it loads is never overwritten afterwards
+  const loaded = core.started({role: r.role, eventId});
   ui.openTab(r.role === 'organizer' ? 'overview' : 'desk');
+  await loaded;
 }
 for (const ev of ['pointerdown', 'keydown', 'touchstart']) document.addEventListener(ev, () => session?.touch(), {passive: true});
 $('togglePassword').addEventListener('click', () => {
