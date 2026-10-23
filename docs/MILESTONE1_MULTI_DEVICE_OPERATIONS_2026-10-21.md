@@ -61,6 +61,17 @@ Run on macOS with Node v26.3.0 and Playwright/Chromium 156 in an isolated virtua
 
 Real emails, hosted users or grants, new fixtures, hosted scores, publication, template or redirect changes, deployment, production `main` changes, merging PR #19, any tunnel or public hosting, any real FFTT3 data. The three hosted scoring fixtures remain consumed.
 
+## Game-day staff authentication release requirement (decision October 23, 2026)
+
+The organizer approved a **$0-budget release requirement**: game-day sign-in must be low-friction and resilient to email delay or link hand-off failure. The existing synthetic PKCE Magic-Link flow remains valid **development evidence only**, not the required game-day experience.
+
+- **Anonymous spectator view:** no registration/login, no routine Auth email; show only organizer-approved public fields.
+- **Staff:** individual, pre-provisioned authorized organizer/scorekeeper identities. Evaluate email/password entry (preferred for routine live use without an inbox dependency), and optional six-digit emailed OTP as recovery/alternative. Subject any implementation to appropriate brute-force, credential recovery, privacy, session and security review. No hosted Auth configuration change is authorized by this decision.
+- **Session lifecycle:** implement secure renewal/refresh for a tournament-length session, explicit expiry/sign-out, identity and current event-role verification, revocation, and mobile background/resume behavior without unsafe token persistence. Preserve fail-closed private views.
+- **Pre-event operational test:** verify real phone/tablet/browser behavior, email deliverability and rate limits, recovery, role denials, stale views, and a full fictional event before production. Target **zero routine login emails during active play**; this is an operational target, not a guarantee.
+- **Economics and boundaries:** use free services only unless a separate future decision changes that. Staging hosting, exposed-origin allowlists, Auth emails, accounts/grants, new fixtures, scoring/publication, migration of real players and production release all require their own approvals. Three existing hosted score fixtures stay consumed; draft PR #19 remains unmerged.
+- **Implementation status:** **not implemented, not tested, not released**. The existing Tailscale-first private-hosting runbook is historical/provisional; evaluating public HTTPS staging is a separate deployment decision, not yet an authorized change.
+
 ## Next steps
 
 See the [physical-device runbook](MILESTONE1_PHYSICAL_DEVICE_RUNBOOK_2026-10-21.md) for the approvals, exact order, stop conditions and cleanup.
