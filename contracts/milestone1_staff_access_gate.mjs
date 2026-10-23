@@ -51,8 +51,24 @@ export function createMilestone1StaffAccessGate({
    // Returned material belongs to strict existing signed reader's field allowlist.
    return result;
  }
+ /** Fresh identity + CURRENT role proof for one operation, WITHOUT running the action here. The caller
+  * performs its own (possibly failing) write/read with the returned token, so an ordinary application
+  * error (validation, conflict) is never mistaken for a lost session. The server re-proves the grant
+  * again inside every write; this client-side proof only stops requests early and keeps the UI honest. */
+ async function recheck(eventId){
+   if(!active||active.eventId!==eventId||!isOnline()||now()>=active.expiresAt){drop();deny();}
+   const stamp=epoch,token=await getAccessToken();
+   if(typeof token!=='string'||!JWT.test(token)||token.length>10000){drop();deny();}
+   const user=await readIdentity({token});
+   if(stamp!==epoch)deny();
+   if(user?.id!==active.userId||user?.is_anonymous===true){drop();deny();}
+   const role=await readRole({eventId,token});
+   if(stamp!==epoch)deny();
+   if(role!==active.role||!isOnline()||now()>=active.expiresAt){drop();deny();}
+   return Object.freeze({token,role,userId:active.userId});
+ }
  return Object.freeze({
-  verify,withFreshRole,
+  verify,withFreshRole,recheck,
   signOut:drop,pause:drop,dispose:drop,
   get status(){return Object.freeze({authorized:!!active&&isOnline()&&now()<active.expiresAt,
    role:active?.role??null,cloudScoreWritesEnabled:false,noAutomaticRetry:true});},

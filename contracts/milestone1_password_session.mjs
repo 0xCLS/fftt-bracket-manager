@@ -135,6 +135,17 @@ export function createMilestone1PasswordStaffSession({
   if(st!==null)endLocal();
   fail('revoked');
  }
+ /** One privileged operation at a time, in arrival order. Polling reads pass wait:false and are
+  * skipped (busy) instead of queueing behind a person's action. */
+ let exclusiveHeld=false;const exclusiveQueue=[];
+ async function exclusive(fn,{wait}){
+  if(exclusiveHeld){
+   if(!wait)fail('busy');
+   await new Promise(resolve=>exclusiveQueue.push(resolve)); // ownership is handed over, never released
+  }else exclusiveHeld=true;
+  try{return await fn();}
+  finally{const next=exclusiveQueue.shift();if(next)next();else exclusiveHeld=false;}
+ }
  async function adopt(resp,{eventId,keepSignedIn=false}={}){
   if(!UUID.test(eventId||''))fail('invalid-input');
   endLocal();
@@ -259,6 +270,62 @@ export function createMilestone1PasswordStaffSession({
    }catch(e){await settle(e,op);}
    finally{reading=false;}
   },
+  /** Game-day application access. Runs `fn({token,role,eventId,userId})` only after a renewal if due, a
+   * fresh identity proof and a fresh event-scoped role proof. Errors thrown BY `fn` propagate untouched
+   * (an organizer validation error is not a lost session); failures of the proofs themselves are
+   * classified like every other read. `wait:false` (polling) never queues behind a person's action. */
+  authorized(fn,{wait=true}={}){
+   if(typeof fn!=='function')fail('invalid-input');
+   return exclusive(async()=>{
+    if(st===null||st.accessToken===null)fail('expired');
+    enforceLimits();
+    if(suspendedAt!==null||controller===null)fail('locked');
+    if(busy)fail('busy');
+    if(!isOnline())fail('network');
+    const op=epoch;
+    let ctx;
+    try{
+     if(await ensureFresh())await reverify(op);
+     if(op!==epoch||controller===null)fail('locked');
+     const proof=await gate.recheck(st.eventId);
+     if(op!==epoch)fail('locked');
+     ctx=Object.freeze({token:proof.token,role:proof.role,eventId:st.eventId,userId:st.userId});
+    }catch(e){await settle(e,op);}
+    return fn(ctx);
+   },{wait});
+  },
+  /** Switch the event this session is scoped to (events the account already holds a grant on). A denied
+   * switch leaves the previous event fully usable. */
+  async selectEvent(eventId){
+   if(!UUID.test(eventId||''))fail('invalid-input');
+   return exclusive(async()=>{
+    if(st===null||st.accessToken===null)fail('expired');
+    enforceLimits();
+    if(suspendedAt!==null)fail('locked');
+    if(busy)fail('busy');
+    if(!isOnline())fail('network');
+    if(eventId===st.eventId)return Object.freeze({role:st.role,eventId});
+    busy=true;
+    const previous={eventId:st.eventId,role:st.role};
+    let op=++epoch;
+    try{
+     await ensureFresh();
+     st.eventId=eventId;st.role=null;
+     await reverify(op);
+     persist();
+     return Object.freeze({role:st.role,eventId});
+    }catch(e){
+     if(st===null)throw e instanceof StaffSignInError?e:new StaffSignInError('revoked');
+     const kind=kindOf(e);
+     st.eventId=previous.eventId;st.role=previous.role;
+     op=++epoch;
+     try{await reverify(op);}catch(e2){return settle(e2,op);} // even the old event cannot be proven
+     if(['network','unavailable','rate-limited'].includes(kind)&&e instanceof StaffSignInError)throw e;
+     fail('not-authorized');
+    }finally{busy=false;}
+   },{wait:true});
+  },
+  get currentEventId(){return st?.eventId??null;},
   /** The person did something (tap, key): extends the idle clock. */
   touch(){
    if(st===null||suspendedAt!==null)return;

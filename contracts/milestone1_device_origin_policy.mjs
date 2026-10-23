@@ -69,7 +69,7 @@ export function evaluateMilestone1DeviceOrigin({href,approvedHttpsOrigins=[],app
  const publicApproved=normalizeApprovedPublicStaticOrigins(approvedPublicStaticOrigins);
  let environment=null;
  const reasons=[];
- if(typeof pagePath!=='string'||!/^\/rehearsals\/m1\/[a-z0-9-]+\.html$/.test(pagePath))fail();
+ if(typeof pagePath!=='string'||!/^\/(rehearsals\/m1|app)\/[a-z0-9-]+\.html$/.test(pagePath))fail();
  let u;try{u=new URL(href)}catch{return Object.freeze({allowed:false,profile:null,environment:null,reasons:Object.freeze(['unparseable-url'])})}
  if(u.username||u.password)reasons.push('embedded-credentials');
  if(u.pathname!==pagePath)reasons.push('unexpected-page-path');

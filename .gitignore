@@ -2,3 +2,4 @@
 rehearsals/m1/device-origins.local.json
 .DS_Store
 __pycache__/
+node_modules/

@@ -5,12 +5,18 @@ on:
     branches: [main]
     paths:
       - index.html
+      - app/**
+      - contracts/**
+      - tools/**
       - tests/**
       - .github/workflows/browser-tests.yml
       - supabase/**
   pull_request:
     paths:
       - index.html
+      - app/**
+      - contracts/**
+      - tools/**
       - tests/**
       - .github/workflows/browser-tests.yml
       - supabase/**
@@ -27,6 +33,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Install Chromium and Playwright
         run: |
           python -m pip install playwright
@@ -65,6 +75,21 @@ jobs:
         run: python tests/milestone1_staff_login_browser.py
       - name: Verify sanitized staging export builder, headers and origin refusals (offline, publishes nothing)
         run: python -m unittest discover -s tests -p 'test_staging_export.py' -v
+      - name: Game-day client, session, exports and public-model unit tests (zero network)
+        run: node --test tests/gameday_*.test.mjs
+      - name: Install test-only local PostgreSQL (WebAssembly) and browser driver
+        working-directory: tests/e2e
+        run: |
+          npm ci
+          npx playwright-core install chromium
+      - name: Game-day server logic against the real SQL (local PostgreSQL), parity with the approved engine
+        run: node --test tests/e2e/gameday_server.test.mjs
+      - name: Game-day real client stack (session, API, score transport, core) against the real SQL
+        run: node --test tests/e2e/gameday_core.test.mjs
+      - name: Game-day browser rehearsal (organizer, two scorekeepers, spectator, TV, outsider; isolated Chromium contexts)
+        env:
+          FFTT_CHROME_CHANNEL: none
+        run: node --test tests/e2e/gameday_browser.test.mjs
       - name: Check UI, labels and dropdowns
         run: python tests/ui_smoke.py
       - name: Check tournament safety
@@ -99,6 +124,22 @@ jobs:
         run: |
           psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres \
             -f tests/milestone1_v2_disposable.sql
+      - name: Apply game-day V3 ONLY to ephemeral local PostgreSQL
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres \
+            -f supabase/proposals/GAMEDAY_TOURNAMENT_V3_STAGING.sql
+      - name: Assert game-day V3 privileges (anon/authenticated/private helpers)
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres \
+            -f tests/gameday_v3_disposable.sql
+      - name: Verify a whole fictional tournament over real local Auth with concurrent scorekeepers
+        run: |
+          python -m py_compile tests/gameday_signed_http.py
+          python tests/gameday_signed_http.py
       - name: Verify independently signed local Auth and simultaneous V2 HTTP score race
         run: |
           python -m py_compile tests/milestone1_v2_signed_http.py
