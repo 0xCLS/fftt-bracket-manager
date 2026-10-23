@@ -237,3 +237,7 @@ One end-to-end, authoritative match lifecycle, instead of independent feature la
 - [README](README.md) — currently implemented functions and limitations
 - [FFTT Design System](docs/DESIGN_SYSTEM.md) — existing styling foundation
 - Private `0xCLS/forging-fellowship-table-tennis` repository: `events/2026-11-22/EVENT_RECORD.md`, `knowledge/PLAYER_RATING_SYSTEM.md`, and `knowledge/FUTURE_EVENT_PLAYBOOK.md` — tournament requirements and planning context
+
+## October 23, 2026 — game-day synthetic staging application (code complete; hosted deployment pending owner steps)
+
+Christopher approved a consolidated, $0, fictional-data-only staging build. The branch now contains one integrated application: a staff app (organizer and scorekeepers), an anonymous spectator view and a TV board, backed by an additive server migration that owns events, roster, brackets, progression, corrections, the doubles finale and the allowlisted public projection. It is verified by local real-SQL tests, a headless real-client-stack suite, real-Chrome browser-simulated rehearsals and CI against real local Supabase Auth with concurrent scorekeepers. **Not verified:** hosted behavior and physical devices. **Not done:** production cutover (separate approval), real FFTT3 data, Google Sheets sync. The released GitHub Pages app is unchanged. Details and owner steps: [Game-day staging](docs/GAMEDAY_STAGING_2026-10-23.md).
