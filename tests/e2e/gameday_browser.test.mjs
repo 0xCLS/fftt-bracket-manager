@@ -40,7 +40,8 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
     // ---------------------------------------------------------------- organizer signs in, loads players, builds
     const org = await w.device('org');
     await org.signIn('org');
-    await org.page.locator('#main h2', {hasText: 'Synthetic Rehearsal Games'}).waitFor({timeout: T});
+    await org.page.locator('#evName').waitFor({timeout: T});
+    assert.equal(await org.page.locator('#evName').inputValue(), 'Synthetic Rehearsal Games', 'selected organizer event remains correct');
     await shot(org, '01-organizer-overview');
     await goTab(org.page, 'Players');
     const list = roster(12).map(p => `${p.name}, ${p.rating}, ${p.rating_status}`).join('\n');
@@ -112,7 +113,8 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
     await org.page.reload();   // a reload of the organizer tab: the session is not persisted, so sign in again
     await org.page.locator('#signIn:not([disabled])').waitFor({timeout: T});
     await org.signIn('org');
-    await org.page.locator('#main h2', {hasText: 'Synthetic Rehearsal Games'}).waitFor({timeout: T});
+    await org.page.locator('#evName').waitFor({timeout: T});
+    assert.equal(await org.page.locator('#evName').inputValue(), 'Synthetic Rehearsal Games', 'selected organizer event remains correct');
     await goTab(org.page, 'Match Desk');
     const nsCard = org.page.locator('.queue-card').last();
     await nsCard.locator('button', {hasText: 'No-show…'}).click();
