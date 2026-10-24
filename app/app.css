@@ -176,3 +176,153 @@ body.tv .round-title{color:#aab4be}
 body.tv .bracket{gap:14px}
 body.tv .round{width:260px}
 body.tv .playerline{font-size:.85rem}
+
+
+/* Approved original FFTT desktop design restored for hosted staff (2026-10-24).
+   Scoped to #app: spectator/TV layouts and protected sign-in remain unchanged.
+   Tokens, spacing, and visual hierarchy follow the original main/index.html. */
+#app.shell{display:grid;grid-template-columns:225px minmax(0,1fr);min-height:100dvh;align-items:stretch;color:#29313c;background:#f2f3f5;font-size:13px}
+#app .staff-sidebar{position:sticky;top:0;display:flex;flex-direction:column;align-self:start;height:100dvh;min-height:580px;min-width:0;padding:29px 15px 20px;background:#fbfcfd;border-right:1px solid #e3e6eb}
+#app .sidebar-brand{display:flex;align-items:center;gap:12px;padding:0 9px}
+#app .sidebar-brand img{width:59px;height:59px;flex:none;object-fit:cover;border-radius:50%;box-shadow:0 3px 10px #1c30501b}
+#app .brand-kicker{display:block;color:#7b8590;font-weight:800;font-size:9px;letter-spacing:.13em;line-height:1.5}
+#app .sidebar-brand strong{display:block;margin-top:3px;font-size:17px;letter-spacing:-.04em;line-height:1.17;color:#29313c}
+#app .sidebar-caption{margin:20px 9px 29px;color:#77838c;font-size:11px;line-height:1.6}
+#app .sidebar-group-title{margin:0 10px 10px;color:#929aa2;font-size:10px;font-weight:800;letter-spacing:.15em}
+#app nav.tabs{display:flex;flex-direction:column;gap:4px;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:0 1px;border:0;background:transparent;position:static;top:auto;height:auto;align-self:stretch;scrollbar-width:thin}
+#app nav.tabs button{display:flex;align-items:center;gap:11px;flex:none;width:100%;min-height:44px;padding:10px 12px;text-align:left;border:1px solid transparent;border-radius:6px;background:transparent;color:#56616e;box-shadow:none;font-size:13px;font-weight:610;white-space:nowrap}
+#app nav.tabs button:hover:not(:disabled){background:#edf0f3;border-color:#edf0f3;color:#29313c}
+#app nav.tabs button[aria-current="page"]{background:#e8edf0;color:#29313c;font-weight:770;box-shadow:inset 3px 0 0 #343d47}
+#app .app-tab-icon{width:17px;height:17px;flex:none;stroke:currentColor}
+#app .sidebar-bottom{margin-top:auto;padding:16px 4px 0;border-top:1px solid #e2e6eb}
+#app .sidebar-sync{margin:0 0 2px;color:#216b54;font-size:11px;font-weight:750}
+#app .sidebar-caution{margin:0 0 12px;color:#77838c;font-size:11px;line-height:1.5}
+#app .sidebar-actions{display:grid;gap:7px}
+#app .sidebar-actions button{min-height:37px;width:100%;padding:6px 10px;text-align:center;background:#fff;border-radius:5px;font-size:11px;font-weight:700}
+#app .sidebar-actions button:last-child{border-color:#29313c;background:#29313c;color:#fff}
+#app .developer-credit{margin:13px 0 0;color:#77818d;font-size:10px;font-weight:700;text-align:center}
+#app .staff-workspace{min-width:0;max-width:100%;display:flex;flex-direction:column}
+#app .topbar{position:relative;z-index:2;top:auto;display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:10px;min-height:52px;padding:9px clamp(18px,3.3vw,54px);background:#f2f3f5;border:0;border-bottom:1px solid #e8ebef}
+#app .statusline{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:7px}
+#app .statusline .pill{font-size:11px;font-weight:700;min-height:29px;border:1px solid #e2e6ec;background:#fff;color:#505b68;box-shadow:none}
+#app .statusline .pill.good{background:#e3f2e0;border-color:#c8e5cd;color:#216b54}
+#app .statusline .pill.blue{background:#e6f3f7;border-color:#c9e6ee;color:#315e6e}
+#app .statusline .pill.warn{background:#fff4d6;border-color:#f2e1ad;color:#75581e}
+#app .topbar select#eventSelect{flex:1 1 290px;max-width:390px;min-width:220px;margin-left:0;min-height:38px;font-size:12px}
+#app #banner{margin:12px clamp(18px,3.3vw,54px) 0}
+#app main.content{flex:1;max-width:1530px;width:100%;margin:0 auto;padding:34px clamp(18px,3.3vw,54px) 24px}
+#app .footer{color:#79838d;font-size:10px;padding:14px 18px 22px}
+#app .card{border:1px solid #e7e9ed;border-radius:6px;box-shadow:0 7px 22px #29313c0e,0 2px 4px #29313c09;padding:22px}
+#app .card h2,#app .card h3{color:#29313c}
+#app button{font-size:12px}
+#app .overview-page{width:100%;min-width:0}
+#app .overview-feature{padding:0;margin:0 0 40px;border:0;background:transparent}
+#app .feature-overline{display:flex;align-items:center;gap:10px;color:#68727d;letter-spacing:.14em;font-size:10px;font-weight:790}
+#app .feature-spark{display:inline-block;flex:none;width:8px;height:8px;background:#bcd884;border-radius:50%;box-shadow:0 0 0 5px #bcd88438}
+#app .overview-feature h1{max-width:100%;margin:18px 0 11px;color:#29313c;font-size:clamp(34px,3.45vw,54px);letter-spacing:-.052em;line-height:1.12;font-weight:750}
+#app .overview-feature p{max-width:600px;margin:0;color:#586672;font-size:14px;line-height:1.6}
+#app .feature-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:21px}
+#app .feature-actions button{min-height:43px;padding:10px 20px;border-radius:999px;font-size:12px;font-weight:740}
+#app .feature-actions .feature-primary{border-color:#29313c;background:#29313c;color:#fff;box-shadow:0 5px 12px #29313c20}
+#app .feature-actions .feature-primary:hover:not(:disabled){background:#475461;color:#fff}
+#app .feature-actions .feature-secondary{background:#fff;color:#29313c;border-color:#d6dbe1}
+#app .feature-actions .feature-secondary:hover:not(:disabled){background:#e8f3f5;border-color:#b9d7dd}
+#app .overview-next{margin:0 0 22px;padding:11px 15px;border-radius:6px;border-left:3px solid #76b9c6;background:#e6f3f7;color:#365967;font-size:12px}
+#app .overview-next strong{font-weight:800}
+#app .overview-content{display:grid;grid-template-columns:minmax(0,1.26fr) minmax(300px,.88fr);gap:19px;align-items:start}
+#app .overview-settings{padding:30px;min-width:0}
+#app .section-heading{display:flex;align-items:center;gap:15px;margin-bottom:13px}
+#app .section-icon{display:grid;place-items:center;width:43px;height:43px;flex:none;background:#d1eff5;color:#29313c;border-radius:5px;font-size:14px;font-weight:790}
+#app .section-overline{display:block;color:#6b747e;font-size:10px;font-weight:800;letter-spacing:.15em}
+#app .section-heading h2,#app .side-section-heading h2{margin:4px 0 0;color:#29313c;font-size:21px;font-weight:750;letter-spacing:-.04em}
+#app .section-description{font-size:13px;color:#64707b;line-height:1.6;margin:0 0 28px}
+#app .form-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:17px 15px}
+#app .form-grid .wide{grid-column:span 4;min-width:0}
+#app .form-grid .date-field{grid-column:span 2;min-width:0}
+#app .form-grid .third{grid-column:span 2;min-width:0}
+#app .form-grid label{display:block;font-size:12px;font-weight:690;color:#46525f;margin:0 0 6px}
+#app .form-grid input,#app .form-grid .readonly-field{width:100%;min-height:43px;margin:0;padding:10px 12px;border-radius:5px;border:1px solid #dbe0e6;background:#fff;color:#29313c;font-size:13px;line-height:1.4}
+#app .form-grid .readonly-field{display:flex;align-items:center;background:#f9fafb;color:#586672}
+#app .form-grid .setup-save{grid-column:1/-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:5px}
+#app .setup-save button{border-radius:999px;min-height:43px;padding:10px 21px;font-size:12px}
+#app .setup-help{color:#77838c;font-size:11px;line-height:1.5}
+#app .overview-snapshot{min-width:0}
+#app .overview-snapshot .side-section-heading{margin:8px 0 14px}
+#app .kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#app .kpi{min-height:139px;padding:19px 17px;display:flex;flex-direction:column;justify-content:space-between;border:1px solid #29313c0d;border-radius:6px;box-shadow:none}
+#app .kpi:nth-child(1){background:#d1eff5}
+#app .kpi:nth-child(2){background:#e9d7f3}
+#app .kpi:nth-child(3){background:#bbd98f}
+#app .kpi:nth-child(4){background:#f7e99b}
+#app .kpi strong{color:#29313c;font-weight:750;font-size:clamp(31px,3vw,42px);line-height:1.07}
+#app .kpi span{color:#3f4b56;font-size:11px;font-weight:680;line-height:1.5}
+#app .overview-format{margin:33px 0 25px}
+#app .overview-format .side-section-heading{margin-bottom:15px}
+#app .format-steps{list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0;padding:0}
+#app .format-steps li{display:flex;align-items:flex-start;gap:13px;min-height:121px;padding:20px 18px;border:1px solid #29313c0c;border-radius:6px;background:#eaf3f5}
+#app .format-steps li:nth-child(2){background:#f2eaf7}
+#app .format-steps li:nth-child(3){background:#f4f6e8}
+#app .format-index{display:grid;place-items:center;flex:none;width:27px;height:27px;background:#fff9;border:1px solid #29313c14;border-radius:5px;color:#29313c;font-size:11px;font-weight:800}
+#app .format-steps strong{display:block;color:#29313c;font-size:13px;font-weight:740;margin-bottom:5px}
+#app .format-steps p{margin:0;color:#586672;font-size:12px;line-height:1.65}
+#app .format-footnote{font-size:11px;margin-top:11px;color:#687580}
+#app .overview-history{max-width:100%;margin:22px 0}
+#app .overview-history .card{padding:24px}
+#app .overview-history h3{font-size:16px}
+#app .overview-history table{font-size:12px}
+#app .overview-history table td,#app .overview-history table th{padding:11px 8px}
+#app .section-intro{margin-bottom:22px}
+#app .section-intro .feature-overline{margin-bottom:9px}
+#app .section-intro h1{font-size:clamp(28px,3vw,41px);font-weight:750;letter-spacing:-.05em;margin:0 0 7px;color:#29313c}
+#app .section-intro p{color:#586672;font-size:13px;max-width:630px;margin:0}
+@media(max-width:1150px){
+ #app .overview-content{grid-template-columns:minmax(0,1fr)}
+ #app .overview-snapshot{max-width:none}
+}
+@media(max-width:800px){
+ #app.shell{grid-template-columns:minmax(0,1fr)}
+ #app .staff-sidebar{position:relative;top:auto;min-height:0;height:auto;padding:15px 17px 8px;border-right:0;border-bottom:1px solid #e3e6eb}
+ #app .sidebar-brand{padding:0}
+ #app .sidebar-brand img{width:46px;height:46px}
+ #app .sidebar-caption,#app .sidebar-group-title{display:none}
+ #app nav.tabs{flex-direction:row;flex:0 0 auto;overflow-x:auto;overflow-y:hidden;gap:6px;padding:11px 0 6px}
+ #app nav.tabs button{width:auto;min-height:39px;padding:8px 12px;font-size:12px}
+ #app nav.tabs button[aria-current="page"]{box-shadow:inset 0 -3px 0 #343d47}
+ #app .sidebar-bottom{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:5px;padding:6px 0 3px;border:0}
+ #app .sidebar-sync,#app .sidebar-caution{margin:0;font-size:10px}
+ #app .sidebar-actions{display:flex;gap:6px;margin-left:auto}
+ #app .sidebar-actions button{width:auto;min-height:35px;padding:6px 10px}
+ #app .developer-credit{display:none}
+ #app .topbar{padding:9px 17px;min-height:45px}
+ #app main.content{padding:24px 17px}
+ #app .overview-feature{margin-bottom:24px}
+ #app .overview-feature h1{font-size:clamp(30px,6vw,43px)}
+ #app .overview-format .format-steps{grid-template-columns:minmax(0,1fr)}
+ #app .format-steps li{min-height:0}
+}
+@media(max-width:520px){
+ #app .sidebar-caution{display:none}
+ #app .sidebar-actions{margin-left:0}
+ #app .statusline{justify-content:flex-start}
+ #app .topbar{justify-content:flex-start}
+ #app .topbar select#eventSelect{max-width:100%;min-width:0}
+ #app .overview-settings{padding:21px}
+ #app .form-grid .wide,#app .form-grid .date-field{grid-column:1/-1}
+ #app .form-grid .third{grid-column:span 2}
+ #app .form-grid .third:nth-of-type(4),#app .form-grid .third:nth-of-type(5){grid-column:span 3}
+ #app .form-grid input{font-size:16px}
+ #app .section-heading h2,#app .side-section-heading h2{font-size:19px}
+ #app .kpi{min-height:115px;padding:16px 12px}
+ #app .kpi strong{font-size:30px}
+ #app .overview-feature h1{font-size:32px}
+ #app .feature-actions button{flex:1 1 auto}
+}
+@media(prefers-reduced-motion:reduce){
+ #app *,#app *::before,#app *::after{transition:none!important;animation:none!important}
+}
+@media print{
+ #app .staff-sidebar,#app .topbar,#app .footer,#app .feature-actions{display:none!important}
+ #app.shell{display:block;background:#fff}
+ #app main.content{max-width:none;padding:0}
+ #app .card{box-shadow:none!important}
+}
