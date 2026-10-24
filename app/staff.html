@@ -48,20 +48,33 @@
 </main>
 
 <div id="app" class="shell" hidden>
- <header class="topbar">
-  <div class="brand"><img src="./assets/emblem.webp" alt="" width="36" height="36"><span>FFTT Bracket Manager<small>STAGING · FICTIONAL DATA</small></span></div>
-  <select id="eventSelect" aria-label="Event" hidden></select>
-  <div class="spacer"></div>
-  <div id="statusline" class="statusline" role="status" aria-live="polite"></div>
-  <button id="reconnect" class="small" type="button" hidden>Reconnect</button>
-  <button id="signOut" class="small" type="button">Sign out</button>
-  <button id="signOutAll" class="small" type="button">Sign out everywhere</button>
- </header>
- <nav id="tabs" class="tabs" aria-label="Sections"></nav>
- <div>
+ <aside class="staff-sidebar" aria-label="Staff workspace">
+  <div class="sidebar-brand">
+   <img src="./assets/emblem.webp" alt="Forging Fellowship Table Tennis Games emblem" width="60" height="60">
+   <div><span class="brand-kicker">FORGING FELLOWSHIP</span><strong>Bracket<br>Manager</strong></div>
+  </div>
+  <p class="sidebar-caption">Forging Fellowship Table Tennis Games</p>
+  <p class="sidebar-group-title">WORKSPACE</p>
+  <nav id="tabs" class="tabs" aria-label="Bracket Manager sections"></nav>
+  <div class="sidebar-bottom">
+   <p class="sidebar-sync"><span aria-hidden="true">●</span> Cloud-connected staging</p>
+   <p class="sidebar-caution">Fictional data only · no real players</p>
+   <div class="sidebar-actions">
+    <button id="reconnect" class="small" type="button" hidden>Reconnect</button>
+    <button id="signOut" class="small" type="button">Sign out</button>
+    <button id="signOutAll" class="small" type="button">Sign out everywhere</button>
+   </div>
+   <p class="developer-credit">Developed by Chris Smith</p>
+  </div>
+ </aside>
+ <div class="staff-workspace">
+  <header class="topbar">
+   <div id="statusline" class="statusline" role="status" aria-live="polite"></div>
+   <select id="eventSelect" aria-label="Select event" hidden></select>
+  </header>
   <div id="banner" class="notice bad" role="alert" hidden></div>
   <main id="main" class="content" tabindex="-1"></main>
-  <footer class="footer">FFTT Bracket Manager · Building community through fellowship<br>Developed by Chris Smith</footer>
+  <footer class="footer">FFTT Bracket Manager · Building community through fellowship</footer>
  </div>
 </div>
 </body></html>
