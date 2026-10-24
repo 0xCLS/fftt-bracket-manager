@@ -10,6 +10,28 @@ import {STALE_AFTER_MS} from './staff_core.mjs';
 const ORGANIZER_TABS = [['overview', 'Overview'], ['players', 'Players'], ['championship', 'Championship'],
   ['consolation', 'Consolation'], ['desk', 'Match Desk'], ['finale', 'Doubles Finale'], ['results', 'Results & Export'], ['staff', 'Staff']];
 const SCOREKEEPER_TABS = [['desk', 'Match Desk']];
+/** Fixed outline icon geometry from the approved single-file FFTT navigation. */
+const STAFF_NAV_GEOMETRY = Object.freeze({
+  overview: [['rect',{x:3,y:3,width:7,height:7,rx:1}],['rect',{x:14,y:3,width:7,height:7,rx:1}],['rect',{x:3,y:14,width:7,height:7,rx:1}],['rect',{x:14,y:14,width:7,height:7,rx:1}]],
+  players: [['path',{d:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'}],['circle',{cx:9,cy:7,r:4}],['path',{d:'M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75'}]],
+  championship: [['path',{d:'M8 21h8M12 17v4M7 4h10v7a5 5 0 0 1-10 0V4ZM7 6H4v3a4 4 0 0 0 4 4M17 6h3v3a4 4 0 0 1-4 4'}]],
+  consolation: [['path',{d:'M3 11a9 9 0 0 1 16-5l2 2M21 3v5h-5M21 13a9 9 0 0 1-16 5l-2-2M3 21v-5h5'}]],
+  desk: [['rect',{x:5,y:4,width:14,height:17,rx:2}],['path',{d:'M9 4.5V3h6v1.5M9 10h6M9 14h6M9 18h4'}]],
+  finale: [['circle',{cx:7.5,cy:7,r:3}],['circle',{cx:16.5,cy:7,r:3}],['path',{d:'M2 20v-2a5.5 5.5 0 0 1 11 0v2M11 20v-2a5.5 5.5 0 0 1 11 0v2'}]],
+  results: [['path',{d:'M4 7V4h16v3M5 7h14v13H5V7ZM9 12h6M9 16h6'}]],
+  staff: [['circle',{cx:9,cy:8,r:3}],['path',{d:'M3 21v-2a6 6 0 0 1 12 0v2M17 11h5M19.5 8.5v5'}]],
+});
+function staffNavIcon(kind) {
+  const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg');
+  for (const [name,value] of Object.entries({class:'app-tab-icon',width:18,height:18,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor','stroke-width':'1.8','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true',focusable:'false'})) svg.setAttribute(name,String(value));
+  for (const [tag,attributes] of STAFF_NAV_GEOMETRY[kind] ?? []) {
+    const el = document.createElementNS(ns,tag);
+    for (const [name,value] of Object.entries(attributes)) el.setAttribute(name,String(value));
+    svg.append(el);
+  }
+  return svg;
+}
+
 const OFFLINE_TOOL = 'https://0xcls.github.io/fftt-bracket-manager/';
 
 export function createStaffUi({core, els, config, signOut}) {
@@ -52,10 +74,15 @@ export function createStaffUi({core, els, config, signOut}) {
     const [text, kind] = conn === 'live' ? [`Live · updated ${age < 2 ? 'just now' : age + 's ago'}`, 'good']
       : conn === 'stale' ? [`Not confirmed for ${age}s · changes paused`, 'bad']
       : conn === 'offline' ? ['Offline · changes paused', 'bad'] : conn === 'paused' ? ['Paused in background', 'warn'] : ['Signed out', 'warn'];
+    const snapshot = s.snapshot;
+    const checked = snapshot?.players?.filter(p => p.checkedIn).length ?? 0;
+    const completed = snapshot?.matches?.filter(m => m.status === 'complete').length ?? 0;
     fill(els.status,
       pill(text, kind), pill(s.role === 'organizer' ? 'Organizer' : s.role === 'scorekeeper' ? 'Scorekeeper' : '—', 'blue'),
+      pill(checked + ' checked in'), pill(completed + ' matches completed', 'blue'),
+      snapshot?.candidates?.length ? pill(snapshot.candidates.length + ' consolation candidates', 'warn') : pill('Consolation not ready', 'warn'),
       s.pending ? pill('Unconfirmed score', 'warn') : null,
-      s.snapshot?.event.publicVisible ? pill('Public view ON', 'blue') : null);
+      snapshot?.event?.publicVisible ? pill('Public view ON', 'blue') : null);
     const evs = s.events;
     clear(els.eventSelect);
     for (const e of evs) els.eventSelect.append(h('option', {value: e.eventId, text: `${e.name} · ${e.date}`, selected: e.eventId === s.eventId}));
@@ -63,8 +90,9 @@ export function createStaffUi({core, els, config, signOut}) {
     const tabs = isOrganizer() ? ORGANIZER_TABS : SCOREKEEPER_TABS;
     if (!tabs.some(([id]) => id === tab)) tab = tabs[0][0];
     clear(els.tabs);
-    for (const [id, text] of tabs) {
-      els.tabs.append(h('button', {type: 'button', text, 'aria-current': id === tab ? 'page' : null, on: {click: () => { tab = id; render(true); }}}));
+    for (const [id, label] of tabs) {
+      els.tabs.append(h('button', {type: 'button', 'aria-current': id === tab ? 'page' : null,
+        on: {click: () => { tab = id; render(true); }}}, staffNavIcon(id), h('span', {text: label})));
     }
     els.banner.hidden = !(conn === 'stale' || conn === 'offline');
     els.banner.textContent = conn === 'offline'
@@ -77,15 +105,14 @@ export function createStaffUi({core, els, config, signOut}) {
     const sn = s.snapshot;
     if (!sn) return h('div', {class: 'empty-state', text: 'Loading the event…'});
     const e = sn.event, checked = sn.players.filter(p => p.checkedIn).length;
-    const done = sn.matches.filter(m => m.status === 'complete').length;
-    const ready = sn.matches.filter(m => m.status === 'pending' && m.p1 && m.p2).length;
+    const championshipDone = sn.matches.filter(m => m.bracket === 'championship' && m.status === 'complete').length;
     const stand = standingsFromSnapshot(sn);
     const champ = sn.brackets.find(b => b.kind === 'championship');
     const cons = sn.brackets.find(b => b.kind === 'consolation');
     const pendingFirst = pendingFirstPlayers(sn).length;
     let next;
-    if (!sn.players.length) next = 'Add the fictional or registered players on the Players tab.';
-    else if (checked < 2) next = 'Check in at least two players on the Players tab.';
+    if (!sn.players.length) next = 'Add fictional players on the Players tab. Never import actual FFTT3 registrations into staging.';
+    else if (checked < 2) next = 'Check in at least two fictional players on the Players tab.';
     else if (!champ) next = 'Build the championship bracket on the Championship tab.';
     else if (champ.status === 'active') next = pendingFirst > 0 && !cons ? 'Record results on the Match Desk. Consolation unlocks when everyone has played once.' : 'Keep recording results on the Match Desk.';
     else if (sn.candidates.length >= 2 && !cons) next = 'Championship is decided. Build the consolation bracket.';
@@ -93,24 +120,58 @@ export function createStaffUi({core, els, config, signOut}) {
     else if (!sn.doubles?.partner1) next = 'Choose the Mixed-Skill Doubles teams on the Doubles Finale tab.';
     else if (!sn.doubles?.winnerTeam) next = 'Play and record the Mixed-Skill Doubles finale.';
     else next = e.lifecycle === 'complete' ? 'The event is complete. Export the results.' : 'Everything is played. Review Results & Export, then mark the event complete.';
-    const form = { name: h('input', {type: 'text', value: e.name, maxlength: 120, id: 'evName'}), date: h('input', {type: 'date', value: e.date, id: 'evDate'}),
-      tables: h('input', {type: 'number', min: 1, max: 12, value: e.tables, id: 'evTables'}) };
-    return h('div', {},
-      h('div', {class: 'card'}, h('h2', {text: e.name}),
-        h('div', {class: 'row'}, pill(e.date), pill(e.lifecycle, e.lifecycle === 'active' ? 'good' : 'blue'),
-          pill(`${e.tables} table${e.tables === 1 ? '' : 's'}`), pill(e.publicVisible ? 'Public view ON' : 'Public view off', e.publicVisible ? 'blue' : '')),
-        h('div', {class: 'notice good'}, h('b', {text: 'Next: '}), next)),
-      h('div', {class: 'grid three'},
-        stat('ice', checked, 'Checked in'), stat('lav', done, 'Matches completed'), stat('lime', ready, 'Ready to play'),
-        stat('butter', sn.candidates.length, 'Consolation candidates')),
-      stand.champion ? h('div', {class: 'champion-banner'}, h('h2', {text: `Champion: ${stand.champion}`}), h('p', {text: `Runner-up: ${stand.runnerUp}`})) : null,
-      h('div', {class: 'card'}, h('h3', {text: 'Event setup'}),
-        h('form', {on: {submit: async ev => { ev.preventDefault(); result(await core.actions.updateEvent(form.name.value, form.date.value, Number(form.tables.value)), 'Event saved.'); }}},
-          h('div', {class: 'grid two'}, h('div', {}, h('label', {for: 'evName', text: 'Event name'}), form.name),
-            h('div', {}, h('label', {for: 'evDate', text: 'Date'}), form.date)),
-          h('label', {for: 'evTables', text: 'Tables'}), form.tables,
-          h('div', {class: 'row'}, h('button', {class: 'primary', type: 'submit', disabled: !core.canWrite(), text: 'Save setup'})))),
-      eventsCard());
+    const navigate = id => { tab = id; render(true); };
+    const form = {
+      name: h('input', {type: 'text', value: e.name, maxlength: 120, id: 'evName'}),
+      date: h('input', {type: 'date', value: e.date, id: 'evDate'}),
+      tables: h('input', {type: 'number', min: 1, max: 12, value: e.tables, id: 'evTables'}),
+    };
+    const field = (label,id,input,cls) => h('div', {class: cls}, h('label', {'for': id, text: label}), input);
+    const fixedField = (label,value) => h('div', {class: 'third'},
+      h('span', {class:'field-label',text:label}), h('div', {class:'readonly-field',text:value}));
+    const kpi = (number,label) => h('div', {class:'kpi'},h('strong',{text:String(number)}),h('span',{text:label}));
+    const format = (number,label,description) => h('li',{},
+      h('span',{class:'format-index',text:number}),
+      h('div',{},h('strong',{text:label}),h('p',{text:description})));
+    return h('div', {class: 'overview-page'},
+      h('section', {class: 'overview-feature'},
+        h('span', {class: 'feature-overline'}, h('span',{class:'feature-spark','aria-hidden':'true'}), 'FORGING FELLOWSHIP · TOURNAMENT DESK'),
+        h('h1', {text:'Forging Fellowship Table Tennis Games'}),
+        h('p', {text:'Everything you need to prepare the Games, organize players, and keep the competition moving.'}),
+        h('div',{class:'feature-actions'},
+          h('button',{type:'button',class:'feature-primary',on:{click:()=>navigate('players')}},'Manage players  ↗'),
+          h('button',{type:'button',class:'feature-secondary',on:{click:()=>navigate('desk')}},'Open Match Desk  →'))),
+      h('div',{class:'overview-next','role':'status'},h('strong',{text:'Next: '}),next),
+      h('div',{class:'overview-content'},
+        h('section',{class:'card overview-settings'},
+          h('div',{class:'section-heading'},
+            h('span',{class:'section-icon','aria-hidden':'true',text:'01'}),
+            h('div',{},h('span',{class:'section-overline',text:'EVENT DETAILS'}),h('h2',{text:'Set up your tournament'}))),
+          h('p',{class:'section-description',text:'Choose the event details before building the bracket.'}),
+          h('form',{class:'form-grid',on:{submit:async ev=>{ev.preventDefault();result(await core.actions.updateEvent(form.name.value,form.date.value,Number(form.tables.value)),'Event saved.');}}},
+            field('Event name','evName',form.name,'wide'),
+            field('Event date','evDate',form.date,'date-field'),
+            field('Tables in use','evTables',form.tables,'third'),
+            fixedField('Regular matches','Best of 3'),
+            fixedField('Singles final','Best of 5'),
+            h('div',{class:'setup-save'},
+              h('button',{class:'primary',type:'submit',disabled:!core.canWrite(),text:'Save event setup  →'}),
+              h('span',{class:'setup-help',text:'Match formats are fixed for this rehearsal.'})))),
+        h('section',{class:'overview-snapshot','aria-label':'Tournament at a glance'},
+          h('div',{class:'side-section-heading'},h('span',{class:'section-overline',text:'LIVE SNAPSHOT'}),h('h2',{text:'At a glance'})),
+          h('div',{class:'kpis'},
+            kpi(checked,'Checked-in players'),kpi(championshipDone,'Championship matches'),
+            kpi(sn.candidates.length,'Consolation entrants'),kpi(e.tables,'Tables configured')))),
+      h('section',{class:'overview-format'},
+        h('div',{class:'side-section-heading'},h('span',{class:'section-overline',text:'HOW IT WORKS'}),h('h2',{text:'Three stages. More play.'})),
+        h('ol',{class:'format-steps'},
+          format('1','Championship','Every player begins on the championship side.'),
+          format('2','Consolation','Players who lose their first actual match get another opportunity.'),
+          format('3','Doubles finale','Finalists pair with selected consolation players.')),
+        h('p',{class:'format-footnote',text:'Ratings stay private. Consolation matchups are reviewed before the bracket is built.'})),
+      stand.champion ? h('div',{class:'champion-banner'},
+        h('h2',{text:'Champion: ' + stand.champion}),h('p',{text:'Runner-up: ' + stand.runnerUp})) : null,
+      h('section',{class:'overview-history'},eventsCard()));
   }
   const stat = (tone, n, label) => h('div', {class: 'stat ' + tone}, h('b', {text: String(n)}), h('span', {text: label}));
   function eventsCard() {
@@ -510,7 +571,20 @@ export function createStaffUi({core, els, config, signOut}) {
     const typing = active && els.main.contains(active) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName) && Date.now() - lastInputAt < 15000;
     if (!force && (typing || dirtyDialog > 0)) return; // never rebuild under a person's fingers
     const view = views[tab] ?? views.desk;
-    fill(els.main, s.signedIn ? view() : loading());
+    const pane = s.signedIn ? view() : loading();
+    const title = {players:'Players',championship:'Championship',consolation:'Consolation',desk:'Match Desk',
+      finale:'Doubles Finale',results:'Results & Export',staff:'Staff'}[tab];
+    const description = {players:'Create and check in fictional players before seeding the bracket.',
+      championship:'Seed the field and build the singles championship bracket.',
+      consolation:'Review first-match losses and build fair additional matches.',
+      desk:'Assign tables and submit server-verified match scores.',
+      finale:'Pair finalists with selected consolation players.',
+      results:'Review standings, publish fictional results and export private backups.',
+      staff:'Manage organizer-approved roles for this fictional event.'}[tab];
+    fill(els.main, title && s.signedIn ? h('div',{},
+      h('header',{class:'section-intro'},
+        h('div',{class:'feature-overline'},h('span',{class:'feature-spark','aria-hidden':'true'}),'FORGING FELLOWSHIP · TOURNAMENT DESK'),
+        h('h1',{text:title}),h('p',{text:description})),pane) : pane);
   }
   document.addEventListener('input', () => { lastInputAt = Date.now(); }, true);
   let lastWritable = null;
