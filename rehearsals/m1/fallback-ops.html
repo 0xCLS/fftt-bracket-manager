@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<title>FFTT · Organizer Fallback Operations (Training)</title>
+<link rel="stylesheet" href="./continuity.css">
+<script type="module" src="./fallback-ops.mjs"></script></head>
+<body><main>
+<header><p class="eyebrow">FORGING FELLOWSHIP · MILESTONE 1 · TRAINING SIMULATION</p>
+<h1>Organizer fallback operations</h1>
+<p class="intro">Fictional rehearsal of an outage: stand down scoring devices, seal a protected backup, run one isolated organizer device, then reconcile by hand. This page has no network access (CSP <code>connect-src 'none'</code>), cannot stop any real device, and never uploads, merges or scores.</p>
+<p class="warning">NO NETWORK · NO CLOUD WRITES · NO AUTOMATIC MERGE · ACKNOWLEDGEMENTS ARE ORGANIZER ATTESTATIONS</p></header>
+<section><h2>0. Rehearsal setup</h2>
+<label for="mode">Evidence mode</label>
+<select id="mode"><option value="training">training (simulated stand-down allowed)</option><option value="live">live (only physically observed stand-down counts)</option></select>
+<label for="role">Fictional signed role of this device</label>
+<select id="role"><option>organizer</option><option>scorekeeper</option></select>
+<label for="rev">Fictional authoritative server revision</label>
+<input id="rev" type="number" value="8" min="0">
+<button id="reset" type="button" class="secondary">Reset rehearsal</button>
+<p id="message" role="status">Fictional simulation ready.</p></section>
+<section><h2>1. Verify organizer, then declare outage</h2>
+<button id="verify" type="button">Verify organizer role</button>
+<label class="check"><input id="unknown" type="checkbox"> A score response was lost (one unknown score, match C-0-0)</label>
+<button id="outage" type="button">Declare outage</button></section>
+<section><h2>2. Stand down scoring devices</h2>
+<button id="requestStandDown" type="button">Request stand-down</button>
+<div id="roster"></div></section>
+<section><h2>3. Protected backup</h2>
+<label for="backupText">Fictional backup text</label>
+<textarea id="backupText" rows="3" spellcheck="false">{"fictionalBackup":true,"matches":["C-0-0","C-0-1"]}</textarea>
+<label class="check"><input id="protected" type="checkbox"> Stored in a protected location the organizer controls</label>
+<button id="seal" type="button">Seal backup digest</button>
+<button id="verifyBackup" type="button" class="secondary">Re-verify backup text</button>
+<button id="tamper" type="button" class="secondary">Alter the text</button></section>
+<section><h2>4. Begin isolated fallback</h2>
+<label class="check"><input id="approved" type="checkbox"> Organizer approves single-device authority</label>
+<label class="check"><input id="paperLog" type="checkbox"> Dated paper log is ready</label>
+<button id="fallback" type="button">Begin fallback</button></section>
+<section><h2>5. Record offline results (paper-backed, never uploaded)</h2>
+<label for="code">Match code</label><input id="code" value="C-0-1">
+<label for="slot">Winner slot</label><select id="slot"><option>1</option><option>2</option></select>
+<label for="scores">Game scores</label><input id="scores" value="11-7, 11-9">
+<button id="record" type="button">Record result from paper log</button></section>
+<section><h2>6. Reconnect and reconcile by hand</h2>
+<button id="reconnect" type="button">Connection restored</button>
+<button id="reverify" type="button" class="secondary">Re-verify organizer</button>
+<div id="offlineList"></div><div id="unknownList"></div>
+<label class="check"><input id="backupReviewed" type="checkbox"> Backup reviewed</label>
+<label class="check"><input id="logReviewed" type="checkbox"> Paper log reviewed</label>
+<button id="reconcile" type="button">Sign off reconciliation</button>
+<button id="cloudRead" type="button">Fresh authoritative read</button></section>
+<section><h2>7. Return to cloud readiness</h2>
+<div id="releases"></div><ul id="readiness"></ul></section>
+<section><h2>State</h2><dl>
+<dt>Phase</dt><dd id="phase"></dd><dt>Stand-down</dt><dd id="standdown"></dd>
+<dt>Physical confirmation</dt><dd id="physical"></dd><dt>Backup</dt><dd id="backup"></dd>
+<dt>Unknown scores</dt><dd id="unknowns"></dd><dt>Offline results</dt><dd id="offline"></dd>
+<dt>Score writes</dt><dd id="writes"></dd><dt>Incident log</dt><dd id="log"></dd></dl>
+<button id="verifyLog" type="button" class="secondary">Verify incident log chain</button></section>
+<footer>Training simulation only · fictional data · no hosted fixture, database or device is touched.</footer>
+</main></body></html>

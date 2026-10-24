@@ -1,0 +1,5 @@
+# Private operator-local approved device origin (never commit a real LAN/tailnet hostname)
+rehearsals/m1/device-origins.local.json
+.DS_Store
+__pycache__/
+node_modules/

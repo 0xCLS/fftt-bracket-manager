@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://copmkalfkkrkzheohwuc.supabase.co; img-src 'self'; object-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex,nofollow">
+<meta name="color-scheme" content="light">
+<title>FFTT Bracket Manager · Staff</title>
+<link rel="icon" type="image/webp" href="./assets/emblem.webp">
+<link rel="stylesheet" href="./app.css">
+<script type="module" src="./staff.mjs"></script></head>
+<body>
+<noscript><p class="public-wrap">The FFTT Bracket Manager needs JavaScript.</p></noscript>
+
+<main id="signin" class="signin" hidden>
+ <div class="card">
+  <div class="brand"><img src="./assets/emblem.webp" alt="" width="36" height="36"><span>FFTT Bracket Manager<small>STAFF SIGN-IN</small></span></div>
+  <p><span id="envBanner" class="banner" role="status">SYNTHETIC STAGING · FICTIONAL DATA ONLY</span></p>
+  <p id="originStatus" class="muted" role="status">Checking this address…</p>
+  <form id="loginForm" novalidate>
+   <label for="email">Email</label>
+   <input id="email" name="username" type="email" autocomplete="username" inputmode="email" enterkeyhint="next" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+   <label for="password">Password</label>
+   <div class="row">
+    <input id="password" name="password" type="password" autocomplete="current-password" enterkeyhint="go" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="128" required>
+    <button id="togglePassword" type="button" aria-pressed="false" aria-controls="password">Show</button>
+   </div>
+   <label for="eventId">Event ID</label>
+   <input id="eventId" name="event" type="text" autocomplete="off" inputmode="text" enterkeyhint="go" autocapitalize="none" spellcheck="false" placeholder="from the organizer's link" required>
+   <label class="check" for="keepSignedIn"><input id="keepSignedIn" type="checkbox"> Keep me signed in on this tab. Ends when you close the tab; use only on a device you control.</label>
+   <p><button id="signIn" class="primary" type="submit" disabled>Sign in</button></p>
+   <p id="signInStatus" class="status" role="status" aria-live="polite"></p>
+  </form>
+  <details id="recoveryBox">
+   <summary>Can't sign in? Use an emailed 6-digit code</summary>
+   <p class="help">Only for accounts the organizer created. We never reveal whether an address has an account.</p>
+   <label for="recoveryEmail">Email</label>
+   <input id="recoveryEmail" type="email" autocomplete="email" inputmode="email" autocapitalize="none" autocorrect="off" spellcheck="false">
+   <p><button id="requestCode" type="button" disabled>Email me a code</button></p>
+   <label for="code">6-digit code</label>
+   <input id="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" enterkeyhint="go">
+   <p><button id="verifyCode" class="primary" type="button" disabled>Sign in with code</button></p>
+   <p id="recoveryStatus" class="status" role="status" aria-live="polite"></p>
+  </details>
+  <details><summary>Device check</summary><ul id="readiness" class="checks"></ul></details>
+  <p class="help">Spectators do not need to sign in. Ask for the public link.</p>
+ </div>
+</main>
+
+<div id="app" class="shell" hidden>
+ <aside class="staff-sidebar" aria-label="Staff workspace">
+  <div class="sidebar-brand">
+   <img src="./assets/emblem.webp" alt="Forging Fellowship Table Tennis Games emblem" width="60" height="60">
+   <div><span class="brand-kicker">FORGING FELLOWSHIP</span><strong>Bracket<br>Manager</strong></div>
+  </div>
+  <p class="sidebar-caption">Forging Fellowship Table Tennis Games</p>
+  <p class="sidebar-group-title">WORKSPACE</p>
+  <nav id="tabs" class="tabs" aria-label="Bracket Manager sections"></nav>
+  <div class="sidebar-bottom">
+   <p class="sidebar-sync"><span aria-hidden="true">●</span> Cloud-connected staging</p>
+   <p class="sidebar-caution">Fictional data only · no real players</p>
+   <div class="sidebar-actions">
+    <button id="reconnect" class="small" type="button" hidden>Reconnect</button>
+    <button id="signOut" class="small" type="button">Sign out</button>
+    <button id="signOutAll" class="small" type="button">Sign out everywhere</button>
+   </div>
+   <p class="developer-credit">Developed by Chris Smith</p>
+  </div>
+ </aside>
+ <div class="staff-workspace">
+  <header class="topbar">
+   <div id="statusline" class="statusline" role="status" aria-live="polite"></div>
+   <select id="eventSelect" aria-label="Select event" hidden></select>
+  </header>
+  <div id="banner" class="notice bad" role="alert" hidden></div>
+  <main id="main" class="content" tabindex="-1"></main>
+  <footer class="footer">FFTT Bracket Manager · Building community through fellowship</footer>
+ </div>
+</div>
+</body></html>

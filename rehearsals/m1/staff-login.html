@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://copmkalfkkrkzheohwuc.supabase.co; img-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex,nofollow">
+<title>FFTT · Staff sign-in (synthetic candidate)</title>
+<link rel="stylesheet" href="./staff-login.css">
+<script type="module" src="./staff-login.mjs"></script></head>
+<body><main>
+<header>
+<p class="eyebrow">FORGING FELLOWSHIP · STAFF</p>
+<h1>Staff sign-in</h1>
+<p id="envBanner" class="banner" role="status">SYNTHETIC CANDIDATE · READ ONLY · NO SCORES</p>
+<p id="originStatus" class="note" role="status">Checking this address…</p>
+<ul id="readiness" class="checks"></ul>
+</header>
+
+<section id="signInPanel" aria-labelledby="signInHeading">
+<h2 id="signInHeading">Sign in</h2>
+<form id="loginForm" novalidate>
+<label for="email">Email</label>
+<input id="email" name="username" type="email" autocomplete="username" inputmode="email" enterkeyhint="next" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+<label for="password">Password</label>
+<div class="row">
+<input id="password" name="password" type="password" autocomplete="current-password" enterkeyhint="go" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="128" required>
+<button id="togglePassword" type="button" class="secondary" aria-pressed="false" aria-controls="password">Show</button>
+</div>
+<label for="eventId">Event ID</label>
+<input id="eventId" name="event" type="text" autocomplete="off" inputmode="text" enterkeyhint="go" autocapitalize="none" spellcheck="false" placeholder="given to you by the organizer" required>
+<label class="check" for="keepSignedIn"><input id="keepSignedIn" type="checkbox"> Keep me signed in on this tab. Ends when you close the tab; use only on a device you control.</label>
+<button id="signIn" type="submit" disabled>Sign in</button>
+<p id="signInStatus" class="status" role="status" aria-live="polite"></p>
+</form>
+<details id="recoveryBox">
+<summary>Can't sign in? Use an emailed 6-digit code</summary>
+<p class="hint">Only for accounts the organizer created. We never reveal whether an address has an account.</p>
+<label for="recoveryEmail">Email</label>
+<input id="recoveryEmail" type="email" autocomplete="email" inputmode="email" autocapitalize="none" autocorrect="off" spellcheck="false">
+<button id="requestCode" type="button" class="secondary" disabled>Email me a code</button>
+<label for="code">6-digit code</label>
+<input id="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" enterkeyhint="go">
+<button id="verifyCode" type="button" disabled>Sign in with code</button>
+<p id="recoveryStatus" class="status" role="status" aria-live="polite"></p>
+</details>
+</section>
+
+<section id="sessionPanel" hidden aria-labelledby="sessionHeading">
+<h2 id="sessionHeading">Signed in</h2>
+<dl>
+<dt>Role</dt><dd id="roleOut"></dd>
+<dt>Session ends in</dt><dd id="endsOut"></dd>
+<dt>Signs out if idle</dt><dd id="idleOut"></dd>
+<dt>Stored on this tab</dt><dd id="persistOut"></dd>
+</dl>
+<div class="row wrap">
+<button id="follow" type="button">Follow Match Desk</button>
+<button id="stopFollow" type="button" class="secondary">Stop</button>
+<button id="signOut" type="button" class="secondary">Sign out</button>
+<button id="signOutAll" type="button" class="secondary">Sign out everywhere</button>
+<button id="retry" type="button" hidden>Reconnect</button>
+</div>
+<p id="deskStatus" class="status" role="status" aria-live="polite">No authorized data.</p>
+<div id="matches"></div>
+</section>
+<footer>Synthetic development only · read only · no scores · sessions never leave this device except to the sign-in service.</footer>
+</main></body></html>

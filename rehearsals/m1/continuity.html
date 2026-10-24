@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'none'; script-src 'self'; style-src 'self'; img-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<title>FFTT · Organizer Offline Continuity Drill</title>
+<link rel="stylesheet" href="./continuity.css">
+<script type="module" src="./continuity.mjs"></script>
+</head><body>
+<main><header>
+<p class="eyebrow">FORGING FELLOWSHIP · MILESTONE 1</p>
+<h1>Organizer continuity drill</h1>
+<p class="intro">A safe training simulation of cloud interruption, single-device fallback and reconciliation. Everything stays in this tab: no Supabase, login, database, score requests, backups or participant data.</p>
+<p class="warning">SIMULATION ONLY — checkbox acknowledgments do not prove that other devices have stopped. Never use this page to authorize real tournament activity.</p>
+</header>
+<section><h2>1. Confirm synthetic organizer access</h2>
+<label for="role">Simulated account role</label>
+<select id="role"><option value="scorekeeper">Scorekeeper (denied)</option><option value="organizer">Organizer (fictional)</option><option value="outsider">Outsider (denied)</option></select>
+<button id="verify" type="button">Check organizer role</button>
+<p class="hint">Only the fictional organizer may proceed. In a live implementation, the role must be verified by a fresh signed Auth/session and the event-scoped backend.</p></section>
+<section><h2>2. Simulate cloud connection loss</h2>
+<label class="check"><input id="unknown" type="checkbox"> An in-flight score outcome was unknown when connection dropped</label>
+<button id="outage" type="button">Simulate cloud outage</button></section>
+<section><h2>3. Organizer-only fallback prerequisites</h2>
+<p class="hint">These are training acknowledgments, not device checks. Actual fallback requires a protected backup, physical stand-down of every scoring device, and an independent incident log.</p>
+<label class="check"><input id="approved" type="checkbox"> Organizer explicitly approves isolated fallback</label>
+<label class="check"><input id="stoodDown" type="checkbox"> Other scoring devices physically stopped (fictional)</label>
+<label class="check"><input id="backup" type="checkbox"> Private backup protected and revision/generation checked</label>
+<label class="check"><input id="log" type="checkbox"> Dated manual incident log prepared</label>
+<label class="check"><input id="documented" type="checkbox"> Unknown cloud score documented separately</label>
+<button id="fallback" type="button">Rehearse isolated fallback</button>
+<button id="edit" type="button">Record fictional manually logged edit</button>
+</section>
+<section><h2>4. Return online and review, without automatic upload</h2>
+<button id="reconnect" type="button">Simulate network return</button>
+<button id="reverify" type="button">Recheck fictional organizer role</button>
+<label class="check"><input id="backupReviewed" type="checkbox"> Protected backup reviewed</label>
+<label class="check"><input id="logReviewed" type="checkbox"> Entire incident log reviewed</label>
+<label class="check"><input id="editsReviewed" type="checkbox"> Every offline edit manually reconciled</label>
+<label class="check"><input id="unknownReviewed" type="checkbox"> Unknown original score independently checked</label>
+<button id="reconcile" type="button">Rehearse manual reconciliation</button>
+<button id="verified" type="button">Rehearse fresh verified snapshot</button></section>
+<section class="status" aria-live="polite"><h2>Safe status</h2>
+<p id="message" role="status">Ready to simulate. No cloud writes are available.</p>
+<dl><dt>Simulated authority phase</dt><dd id="phase">cloud-ready</dd>
+<dt>Fictional fallback edits</dt><dd id="edits">0</dd>
+<dt>Manual reconciliation required</dt><dd id="review">No</dd>
+<dt>Cloud writes</dt><dd id="writes">DISABLED (always)</dd></dl>
+</section>
+<button id="restart" type="button" class="secondary">Reset fictional simulation only</button>
+<footer>No real FFTT3 player data · zero network access · no event modifications · no score replay.</footer>
+</main>
+</body></html>
