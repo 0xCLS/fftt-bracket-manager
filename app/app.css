@@ -43,9 +43,9 @@ main.content{padding:16px;max-width:1180px;width:100%;margin:0 auto}
 @media (min-width:980px){
  .shell{grid-template-columns:228px 1fr;grid-template-rows:auto 1fr}
  .topbar{grid-column:1/-1}
- nav.tabs{flex-direction:column;overflow:visible;padding:14px 10px;border-bottom:0;border-right:1px solid var(--line);
+ .shell > nav.tabs{flex-direction:column;overflow:visible;padding:14px 10px;border-bottom:0;border-right:1px solid var(--line);
   position:sticky;top:61px;align-self:start;height:calc(100vh - 61px)}
- nav.tabs button{text-align:left}
+ .shell > nav.tabs button{text-align:left}
  main.content{padding:24px 28px}
 }
 
