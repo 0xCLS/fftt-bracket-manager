@@ -73,6 +73,21 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
     await org.page.locator('button', {hasText: 'Publish to spectators'}).click();
     await waitToast(org.page, /visible to spectators/);
     await spec.page.locator('#evName', {hasText: 'Synthetic Rehearsal Games'}).waitFor({timeout: 15000});
+    // Desktop spectators must not inherit the staff sidebar's viewport-height navigation.
+    // This guards the real CSS layout, not just textContent/DOM presence (mobile-only tests missed it).
+    await spec.page.setViewportSize({width: 1440, height: 900});
+    await spec.page.locator('#main h2', {hasText: 'Now playing'}).waitFor({timeout: T});
+    const publicLayout = await spec.page.evaluate(() => {
+      const nav = document.querySelector('nav.tabs');
+      const main = document.querySelector('main#main');
+      const n = nav.getBoundingClientRect(), m = main.getBoundingClientRect();
+      return {direction: getComputedStyle(nav).flexDirection, navHeight: n.height, mainTop: m.top, visible: !!main.textContent.trim()};
+    });
+    assert.equal(publicLayout.direction, 'row', 'desktop spectator tabs must be horizontal');
+    assert.ok(publicLayout.navHeight < 100, 'desktop spectator navigation must not occupy the viewport');
+    assert.ok(publicLayout.mainTop < 450 && publicLayout.visible, 'spectator content must be visible below the tabs');
+    await spec.page.setViewportSize({width: 390, height: 844});
+
 
     // table assignment by a scorekeeper shows up as Now playing for spectators and on the TV
     const tv = await w.device('tv', {viewport: {width: 1920, height: 1080}});
