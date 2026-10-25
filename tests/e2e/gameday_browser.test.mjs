@@ -63,12 +63,18 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
     await b.page.locator('.queue-card').first().waitFor({timeout: T});
     assert.equal(await a.page.locator('nav.tabs button').count(), 1, 'a scorekeeper sees only the Match Desk');
     assert.ok(!(await a.page.locator('#app').innerText()).match(/Rating|Roster|Staff|Export|Players/), 'no organizer or rating information on a scorekeeper phone');
+    const scorekeeperStatus = await a.page.locator('#statusline').innerText();
+    assert.doesNotMatch(scorekeeperStatus, /0 checked in|0 matches completed|Consolation not ready/,
+      'role-scoped scorekeeper view must not invent zero organizer totals');
+    assert.match(scorekeeperStatus, /Match Desk only/, 'scorekeeper sees its role-scoped status');
     await shot(a, '04-scorekeeper-a-desk');
 
     // ---------------------------------------------------------------- spectators: nothing is public until the organizer publishes
     const spec = await w.device('spec', PHONE);
     await spec.open(SPECT + '/');
     await spec.page.locator('#main', {hasText: 'No event is public yet'}).waitFor({timeout: T});
+    assert.match(await spec.page.locator('#live').innerText(), /No public event/,
+      'a connected empty spectator feed must not claim to be live');
     await goTab(org.page, 'Results & Export');
     await org.page.locator('button', {hasText: 'Publish to spectators'}).click();
     await waitToast(org.page, /visible to spectators/);
@@ -81,10 +87,12 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
       const nav = document.querySelector('nav.tabs');
       const main = document.querySelector('main#main');
       const n = nav.getBoundingClientRect(), m = main.getBoundingClientRect();
-      return {direction: getComputedStyle(nav).flexDirection, navHeight: n.height, mainTop: m.top, visible: !!main.textContent.trim()};
+      return {direction: getComputedStyle(nav).flexDirection, navHeight: n.height, mainTop: m.top, leftGap: Math.abs(n.left - m.left), firstTabLeft: nav.querySelector('button').getBoundingClientRect().left, mainLeft: m.left, visible: !!main.textContent.trim()};
     });
     assert.equal(publicLayout.direction, 'row', 'desktop spectator tabs must be horizontal');
     assert.ok(publicLayout.navHeight < 100, 'desktop spectator navigation must not occupy the viewport');
+    assert.ok(Math.abs(publicLayout.firstTabLeft - publicLayout.mainLeft) < 24,
+      'spectator desktop tab alignment must match the centered content column');
     assert.ok(publicLayout.mainTop < 450 && publicLayout.visible, 'spectator content must be visible below the tabs');
     await spec.page.setViewportSize({width: 390, height: 844});
 
@@ -176,7 +184,14 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
     const [dl2] = await Promise.all([org.page.waitForEvent('download'), org.page.locator('button', {hasText: 'Results (text)'}).click()]);
     const resultsTxt = fs.readFileSync(await dl2.path(), 'utf8');
     assert.match(resultsTxt, /Singles Champion/); assert.doesNotMatch(resultsTxt, /rating/i);
+    assert.match(resultsTxt, /Mixed-Skill Doubles game scores \(Team A–Team B\): 11-8, 9-11, 11-7/);
+    const [csvDl] = await Promise.all([org.page.waitForEvent('download'), org.page.locator('button', {hasText: 'Matches (CSV)'}).click()]);
+    const matchCsv = fs.readFileSync(await csvDl.path(), 'utf8');
+    assert.match(matchCsv, /doubles,1,D-FINAL/);
+    assert.match(matchCsv, /11-8, 9-11, 11-7/);
+    assert.doesNotMatch(matchCsv, /rating|00000000-0000-4000|@/i);
     await org.page.locator('button', {hasText: 'Mark event complete'}).click();
+    await org.page.locator('dialog[open]', {hasText: 'An organizer may still make audited corrections'}).waitFor({timeout: T});
     await org.page.locator('dialog[open] button', {hasText: 'Mark complete'}).click();
     await waitToast(org.page, /marked complete/);
 
