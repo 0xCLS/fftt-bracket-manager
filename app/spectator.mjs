@@ -34,8 +34,12 @@ function finaleCard(f) {
 }
 function viewBracket(ev) {
   return h('div', {},
-    h('div', {class: 'card'}, h('h2', {text: 'Championship'}), bracketView(ev.championship, 'championship')),
-    ev.consolation.length ? h('div', {class: 'card'}, h('h2', {text: 'Consolation'}), bracketView(ev.consolation, 'consolation')) : null);
+    h('div', {class: 'card'}, h('h2', {text: 'Championship'}),
+      h('p', {class: 'help bracket-hint', text: 'Swipe sideways within the bracket to see later rounds.'}),
+      bracketView(ev.championship, 'championship')),
+    ev.consolation.length ? h('div', {class: 'card'}, h('h2', {text: 'Consolation'}),
+      h('p', {class: 'help bracket-hint', text: 'Swipe sideways within the bracket to see later rounds.'}),
+      bracketView(ev.consolation, 'consolation')) : null);
 }
 function viewResults(ev, board) {
   const st = standings(ev);
@@ -50,11 +54,12 @@ function viewResults(ev, board) {
 
 function render(view) {
   const live = $('live');
-  if (view.state === 'empty') { live.className = 'pill warn'; live.textContent = 'Waiting for the feed…'; }
-  else if (view.state === 'stale') { live.className = 'pill bad'; live.textContent = `Out of date · last update ${Math.round(view.ageMs / 1000)}s ago`; }
-  else { live.className = 'pill good'; live.textContent = 'Live'; }
   const events = view.events;
   const ev = pickEvent(events, wanted);
+  if (view.state === 'empty') { live.className = 'pill warn'; live.textContent = 'Waiting for the feed…'; }
+  else if (view.state === 'stale') { live.className = 'pill bad'; live.textContent = `Out of date · last update ${Math.round(view.ageMs / 1000)}s ago`; }
+  else if (!ev) { live.className = 'pill warn'; live.textContent = 'No public event'; }
+  else { live.className = 'pill good'; live.textContent = 'Live'; }
   const pick = $('evPick');
   pick.hidden = events.length < 2;
   if (!pick.hidden) { clear(pick); for (const e of events) pick.append(h('option', {value: e.id, text: e.name, selected: e.id === ev?.id})); }
