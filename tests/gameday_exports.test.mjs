@@ -31,6 +31,26 @@ test('CSV quotes commas and neutralizes spreadsheet formulas', () => {
   assert.equal(c.split('\r\n')[0], 'Bracket,Round,Match,Player 1,Player 2,Winner,Game scores,Table,Status');
   assert.doesNotMatch(c, /rating|00000000-0000-4000-8000-0000000000/i);
 });
+test('played doubles appears in shareable exports with team scores', () => {
+  const final = parseOrganizerSnapshot({...raw, doubles: {
+    finalist_1: id(1), finalist_2: id(3), partner_1: id(2), partner_2: id(4),
+    winner_team: 2, game_scores: '8-11, 11-9, 7-11',
+  }});
+  const text = resultsText(final);
+  assert.ok(text.includes('Mixed-Skill Doubles winners:'));
+  assert.ok(text.includes('Mixed-Skill Doubles runners-up:'));
+  assert.ok(text.includes('Mixed-Skill Doubles game scores (Team A–Team B): 8-11, 11-9, 7-11'));
+  const csvRows = matchesCsv(final).trimEnd().split('\r\n');
+  assert.equal(csvRows.length, 5);
+  assert.ok(csvRows[4].startsWith('doubles,1,D-FINAL,'));
+  assert.ok(csvRows[4].includes('8-11, 11-9, 7-11'));
+  assert.ok(!csvRows[4].includes('00000000-0000'));
+  const unplayed = parseOrganizerSnapshot({...raw, doubles: {
+    finalist_1: id(1), finalist_2: id(3), partner_1: id(2), partner_2: id(4),
+    winner_team: null, game_scores: '',
+  }});
+  assert.equal(matchesCsv(unplayed).trimEnd().split('\r\n').length, 4);
+});
 test('standings flag players below the two-match standard', () => {
   const s = standingsFromSnapshot(snap);
   assert.equal(s.champion, '=cmd|calc'); assert.equal(s.runnerUp, 'Ada Quill');
