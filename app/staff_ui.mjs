@@ -74,13 +74,17 @@ export function createStaffUi({core, els, config, signOut}) {
     const [text, kind] = conn === 'live' ? [`Live · updated ${age < 2 ? 'just now' : age + 's ago'}`, 'good']
       : conn === 'stale' ? [`Not confirmed for ${age}s · changes paused`, 'bad']
       : conn === 'offline' ? ['Offline · changes paused', 'bad'] : conn === 'paused' ? ['Paused in background', 'warn'] : ['Signed out', 'warn'];
-    const snapshot = s.snapshot;
-    const checked = snapshot?.players?.filter(p => p.checkedIn).length ?? 0;
-    const completed = snapshot?.matches?.filter(m => m.status === 'complete').length ?? 0;
+    // Only organizers receive player/match totals. The scorekeeper's brief intentionally contains
+    // no roster or results; never turn its absent fields into misleading "0" statistics.
+    const snapshot = s.role === 'organizer' ? s.snapshot : null;
+    const checked = snapshot?.players?.filter(p => p.checkedIn).length;
+    const completed = snapshot?.matches?.filter(m => m.status === 'complete').length;
     fill(els.status,
       pill(text, kind), pill(s.role === 'organizer' ? 'Organizer' : s.role === 'scorekeeper' ? 'Scorekeeper' : '—', 'blue'),
-      pill(checked + ' checked in'), pill(completed + ' matches completed', 'blue'),
-      snapshot?.candidates?.length ? pill(snapshot.candidates.length + ' consolation candidates', 'warn') : pill('Consolation not ready', 'warn'),
+      snapshot ? pill(checked + ' checked in') : null,
+      snapshot ? pill(completed + ' matches completed', 'blue') : null,
+      snapshot ? (snapshot.candidates?.length ? pill(snapshot.candidates.length + ' consolation candidates', 'warn') : pill('Consolation not ready', 'warn')) : null,
+      s.role === 'scorekeeper' && s.brief ? pill(s.brief.lifecycle === 'complete' ? 'Event complete' : 'Match Desk only', s.brief.lifecycle === 'complete' ? 'warn' : 'blue') : null,
       s.pending ? pill('Unconfirmed score', 'warn') : null,
       snapshot?.event?.publicVisible ? pill('Public view ON', 'blue') : null);
     const evs = s.events;
@@ -318,7 +322,9 @@ export function createStaffUi({core, els, config, signOut}) {
     const org = isOrganizer();
     const children = [];
     if (s.pending) children.push(pendingBanner());
-    if (s.deskStatus === 'not-active') children.push(h('div', {class: 'notice warn', text: 'No bracket is active yet. The organizer builds it from the Championship tab.'}));
+    if (s.deskStatus === 'not-active') children.push(h('div', {class: 'notice warn', text: s.brief?.lifecycle === 'complete'
+      ? 'Event complete. New scoring and table assignments are closed; contact the organizer if a recorded result needs correction.'
+      : 'No bracket is active yet. The organizer builds it from the Championship tab.'}));
     if (s.deskStatus === 'denied') children.push(h('div', {class: 'notice bad', text: 'The Match Desk could not be loaded. Pull to refresh or sign in again.'}));
     const usage = new Map(rows.filter(r => r.table).map(r => [r.table, r]));
     children.push(h('div', {class: 'card'}, h('h3', {text: 'Tables'}), h('div', {class: 'row'},
@@ -523,11 +529,11 @@ export function createStaffUi({core, els, config, signOut}) {
           h('button', {type: 'button', text: 'Results (text)', on: {click: () => download(`FFTT_results_${e.date}.txt`, resultsText(sn))}}),
           h('button', {type: 'button', text: 'Matches (CSV)', on: {click: () => download(`FFTT_matches_${e.date}.csv`, matchesCsv(sn), 'text/csv')}}),
           h('button', {type: 'button', text: 'Print', on: {click: () => window.print()}})),
-        h('p', {class: 'help', text: 'The private backup contains internal ratings and the audit trail. Results and CSV are safe to share.'})),
+        h('p', {class: 'help', text: 'The private backup contains internal ratings and the audit trail. Results and CSV contain names, scores and teams only; review before sharing.'})),
       h('div', {class: 'card'}, h('h3', {text: 'Event status'}),
         h('div', {class: 'row'},
           h('button', {type: 'button', disabled: !core.canWrite() || e.lifecycle !== 'active', text: 'Mark event complete', on: {click: async () => {
-            if (await confirmDialog('Mark the event complete?', 'Scoring stops. Results stay visible.', 'Mark complete')) result(await core.actions.setLifecycle('complete'), 'Event marked complete.'); }}}),
+            if (await confirmDialog('Mark the event complete?', 'New match scoring and table assignments stop. An organizer may still make audited corrections to saved results. Publication stays unchanged.', 'Mark complete')) result(await core.actions.setLifecycle('complete'), 'Event marked complete.'); }}}),
           h('button', {type: 'button', class: 'danger', disabled: !core.canWrite() || e.lifecycle === 'archived', text: 'Archive event', on: {click: async () => {
             if (await confirmDialog('Archive this event?', 'It is hidden from the public and staff lists. This cannot be undone here.', 'Archive', {danger: true})) result(await core.actions.setLifecycle('archived'), 'Archived.'); }}}))),
       h('div', {class: 'card'}, h('h3', {text: 'If the connection fails'}),
