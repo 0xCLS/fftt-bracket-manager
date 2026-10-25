@@ -43,7 +43,11 @@ export function resultsText(snapshot) {
   if (s.champion) lines.push(`Singles Champion: ${s.champion}`, `Runner-up: ${s.runnerUp}`);
   if (s.semifinalists.length) lines.push(`Semifinalists: ${s.semifinalists.join(', ')}`);
   if (s.consolationChampion) lines.push(`Consolation Champion: ${s.consolationChampion}`, `Consolation Runner-up: ${s.consolationRunnerUp}`);
-  if (s.doubles) lines.push(`Mixed-Skill Doubles winners: ${s.doubles.winners.join(' + ')}`, `Mixed-Skill Doubles: ${s.doubles.losers.join(' + ')}`);
+  if (s.doubles) {
+    lines.push(`Mixed-Skill Doubles winners: ${s.doubles.winners.join(' + ')}`,
+      `Mixed-Skill Doubles runners-up: ${s.doubles.losers.join(' + ')}`);
+    if (snapshot.doubles?.scores) lines.push(`Mixed-Skill Doubles game scores (Team A–Team B): ${snapshot.doubles.scores}`);
+  }
   lines.push('', 'MATCH RESULTS');
   for (const kind of ['championship', 'consolation']) {
     const ms = normalizeSnapshotMatches(snapshot).filter(m => m.bracket === kind && m.status === 'complete');
@@ -61,6 +65,16 @@ export function matchesCsv(snapshot) {
   const rows = [['Bracket', 'Round', 'Match', 'Player 1', 'Player 2', 'Winner', 'Game scores', 'Table', 'Status']];
   for (const m of normalizeSnapshotMatches(snapshot).sort((a, b) => a.bracket.localeCompare(b.bracket) || a.round - b.round || a.slot - b.slot)) {
     rows.push([m.bracket, m.round + 1, m.code, m.name1 ?? '', m.name2 ?? '', m.winnerName ?? '', m.scores, m.table ?? '', m.status]);
+  }
+  // Include the played doubles finale as a team-vs-team row. Only player names/scores leave
+  // the organizer view; internal IDs, rating data and staff records never enter this export.
+  const d = snapshot.doubles;
+  if (d?.partner1 && d?.partner2 && d.winnerTeam && d.scores) {
+    const names = new Map(snapshot.players.map(p => [p.id, p.name]));
+    const teamA = [d.finalist1, d.partner1].map(id => names.get(id)).join(' + ');
+    const teamB = [d.finalist2, d.partner2].map(id => names.get(id)).join(' + ');
+    rows.push(['doubles', 1, 'D-FINAL', teamA, teamB, d.winnerTeam === 1 ? teamA : teamB,
+      d.scores, '', 'complete']);
   }
   return rows.map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
 }
