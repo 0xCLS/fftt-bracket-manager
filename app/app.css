@@ -149,6 +149,10 @@ dialog form,dialog .dlg{padding:18px}
 /* ---- spectator + TV */
 .public-head{padding:16px;background:var(--surface);border-bottom:1px solid var(--line)}
 .public-wrap{max-width:1100px;margin:0 auto;padding:16px}
+/* Match spectator tabs to the centered public content column; preserve horizontal scrolling. */
+#tabs{padding-left:max(16px,calc((100% - 1100px)/2 + 16px));padding-right:16px}
+.bracket-hint{display:none}
+@media (max-width:700px){.bracket-hint{display:block}}
 .now-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
 .board-match{background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px;box-shadow:var(--shadow)}
 .board-match .tbl{font-size:.8rem;font-weight:800;letter-spacing:.06em;color:#2f6674;text-transform:uppercase}
