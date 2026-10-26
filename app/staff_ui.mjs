@@ -36,7 +36,14 @@ const OFFLINE_TOOL = 'https://0xcls.github.io/fftt-bracket-manager/';
 
 export function createStaffUi({core, els, config, signOut}) {
   const s = core.state;
-  let tab = 'overview', lastInputAt = 0, dirtyDialog = 0;
+  let tab = 'overview', lastInputAt = 0, dirtyDialog = 0, lastPaneKey = '';
+  // Drafts belong to one organizer event and tab; never persist these private values in storage.
+  const drafts = new Map();
+  const draftKey = id => `${s.eventId}:${tab}:${id}`;
+  const remember = (id, value) => drafts.set(draftKey(id), value);
+  const draft = (id, fallback) => drafts.has(draftKey(id)) ? drafts.get(draftKey(id)) : fallback;
+  const abandonDrafts = () => { drafts.clear(); lastPaneKey = ''; };
+  const draftInputs = new Set(['evName', 'evDate', 'evTables', 'dbA', 'dbB', 'dbScores']);
   const isOrganizer = () => s.role === 'organizer';
   const nameOf = id => s.snapshot?.players.find(p => p.id === id)?.name ?? '—';
 
@@ -71,7 +78,9 @@ export function createStaffUi({core, els, config, signOut}) {
   function renderChrome() {
     const conn = core.connection();
     const age = Math.round((Date.now() - s.lastGoodAt) / 1000);
-    const [text, kind] = conn === 'live' ? [`Live · updated ${age < 2 ? 'just now' : age + 's ago'}`, 'good']
+    const connecting = conn === 'stale' && s.lastGoodAt === 0 && !s.lastError;
+    const [text, kind] = connecting ? ['Connecting · verifying tournament', 'warn']
+      : conn === 'live' ? [`Live · updated ${age < 2 ? 'just now' : age + 's ago'}`, 'good']
       : conn === 'stale' ? [`Not confirmed for ${age}s · changes paused`, 'bad']
       : conn === 'offline' ? ['Offline · changes paused', 'bad'] : conn === 'paused' ? ['Paused in background', 'warn'] : ['Signed out', 'warn'];
     // Only organizers receive player/match totals. The scorekeeper's brief intentionally contains
@@ -88,17 +97,21 @@ export function createStaffUi({core, els, config, signOut}) {
       s.pending ? pill('Unconfirmed score', 'warn') : null,
       snapshot?.event?.publicVisible ? pill('Public view ON', 'blue') : null);
     const evs = s.events;
-    clear(els.eventSelect);
-    for (const e of evs) els.eventSelect.append(h('option', {value: e.eventId, text: `${e.name} · ${e.date}`, selected: e.eventId === s.eventId}));
+    const eventOptionsKey = JSON.stringify(evs.map(e => [e.eventId, e.name, e.date]));
+    if (els.eventSelect.dataset.optionsKey !== eventOptionsKey || els.eventSelect.value !== s.eventId) {
+      clear(els.eventSelect);
+      for (const e of evs) els.eventSelect.append(h('option', {value: e.eventId, text: `${e.name} · ${e.date}`, selected: e.eventId === s.eventId}));
+      els.eventSelect.dataset.optionsKey = eventOptionsKey;
+    }
     els.eventSelect.hidden = evs.length < 2;
     const tabs = isOrganizer() ? ORGANIZER_TABS : SCOREKEEPER_TABS;
     if (!tabs.some(([id]) => id === tab)) tab = tabs[0][0];
     clear(els.tabs);
     for (const [id, label] of tabs) {
       els.tabs.append(h('button', {type: 'button', 'aria-current': id === tab ? 'page' : null,
-        on: {click: () => { tab = id; render(true); }}}, staffNavIcon(id), h('span', {text: label})));
+        on: {click: () => { if (tab !== id) abandonDrafts(); tab = id; render(true); }}}, staffNavIcon(id), h('span', {text: label})));
     }
-    els.banner.hidden = !(conn === 'stale' || conn === 'offline');
+    els.banner.hidden = !(conn === 'offline' || (conn === 'stale' && !connecting));
     els.banner.textContent = conn === 'offline'
       ? 'You are offline. Cloud changes are paused. The last information stays on screen; use the organizer fallback if needed.'
       : 'The connection could not be confirmed. Cloud changes are paused until it is.';
@@ -275,7 +288,8 @@ export function createStaffUi({core, els, config, signOut}) {
     return h('div', {},
       h('div', {class: 'card'}, h('h3', {text: champ ? 'Championship bracket' : 'Build the championship bracket'}),
         h('p', {text: `${field.length} player${field.length === 1 ? '' : 's'} checked in. Seeding uses the internal ratings: strongest players are kept apart and receive the byes.`}),
-        !champ && preview.length ? h('details', {}, h('summary', {text: 'Preview opening round'}),
+        !champ && preview.length ? h('details', {open: draft('seedPreviewOpen', false),
+          on: {toggle: ev => remember('seedPreviewOpen', ev.target.open)}}, h('summary', {text: 'Preview opening round'}),
           h('ol', {}, pairs(preview).map(([a, b]) => h('li', {text: `${nameOf(a)} vs ${b ? nameOf(b) : 'BYE'}`})))) : null,
         h('div', {class: 'row'},
           !champ ? h('button', {class: 'primary', type: 'button', disabled: !core.canWrite() || field.length < 2, text: 'Build championship bracket',
@@ -295,7 +309,9 @@ export function createStaffUi({core, els, config, signOut}) {
     if (!champ) return h('div', {class: 'notice warn', text: 'Build the championship bracket first.'});
     const pending = pendingFirstPlayers(sn);
     const cands = sn.candidates.map(c => ({...c, p: sn.players.find(p => p.id === c.playerId)})).filter(c => c.p);
-    const checks = new Map(cands.map(c => [c.playerId, h('input', {type: 'checkbox', checked: true, 'aria-label': `Include ${c.p.name}`})]));
+    const checks = new Map(cands.map(c => [c.playerId, h('input', {type: 'checkbox',
+      checked: draft(`consolation:${c.playerId}`, true), 'aria-label': `Include ${c.p.name}`,
+      on: {change: ev => remember(`consolation:${c.playerId}`, ev.target.checked)}})]));
     return h('div', {},
       h('div', {class: 'card'}, h('h3', {text: 'Consolation bracket'}),
         h('div', {class: 'notice ' + (pending.length ? 'warn' : 'good')},
@@ -332,7 +348,11 @@ export function createStaffUi({core, els, config, signOut}) {
         return pill(m ? `Table ${i + 1} · ${m.players[0].name.split(' ')[0]} v ${m.players[1].name.split(' ')[0]}` : `Table ${i + 1} · free`, m ? 'blue' : 'good'); }))));
     children.push(h('h2', {text: `Ready to play (${rows.length})`}));
     children.push(rows.length ? h('div', {class: 'queue'}, rows.map(r => queueCard(r, tables, org)))
-      : h('div', {class: 'empty-state', text: s.deskStatus === 'ready' ? 'No playable matches are waiting right now.' : 'Waiting for the Match Desk…'}));
+      : h('div', {class: 'empty-state', text:
+        s.deskStatus === 'not-active' && (s.brief?.lifecycle === 'complete' || s.snapshot?.event.lifecycle === 'complete')
+          ? 'This event is complete. There are no further matches to play.'
+          : s.deskStatus === 'not-active' ? 'No bracket is active yet. The organizer builds it from Championship.'
+          : s.deskStatus === 'ready' ? 'No playable matches are waiting right now.' : 'Waiting for the Match Desk…'}));
     if (org && s.snapshot) {
       const done = normalizeSnapshotMatches(s.snapshot).filter(m => m.status === 'complete').sort((a, b) => b.round - a.round).slice(0, 12);
       children.push(h('div', {class: 'card'}, h('h3', {text: 'Recent results (organizer corrections)'}),
@@ -341,10 +361,18 @@ export function createStaffUi({core, els, config, signOut}) {
     }
     return h('div', {}, children);
   }
+  // UI removes occupied table choices; the server retains the authoritative conflict check.
+  const occupiedByOtherMatch = (match, table) => s.desk.some(other =>
+    other.matchId !== match.matchId && Number(other.table) === Number(table));
+  const tableOption = (match, n) => {
+    const occupied = occupiedByOtherMatch(match, n);
+    return h('option', {value: n, text: occupied ? `Table ${n} · occupied` : `Table ${n}`,
+      disabled: occupied, selected: Number(match.table) === n});
+  };
   function queueCard(r, tables, org) {
     const best = bestOf(r.bracket, r.isFinal, {regular_best_of: 3, final_best_of: 5});
     const sel = h('select', {'aria-label': 'Table', disabled: !core.canWrite(), on: {change: async ev => result(await core.actions.assignTable(r.matchId, ev.target.value ? Number(ev.target.value) : null), ev.target.value ? `Assigned to table ${ev.target.value}.` : 'Table cleared.')}},
-      h('option', {value: '', text: 'No table'}), Array.from({length: tables}, (_, i) => h('option', {value: i + 1, text: `Table ${i + 1}`, selected: r.table === i + 1})));
+      h('option', {value: '', text: 'No table'}), Array.from({length: tables}, (_, i) => tableOption(r, i + 1)));
     return h('div', {class: 'queue-card' + (r.table ? ' playing' : '')},
       h('div', {class: 'row'}, pill(r.bracket === 'championship' ? 'Championship' : 'Consolation', 'blue'), pill(r.isFinal && r.bracket === 'championship' ? 'Final · best of 5' : `Best of ${best}`),
         r.table ? pill(`Table ${r.table}`, 'good') : null),
@@ -372,7 +400,15 @@ export function createStaffUi({core, els, config, signOut}) {
       dlg.append(body);
       const msg = h('p', {class: 'status bad', role: 'alert'});
       const gameInputs = [];
-      const tableSel = h('select', {id: 'scTable'}, Array.from({length: tables}, (_, i) => h('option', {value: i + 1, text: `Table ${i + 1}`, selected: (row.table ?? 1) === i + 1})));
+      const available = Array.from({length: tables}, (_, i) => i + 1).filter(n => !occupiedByOtherMatch(row, n));
+      const initial = row.table ?? available[0] ?? null;
+      const tableSel = h('select', {id: 'scTable'}, 
+        initial === null ? h('option', {value: '', text: 'No free table', disabled: true, selected: true}) : null,
+        Array.from({length: tables}, (_, i) => {
+          const n = i + 1, occupied = occupiedByOtherMatch(row, n);
+          return h('option', {value: n, text: occupied ? `Table ${n} · occupied` : `Table ${n}`,
+            disabled: occupied, selected: n === initial});
+        }));
       function form() {
         gameInputs.length = 0;
         const grid = h('div', {class: 'games'}, h('span'), h('b', {text: row.players[0].name.split(' ')[0]}), h('span'), h('b', {text: row.players[1].name.split(' ')[0]}));
@@ -479,7 +515,8 @@ export function createStaffUi({core, els, config, signOut}) {
           h('button', {type: 'button', disabled: locked, text: 'Suggest balanced partners', on: {click: () => {
             const sug = suggestPartners([f1, f2].map(p => ({...p})), ordered);
             if (!sug) { toast('Two finalists and at least two candidates are needed.', 'bad'); return; }
-            a.value = sug.partner1.id; b.value = sug.partner2.id; }}}),
+            a.value = sug.partner1.id; b.value = sug.partner2.id;
+            remember('dbA', a.value); remember('dbB', b.value); }}}),
           h('button', {type: 'button', class: 'primary', disabled: !core.canWrite() || locked, text: 'Save teams', on: {click: async () => {
             if (!a.value || !b.value || a.value === b.value) { toast('Choose two different partners.', 'bad'); return; }
             result(await core.actions.setDoublesTeams(a.value, b.value), 'Teams saved.'); }}})),
@@ -571,11 +608,26 @@ export function createStaffUi({core, els, config, signOut}) {
   // ------------------------------------------------------------ render loop
   const views = {overview: viewOverview, players: viewPlayers, championship: viewChampionship, consolation: viewConsolation,
     desk: viewDesk, finale: viewFinale, results: viewResults, staff: viewStaff};
+  function syncConnectionGuard() {
+    // A heartbeat may change writability without rebuilding (and erasing) a draft.
+    const writable = core.canWrite();
+    for (const el of els.main.querySelectorAll('input, select, textarea, button')) {
+      if (!writable && !el.disabled) { el.disabled = true; el.dataset.connectionPaused = '1'; }
+      else if (writable && el.dataset.connectionPaused === '1') {
+        el.disabled = false; delete el.dataset.connectionPaused;
+      }
+    }
+  }
   function render(force = false) {
     renderChrome();
+    const paneKey = JSON.stringify([tab, s.eventId, s.role, s.signedIn,
+      s.pulse?.revision, s.pulse?.generation, s.snapshot?.event.revision,
+      s.brief?.lifecycle, s.deskStatus, s.pending?.submissionId, s.score.status,
+      s.events.length, s.audit?.length]);
+    if (!force && paneKey === lastPaneKey) { syncConnectionGuard(); return; }
     const active = document.activeElement;
     const typing = active && els.main.contains(active) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName) && Date.now() - lastInputAt < 15000;
-    if (!force && (typing || dirtyDialog > 0)) return; // never rebuild under a person's fingers
+    if (!force && (typing || dirtyDialog > 0)) { syncConnectionGuard(); return; } // never rebuild under a person's fingers
     const view = views[tab] ?? views.desk;
     const pane = s.signedIn ? view() : loading();
     const title = {players:'Players',championship:'Championship',consolation:'Consolation',desk:'Match Desk',
@@ -591,15 +643,27 @@ export function createStaffUi({core, els, config, signOut}) {
       h('header',{class:'section-intro'},
         h('div',{class:'feature-overline'},h('span',{class:'feature-spark','aria-hidden':'true'}),'FORGING FELLOWSHIP · TOURNAMENT DESK'),
         h('h1',{text:title}),h('p',{text:description})),pane) : pane);
+    lastPaneKey = paneKey;
+    for (const el of els.main.querySelectorAll('[id]')) {
+      if (draftInputs.has(el.id) && drafts.has(draftKey(el.id))) el.value = draft(el.id, el.value);
+    }
+    syncConnectionGuard();
   }
-  document.addEventListener('input', () => { lastInputAt = Date.now(); }, true);
+  document.addEventListener('input', ev => {
+    if (!els.main.contains(ev.target)) return;
+    lastInputAt = Date.now();
+    if (draftInputs.has(ev.target.id)) remember(ev.target.id, ev.target.value);
+  }, true);
+  document.addEventListener('change', ev => {
+    if (els.main.contains(ev.target) && draftInputs.has(ev.target.id)) remember(ev.target.id, ev.target.value);
+  }, true);
   let lastWritable = null;
   setInterval(() => {
     if (!s.signedIn) return;
     renderChrome();
     // a time-based change (the connection went stale, or came back) must disable/enable the buttons now
     const writable = core.canWrite();
-    if (writable !== lastWritable) { lastWritable = writable; render(true); }
+    if (writable !== lastWritable) { lastWritable = writable; syncConnectionGuard(); }
   }, 1000);
-  return Object.freeze({render, openTab: id => { tab = id; render(true); }});
+  return Object.freeze({render, openTab: id => { if (tab !== id) abandonDrafts(); tab = id; render(true); }});
 }

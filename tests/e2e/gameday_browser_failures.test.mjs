@@ -128,6 +128,37 @@ test('keep me signed in: a reload restores the session from the tab vault; sign 
   } finally { await w.close(); }
 });
 
+test('heartbeat preserves the organizer opening-round preview and occupied tables cannot be selected', {timeout: 120000}, async () => {
+  const w = await createBrowserWorld();
+  try {
+    const {roster} = await import('./helpers.mjs');
+    const org = await w.device('org');
+    await org.signIn('org');
+    await w.fake.local.rpc(w.ids.org, 'fftt_upsert_players_v3', {p_event_id: w.eventId, p_players: roster(8)});
+    await w.fake.local.rpc(w.ids.org, 'fftt_set_checkin_bulk_v3', {p_event_id: w.eventId, p_player_ids: null, p_checked_in: true});
+    await org.page.locator('nav.tabs button', {hasText: /^Championship$/}).click();
+    await org.page.locator('summary', {hasText: 'Preview opening round'}).waitFor({timeout: T});
+    await org.page.locator('summary', {hasText: 'Preview opening round'}).click();
+    await org.page.waitForTimeout(8500);
+    assert.equal(await org.page.locator('details', {has: org.page.locator('summary', {hasText: 'Preview opening round'})}).evaluate(el => el.open), true,
+      'open preview must survive a heartbeat');
+    await org.page.locator('button', {hasText: 'Build championship bracket'}).click();
+    await org.page.locator('nav.tabs button', {hasText: /^Match Desk$/}).click();
+    const cards = org.page.locator('.queue-card');
+    await cards.first().waitFor({timeout: T});
+    assert.ok(await cards.count() >= 2);
+    await cards.first().locator('select[aria-label="Table"]').selectOption('1');
+    await org.page.locator('#toast:not([hidden])', {hasText: 'Assigned to table 1'}).waitFor({timeout: T});
+    const occupiedOption = cards.nth(1).locator('select[aria-label="Table"] option[value="1"]');
+    await occupiedOption.waitFor({timeout: T});
+    assert.equal(await occupiedOption.isDisabled(), true, 'occupied table is unavailable for a second match');
+    await cards.nth(1).locator('button', {hasText: 'Record result'}).click();
+    assert.equal(await org.page.locator('dialog[open] #scTable option[value="1"]').isDisabled(), true,
+      'the score dialog also prevents selecting an occupied table');
+    await org.page.locator('dialog[open] button', {hasText: 'Cancel'}).click();
+  } finally { await w.close(); }
+});
+
 test('a short token lifetime is renewed silently while scoring continues', {timeout: 240000}, async () => {
   const w = await createBrowserWorld({ttlSeconds: 90});
   try {
