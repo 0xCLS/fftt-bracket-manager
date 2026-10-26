@@ -137,9 +137,24 @@ dialog form,dialog .dlg{padding:18px}
 .winner-pick input:focus-visible+span{outline:3px solid var(--focus);outline-offset:2px}
 .review{padding:12px;border-radius:6px;background:var(--butter);font-weight:600}
 
-/* ---- sign-in */
-.signin{max-width:440px;margin:6vh auto;padding:0 16px}
-.signin .card{padding:22px}
+/* ---- sign-in: keep the primary path compact; maintain accessible labels and recovery. */
+.signin{max-width:490px;margin:clamp(24px,5vh,52px) auto;padding:0 18px}
+.signin .card{padding:clamp(20px,3vw,30px)}
+.signin .brand{margin-bottom:12px}
+.signin #loginForm>label:not(.check){display:block;margin-top:16px;margin-bottom:6px;font-weight:700}
+.signin #loginForm>.row{align-items:center;gap:8px}
+.signin #password{flex:1;min-width:0}
+.signin #togglePassword{flex:none;padding:10px 14px}
+.signin #loginForm>p{margin:13px 0}
+.signin #loginForm>.check{margin-top:17px}
+.signin details{margin-top:14px}
+.signin details summary{cursor:pointer;line-height:1.4;font-weight:600}
+.signin details[open]{padding-bottom:7px}
+.signin details[open] .help{line-height:1.5}
+.event-filter{display:flex;align-items:center;gap:8px}
+.event-filter label{margin:0}
+.event-filter select{width:auto;min-width:155px}
+@media(max-width:580px){.signin{margin:15px auto}.event-filter{flex-wrap:wrap}.event-filter select{min-width:130px}}
 .banner{display:inline-block;padding:3px 10px;border-radius:999px;background:var(--warning-soft);color:var(--warning);font-size:.75rem;font-weight:700;letter-spacing:.04em}
 .checks{list-style:none;padding:0;margin:8px 0 0;font-size:.8rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 14px}
 .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--accent);color:#fff;padding:10px 18px;border-radius:999px;

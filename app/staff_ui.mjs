@@ -191,16 +191,39 @@ export function createStaffUi({core, els, config, signOut}) {
       h('section',{class:'overview-history'},eventsCard()));
   }
   const stat = (tone, n, label) => h('div', {class: 'stat ' + tone}, h('b', {text: String(n)}), h('span', {text: label}));
+  let eventFilter = 'current';
   function eventsCard() {
     const create = s.events.some(e => e.canCreate);
     const name = h('input', {type: 'text', id: 'newName', maxlength: 120, placeholder: 'Event name'});
     const date = h('input', {type: 'date', id: 'newDate'});
     const tables = h('input', {type: 'number', id: 'newTables', min: 1, max: 12, value: 2});
-    return h('div', {class: 'card'}, h('h3', {text: 'Your events'}),
-      h('table', {}, h('thead', {}, h('tr', {}, ['Event', 'Date', 'Role', ''].map(t => h('th', {text: t})))),
-        h('tbody', {}, s.events.map(e => h('tr', {}, h('td', {text: e.name}), h('td', {text: e.date}), h('td', {text: e.role}),
-          h('td', {}, e.eventId === s.eventId ? pill('Open', 'good') : h('button', {class: 'small', type: 'button', text: 'Open',
-            on: {click: async () => { const r = await core.selectEvent(e.eventId); if (!r.ok) toast(r.message, 'bad'); tab = 'overview'; render(true); }}})))))),
+    const rows = h('tbody');
+    const paintRows = () => {
+      const shown = s.events.filter(e => eventFilter === 'all' || (eventFilter === 'current'
+        ? e.lifecycle !== 'archived' : e.lifecycle === eventFilter));
+      clear(rows);
+      if (!shown.length) rows.append(h('tr', {}, h('td', {colspan: 4, class: 'muted', text: 'No events in this category.'})));
+      for (const e of shown) rows.append(h('tr', {},
+        h('td', {text: e.name}), h('td', {text: e.date}),
+        h('td', {}, pill(e.lifecycle, e.lifecycle === 'archived' ? 'warn' : '')),
+        h('td', {}, e.eventId === s.eventId ? pill('Selected', 'good')
+          : h('button', {class: 'small', type: 'button', text: 'Open',
+            on: {click: async () => {
+              const r = await core.selectEvent(e.eventId);
+              if (!r.ok) toast(r.message, 'bad');
+              else { abandonDrafts(); tab = 'overview'; render(true); }
+            }}}))));
+    };
+    const filter = h('select', {id: 'eventFilter', 'aria-label': 'Filter event list',
+      on: {change: ev => { eventFilter = ev.target.value; paintRows(); }}},
+      [['current','Current (not archived)'],['draft','Draft'],['active','Active'],
+       ['complete','Completed'],['archived','Archived'],['all','All events']]
+       .map(([value,text]) => h('option', {value, text, selected: eventFilter === value})));
+    paintRows();
+    return h('div', {class: 'card'}, h('div', {class:'row between'},
+      h('h3', {text: 'Your events'}), h('div', {class:'event-filter'},
+        h('label', {for:'eventFilter', text:'Show'}), filter)),
+      h('div', {class: 'scroll-x'}, h('table', {}, h('thead', {}, h('tr', {}, ['Event', 'Date', 'Status', ''].map(t => h('th', {text: t})))), rows)),
       create ? h('form', {on: {submit: async ev => { ev.preventDefault();
           if (result(await core.actions.createEvent(name.value, date.value, Number(tables.value)), 'Event created. It is empty and not public.')) { tab = 'players'; render(true); } }}},
         h('h4', {text: 'Create a new event'}), h('label', {for: 'newName', text: 'Name'}), name,
@@ -623,7 +646,7 @@ export function createStaffUi({core, els, config, signOut}) {
     const paneKey = JSON.stringify([tab, s.eventId, s.role, s.signedIn,
       s.pulse?.revision, s.pulse?.generation, s.snapshot?.event.revision,
       s.brief?.lifecycle, s.deskStatus, s.pending?.submissionId, s.score.status,
-      s.events.length, s.audit?.length]);
+      s.events.length, s.audit?.length, s.busy]);
     if (!force && paneKey === lastPaneKey) { syncConnectionGuard(); return; }
     const active = document.activeElement;
     const typing = active && els.main.contains(active) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName) && Date.now() - lastInputAt < 15000;
