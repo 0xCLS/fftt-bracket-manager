@@ -150,7 +150,7 @@ test('heartbeat preserves the organizer opening-round preview and occupied table
     await cards.first().locator('select[aria-label="Table"]').selectOption('1');
     await org.page.locator('#toast:not([hidden])', {hasText: 'Assigned to table 1'}).waitFor({timeout: T});
     const occupiedOption = cards.nth(1).locator('select[aria-label="Table"] option[value="1"]');
-    await occupiedOption.waitFor({timeout: T});
+    await occupiedOption.waitFor({state: 'attached', timeout: T});
     assert.equal(await occupiedOption.isDisabled(), true, 'occupied table is unavailable for a second match');
     await cards.nth(1).locator('button', {hasText: 'Record result'}).click();
     assert.equal(await org.page.locator('dialog[open] #scTable option[value="1"]').isDisabled(), true,
