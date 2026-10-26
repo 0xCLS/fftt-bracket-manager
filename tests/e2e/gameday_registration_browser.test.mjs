@@ -170,6 +170,33 @@ test('without a connected sheet: a clear message, the private CSV fallback works
     // clearing forgets the list
     await org.page.locator('button', {hasText: 'Clear list'}).click();
     await org.page.locator('.reg-row').first().waitFor({state: 'detached'});
+    // contradictory fictional registrants (exact approved answers): flagged for organizer review, still provisional
+    const header = SYNTHETIC_FORM_CSV.split('\n')[0];
+    const P = {beg: 'Beginner — New or fairly new to table tennis; still developing reliable serves, returns, and control',
+      adv: 'Advanced / Competitive — Club, league, or tournament-level ability, or comparable demonstrated play'};
+    const RALLY = {top: 'I can sustain strong rallies consistently, including under pressure', weak: 'I am still learning and have difficulty sustaining rallies'};
+    const q = t => '"' + t.replaceAll('"', '""') + '"';
+    const extra = [header,
+      ['2026/11/09 10:00:00', 'Quinn Brightwater', 'quinn.b@example.invalid', '734-555-0120', 'Adult', 'No', 'Several times a week', 'Yes, quite a bit', RALLY.top, 'Yes, confidently', 'Yes, confidently', P.beg],
+      ['2026/11/09 10:05:00', 'Rory Ashgrove', 'rory.a@example.invalid', '734-555-0121', 'Adult', 'No', 'Never', 'No', RALLY.weak, 'No', 'No', P.adv]]
+      .map((x, i) => i === 0 ? x : x.map(q).join(',')).join('\n');
+    await org.page.locator('#regFile').setInputFiles({name: 'contradictions.csv', mimeType: 'text/csv', buffer: Buffer.from(extra)});
+    await org.page.locator('.reg-row').first().waitFor({timeout: T});
+    const quinn = org.page.locator('.reg-row', {has: org.page.locator('.reg-name', {hasText: /^Quinn B\.$/})});
+    const rory = org.page.locator('.reg-row', {has: org.page.locator('.reg-name', {hasText: /^Rory A\.$/})});
+    assert.match(await quinn.innerText(), /Level 4 · Strong Intermediate/);
+    assert.match(await quinn.innerText(), /Organizer review: the answers disagree with the chosen profile/);
+    assert.match(await rory.innerText(), /Level 2 · Recreational/);
+    assert.match(await rory.innerText(), /Organizer review/);
+    await org.page.locator('.chip', {hasText: /^Needs a look \(2\)$/}).click();
+    assert.equal(await org.page.locator('.reg-row').count(), 2);
+    await quinn.locator('button', {hasText: 'Edit'}).click();
+    assert.match(await org.page.locator('.reg-basis').innerText(), /Organizer review: other answers point 3 levels higher than the chosen profile/);
+    await quinn.locator('button', {hasText: 'Done'}).click();
+    await quinn.locator('button', {hasText: 'Check in'}).click();
+    await toast(org.page, /Quinn B\. checked in/);
+    const stored = await w.fake.local.admin("select rating, rating_confirmed from fftt_private.players where display_name = 'Quinn B.'");
+    assert.deepEqual(stored, [{rating: 4, rating_confirmed: false}], 'the suggestion is stored as provisional until the organizer confirms it');
     // an unreadable file is refused plainly
     await org.page.locator('#regFile').setInputFiles({name: 'x.csv', mimeType: 'text/csv', buffer: Buffer.from('Timestamp,Email\n2026/11/01,a@b.invalid\n')});
     await org.page.locator('.reg-row').first().waitFor({state: 'detached'});

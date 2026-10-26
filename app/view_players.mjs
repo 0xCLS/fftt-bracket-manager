@@ -50,7 +50,7 @@ export function createPlayersView(ctx) {
       const key = nameKey(name);
       const rosterMatch = player ? null : (rosterKeys.find(x => x.key === key) ?? rosterKeys.find(x => similarNames(x.key, key)))?.p ?? null;
       const dupOpen = r.duplicate && open.has(r.duplicate.group);
-      const attention = !!(r.nameIssue || dupOpen || r.ratingConfidence === 'low' || rosterMatch);
+      const attention = !!(r.nameIssue || dupOpen || r.ratingConfidence === 'low' || r.ratingReview || rosterMatch);
       const state = player ? (player.checkedIn ? 'in' : 'roster') : 'new';
       return {r, player, name, edit, rosterMatch, dupOpen: !!dupOpen, attention, state, rating: edit.rating ?? r.suggestedRating};
     });
@@ -100,6 +100,7 @@ export function createPlayersView(ctx) {
           r.name !== row.name && r.name !== 'Unnamed registrant' ? `Registered as ${r.name}` : null,
           r.hint.email || r.hint.phone ? h('span', {class: 'reg-hint', text: [r.hint.email, r.hint.phone].filter(Boolean).join(' · '), title: 'Masked: full contact details are never shown here.'}) : null),
         r.nameIssue ? h('span', {class: 'reg-note warn', text: r.nameIssue}) : null,
+        r.ratingReview && row.edit.rating === undefined ? h('span', {class: 'reg-note warn', text: 'Organizer review: the answers disagree with the chosen profile. Check the suggested level.'}) : null,
         row.rosterMatch && row.state === 'new' ? h('span', {class: 'reg-note', text: `Roster already has “${row.rosterMatch.name}”.`}) : null),
       h('div', {class: 'reg-level'},
         h('span', {class: 'rating-chip', 'aria-hidden': 'true', text: String(row.rating)}),

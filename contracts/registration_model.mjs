@@ -233,14 +233,19 @@ const WEIGHT = {profile: 4, rally: 3, spin: 1.5, attack: 1.5, frequency: 1, expe
 const levelFromScore = x => (x < .12 ? 1 : x < .38 ? 2 : x < .60 ? 3 : x < .82 ? 4 : 5);
 
 /** answers: raw strings {frequency, experience, rallies, spin, attack, description (= the playing profile), selfLevel}.
- * Returns {level 1-5, confidence 'low'|'medium'|'high', basis: string[]}. Never throws.
+ * Returns {level 1-5, confidence 'low'|'medium'|'high', basis: string[], review: boolean}. Never throws.
  *
- * How it decides (all of it shown to the organizer): every answered question points part-way up the Level 1-5 scale;
- * the weighted average gives a level. Then two guard rails keep it honest:
- *   - the person's EXPLICIT profile choice anchors the result: it can differ from that profile by at most one level;
- *   - Level 5 additionally needs organized-play experience (or the Advanced profile with some experience).
- * If the other answers disagree with the profile by two levels or more, confidence drops and the basis says so.
- * This is a PROVISIONAL suggestion; the organizer confirms or changes every rating. */
+ * How it decides (all of it shown to the organizer): every ANSWERED question points part-way up the Level 1-5 scale and
+ * the weighted average gives the level. Self-assessment is one input, not a verdict: the chosen profile carries the largest
+ * single weight (more than any other one answer) but it can be out-voted when the rest of the answers (rally consistency,
+ * spin, attacking, how often they play, organized experience) agree with each other. Unanswered questions count for
+ * nothing, neither for nor against. Guard rails:
+ *   - an AUTOMATIC Level 5 needs competitive evidence (quite a bit of league/club/school-team experience, or the Advanced
+ *     profile with some); otherwise the suggestion is Level 4 and says so. An organizer who has SEEN the play can still
+ *     confirm Level 5;
+ *   - when the answers contradict the chosen profile by two levels or more, confidence drops (medium at two, low at three
+ *     or more) and `review` is set with a plain organizer-review warning.
+ * This is only a PROVISIONAL suggestion; the organizer confirms or changes every rating. */
 export function suggestRating(input) {
   const a = input !== null && typeof input === 'object' ? input : {};
   const sig = {profile: profileLevel(a.description), rally: rallyLevel(a.rallies), spin: spinLevel(a.spin), attack: attackLevel(a.attack),
@@ -255,22 +260,21 @@ export function suggestRating(input) {
   if (sig.spin !== null && sig.spin > 0) basis.push(SPIN_TEXT[sig.spin]);
   if (sig.attack !== null && sig.attack > 0) basis.push(ATTACK_TEXT[sig.attack]);
   if (sig.self !== null && sig.profile === null) basis.push(SELF_TEXT[sig.self]);
-  if (given.length === 0) return {level: 3, confidence: 'low', basis: ['No playing details were given; starting at Intermediate']};
+  if (given.length === 0) return {level: 3, confidence: 'low', basis: ['No playing details were given; starting at Intermediate'], review: false};
   const used = given.filter(([k]) => !(k === 'self' && sig.profile !== null));   // an old label never competes with the real profile
   const score = used.reduce((t, [k, v]) => t + WEIGHT[k] * FRAC[k][v], 0) / used.reduce((t, [k]) => t + WEIGHT[k], 0);
-  const raw = levelFromScore(score);
-  let level = raw;
+  let level = levelFromScore(score), review = false;
   if (sig.profile !== null) {
-    const anchor = sig.profile + 1;
-    level = Math.min(anchor + 1, Math.max(anchor - 1, level));
-    if (Math.abs(raw - anchor) >= 2) {
-      confidence = confidence === 'high' ? 'medium' : 'low';
-      basis.push(raw > anchor ? 'Other answers point higher than the chosen profile; check at warm-up' : 'Other answers point lower than the chosen profile; check at warm-up');
+    const gap = level - (sig.profile + 1);                       // + : the answers point higher than the chosen profile
+    if (Math.abs(gap) >= 2) {
+      review = true;
+      confidence = Math.abs(gap) >= 3 ? 'low' : (confidence === 'high' ? 'medium' : 'low');
+      basis.push(`Organizer review: other answers point ${Math.abs(gap)} levels ${gap > 0 ? 'higher' : 'lower'} than the chosen profile`);
     }
   }
   const organized = sig.experience === 2 || (sig.experience !== null && sig.experience >= 1 && sig.profile === 4);
-  if (level === 5 && !organized) { level = 4; basis.push('Level 5 needs league, club or tournament experience; suggested Level 4'); }
-  return {level, confidence, basis: basis.slice(0, 8)};
+  if (level === 5 && !organized) { level = 4; basis.push('Level 5 needs competitive evidence; suggested Level 4 (the organizer can confirm 5 after seeing play)'); }
+  return {level, confidence, basis: basis.slice(0, 8), review};
 }
 
 // ---------------------------------------------------------------- building registrants
@@ -352,7 +356,7 @@ function groupDuplicates(list) {
 function toRegistrant(x, dup) {
   return Object.freeze({
     ref: x.ref, name: clean(x.name).slice(0, 120), shortName: clean(x.shortName).slice(0, 80), registeredAt: clean(x.registeredAt).slice(0, 40),
-    suggestedRating: x.rating.level, ratingConfidence: x.rating.confidence, ratingBasis: Object.freeze(x.rating.basis.slice(0, 8)),
+    suggestedRating: x.rating.level, ratingConfidence: x.rating.confidence, ratingBasis: Object.freeze(x.rating.basis.slice(0, 8)), ratingReview: x.rating.review === true,
     nameIssue: x.nameIssue, hint: Object.freeze({email: x.hint.email, phone: x.hint.phone}),
     duplicate: dup ? Object.freeze({group: dup.group, reasons: Object.freeze([...dup.reasons]), strength: dup.strength}) : null,
   });
@@ -364,7 +368,7 @@ function summarize(registrants, groups) {
 
 // ---------------------------------------------------------------- the wire contract (server -> browser), validated strictly
 export const REF_PATTERN = /^[A-Za-z0-9_-]{16,64}$/;
-const REG_KEYS = ['ref', 'name', 'shortName', 'registeredAt', 'suggestedRating', 'ratingConfidence', 'ratingBasis', 'nameIssue', 'hint', 'duplicate'];
+const REG_KEYS = ['ref', 'name', 'shortName', 'registeredAt', 'suggestedRating', 'ratingConfidence', 'ratingBasis', 'ratingReview', 'nameIssue', 'hint', 'duplicate'];
 const plain = o => o !== null && typeof o === 'object' && !Array.isArray(o);
 const keysOk = (o, keys) => plain(o) && Object.keys(o).length === keys.length && keys.every(k => k in o);
 /** Validates a registration payload; throws on anything outside the contract (a contact detail can never pass). */
@@ -380,7 +384,7 @@ export function parseRegistrationPayload(raw) {
       || typeof r.name !== 'string' || r.name.length > 120 || typeof r.shortName !== 'string' || r.shortName.length > 80
       || typeof r.registeredAt !== 'string' || r.registeredAt.length > 40 || (r.registeredAt !== '' && !STAMP.test(r.registeredAt))
       || !Number.isInteger(r.suggestedRating) || r.suggestedRating < 1 || r.suggestedRating > 5
-      || !['low', 'medium', 'high'].includes(r.ratingConfidence) || !Array.isArray(r.ratingBasis) || r.ratingBasis.length > 8
+      || typeof r.ratingReview !== 'boolean' || !['low', 'medium', 'high'].includes(r.ratingConfidence) || !Array.isArray(r.ratingBasis) || r.ratingBasis.length > 8
       || !r.ratingBasis.every(b => typeof b === 'string' && b.length <= 120)
       || !(r.nameIssue === null || (typeof r.nameIssue === 'string' && r.nameIssue.length <= 120))
       || !keysOk(r.hint, ['email', 'phone']) || !(r.hint.email === null || (typeof r.hint.email === 'string' && /^.•••@.•••\.[^.@]+$/u.test(r.hint.email)))

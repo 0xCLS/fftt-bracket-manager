@@ -70,7 +70,7 @@ test('PRIVACY: no e-mail address, phone number or free-text answer survives into
   assert.ok(!/555[-.\s)]*01\d\d|\b7345550/.test(json), 'no phone number');
   assert.ok(!/Bringing my kids|Typed my|Resubmitted|Possibly the same|household/i.test(json), 'free-text answers are never forwarded');
   for (const x of r.registrants) {
-    assert.deepEqual(Object.keys(x).sort(), ['duplicate', 'hint', 'name', 'nameIssue', 'ratingBasis', 'ratingConfidence', 'ref', 'registeredAt', 'shortName', 'suggestedRating']);
+    assert.deepEqual(Object.keys(x).sort(), ['duplicate', 'hint', 'name', 'nameIssue', 'ratingBasis', 'ratingConfidence', 'ratingReview', 'ref', 'registeredAt', 'shortName', 'suggestedRating']);
     assert.ok(x.hint.email === null || /^.•••@.•••\.[a-z]+$/u.test(x.hint.email));
     assert.ok(x.hint.phone === null || /^•••• \d\d$/u.test(x.hint.phone));
     assert.ok(Object.isFrozen(x));
@@ -207,22 +207,58 @@ test('REGRESSION: rally answers separate "difficulty", "short", "usually consist
   assert.ok(suggestRating(answers({r: 5})).basis.includes('Sustains strong rallies consistently, including under pressure'));
 });
 
-test('REGRESSION: the chosen profile anchors the suggestion (at most one level away) and disagreement lowers confidence', () => {
-  const beginnerTop = suggestRating(answers({p: 0, r: 5, f: 0, e: 0, s: 4, a: 4}));
-  assert.equal(beginnerTop.level, 2, 'a Beginner profile is never lifted past Level 2');
-  assert.notEqual(beginnerTop.confidence, 'high');
-  assert.ok(beginnerTop.basis.some(b => /higher than the chosen profile/.test(b)));
-  const advancedWeak = suggestRating(answers({p: 4, r: 1, f: 5, e: 0, s: 0, a: 0}));
-  assert.equal(advancedWeak.level, 4, 'an Advanced profile with beginner-like answers is pulled down by one level, not more');
-  assert.ok(advancedWeak.basis.some(b => /lower than the chosen profile/.test(b)));
-  // agreeing answers keep high confidence
-  assert.equal(suggestRating(answers({p: 2})).confidence, 'high');
+test('CALIBRATION: the profile is one weighty input, not a ceiling or floor; strong contradictions move the suggestion and are flagged for review', () => {
+  // A highly capable self-described BEGINNER (fictional): strong rallies under pressure, plays several times a week,
+  // confident spin and attack. FFTT2 showed such players exist; the suggestion rises well past Level 2 and is flagged.
+  const capable = suggestRating(answers({p: 0, r: 5, f: 0, e: 0, s: 4, a: 4}));
+  assert.equal(capable.level, 3, 'two levels above the Beginner profile');
+  assert.equal(capable.review, true);
+  assert.equal(capable.confidence, 'medium');
+  assert.ok(capable.basis.some(b => /Organizer review: other answers point 2 levels higher than the chosen profile/.test(b)));
+  // add organized experience and the same person is suggested Level 4, three levels above their own profile, low confidence
+  const capableExp = suggestRating(answers({p: 0, r: 5, f: 0, e: 2, s: 4, a: 4}));
+  assert.deepEqual([capableExp.level, capableExp.confidence, capableExp.review], [4, 'low', true]);
+  assert.ok(capableExp.basis.some(b => /3 levels higher/.test(b)));
+  // a weakly performing self-described ADVANCED player (fictional): never plays, struggles to rally, no spin, no attack
+  const weakAdvanced = suggestRating(answers({p: 4, r: 1, f: 5, e: 0, s: 0, a: 0}));
+  assert.deepEqual([weakAdvanced.level, weakAdvanced.confidence, weakAdvanced.review], [2, 'low', true]);
+  assert.ok(weakAdvanced.basis.some(b => /Organizer review: other answers point 3 levels lower than the chosen profile/.test(b)));
+  // a milder contradiction moves it less, and still asks for a look
+  const mid = suggestRating(answers({p: 4, r: 2, f: 3, e: 0, s: 1, a: 1}));
+  assert.deepEqual([mid.level, mid.confidence, mid.review], [3, 'medium', true]);
+  // small disagreement (one level) is normal: no warning, confidence kept
+  const mild = suggestRating(answers({p: 0, r: 4, f: 1, e: 0, s: 2, a: 2}));
+  assert.equal(mild.review, false); assert.equal(mild.confidence, 'high');
+  // coherent answers: the suggestion follows the profile and nothing is flagged
+  for (const p of [1, 2, 3]) {
+    const x = suggestRating(answers({p, r: p + 1, f: 1 + (p > 1 ? 0 : 1), e: 0, s: p, a: p}));
+    assert.equal(x.review, false, `profile ${p}`); assert.equal(x.confidence, 'high');
+  }
+  // the profile still matters: the same strong answers with an Advanced profile (and organized play) reach 5, without the warning
+  const agree = suggestRating(answers({p: 4, r: 5, f: 0, e: 2, s: 4, a: 4}));
+  assert.deepEqual([agree.level, agree.review, agree.confidence], [5, false, 'high']);
+});
+
+test('CALIBRATION: a suggestion above Level 4 is automatic only with competitive evidence; the organizer can still confirm 5', () => {
+  // everything maxed except experience: Level 4 with an explanation (no automatic 5)
+  const noEvidence = suggestRating(answers({p: 4, r: 5, f: 0, e: 0, s: 4, a: 4}));
+  assert.equal(noEvidence.level, 4);
+  assert.ok(noEvidence.basis.some(b => /Level 5 needs competitive evidence/.test(b) && /organizer can confirm 5/.test(b)));
+  assert.ok(noEvidence.basis.every(b => b.length <= 120), 'every reason fits the contract');
+  // the same answers with quite a bit of organized play reach Level 5 automatically
+  assert.equal(suggestRating(answers({p: 4, r: 5, f: 0, e: 2, s: 4, a: 4})).level, 5);
+  assert.equal(suggestRating(answers({p: 3, r: 5, f: 0, e: 2, s: 4, a: 4})).level, 5);
+  // a self-described Beginner can never be AUTOMATICALLY pushed to 5, even with maxed answers and experience
+  assert.ok(suggestRating(answers({p: 0, r: 5, f: 0, e: 2, s: 4, a: 4})).level <= 4);
+  // suggestions carry no confirmation: the rating stays provisional until the organizer confirms it (server-side step)
+  const r = suggestRating(answers({}));
+  assert.deepEqual(Object.keys(r).sort(), ['basis', 'confidence', 'level', 'review']);
 });
 
 test('REGRESSION: league/club/school-team experience: "a little" and "quite a bit" differ; Level 5 needs organized play', () => {
   const top = {f: 0, r: 5, s: 4, a: 4, p: 4};
   assert.equal(level({...top, e: 0}), 4, 'Advanced profile and strong answers but no experience: Level 4 with a note');
-  assert.ok(suggestRating(answers({...top, e: 0})).basis.some(b => /Level 5 needs league, club or tournament experience/.test(b)));
+  assert.ok(suggestRating(answers({...top, e: 0})).basis.some(b => /Level 5 needs competitive evidence/.test(b)));
   assert.equal(level({...top, e: 1}), 5, 'Advanced profile with a little organized-play experience');
   assert.equal(level({...top, e: 2}), 5);
   // an experienced player who chose a lower profile is not pushed to 5 unless the rest agrees
@@ -244,17 +280,23 @@ test('REGRESSION: spin, attack and frequency are ordered scales; missing answers
   assert.equal(suggestRating({description: FORM.profile[2], rallies: FORM.rally[3]}).confidence, 'low');
   // the old Yes/Sometimes/No wording of other forms still works
   assert.equal(suggestRating({rallies: 'Yes', spin: 'Sometimes', attack: 'Usually', frequency: 'weekly', description: 'Intermediate'}).level, 3);
-  assert.deepEqual(suggestRating({selfLevel: 'Beginner'}), {level: 1, confidence: 'low', basis: ['Self-described: Beginner']});
+  assert.deepEqual(suggestRating({selfLevel: 'Beginner'}), {level: 1, confidence: 'low', basis: ['Self-described: Beginner'], review: false});
 });
 
-test('the whole approved-choice grid stays inside 1-5, deterministic, and never leaks answer text beyond the fixed reasons', () => {
+test('the whole approved-choice grid: inside 1-5, deterministic, monotone in the profile, honest flags, no leaked answer text', () => {
   const known = new Set();
-  for (let p = 0; p < 5; p++) for (let r = 0; r < 6; r++) for (let f = 0; f < 6; f += 2) for (let e = 0; e < 3; e++) for (let s = 0; s < 5; s += 2) for (let a = 0; a < 5; a += 2) {
-    const x = suggestRating(answers({p, r, f, e, s, a})), y = suggestRating(answers({p, r, f, e, s, a}));
-    assert.deepEqual(x, y);
-    assert.ok(x.level >= 1 && x.level <= 5 && ['low', 'medium', 'high'].includes(x.confidence) && x.basis.length <= 8);
-    assert.ok(x.level >= Math.max(1, p), 'never more than one level below the chosen profile'); assert.ok(x.level <= Math.min(5, p + 2), 'never more than one level above');
-    for (const b of x.basis) known.add(b);
+  for (let r = 0; r < 6; r++) for (let f = 0; f < 6; f += 2) for (let e = 0; e < 3; e++) for (let s = 0; s < 5; s += 2) for (let a = 0; a < 5; a += 2) {
+    let prev = 0;
+    for (let p = 0; p < 5; p++) {
+      const x = suggestRating(answers({p, r, f, e, s, a}));
+      assert.deepEqual(x, suggestRating(answers({p, r, f, e, s, a})));
+      assert.ok(x.level >= 1 && x.level <= 5 && ['low', 'medium', 'high'].includes(x.confidence) && x.basis.length <= 8);
+      assert.ok(x.level >= prev, 'a higher self-chosen profile never lowers the suggestion (all else equal)'); prev = x.level;
+      assert.equal(x.review, x.basis.some(b => b.startsWith('Organizer review:')), 'the flag and the warning agree');
+      if (x.review) assert.notEqual(x.confidence, 'high', 'significant disagreement is never high-confidence');
+      if (x.level === 5) assert.ok(e === 2 || (e === 1 && p === 4), 'an automatic Level 5 always has competitive evidence');
+      for (const b of x.basis) known.add(b);
+    }
   }
   for (const b of known) assert.ok(b.length <= 120 && !/@|\d{4}/.test(b), b);
 });
