@@ -124,46 +124,90 @@ export function mapHeaders(headerRow) {
 }
 
 // ---------------------------------------------------------------- rating suggestion
-const yes3 = v => {
-  const t = fold(v);
+// The approved FFTT3 form's answer choices are matched EXACTLY (ordered scales), with a tolerant fallback for the
+// older Yes/Sometimes/No wording. Free text is never forwarded; only these small scale positions are used.
+const fold2 = v => fold(v).replace(/[—–]/g, '-');
+
+/** Playing profile: the EXPLICIT leading label wins ("Beginner — … control …" is a Beginner, whatever words follow).
+ * Returns 0..4 (Beginner … Advanced) or null. Keyword guessing is only a fallback for text with no leading label. */
+const PROFILE_LABELS = [[4, /^(advanced|competitive)\b/], [3, /^strong intermediate\b/], [2, /^intermediate\b/], [1, /^recreational\b/], [0, /^(beginner|new)\b/]];
+const PROFILE_KEYWORDS = [
+  [4, /(club|league|tournament|coach|ranked|rated|expert)/], [3, /(strong|loop|topspin|varied serves|aggressive|good footwork)/],
+  [2, /(consistent|placement|solid|steady)/], [1, /(casual|for fun|recreational|hobby|social)/],
+  [0, /(just (start|learn)|brand new|first time|never played|learning|barely)/],
+];
+export function profileLevel(v) {
+  const t = fold2(v);
   if (!t) return null;
-  if (/^(y|yes|true|always|often|usually|definitely|i do|regularly|consistently|reliably|1)\b/.test(t)) return 1;
-  if (/^(sometimes|occasionally|a little|somewhat|maybe|kind of|sort of|a bit|not always)\b/.test(t)) return 0.5;
-  if (/^(n|no|false|never|not really|rarely|not yet|none|0)\b/.test(t)) return 0;
+  for (const [tier, re] of PROFILE_LABELS) if (re.test(t)) return tier;
+  for (const [tier, re] of PROFILE_KEYWORDS) if (re.test(t)) return tier;
   return null;
-};
-const frequency = v => {
-  const t = fold(v);
+}
+/** Rally consistency (six approved sentences) -> 0..5, or null. The most specific phrase is tested first. */
+export function rallyLevel(v) {
+  const t = fold2(v);
   if (!t) return null;
-  if (/(never|not currently|not at all|none|haven.?t played|first time|new to)/.test(t)) return 0;
-  if (/(daily|every day|most days|several times a week|multiple times a week|3\+|4\+|\d+\s*times? (a|per) week)/.test(t)) return 3;
-  if (/(weekly|once a week|every week|1-2 times a week|a week)/.test(t)) return 2;
-  if (/(monthly|once a month|few times a month|couple times a month|a month)/.test(t)) return 1;
-  if (/(rare|few times a year|once a year|yearly|occasional|holiday|now and then|once in a while|a year)/.test(t)) return 0.5;
+  if (/under pressure|strong rallies/.test(t)) return 5;
+  if (/control placement/.test(t)) return 4;
+  if (/usually sustain|reasonable consistency/.test(t)) return 3;
+  if (/short rallies/.test(t)) return 2;
+  if (/still learning|difficulty sustaining/.test(t)) return 1;
+  if (/haven.?t played|don.?t know/.test(t)) return 0;
+  // older wording
+  if (/^(y|yes|always|reliably|consistently|usually)\b/.test(t)) return 4;
+  if (/^(sometimes|occasionally|a little|somewhat|maybe|kind of|not always)\b/.test(t)) return 2;
+  if (/^(n|no|never|not really|rarely|not yet)\b/.test(t)) return 1;
   return null;
-};
-const experience = v => {
-  const t = fold(v);
+}
+/** Spin: No / A little / Sometimes / Yes, fairly consistently / Yes, confidently -> 0..4. */
+export function spinLevel(v) {
+  const t = fold2(v);
+  if (!t) return null;
+  if (/confident/.test(t)) return 4;
+  if (/fairly consistent|consistently/.test(t)) return 3;
+  if (/^sometimes/.test(t)) return 2;
+  if (/^a little|^a bit/.test(t)) return 1;
+  if (/^(n|no|never|not at all|none)\b/.test(t)) return 0;
+  if (/^(y|yes|always|regularly)\b/.test(t)) return 3;
+  return null;
+}
+/** Attack: No / Rarely / Sometimes / Usually / Yes, confidently -> 0..4. */
+export function attackLevel(v) {
+  const t = fold2(v);
+  if (!t) return null;
+  if (/confident/.test(t)) return 4;
+  if (/^usually|^often|^consistently/.test(t)) return 3;
+  if (/^sometimes/.test(t)) return 2;
+  if (/^(rarely|seldom|a little)/.test(t)) return 1;
+  if (/^(n|no|never|not at all|none)\b/.test(t)) return 0;
+  if (/^(y|yes|always|regularly)\b/.test(t)) return 3;
+  return null;
+}
+/** How often they play: Never / Rarely / Occasionally / A few times a month / About once a week / Several times a week -> 0..5. */
+export function frequencyLevel(v) {
+  const t = fold2(v);
+  if (!t) return null;
+  if (/(several times a week|multiple times a week|daily|every day|most days|\d+\s*times? (a|per) week)/.test(t)) return 5;
+  if (/(once a week|weekly|every week|about once a week)/.test(t)) return 4;
+  if (/(few times a month|monthly|once a month|couple of times a month|a month)/.test(t)) return 3;
+  if (/occasional|now and then|once in a while|few times a year|yearly|holiday/.test(t)) return 2;
+  if (/rare/.test(t)) return 1;
+  if (/(never|not currently|not at all|none|haven.?t played)/.test(t)) return 0;
+  return null;
+}
+/** League, club or school-team experience: No / Yes, a little / Yes, quite a bit -> 0..2. */
+export function experienceLevel(v) {
+  const t = fold2(v);
   if (!t) return null;
   if (/^(no|none|never|n\/a|nope|not)\b/.test(t)) return 0;
-  if (/(club|league|school|team|tournament|compet|coach|varsity|rated|yes)/.test(t)) return 1;
+  if (/quite a bit|a lot|extensive|for years|many years/.test(t)) return 2;
+  if (/a little|a bit|some\b|briefly/.test(t)) return 1;
+  if (/(club|league|school|team|tournament|compet|coach|varsity|rated|yes)/.test(t)) return 2;
   return null;
-};
-const DESCRIPTION_TIERS = [
-  [4, /(competitive|league|tournament|club|coach|rated|advanced|expert|ranked)/],
-  [3, /(strong|attack|loop|topspin|varied serves|aggressive|good footwork|heavy spin|lots of spin)/],
-  [2, /(consistent|control|placement|decent|comfortable|solid|steady|some spin)/],
-  [1, /(casual|for fun|recreational|basement|backyard|social|rally|hobby)/],
-  [0, /(just (start|learn)|new to|brand new|beginner|first time|never played|learning|barely)/],
-];
-const description = v => {
-  const t = fold(v);
-  if (!t) return null;
-  for (const [tier, re] of DESCRIPTION_TIERS) if (re.test(t)) return tier;
-  return null;
-};
+}
+/** Older self-label (Beginner/Intermediate/Advanced) from other forms: a weak input only, never used by the FFTT3 form. */
 const selfLevel = v => {
-  const t = fold(v);
+  const t = fold2(v);
   if (!t) return null;
   if (/(advanced|expert|competitive|strong|pro)/.test(t)) return 3;
   if (/intermediate|medium|average|decent/.test(t)) return 2;
@@ -171,34 +215,62 @@ const selfLevel = v => {
   if (/(beginner|novice|new)/.test(t)) return 0;
   return null;
 };
-const FREQ_INDEX = new Map([[0, 0], [0.5, 1], [1, 2], [2, 3], [3, 4]]);
-const FREQ_BASIS = ['Rarely or never plays', 'Plays a few times a year', 'Plays about monthly', 'Plays about weekly', 'Plays several times a week'];
-const DESC_BASIS = ['Describes themselves as new or learning', 'Describes a casual, recreational game', 'Describes a consistent, controlled game',
-  'Describes a strong game with attack or spin', 'Describes competitive or league-level play'];
-const SELF_BASIS = ['Self-described: Beginner', 'Self-described: Recreational', 'Self-described: Intermediate', 'Self-described: Advanced'];
 
-/** answers: raw strings {frequency, experience, rallies, spin, attack, description, selfLevel}.
- * Returns {level 1-5, confidence 'low'|'medium'|'high', basis: string[]}. Never throws. */
+const FREQ_TEXT = ['Never plays', 'Rarely plays', 'Plays occasionally', 'Plays a few times a month', 'Plays about once a week', 'Plays several times a week'];
+const RALLY_TEXT = ['Has not played yet, so rally consistency is unknown', 'Is still learning and has difficulty sustaining rallies', 'Can sustain short rallies sometimes',
+  'Can usually sustain rallies with reasonable consistency', 'Sustains rallies consistently and controls placement', 'Sustains strong rallies consistently, including under pressure'];
+const SPIN_TEXT = ['Does not use spin on purpose', 'Uses spin a little', 'Uses spin sometimes', 'Uses spin fairly consistently', 'Uses spin confidently'];
+const ATTACK_TEXT = ['Does not attack easier balls', 'Rarely attacks easier balls', 'Sometimes attacks easier balls', 'Usually attacks easier balls', 'Attacks easier balls confidently'];
+const EXP_TEXT = ['No league, club or school-team experience', 'A little league, club or school-team experience', 'Quite a bit of league, club or school-team experience'];
+const PROFILE_TEXT = ['Chose the Beginner profile', 'Chose the Recreational profile', 'Chose the Intermediate profile', 'Chose the Strong Intermediate profile', 'Chose the Advanced / Competitive profile'];
+const SELF_TEXT = ['Self-described: Beginner', 'Self-described: Recreational', 'Self-described: Intermediate', 'Self-described: Advanced'];
+// each signal: weight, and the fraction of the way up the FFTT scale its answer points to (0 = Level 1 ... 1 = Level 5)
+const FRAC = {
+  profile: [0, .25, .5, .75, 1], rally: [0, .05, .2, .45, .65, .9], spin: [0, .25, .5, .75, 1], attack: [0, .25, .5, .75, 1],
+  frequency: [0, .1, .2, .4, .6, .85], experience: [0, .5, 1], self: [0, .25, .5, .85],
+};
+const WEIGHT = {profile: 4, rally: 3, spin: 1.5, attack: 1.5, frequency: 1, experience: 1.5, self: 1};
+const levelFromScore = x => (x < .12 ? 1 : x < .38 ? 2 : x < .60 ? 3 : x < .82 ? 4 : 5);
+
+/** answers: raw strings {frequency, experience, rallies, spin, attack, description (= the playing profile), selfLevel}.
+ * Returns {level 1-5, confidence 'low'|'medium'|'high', basis: string[]}. Never throws.
+ *
+ * How it decides (all of it shown to the organizer): every answered question points part-way up the Level 1-5 scale;
+ * the weighted average gives a level. Then two guard rails keep it honest:
+ *   - the person's EXPLICIT profile choice anchors the result: it can differ from that profile by at most one level;
+ *   - Level 5 additionally needs organized-play experience (or the Advanced profile with some experience).
+ * If the other answers disagree with the profile by two levels or more, confidence drops and the basis says so.
+ * This is a PROVISIONAL suggestion; the organizer confirms or changes every rating. */
 export function suggestRating(input) {
-  const answers = input !== null && typeof input === 'object' ? input : {};
-  const f = frequency(answers.frequency), e = experience(answers.experience), r = yes3(answers.rallies),
-    sp = yes3(answers.spin), at = yes3(answers.attack), d = description(answers.description), sl = selfLevel(answers.selfLevel);
-  const given = [f, e, r, sp, at, d, sl].filter(x => x !== null).length;
-  const confidence = given >= 5 ? 'high' : given >= 3 ? 'medium' : 'low';
+  const a = input !== null && typeof input === 'object' ? input : {};
+  const sig = {profile: profileLevel(a.description), rally: rallyLevel(a.rallies), spin: spinLevel(a.spin), attack: attackLevel(a.attack),
+    frequency: frequencyLevel(a.frequency), experience: experienceLevel(a.experience), self: selfLevel(a.selfLevel)};
+  const given = Object.entries(sig).filter(([, v]) => v !== null);
+  let confidence = given.length >= 5 ? 'high' : given.length >= 3 ? 'medium' : 'low';
   const basis = [];
-  if (f !== null) basis.push(FREQ_BASIS[FREQ_INDEX.get(f)]);
-  if (e === 1) basis.push('Has club, league, school-team or tournament experience');
-  if (r === 1 || r === 0.5) basis.push(r === 1 ? 'Sustains rallies reliably' : 'Sometimes sustains rallies');
-  if (sp === 1 || sp === 0.5) basis.push(sp === 1 ? 'Uses spin on purpose' : 'Sometimes uses spin');
-  if (at === 1 || at === 0.5) basis.push(at === 1 ? 'Attacks easier balls consistently' : 'Sometimes attacks easier balls');
-  if (d !== null) basis.push(DESC_BASIS[d]);
-  if (sl !== null) basis.push(SELF_BASIS[sl]);
-  if (given === 0) return {level: 3, confidence: 'low', basis: ['No playing details were given; starting at Intermediate']};
-  if (given <= 2 && sl !== null && f === null) return {level: [1, 2, 3, 4][sl], confidence, basis};
-  const score = (sl ?? 0) * 0.75 + ((f ?? 0) * 0.6) + (e === 1 ? 2.5 : 0) + (r ?? 0) * 1.25 + (sp ?? 0) * 1.0 + (at ?? 0) * 1.25 + (d ?? 0) * 0.75;
-  let level = score < 1.5 ? 1 : score < 4.0 ? 2 : score < 7.5 ? 3 : score < 10.5 ? 4 : 5;
-  if (level === 5 && e !== 1) level = 4;   // Advanced / Competitive needs demonstrated organized play
-  return {level, confidence, basis};
+  if (sig.profile !== null) basis.push(PROFILE_TEXT[sig.profile]);
+  if (sig.rally !== null) basis.push(RALLY_TEXT[sig.rally]);
+  if (sig.frequency !== null) basis.push(FREQ_TEXT[sig.frequency]);
+  if (sig.experience !== null && sig.experience > 0) basis.push(EXP_TEXT[sig.experience]);
+  if (sig.spin !== null && sig.spin > 0) basis.push(SPIN_TEXT[sig.spin]);
+  if (sig.attack !== null && sig.attack > 0) basis.push(ATTACK_TEXT[sig.attack]);
+  if (sig.self !== null && sig.profile === null) basis.push(SELF_TEXT[sig.self]);
+  if (given.length === 0) return {level: 3, confidence: 'low', basis: ['No playing details were given; starting at Intermediate']};
+  const used = given.filter(([k]) => !(k === 'self' && sig.profile !== null));   // an old label never competes with the real profile
+  const score = used.reduce((t, [k, v]) => t + WEIGHT[k] * FRAC[k][v], 0) / used.reduce((t, [k]) => t + WEIGHT[k], 0);
+  const raw = levelFromScore(score);
+  let level = raw;
+  if (sig.profile !== null) {
+    const anchor = sig.profile + 1;
+    level = Math.min(anchor + 1, Math.max(anchor - 1, level));
+    if (Math.abs(raw - anchor) >= 2) {
+      confidence = confidence === 'high' ? 'medium' : 'low';
+      basis.push(raw > anchor ? 'Other answers point higher than the chosen profile; check at warm-up' : 'Other answers point lower than the chosen profile; check at warm-up');
+    }
+  }
+  const organized = sig.experience === 2 || (sig.experience !== null && sig.experience >= 1 && sig.profile === 4);
+  if (level === 5 && !organized) { level = 4; basis.push('Level 5 needs league, club or tournament experience; suggested Level 4'); }
+  return {level, confidence, basis: basis.slice(0, 8)};
 }
 
 // ---------------------------------------------------------------- building registrants

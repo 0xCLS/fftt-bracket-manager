@@ -27,6 +27,15 @@ test('registration workflow: load, search, one-click and bulk check-in, merge du
     await org.page.locator('.reg-count', {hasText: 'Showing 1 of 20'}).waitFor();
     await org.page.fill('#regSearch', '');
 
+    // the suggested level and its reasons come from the approved form's exact answers (provisional, until confirmed)
+    assert.match(await row(org.page, 'Hal W.').innerText(), /Level 3 · Intermediate\s+Suggested/);
+    await row(org.page, 'Hal W.').locator('button', {hasText: 'Edit'}).click();
+    const why = await org.page.locator('.reg-basis').innerText();
+    assert.match(why, /Chose the Intermediate profile/);
+    assert.match(why, /Sustains rallies consistently and controls placement/);
+    await row(org.page, 'Hal W.').locator('button', {hasText: 'Done'}).click();
+    assert.match(await row(org.page, 'Eli B.').innerText(), /Level 1 · Beginner/);
+
     // one-click check-in creates the roster player (rating suggested, unconfirmed) and checks them in
     await row(org.page, 'Ben M.').locator('button', {hasText: 'Check in'}).click();
     await toast(org.page, /Ben M\. checked in/);
