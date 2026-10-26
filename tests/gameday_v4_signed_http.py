@@ -119,19 +119,24 @@ def run() -> None:
 
     # ---- public view carries formats and nothing private
     ok(rpc(org, "fftt_set_visibility_v3", {"p_event_id": E, "p_visible": True}), "Published")
-    pub = request(api, anon, "GET", "/rest/v1/fftt_public_tournament_v1")
-    ensure(pub.code == 200 and len(pub.body) == 1, "Anonymous spectators read the tournament")
-    matches = [m for b in pub.body[0]["brackets"] for m in b["matches"] if m["status"] == "complete"]
+    # (the shared local stack may also hold the earlier V3 rehearsal's published event: look only at this one)
+    def mine_public():
+        r = request(api, anon, "GET", "/rest/v1/fftt_public_tournament_v1")
+        ensure(r.code == 200, "Anonymous spectators read the public view")
+        return [e for e in r.body if e["event_name"] == "Signed HTTP V4"]
+    pub = mine_public()
+    ensure(len(pub) == 1, "Anonymous spectators read this tournament")
+    matches = [m for b in pub[0]["brackets"] for m in b["matches"] if m["status"] == "complete"]
     ensure(matches and all(m["best_of"] in (1, 3) and m["points_to_win"] in (11, 21) for m in matches), "Public matches carry their formats")
-    blob = json.dumps(pub.body)
+    blob = json.dumps(pub)
     ensure("REGREF" not in blob and "registration" not in blob and "@" not in blob and "rating" not in blob, "Public data carries no registration data, ratings or contacts")
 
     # ---- archive -> restore (never public); deletion only for an empty draft
     ok(rpc(org, "fftt_set_lifecycle_v3", {"p_event_id": E, "p_lifecycle": "archived"}), "Archived")
-    ensure(request(api, anon, "GET", "/rest/v1/fftt_public_tournament_v1").body == [], "An archived event is not public")
+    ensure(mine_public() == [], "An archived event is not public")
     restored = ok(rpc(org, "fftt_restore_event_v4", {"p_event_id": E}), "Restored")
     ensure(restored["lifecycle"] == "active", "Restored to the state it came from")
-    ensure(request(api, anon, "GET", "/rest/v1/fftt_public_tournament_v1").body == [], "A restore does not re-publish")
+    ensure(mine_public() == [], "A restore does not re-publish")
     ensure(rpc(org, "fftt_delete_event_v4", {"p_event_id": E, "p_confirm_name": "Signed HTTP V4"}).code in (400, 409), "An event with results can never be deleted")
     spare = ok(rpc(org, "fftt_create_event_v3", {"p_name": "Spare Draft", "p_date": "2026-12-01", "p_table_count": 2}), "Spare draft created")
     S = spare["event_id"]

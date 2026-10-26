@@ -208,6 +208,8 @@ body.tv .champ{font-size:clamp(26px,3vw,50px);color:#f7e99b;font-weight:800}
    responsive tables, mobile scoring, sign-in chooser, accessibility. Retains the approved charcoal-and-pastel
    direction, the FFTT emblem and the attribution. No inline styles; no images; strict-CSP safe.
    =================================================================================================== */
+#app .card .row + .help,#app .card .row + p,#app .card .row + .notice{margin-top:var(--space-3)}
+#app .card .chips.static + .row,#app .card .notice + .row,#app .card details + .row{margin-top:var(--space-3)}
 #app .card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--space-4);flex-wrap:wrap;margin-bottom:var(--space-4)}
 #app .card-head h2,#app .card-title{margin:0 0 4px;font-size:18px;font-weight:750;letter-spacing:-.03em;color:#29313c}
 #app .card-title{margin-bottom:var(--space-3)}
