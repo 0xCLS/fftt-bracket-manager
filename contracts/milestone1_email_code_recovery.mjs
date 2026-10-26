@@ -44,7 +44,8 @@ export function createMilestone1EmailCodeRecovery({
   },
   async verify({email,code,eventId,keepSignedIn=false}={}){
    if(busy)fail('busy');
-   if(typeof code!=='string'||!CODE.test(code)||!UUID.test(eventId||''))fail('invalid-input'); // no guess consumed
+   const noEvent=eventId===null||eventId===undefined||eventId==='';
+   if(typeof code!=='string'||!CODE.test(code)||(!noEvent&&!UUID.test(eventId||'')))fail('invalid-input'); // no guess consumed
    const e=normalizeStaffEmail(email);
    if(pending===null||pending.email!==e)fail('expired');
    if(now()-pending.requestedAt>codeLifetimeMs){pending=null;fail('expired');}
@@ -58,7 +59,7 @@ export function createMilestone1EmailCodeRecovery({
     throw err;
    }finally{busy=false;}
    pending=null; // a code is single use
-   return adopt(resp,{eventId,keepSignedIn});
+   return adopt(resp,{eventId:noEvent?null:eventId,keepSignedIn});
   },
   get status(){
    const t=now();

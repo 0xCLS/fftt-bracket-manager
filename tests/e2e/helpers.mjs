@@ -44,9 +44,18 @@ export const buildConsolation = async (ctx, {entrants = null} = {}) => {
   return ctx.db.rpc(ctx.org, 'fftt_build_consolation_v3', {p_event_id: ctx.E, p_slots: slots, p_expected_generation: s.event.generation, p_confirm: false});
 };
 
-const WIN3 = ['11-7, 11-9', '11-5, 9-11, 11-8', '12-10, 11-6'];
-const WIN5 = ['11-5, 11-6, 11-7', '11-9, 8-11, 11-7, 9-11, 11-8'];
-export const winningScore = (isFinal, i = 0) => (isFinal ? WIN5 : WIN3)[i % (isFinal ? WIN5 : WIN3).length];
+// Winning game lists for the FIRST-listed player, by format. Several variants include deuce games.
+const WINS = {
+  '3:11': ['11-7, 11-9', '11-5, 9-11, 11-8', '12-10, 11-6'],
+  '1:11': ['11-6', '13-11', '11-9'],
+  '3:21': ['21-15, 21-18', '21-12, 18-21, 21-19', '23-21, 21-9'],
+  '1:21': ['21-15', '22-20', '21-18'],
+  '5:11': ['11-5, 11-6, 11-7', '11-9, 8-11, 11-7, 9-11, 11-8'],
+};
+/** Winning score text for the first player under an explicit format (any odd best-of / 11 or 21 points). */
+export const scoreFor = (bestOf, points, i = 0) => { const l = WINS[`${bestOf}:${points}`]; if (!l) throw new Error('no fixture for format ' + bestOf + ':' + points); return l[i % l.length]; };
+/** Back-compatible: `true` = the historical Best-of-5 final, false = a regular Best-of-3 to 11. */
+export const winningScore = (isFinal, i = 0) => (isFinal === true ? scoreFor(5, 11, i) : scoreFor(3, 11, i));
 /** Same scores but with the player-2 side winning (swap each game). */
 export const swap = text => text.split(', ').map(g => g.split('-').reverse().join('-')).join(', ');
 
@@ -59,7 +68,7 @@ export function submit(ctx, userId, row, winnerId, scores, {submissionId = crypt
   });
 }
 
-export const deskOf = (ctx, userId) => ctx.db.rpc(userId, 'fftt_matchdesk_v1', {p_event_id: ctx.E}, {rows: true});
+export const deskOf = (ctx, userId) => ctx.db.rpc(userId, 'fftt_matchdesk_v2', {p_event_id: ctx.E}, {rows: true});
 
 /** Play every currently playable match; higher rating wins (p1 on ties); scorekeepers alternate.
  * Returns the number of matches played. */
@@ -72,8 +81,8 @@ export async function playAllPlayable(ctx, {only = null, limit = 1000} = {}) {
     const rating = new Map(snap.players.map(p => [p.id, p.rating]));
     const row = desk[0];
     const p1Wins = rating.get(row.player_1_id) >= rating.get(row.player_2_id);
-    const final = row.is_championship_final;
-    const scores = p1Wins ? winningScore(final, played) : swap(winningScore(final, played));
+    const win = scoreFor(row.best_of, row.points_to_win, played);
+    const scores = p1Wins ? win : swap(win);
     const who = flip++ % 2 ? ctx.skB : ctx.skA;
     const res = await submit(ctx, who, row, p1Wins ? row.player_1_id : row.player_2_id, scores, {table: 1});
     if (res.status !== 'accepted') throw new Error('unexpected ' + JSON.stringify(res));

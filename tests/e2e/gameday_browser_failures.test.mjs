@@ -29,7 +29,7 @@ test('a wrong password is refused without hints; no staff UI appears', {timeout:
     const d = await w.device('d', PHONE);
     await d.open(STAFF + '/app/staff.html');
     await d.page.waitForSelector('#signIn:not([disabled])');
-    await d.page.fill('#email', w.accounts.a[0]); await d.page.fill('#password', 'not-the-password'); await d.page.fill('#eventId', w.eventId);
+    await d.page.fill('#email', w.accounts.a[0]); await d.page.fill('#password', 'not-the-password');
     await d.page.click('#signIn');
     await d.page.locator('#signInStatus', {hasText: 'Email or password not recognised'}).waitFor({timeout: T});
     assert.equal(await d.page.locator('#password').inputValue(), '', 'the password field is cleared on submit');
@@ -147,9 +147,9 @@ test('heartbeat preserves the organizer opening-round preview and occupied table
     const cards = org.page.locator('.queue-card');
     await cards.first().waitFor({timeout: T});
     assert.ok(await cards.count() >= 2);
-    await cards.first().locator('select[aria-label="Table"]').selectOption('1');
+    await cards.first().locator('select[aria-label^="Table for"]').selectOption('1');
     await org.page.locator('#toast:not([hidden])', {hasText: 'Assigned to table 1'}).waitFor({timeout: T});
-    const occupiedOption = cards.nth(1).locator('select[aria-label="Table"] option[value="1"]');
+    const occupiedOption = cards.nth(1).locator('select[aria-label^="Table for"] option[value="1"]');
     await occupiedOption.waitFor({state: 'attached', timeout: T});
     assert.equal(await occupiedOption.isDisabled(), true, 'occupied table is unavailable for a second match');
     await cards.nth(1).locator('button', {hasText: 'Record result'}).click();

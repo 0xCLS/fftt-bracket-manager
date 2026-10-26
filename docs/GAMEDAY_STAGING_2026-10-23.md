@@ -28,7 +28,7 @@ Existing PKCE evidence, the hosted V2 audit and the three consumed fixtures are 
 * **Local, real SQL (PGlite):** 8 server tests — bracket structure identical to the approved engine for 21 field sizes (2–48), consolation entrants and champion identical after full championships, a full tournament, simultaneous-scorekeeper race, revocation, corrections, forfeits, privacy, validation.
 * **Real client stack against the real SQL (fake HTTP):** 11 tests — organizer + two scorekeepers play a whole tournament; conflicts; lost acknowledgments resolved from server receipts; unsent scores never auto-retried and remembered across reloads; revocation; outsider; outage pause; event create/select.
 * **Real Chrome, isolated contexts:** a full rehearsal (organizer desktop, two phone-sized scorekeepers, spectator phone, TV, outsider) and six failure-path tests. **These are browser-simulated contexts on one machine, not physical devices.**
-* **CI (GitHub Actions):** see the run linked in the completion report; includes real local Supabase GoTrue + PostgreSQL with concurrent scorekeepers.
+* **CI (GitHub Actions):** includes real local Supabase GoTrue + PostgreSQL with concurrent scorekeepers. The run for each commit is recorded in the batch record that introduced it (latest: [GAMEDAY_V4_2026-10-26.md](GAMEDAY_V4_2026-10-26.md)); this page does not carry a run number that could go stale.
 
 ## 4. Not yet verified / open
 
@@ -36,9 +36,9 @@ Existing PKCE evidence, the hosted V2 audit and the three consumed fixtures are 
 * Physical-device rehearsal (real phones/tablet/TV, real mobile networks, password-manager behavior) has **not** been performed.
 * Hosted Supabase Free behavior (rate limits, e-mail quotas, pausing) is unmeasured. The free plan has no point-in-time restore: the organizer's **Private backup (JSON)** download is the backup; there is no in-app restore (rebuild from the backup's roster or re-enter results).
 * Realtime is not used; screens poll every 7 s (spectators 6 s).
-* Doubles finale scoring format is best of 3 (regular format); the organizer should confirm.
+* Doubles finale scoring format is now **configurable** (V4: Best of 1 or 3, to 11 or 21; default Best of 3 to 11). The organizer should confirm the choice.
 * Third place is not invented: both beaten semifinalists are listed.
-* Automatic Google Sheets sync is out of scope.
+* Google Sheets: V4 adds an organizer-only, read-only adapter and a private CSV fallback (see [REGISTRATION_INTEGRATION_2026-10-26.md](REGISTRATION_INTEGRATION_2026-10-26.md)). It is **not connected to the real sheet**; staging uses synthetic sample data only.
 
 ## 5. Owner steps (the minimum Christopher must do)
 

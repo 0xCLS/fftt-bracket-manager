@@ -49,7 +49,7 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
     await org.page.locator('button', {hasText: 'Add players from list'}).click();
     await waitToast(org.page, /12 player/);
     await org.page.locator('button', {hasText: 'Check in all'}).click();
-    await org.page.locator('h3', {hasText: '12 of 12 checked in'}).waitFor({timeout: T});
+    await org.page.locator('h2', {hasText: '12 of 12 checked in'}).waitFor({timeout: T});
     await shot(org, '02-players');
     await goTab(org.page, 'Championship');
     await org.page.locator('button', {hasText: 'Build championship bracket'}).click();
@@ -174,7 +174,7 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
 
     // ---------------------------------------------------------------- results, exports, spectators see the champion
     await goTab(org.page, 'Results & Export');
-    await org.page.locator('h3', {hasText: 'Final standings'}).waitFor();
+    await org.page.locator('h2', {hasText: 'Final standings'}).waitFor();
     assert.match(await org.page.locator('.card', {hasText: 'Final standings'}).innerText(), /singles champion/i);
     await shot(org, '11-results');
     const [dl] = await Promise.all([org.page.waitForEvent('download'), org.page.locator('button', {hasText: 'Private backup'}).click()]);
@@ -222,7 +222,7 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
     // ---------------------------------------------------------------- an outsider cannot get in
     const out = await w.device('out', PHONE);
     await out.signIn('out');
-    await out.page.locator('#signInStatus', {hasText: /not authorised/i}).waitFor({timeout: T});
+    await out.page.locator('#signInStatus', {hasText: /does not have access/i}).waitFor({timeout: T});
     assert.equal(await out.page.locator('#app:not([hidden])').count(), 0);
 
     // ---------------------------------------------------------------- no browser-side problems anywhere

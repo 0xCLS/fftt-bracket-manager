@@ -11,7 +11,7 @@ import {createLocalDb, RpcError} from './localdb.mjs';
 
 export const PROJECT = 'https://copmkalfkkrkzheohwuc.supabase.co';
 export const PUBLISHABLE = 'sb_publishable_lupD9JDsWFQ_65LuwVL1Fg_O-V5Era0';
-const TABLE_FUNCTIONS = new Set(['fftt_matchdesk_v1']);
+const TABLE_FUNCTIONS = new Set(['fftt_matchdesk_v1', 'fftt_matchdesk_v2']);
 const b64 = o => Buffer.from(JSON.stringify(o)).toString('base64url');
 
 export async function createFakeSupabase({ttlSeconds = 3600, now = () => Date.now()} = {}) {

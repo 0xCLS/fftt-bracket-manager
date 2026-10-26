@@ -10,13 +10,25 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const KEY = /^sb_publishable_[A-Za-z0-9_-]{8,}$/;
 const EVENT_FIELDS = ['event_id', 'event_name', 'event_date', 'status', 'revision', 'tables', 'updated_at', 'finale', 'brackets'];
 const MATCH_FIELDS = ['match_id', 'bracket', 'round', 'slot', 'player_1_name', 'player_2_name', 'winner_name', 'game_scores', 'status', 'table_number', 'phase'];
+// The format fields are optional so a display built for this version still shows a server that predates them.
+const MATCH_OPTIONAL = ['best_of', 'points_to_win'];
 const FINALE_FIELDS = ['status', 'team_1', 'team_2', 'winner_team', 'game_scores'];
+const FINALE_OPTIONAL = ['best_of', 'points_to_win'];
 export class PublicProjectionError extends AuthorityGateError {
   constructor() { super('Public projection invalid or unavailable'); this.name = 'PublicProjectionError'; }
 }
 const bad = () => { throw new PublicProjectionError(); };
 const plain = x => x !== null && typeof x === 'object' && !Array.isArray(x);
-const exact = (o, keys) => plain(o) && Object.keys(o).length === keys.length && keys.every(k => k in o);
+const exact = (o, keys, optional = []) => plain(o) && keys.every(k => k in o)
+  && Object.keys(o).every(k => keys.includes(k) || optional.includes(k));
+// optional format pair: absent, or both present as null (a bye) or a valid pair (a historical Best of 5 may be shown)
+const formatPair = (o, bestOfs = [1, 3, 5]) => {
+  const has = 'best_of' in o || 'points_to_win' in o;
+  if (!has) return true;
+  if (!('best_of' in o && 'points_to_win' in o)) return false;
+  if (o.best_of === null && o.points_to_win === null) return true;
+  return bestOfs.includes(o.best_of) && [11, 21].includes(o.points_to_win);
+};
 const int = (x, lo = 0, hi = 1e9) => Number.isSafeInteger(x) && x >= lo && x <= hi;
 const name = x => x === null || (typeof x === 'string' && x.length <= 80);
 const txt = (x, max) => typeof x === 'string' && x.length <= max;
@@ -30,10 +42,11 @@ export function projectPublicTournaments(rows) {
     let finale = null;
     if (e.finale !== null) {
       const f = e.finale;
-      if (!exact(f, FINALE_FIELDS) || !['pending', 'complete'].includes(f.status) || !Array.isArray(f.team_1) || !Array.isArray(f.team_2)
+      if (!exact(f, FINALE_FIELDS, FINALE_OPTIONAL) || !formatPair(f) || !['pending', 'complete'].includes(f.status) || !Array.isArray(f.team_1) || !Array.isArray(f.team_2)
         || f.team_1.length !== 2 || f.team_2.length !== 2 || ![...f.team_1, ...f.team_2].every(n => typeof n === 'string' && n.length <= 80)
         || !(f.winner_team === null || f.winner_team === 1 || f.winner_team === 2) || !txt(f.game_scores, 160)) bad();
-      finale = Object.freeze({status: f.status, team1: Object.freeze([...f.team_1]), team2: Object.freeze([...f.team_2]), winnerTeam: f.winner_team, scores: f.game_scores});
+      finale = Object.freeze({status: f.status, team1: Object.freeze([...f.team_1]), team2: Object.freeze([...f.team_2]), winnerTeam: f.winner_team, scores: f.game_scores,
+        bestOf: f.best_of ?? null, points: f.points_to_win ?? null});
     }
     const brackets = {championship: [], consolation: []};
     const seen = new Set();
@@ -41,13 +54,14 @@ export function projectPublicTournaments(rows) {
       if (!exact(b, ['name', 'matches']) || !(b.name in brackets) || seen.has(b.name) || !Array.isArray(b.matches) || b.matches.length > 140) bad();
       seen.add(b.name);
       brackets[b.name] = b.matches.map(m => {
-        if (!exact(m, MATCH_FIELDS) || !/^[a-z0-9][a-z0-9_.:-]{0,99}$/i.test(m.match_id) || m.bracket !== b.name
+        if (!exact(m, MATCH_FIELDS, MATCH_OPTIONAL) || !formatPair(m) || !/^[a-z0-9][a-z0-9_.:-]{0,99}$/i.test(m.match_id) || m.bracket !== b.name
           || !int(m.round, 0, 7) || !int(m.slot, 0, 63) || !name(m.player_1_name) || !name(m.player_2_name) || !name(m.winner_name)
           || !txt(m.game_scores, 160) || !['pending', 'complete', 'bye', 'empty'].includes(m.status)
           || !(m.table_number === null || int(m.table_number, 1, 12)) || !['waiting', 'up_next', 'playing', 'done'].includes(m.phase)
           || (m.winner_name !== null && m.winner_name !== m.player_1_name && m.winner_name !== m.player_2_name)) bad();
         return Object.freeze({id: m.match_id, round: m.round, slot: m.slot, name1: m.player_1_name, name2: m.player_2_name,
-          winnerName: m.winner_name, scores: m.game_scores, status: m.status, table: m.table_number, phase: m.phase});
+          winnerName: m.winner_name, scores: m.game_scores, status: m.status, table: m.table_number, phase: m.phase,
+          bestOf: m.best_of ?? null, points: m.points_to_win ?? null});
       });
       Object.freeze(brackets[b.name]);
     }

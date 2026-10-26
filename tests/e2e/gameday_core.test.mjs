@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createWorld} from './harness.mjs';
-import {roster} from './helpers.mjs';
+import {roster, scoreFor} from './helpers.mjs';
 import {computeStandings} from '../../contracts/gameday_engine.mjs';
 
 const settle = (ms = 0) => new Promise(r => setTimeout(r, ms));
@@ -20,7 +20,7 @@ const higherRated = (core, row) => {
   return r(row.players[0].id) >= r(row.players[1].id) ? row.players[0] : row.players[1];
 };
 const scoresFor = (row, winnerId) => {
-  const w = row.isFinal ? '11-5, 11-6, 11-7' : '11-7, 11-9';
+  const w = scoreFor(row.bestOf, row.points);
   return winnerId === row.players[0].id ? w : w.split(', ').map(g => g.split('-').reverse().join('-')).join(', ');
 };
 async function scoreOne(dev, row, winnerId, tableNumber = 1) {

@@ -7,6 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {chromium} from 'playwright-core';
 import {createFakeSupabase, PROJECT} from './fake_supabase.mjs';
 import {roster} from './helpers.mjs';
+import {createRegistrationHandler, createHandlerState} from '../../server/registration/handler.mjs';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const STAFF = 'https://fftt-staff-test.pages.dev';
@@ -20,7 +21,7 @@ export async function launch() {
   catch { return chromium.launch(); }
 }
 
-export async function createBrowserWorld({ttlSeconds = 3600, players = 0} = {}) {
+export async function createBrowserWorld({ttlSeconds = 3600, players = 0, registration = 'synthetic-fixture'} = {}) {
   const fake = await createFakeSupabase({ttlSeconds});
   const accounts = {
     org: ['organizer@fftt-staging.invalid', 'org-' + Math.random().toString(36).slice(2) + 'Aa1!'],
@@ -37,6 +38,12 @@ export async function createBrowserWorld({ttlSeconds = 3600, players = 0} = {}) 
   if (players) await fake.local.rpc(ids.org, 'fftt_upsert_players_v3', {p_event_id: ev.id, p_players: roster(players)});
   const browser = await launch();
   const world = {fake, accounts, ids, eventId: ev.id, browser, contexts: [], consoleErrors: [], pageErrors: [], requests: []};
+  // The registration adapter runs unmodified behind the staff origin; it reaches Supabase through the SAME fake backend
+  // (so its organizer-only check is the real database function). `registration: null` leaves it unconfigured.
+  world.registrationEnv = registration ? {REGISTRATION_ENABLED: 'true', STAFF_ORIGIN: STAFF, SUPABASE_URL: PROJECT,
+    SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_lupD9JDsWFQ_65LuwVL1Fg_O-V5Era0', REGISTRATION_SOURCE: registration} : {};
+  const registrationState = createHandlerState();
+  const adapterFetch = fake.clientFetch('registration-adapter');
 
   function headersFor(origin, file) {
     const connect = "connect-src 'self' " + PROJECT;
@@ -67,6 +74,13 @@ export async function createBrowserWorld({ttlSeconds = 3600, players = 0} = {}) 
         let p = url.pathname;
         if (p === '/' && url.origin === SPECT) p = '/app/spectator.html'; // production: a _redirects rewrite (200)
         if (p === '/') return route.fulfill({status: 404, body: 'the staff root redirects to /app/staff.html in production'});
+        if (p === '/__test__/axe.min.js') return route.fulfill({status: 200, headers: {...SEC, 'content-type': 'text/javascript'}, body: fs.readFileSync(path.join(ROOT, 'tests/e2e/node_modules/axe-core/axe.min.js'))});   // test-only accessibility checker
+        if (p === '/api/registrations' && url.origin === STAFF) {
+          const handler = createRegistrationHandler({env: world.registrationEnv, fetchImpl: adapterFetch, state: registrationState});
+          const res = await handler(new Request(req.url(), {method: req.method(), headers: req.headers(), body: req.method() === 'POST' ? req.postData() : undefined}));
+          world.requests.push({device: name, method: req.method(), path: '/api/registrations', auth: !!req.headers().authorization, at: Date.now()});
+          return route.fulfill({status: res.status, headers: Object.fromEntries(res.headers), body: await res.text()});
+        }
         if (p === '/app/origin-profile.json') return route.fulfill({status: 200, headers: {...SEC, 'content-type': 'application/json'}, body: profile});
         const file = path.join(ROOT, p);
         if (!file.startsWith(ROOT) || !/^\/(app|contracts)\//.test(p) || !fs.existsSync(file) || !fs.statSync(file).isFile()) return route.fulfill({status: 404, body: 'not found'});
@@ -81,14 +95,21 @@ export async function createBrowserWorld({ttlSeconds = 3600, players = 0} = {}) 
       await dev.page.goto(url);
       return dev.page;
     };
-    dev.signIn = async (who, {event = ev.id, keep = false} = {}) => {
+    /** Signs in WITHOUT typing an event id (the person's own event is found after sign-in); pass `event` to use the
+     * optional event-ID field instead (an event link or a pasted id). `choose` picks by name if several are offered. */
+    dev.signIn = async (who, {event = null, keep = false, choose = null} = {}) => {
       const page = dev.page ?? await dev.open(STAFF + '/app/staff.html');
       await page.waitForSelector('#signIn:not([disabled])');
       await page.fill('#email', accounts[who][0]);
       await page.fill('#password', accounts[who][1]);
-      await page.fill('#eventId', event);
+      if (event) { await page.locator('#eventIdBox summary').click(); await page.fill('#eventId', event); }
       if (keep) await page.check('#keepSignedIn');
       await page.click('#signIn');
+      if (choose) {
+        await page.locator('#eventChooser:not([hidden])').waitFor({timeout: 20000});
+        await page.locator('.chooser-option', {hasText: choose}).click();
+        await page.click('#chooserGo');
+      }
     };
     world.contexts.push(dev);
     return dev;

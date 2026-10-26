@@ -7,6 +7,8 @@ import {createMilestone1StaffSessionVault} from '../../contracts/milestone1_staf
 import {createGamedayApi} from '../../contracts/gameday_api.mjs';
 import {createGamedayScoreTransport} from '../../contracts/gameday_score_transport.mjs';
 import {createStaffCore, createPendingLedger} from '../../app/staff_core.mjs';
+import {createRegistrationClient} from '../../contracts/registration_client.mjs';
+import {createRegistrationHandler, createHandlerState} from '../../server/registration/handler.mjs';
 
 export const memoryStorage = () => {
   const m = new Map();
@@ -32,6 +34,16 @@ export async function createWorld({ttlSeconds = 3600} = {}) {
   await fake.local.admin(`insert into fftt_private.event_staff(event_id,user_id,role) values ($1,$2,'organizer'),($1,$3,'scorekeeper'),($1,$4,'scorekeeper')`,
     [ev.id, ids.org, ids.a, ids.b]);
   const world = {fake, clock, now, accounts, ids, eventId: ev.id, devices: []};
+  // the registration adapter (synthetic-fixture source) in front of the SAME fake backend, reached like a same-origin fetch
+  const STAFF = 'https://fftt-staff-test.pages.dev', regState = createHandlerState();
+  world.registrationEnv = {REGISTRATION_ENABLED: 'true', STAFF_ORIGIN: STAFF, SUPABASE_URL: fake.PROJECT, SUPABASE_PUBLISHABLE_KEY: fake.PUBLISHABLE, REGISTRATION_SOURCE: 'synthetic-fixture'};
+  const registrationFetch = name => async (url, init) => {
+    const offline = fake.hooks.offline.has(name);
+    if (offline) throw new TypeError('Failed to fetch');
+    const res = await createRegistrationHandler({env: world.registrationEnv, fetchImpl: fake.clientFetch('adapter-' + name), now, state: regState})(
+      new Request(STAFF + url, {...init, headers: {...init.headers, origin: STAFF}}));
+    return {status: res.status, headers: res.headers, json: () => res.json()};
+  };
 
   world.device = (name, who, {storage = memoryStorage(), tabStorage = memoryStorage(), allowTabPersistence = false} = {}) => {
     const fetchImpl = fake.clientFetch(name);
@@ -42,7 +54,8 @@ export async function createWorld({ttlSeconds = 3600} = {}) {
       const session = createMilestone1PasswordStaffSession({transport, isOnline: () => online.v, now, vault, allowTabPersistence});
       const api = createGamedayApi({publishableKey: PUBLISHABLE, fetchImpl});
       const scoreTransport = createGamedayScoreTransport({publishableKey: PUBLISHABLE, fetchImpl});
-      const core = createStaffCore({session, api, scoreTransport, ledger: createPendingLedger(storage), now, isOnline: () => online.v});
+      const registrationClient = createRegistrationClient({fetchImpl: registrationFetch(name)});
+      const core = createStaffCore({session, api, scoreTransport, registrationClient, ledger: createPendingLedger(storage), now, isOnline: () => online.v});
       return {transport, session, api, scoreTransport, core};
     };
     const dev = {name, who, storage, tabStorage, online, ...build(),

@@ -38,7 +38,7 @@ export function validateLocalScoreIntent(x){
   &&Number.isSafeInteger(x.tableNumber)&&x.tableNumber>=1&&x.tableNumber<=99,
   'Invalid score versions/table');
  requireLocal(typeof x.gameScores==='string'&&x.gameScores.length<=128
-  &&/^\d{1,2}-\d{1,2}(,\s*\d{1,2}-\d{1,2}){1,6}$/.test(x.gameScores),
+  &&/^\d{1,2}-\d{1,2}(,\s*\d{1,2}-\d{1,2}){0,6}$/.test(x.gameScores),   // a Best-of-1 match is ONE game
   'Expected explicit valid-looking fictional game scores');
  return Object.freeze({...x});
 }

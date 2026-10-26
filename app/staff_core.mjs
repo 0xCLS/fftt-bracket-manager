@@ -10,7 +10,9 @@
 import {GamedayApiError} from '../contracts/gameday_api.mjs';
 import {StaffSignInError} from '../contracts/milestone1_password_transport.mjs';
 import {createMilestone1ScoreSession} from '../contracts/milestone1_score_session.mjs';
-import {seedSlots, enginePlayers, normalizeGameScores, bestOf} from '../contracts/gameday_engine.mjs';
+import {seedSlots, enginePlayers, normalizeGameScores} from '../contracts/gameday_engine.mjs';
+import {RegistrationClientError} from '../contracts/registration_client.mjs';
+import {importCsv} from '../contracts/registration_model.mjs';
 
 export const POLL_MS = 7000;
 export const STALE_AFTER_MS = 25000;
@@ -45,10 +47,19 @@ const DETAIL = Object.freeze({
   'slots-players': 'At least two players are needed.',
   'partners': 'Choose two different partners who are not the finalists.',
   'partners-not-in-consolation': 'Doubles partners come from the consolation bracket.',
-  'scores': 'Check the game scores.', 'scores-count': 'Enter the full set of games for this match.',
-  'scores-game': 'Each game goes to 11 and is won by 2.', 'scores-winner': 'The scores do not match the winner.',
-  'scores-extra-games': 'Games were entered after the match was already won.', 'scores-format': 'Use scores like 11-8.',
+  'scores': 'Check the game scores.', 'scores-count': 'The number of games does not fit this match. Its format may have changed: refresh and check.',
+  'scores-game': 'A game score does not fit this match\'s target (won by 2). Its format may have changed: refresh and check.', 'scores-winner': 'The scores do not match the winner.',
+  'scores-extra-games': 'Games were entered after the match was already won.', 'scores-format': 'Use scores like 11-8.', 'scores-range': 'Game scores have at most two digits.',
   'table': 'That table number is not available.', 'email': 'Enter a valid e-mail address.',
+  'format-locked': 'Match formats cannot change once a result has been recorded.',
+  'format-value': 'Choose Best of 1 or Best of 3, and games to 11 or 21.', 'formats': 'Choose a format to change.',
+  'not-deletable': 'Only an empty draft event can be deleted. This one has players, a bracket or results.',
+  'confirmation': 'Type the event name exactly to confirm.',
+  'already-linked': 'That registration is already linked to a player.',
+  'player-ref': 'That registration could not be used. Reload the registration list.',
+  'player-source': 'That registration could not be used. Reload the registration list.',
+  'player-fields': 'That registration could not be used. Reload the registration list.',
+  'players-count': 'Choose between 1 and 64 players at a time.',
 });
 export function describeError(e) {
   if (e instanceof GamedayApiError) {
@@ -88,14 +99,32 @@ export function createPendingLedger(storage) {
   });
 }
 
-export function createStaffCore({session, api, scoreTransport, ledger, now = () => Date.now(),
+const REG_ERRORS = Object.freeze({
+  'not-configured': 'The registration sheet is not connected on this site yet. Import a private CSV file instead, or add walk-ins by hand.',
+  'not-enabled': 'The registration sheet is not enabled for this event.',
+  'forbidden': 'Only an organizer of this event can load registrations.',
+  'access-rejected': 'Your sign-in expired. Sign in again.',
+  'rate-limited': 'Registrations were loaded a moment ago. Wait a little, then try again.',
+  'source-unauthorized': 'The registration sheet is not shared with the connection account, or its access was removed. Ask the administrator.',
+  'source-not-found': 'The registration sheet or tab could not be found. Ask the administrator to check the connection.',
+  'source-busy': 'The registration sheet is busy. Try again in a minute.',
+  'source-unavailable': 'The registration sheet could not be read right now. Try again, or import a private CSV file.',
+  'network': 'You appear to be offline. Nothing was sent.',
+  'malformed': 'The registration answer was not in the expected form, so nothing was shown.',
+});
+
+export function createStaffCore({session, api, scoreTransport, registrationClient = null, ledger, now = () => Date.now(),
   randomId = () => crypto.randomUUID(), isOnline = () => true, onChange = () => {}} = {}) {
   const s = {
     signedIn: false, role: null, eventId: null, events: [], snapshot: null, brief: null, pulse: null,
     desk: [], deskStatus: 'idle', score: {status: 'idle', pendingSubmissionId: null}, pending: null,
     lastGoodAt: 0, lastError: null, busy: false, paused: false, endedReason: null, audit: null,
     lastScoreMessage: null,
+    // organizer-only, in memory only, dropped with every other private view: {status, payload, error, at}
+    registrations: {status: 'idle', payload: null, error: null, at: 0},
   };
+  let confirming = false;
+  const refused = new Map();   // submission id -> reason: the database REFUSED it (validation), so nothing was recorded
   let scoreSession = null, scope = null, rawDesk = new Map(), refreshing = false, queuedForce = false, lastFullAt = 0;
   const emit = () => { try { onChange(); } catch { /* a view error must not stop the core */ } };
 
@@ -116,7 +145,11 @@ export function createStaffCore({session, api, scoreTransport, ledger, now = () 
         if (!scope) throw new Error('no scope');
         return scoreTransport.readOwnSnapshot(scope.token, {eventId, submissionId});
       },
-      sendScore: async intent => { if (!scope) throw new Error('no scope'); return scoreTransport.submitScore(scope.token, intent); },
+      sendScore: async intent => {
+        if (!scope) throw new Error('no scope');
+        try { return await scoreTransport.submitScore(scope.token, intent); }
+        catch (e) { if (e?.definiteRefusal) refused.set(intent.submissionId, e.detail ?? 'refused'); throw e; }
+      },
       getSubmissionId: randomId,
       isAuthenticated: () => s.signedIn && !s.paused && session.status.canRead,
       allowApprovedHostedSyntheticFixture: true,
@@ -135,6 +168,7 @@ export function createStaffCore({session, api, scoreTransport, ledger, now = () 
       return Object.freeze({matchId: m.matchId, version: m.matchVersion, code: m.code, bracket: raw?.bracket ?? 'championship',
         round: raw?.round_number ?? 0, slot: raw?.slot ?? 0, isFinal: raw?.is_championship_final === true,
         table: raw?.table_number ?? null, generation: raw?.bracket_generation ?? 0,
+        bestOf: raw?.best_of ?? 3, points: raw?.points_to_win ?? 11,
         players: m.players.map(p => ({id: p.id, name: p.name}))});
     });
   };
@@ -150,6 +184,7 @@ export function createStaffCore({session, api, scoreTransport, ledger, now = () 
 
   function clearPrivate(reason = null) {
     s.snapshot = null; s.brief = null; s.pulse = null; s.desk = []; s.deskStatus = 'idle'; s.audit = null;
+    s.registrations = {status: 'idle', payload: null, error: null, at: 0};
     rawDesk = new Map(); lastFullAt = 0;
     if (reason) s.endedReason = reason;
   }
@@ -177,6 +212,7 @@ export function createStaffCore({session, api, scoreTransport, ledger, now = () 
         const res = {pulse, role: ctx.role};
         if (ctx.role === 'organizer') res.snapshot = await api.organizerSnapshot(ctx.token, {p_event_id: ctx.eventId});
         else res.brief = await api.eventBrief(ctx.token, {p_event_id: ctx.eventId});
+        try { res.events = await api.myEvents(ctx.token, {}); } catch (e) { if (e instanceof GamedayApiError && e.kind === 'access-rejected') throw e; /* the list is a convenience */ }
         if (pulse.lifecycle === 'active') {
           if (scoreSession && !UNRESOLVED.has(scoreSession.view.status)) {
             await inScope(ctx, () => scoreSession.load());
@@ -191,6 +227,7 @@ export function createStaffCore({session, api, scoreTransport, ledger, now = () 
         lastFullAt = now();
         if (out.snapshot) s.snapshot = out.snapshot;
         if (out.brief) s.brief = out.brief;
+        if (out.events) s.events = out.events;
         if (out.notActive) { s.desk = []; s.deskStatus = 'not-active'; }
         else if (out.deskLoaded) {
           syncScoreView();
@@ -270,7 +307,7 @@ export function createStaffCore({session, api, scoreTransport, ledger, now = () 
   const E = () => s.eventId;
   const organizerOnly = () => s.role === 'organizer';
   const actions = {
-    updateEvent: (name, date, tables) => act(ctx => api.updateEvent(ctx.token, {p_event_id: E(), p_name: name, p_date: date, p_table_count: tables})),
+    async updateEvent(name, date, tables) { const r = await act(ctx => api.updateEvent(ctx.token, {p_event_id: E(), p_name: name, p_date: date, p_table_count: tables})); if (r.ok) await loadEvents(); return r; },
     createEvent: async (name, date, tables) => {
       const r = await act(ctx => api.createEvent(ctx.token, {p_name: name, p_date: date, p_table_count: tables}), {refreshAfter: false});
       if (!r.ok) return r;
@@ -306,8 +343,72 @@ export function createStaffCore({session, api, scoreTransport, ledger, now = () 
     setDoublesTeams: (p1, p2) => act(ctx => api.setDoublesTeams(ctx.token, {p_event_id: E(), p_partner_1: p1, p_partner_2: p2})),
     recordDoubles: (team, scores) => act(ctx => api.recordDoublesResult(ctx.token, {p_event_id: E(), p_winner_team: team, p_game_scores: scores})),
     setVisibility: v => act(ctx => api.setVisibility(ctx.token, {p_event_id: E(), p_visible: v})),
-    setLifecycle: l => act(ctx => api.setLifecycle(ctx.token, {p_event_id: E(), p_lifecycle: l})),
+    async setLifecycle(l) { const r = await act(ctx => api.setLifecycle(ctx.token, {p_event_id: E(), p_lifecycle: l})); if (r.ok) await loadEvents(); return r; },
     setStaff: (email, action, role) => act(ctx => api.setStaff(ctx.token, {p_event_id: E(), p_email: email, p_action: action, p_role: action === 'revoke' ? null : role})),
+    /** formats: {champ: {bestOf, points}, ...} — any subset of the five categories. */
+    setFormats: formats => act(ctx => api.setFormats(ctx.token, {p_event_id: E(), p_formats: Object.fromEntries(
+      Object.entries(formats).map(([k, f]) => [k, {best_of: f.bestOf, points: f.points}]))})),
+    setMatchFormat: (matchId, bestOf, points) => act(ctx => api.setMatchFormat(ctx.token, {p_event_id: E(), p_match_id: matchId, p_best_of: bestOf, p_points: points})),
+    /** items: [{ref?, name, rating, source:'registration'|'walk_in', ratingConfirmed?, linkPlayerId?, sameAsRef?}] */
+    checkinRegistrants: (items, checkIn = true) => act(ctx => api.checkinRegistrants(ctx.token, {p_event_id: E(), p_check_in: checkIn,
+      p_registrants: items.map(i => ({...(i.ref ? {ref: i.ref} : {}), name: i.name, rating: i.rating, rating_status: 'provisional', source: i.source,
+        ...(i.ratingConfirmed === undefined ? {} : {rating_confirmed: i.ratingConfirmed}),
+        ...(i.linkPlayerId ? {link_player_id: i.linkPlayerId} : {}), ...(i.sameAsRef ? {same_as_ref: i.sameAsRef} : {})}))})),
+    confirmRatings: items => act(ctx => api.confirmRatings(ctx.token, {p_event_id: E(), p_items: items.map(i => ({id: i.id, rating: i.rating}))})),
+    /** Move ANY event the person organizes to the archive (hidden from spectators); the database checks organizer access for it. */
+    async archiveEvent(eventId) {
+      const r = await act(ctx => api.setLifecycle(ctx.token, {p_event_id: eventId, p_lifecycle: 'archived'}), {refreshAfter: eventId === s.eventId});
+      if (r.ok) await loadEvents();
+      return r;
+    },
+    /** Archived -> its previous state (the server decides which). The event may be any one the person organizes:
+     * the database checks organizer access for THAT event; nothing is trusted from this client. */
+    async restoreEvent(eventId) {
+      const r = await act(ctx => api.restoreEvent(ctx.token, {p_event_id: eventId}), {refreshAfter: eventId === s.eventId});
+      if (r.ok) await loadEvents();
+      return r;
+    },
+    /** Permanent deletion of an EMPTY DRAFT event (server rules: organizer + platform organizer + exact name; anything
+     * with players, a bracket or results is refused). Never the event that is currently open. */
+    async deleteEvent(eventId, confirmName) {
+      if (eventId === s.eventId) return {ok: false, message: 'Open a different event first, then delete this one.'};
+      const r = await act(ctx => api.deleteEvent(ctx.token, {p_event_id: eventId, p_confirm_name: confirmName}), {refreshAfter: false});
+      await loadEvents();
+      return r;
+    },
+    /** Organizer-only, read-only: ask the server adapter for the sign-up sheet (or the synthetic fixture on staging). */
+    async loadRegistrations() {
+      if (!registrationClient) { s.registrations = {status: 'error', payload: null, error: REG_ERRORS['not-configured'], at: now(), code: 'not-configured'}; emit(); return {ok: false, message: REG_ERRORS['not-configured']}; }
+      if (!isOnline()) return {ok: false, message: REG_ERRORS.network};
+      s.registrations = {...s.registrations, status: 'loading', error: null}; emit();
+      const eventAtStart = s.eventId;
+      try {
+        const payload = await session.authorized(ctx => {
+          if (ctx.role !== 'organizer') throw new RegistrationClientError('forbidden');
+          return registrationClient.load(ctx.token, {eventId: ctx.eventId});
+        });
+        if (eventAtStart !== s.eventId || !s.signedIn) return {ok: false, message: 'The event changed while loading. Try again.'};
+        s.registrations = {status: 'ready', payload, error: null, at: now()}; emit();
+        return {ok: true, payload};
+      } catch (e) {
+        if (isSessionEnded(e)) { endSession(e.kind); return {ok: false, message: describeError(e)}; }
+        const kind = e instanceof RegistrationClientError ? e.kind : null;
+        const message = kind ? REG_ERRORS[kind] : describeError(e);
+        // a failed refresh keeps a previously loaded list on screen (clearly marked), it never invents one
+        s.registrations = {...s.registrations, status: s.registrations.payload ? 'ready' : 'error', error: message, code: kind, at: s.registrations.at}; emit();
+        return {ok: false, message, kind};
+      }
+    },
+    /** The organizer's PRIVATE fallback: a CSV file read in memory in this browser; never uploaded, never stored. */
+    async importRegistrationsCsv(text) {
+      if (s.role !== 'organizer' || !s.eventId) return {ok: false, message: REG_ERRORS.forbidden};
+      try {
+        const payload = await importCsv(text, {refSalt: s.eventId});
+        s.registrations = {status: 'ready', payload, error: null, at: now()}; emit();
+        return {ok: true, payload};
+      } catch { return {ok: false, message: 'That file could not be read as a registration sheet. Export the sheet as CSV (with its header row) and try again.'}; }
+    },
+    clearRegistrations() { s.registrations = {status: 'idle', payload: null, error: null, at: 0}; emit(); },
     async loadAudit() { const r = await act(async ctx => { s.audit = await api.auditLog(ctx.token, {p_event_id: E(), p_limit: 100}); }, {refreshAfter: false}); emit(); return r; },
     async exportEvent() {
       if (!isOnline()) return {ok: false, message: 'You appear to be offline. Nothing was sent.'};
@@ -318,14 +419,17 @@ export function createStaffCore({session, api, scoreTransport, ledger, now = () 
 
   // ---------------------------------------------------------------- scoring
   /** Validate and stage a score. Nothing is sent until confirmScore(). */
-  function prepareScore({matchId, winnerId, games, table}) {
+  /** `expect` {bestOf, points}: the format the person was shown. If the organizer changed it meanwhile, nothing is staged. */
+  function prepareScore({matchId, winnerId, games, table, expect = null}) {
     if (!canWrite()) return {ok: false, message: 'The connection is not confirmed, so scoring is paused.'};
     if (!scoreSession || scoreSession.view.status !== 'ready') return {ok: false, message: 'The Match Desk is refreshing. Try again in a moment.'};
     const row = s.desk.find(m => m.matchId === matchId);
     if (!row) return {ok: false, message: 'That match is no longer waiting for a result.'};
-    const best = bestOf(row.bracket, row.isFinal, {regular_best_of: 3, final_best_of: 5});
+    if (expect && (expect.bestOf !== row.bestOf || expect.points !== row.points)) {
+      return {ok: false, formatChanged: true, message: `The organizer changed this match to Best of ${row.bestOf}, games to ${row.points}. Close this window and open the match again.`};
+    }
     const p1Won = winnerId === row.players[0].id;
-    const norm = normalizeGameScores(games, best, p1Won);
+    const norm = normalizeGameScores(games, row.bestOf, p1Won, row.points);
     if (!norm.ok) return {ok: false, message: norm.error};
     if (norm.text === '') return {ok: false, message: 'Enter the game scores so the result can be checked.'};
     const tableNumber = Number(table ?? row.table ?? 1);
@@ -345,7 +449,12 @@ export function createStaffCore({session, api, scoreTransport, ledger, now = () 
   }
   /** The deliberate confirmation: record the incident durably, send ONCE, then look the decision up. */
   async function confirmScore({submissionId, row, text, tableNumber, winnerId}) {
+    if (confirming) return {ok: false, message: 'This score is already being sent.'};
     if (!scoreSession || scoreSession.view.status !== 'prepared') return {ok: false, message: 'Nothing is staged to send.'};
+    confirming = true;
+    try { return await confirmScoreOnce({submissionId, row, text, tableNumber, winnerId}); } finally { confirming = false; }
+  }
+  async function confirmScoreOnce({submissionId, row, text, tableNumber, winnerId}) {
     const rec = {submissionId, matchId: row.matchId, code: row.code, scores: text, table: tableNumber, winnerId,
       generation: row.generation, expectedVersion: row.version, at: now()};
     if (!ledger.write(s.eventId, rec)) {
@@ -362,6 +471,19 @@ export function createStaffCore({session, api, scoreTransport, ledger, now = () 
     } finally { s.busy = false; emit(); }
   }
   async function resolveScoreOutcome() {
+    const pendingId = scoreSession?.view.pendingSubmissionId;
+    if (pendingId && refused.has(pendingId)) {
+      // Definite: the server rolled the whole request back. Forget the incident and show the current Match Desk.
+      const reason = refused.get(pendingId); refused.delete(pendingId);
+      ledger.clear(s.eventId); s.pending = null;
+      if (s.eventId) newScoreSession(s.eventId);
+      syncScoreView();
+      s.lastScoreMessage = ['scores-count', 'scores-game', 'scores-extra-games', 'scores-winner'].includes(reason)
+        ? 'That score no longer fits this match (its format may have just been changed). NOTHING was recorded. The Match Desk now shows the current format: open the match and enter the result again.'
+        : 'The server did not accept that score. NOTHING was recorded. Check the match and enter it again.';
+      await refresh({force: true});
+      return {ok: false, refused: true, message: s.lastScoreMessage};
+    }
     const st = scoreSession?.view.status;
     if (st === 'needs-own-receipt' || st === 'unknown') {
       try { await session.authorized(ctx => inScope(ctx, () => scoreSession.inspectOwnDecision())); }

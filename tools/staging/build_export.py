@@ -23,7 +23,7 @@ ENTRIES = {'login': [ENTRY], 'staff': ['app/staff.html'], 'spectator': ['app/spe
 SUPABASE = 'https://copmkalfkkrkzheohwuc.supabase.co'
 KNOWN_SHARED_ORIGINS = {'https://0xcls.github.io'}
 DEDICATED_HOST = re.compile(r'^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.(github\.io|pages\.dev)$')
-SENSITIVE = re.compile(r'(^|/)(\.git|\.github|\.env|node_modules|__pycache__|tests|docs|supabase|tools)(/|$)|\.(log|bak|sql|py|sh|key|pem)$|\.local\.json$')
+SENSITIVE = re.compile(r'(^|/)(\.git|\.github|\.env|node_modules|__pycache__|tests|docs|supabase|tools|server|functions)(/|$)|\.(log|bak|sql|py|sh|key|pem)$|\.local\.json$')
 HEADERS = (
     "/*\n"
     "  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' " + SUPABASE +

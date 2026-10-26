@@ -18,7 +18,8 @@ const KEY = /^sb_publishable_[A-Za-z0-9_-]{8,}$/;
 const TERMINAL = ['submission_id', 'status', 'match_id', 'match_version', 'event_revision', 'generation', 'reason'];
 const PULSE = ['event_id', 'revision', 'generation', 'lifecycle', 'submission_id', 'decision'];
 const DESK = ['event_id', 'bracket_generation', 'match_id', 'match_code', 'match_version', 'bracket', 'round_number',
-  'slot', 'player_1_id', 'player_2_id', 'player_1_name', 'player_2_name', 'is_championship_final', 'table_number'];
+  'slot', 'player_1_id', 'player_2_id', 'player_1_name', 'player_2_name', 'is_championship_final', 'table_number',
+  'best_of', 'points_to_win'];
 const fail = reason => { throw new AuthorityGateError(reason); };
 const plain = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 const natural = x => Number.isSafeInteger(x) && x >= 0;
@@ -43,6 +44,15 @@ export function createGamedayScoreTransport({projectUrl = C3_HOST, publishableKe
         body: JSON.stringify(payload),
       });
     } catch { fail(what + ': network response unknown'); }
+    if (response?.status === 400 && what === 'score') {
+      // The database RAISED a validation error: the whole transaction rolled back, so nothing was recorded. That is the
+      // one failure that is definite (every other non-200 stays "unknown" and is settled from the server's own receipt).
+      let body = null; try { body = await response.json(); } catch { /* generic */ }
+      if (body?.message === 'fftt_validation_error') {
+        throw Object.assign(new AuthorityGateError('score: refused by validation'), {definiteRefusal: true, detail: typeof body.details === 'string' ? body.details.slice(0, 48) : null});
+      }
+      fail(what + ': denied, expired or uncertain');
+    }
     if (response?.status !== 200) fail(what + ': denied, expired or uncertain');
     try { return await response.json(); } catch { fail(what + ': unreadable response'); }
   }
@@ -91,10 +101,12 @@ export function createGamedayScoreTransport({projectUrl = C3_HOST, publishableKe
     async readMatchdesk(token, {eventId} = {}) {
       if (!UUID.test(eventId || '')) fail('Invalid desk request');
       reads++;
-      const rows = await post('/rest/v1/rpc/fftt_matchdesk_v1', token, {p_event_id: eventId}, 'desk');
+      const rows = await post('/rest/v1/rpc/fftt_matchdesk_v2', token, {p_event_id: eventId}, 'desk');
       if (!Array.isArray(rows) || rows.length > 140) fail('Unexpected Match Desk');
       return rows.map(r => {
         if (!sameKeys(r, DESK) || r.event_id !== eventId) fail('Unexpected Match Desk row');
+        // a historical Best of 5 may still be waiting to be played; nothing else outside 1/3 and 11/21 is valid
+        if (![1, 3, 5].includes(r.best_of) || ![11, 21].includes(r.points_to_win)) fail('Unexpected match format');
         return r;
       });
     },

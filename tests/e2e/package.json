@@ -5,6 +5,7 @@
   "description": "Test-only support (local PostgreSQL in WebAssembly). Nothing here ships to any hosted origin.",
   "dependencies": {
     "@electric-sql/pglite": "0.3.14",
+    "axe-core": "4.10.2",
     "playwright-core": "^1.49.1"
   }
 }

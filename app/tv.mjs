@@ -11,7 +11,8 @@ const ROTATE_MS = 15000;
 let rot = 0, rotAt = Date.now();
 const line = (m, big = false) => h('div', {class: 'tv-line'},
   m.table ? h('span', {class: 'tbl', text: `Table ${m.table} · `}) : null, `${m.name1} vs ${m.name2}`,
-  h('small', {text: m.status === 'complete' ? `${m.winnerName} won ${m.scores}` : `${m.bracket === 'championship' ? 'Championship' : 'Consolation'} · Round ${m.round + 1}`}));
+  h('small', {text: m.status === 'complete' ? `${m.winnerName} won ${m.scores}` : `${m.bracket === 'championship' ? 'Championship' : 'Consolation'} · Round ${m.round + 1}`},
+    m.bestOf && m.points ? h('span', {class: 'fmt', text: `Best of ${m.bestOf} · to ${m.points}`}) : null));
 
 function standings(ev) {
   const matches = [...ev.championship.map(m => ({...m, bracket: 'championship'})), ...ev.consolation.map(m => ({...m, bracket: 'consolation'}))]

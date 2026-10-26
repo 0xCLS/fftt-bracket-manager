@@ -26,6 +26,7 @@ export function createMilestone1PasswordStaffSession({
  transport,isOnline,now=()=>Date.now(),vault=null,allowTabPersistence=false,
  refreshBeforeMs=120_000,idleTimeoutMs=2*3600_000,maxSessionMs=14*3600_000,
  maxFailures=5,cooldownBaseMs=30_000,cooldownMaxMs=900_000,
+ listEvents=null,choiceLifetimeMs=300_000,
 }={}){
  if(['signInWithPassword','refresh','signOut','readIdentity','readRole','readSnapshot','readMatchdesk']
     .some(k=>typeof transport?.[k]!=='function')||typeof isOnline!=='function'||typeof now!=='function'
@@ -33,7 +34,8 @@ export function createMilestone1PasswordStaffSession({
    ||typeof allowTabPersistence!=='boolean'
    ||!within(refreshBeforeMs,10_000,600_000)||!within(idleTimeoutMs,60_000,12*3600_000)
    ||!within(maxSessionMs,idleTimeoutMs,24*3600_000)||!within(maxFailures,3,10)
-   ||!within(cooldownBaseMs,1_000,300_000)||!within(cooldownMaxMs,cooldownBaseMs,3600_000))
+   ||!within(cooldownBaseMs,1_000,300_000)||!within(cooldownMaxMs,cooldownBaseMs,3600_000)
+   ||(listEvents!==null&&typeof listEvents!=='function')||!within(choiceLifetimeMs,30_000,900_000))
   throw new AuthorityGateError('Invalid staff session configuration');
  let st=null,controller=null,epoch=0,sid=0,suspendedAt=null,busy=false,reading=false,refreshing=null;
  let failures=0,cooldownUntil=0,lastPersistedAt=0;
@@ -173,6 +175,58 @@ export function createMilestone1PasswordStaffSession({
   }
  }
 
+ /** SIGN-IN WITHOUT TYPING AN EVENT ID. The password (or code) proof is unchanged and the session is still scoped
+  * to exactly ONE event whose role is proven by the same independent identity + role check. When the person gives no
+  * event id, their OWN event list is read with their OWN token (the database lists only events they hold a grant on):
+  * one event is entered directly; several are offered by NAME. The held tokens live only in this closure, for a few
+  * minutes, and are signed out server-side if the choice is cancelled, expires or is replaced. */
+ let choice=null,choiceSeq=0;
+ const quietSignOut=async token=>{try{await transport.signOut({token,scope:'local'});}catch{/* best effort */}};
+ async function dropChoice(){
+  const c=choice;choice=null;
+  if(c!==null)await quietSignOut(c.resp.accessToken);
+ }
+ async function adoptOrChoose(resp,{eventId=null,keepSignedIn=false}={}){
+  if(typeof eventId==='string'&&eventId!=='')return adopt(resp,{eventId,keepSignedIn});
+  const token=resp.accessToken;
+  if(listEvents===null){await quietSignOut(token);fail('invalid-input');}
+  let events;
+  try{
+   if(!isOnline())fail('network');
+   const who=await transport.readIdentity({token});
+   if(who.id!==resp.userId)fail('denied');
+   events=await listEvents({token});
+   if(!Array.isArray(events)||events.length>50
+     ||events.some(e=>!e||!UUID.test(e.eventId||'')||typeof e.name!=='string'||typeof e.date!=='string'
+       ||!['organizer','scorekeeper'].includes(e.role)||!['draft','active','complete','archived'].includes(e.lifecycle)))fail('unavailable');
+  }catch(e){
+   await quietSignOut(token);
+   const kind=kindOf(e);
+   if(['network','unavailable','rate-limited'].includes(kind)&&e instanceof StaffSignInError)throw e;
+   fail(kind==='access-rejected'?'access-rejected':'unavailable');
+  }
+  if(events.length===0){await quietSignOut(token);fail('not-authorized');}
+  // current events first, archived ones last (an organizer whose only event is archived can still sign in to restore it)
+  const rank=e=>e.lifecycle==='archived'?2:e.lifecycle==='complete'?1:0;
+  const list=Object.freeze([...events].sort((a,b)=>rank(a)-rank(b)||String(b.date).localeCompare(String(a.date)))
+   .map(e=>Object.freeze({eventId:e.eventId,name:e.name.slice(0,160),date:e.date,lifecycle:e.lifecycle,role:e.role})));
+  if(list.length===1)return adopt(resp,{eventId:list[0].eventId,keepSignedIn});
+  const mine=++choiceSeq;
+  choice={resp,list,keepSignedIn,at:now(),seq:mine};
+  return Object.freeze({
+   choose:Object.freeze({events:list,expiresInMs:choiceLifetimeMs}),
+   async finish(eventId){
+    if(choice===null||choice.seq!==mine)fail('expired');
+    if(typeof eventId!=='string'||!list.some(e=>e.eventId===eventId))fail('invalid-input');
+    if(now()-choice.at>choiceLifetimeMs){await dropChoice();fail('expired');}
+    if(busy)fail('busy');
+    const c=choice;choice=null;busy=true;
+    try{return await adopt(c.resp,{eventId,keepSignedIn:c.keepSignedIn});}finally{busy=false;}
+   },
+   async cancel(){if(choice!==null&&choice.seq===mine)await dropChoice();},
+  });
+ }
+
  async function signOutImpl({global=false}={}){
   const had=st!==null,token=st?.accessToken??null,expired=st===null||st.accessExpiresAt<=now();
   const rt=st?.refreshToken??null;
@@ -190,16 +244,19 @@ export function createMilestone1PasswordStaffSession({
  }
  return Object.freeze({
   /** Password sign-in for an EXISTING authorized account. Never registers. */
-  async signIn({email,password,eventId,keepSignedIn=false}={}){
+  async signIn({email,password,eventId=null,keepSignedIn=false}={}){
    if(busy)fail('busy');
    const e=normalizeStaffEmail(email);
-   if(typeof password!=='string'||password.length<1||password.length>128||!UUID.test(eventId||''))fail('invalid-input');
+   const noEvent=eventId===null||eventId===undefined||eventId==='';
+   if(typeof password!=='string'||password.length<1||password.length>128||(!noEvent&&!UUID.test(eventId||''))
+     ||(noEvent&&listEvents===null))fail('invalid-input');
    const t=now();
    if(t<cooldownUntil)fail('cooldown',{retryAfterMs:cooldownUntil-t}); // no request is sent
    if(!isOnline())fail('network');
    busy=true;
    try{
     // replacing a live session: revoke the old one on the server too, never orphan it
+    await dropChoice();
     if(st!==null)await signOutImpl({global:false});
     endLocal();
     let resp;
@@ -215,14 +272,14 @@ export function createMilestone1PasswordStaffSession({
      throw err instanceof StaffSignInError?err:new StaffSignInError('unavailable');
     }
     failures=0;cooldownUntil=0;
-    return await adopt(resp,{eventId,keepSignedIn});
+    return await adoptOrChoose(resp,{eventId:noEvent?null:eventId,keepSignedIn});
    }finally{busy=false;}
   },
   /** Used by the optional email-code recovery; receives an already validated session. */
   async adoptVerifiedSession(resp,options){
    if(busy)fail('busy');
    busy=true;
-   try{return await adopt(resp,options);}finally{busy=false;}
+   try{await dropChoice();return await adoptOrChoose(resp,options);}finally{busy=false;}
   },
   /** Renew after a reload or a discarded mobile tab, from the opt-in tab vault. */
   async restore(){

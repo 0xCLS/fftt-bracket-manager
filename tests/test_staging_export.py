@@ -104,7 +104,7 @@ class GamedayBundles(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp = tempfile.mkdtemp()
         repo = Path(cls.tmp) / 'repo'; repo.mkdir()
-        for d in ('contracts', 'rehearsals', 'docs', 'tests', 'tools', 'supabase', 'app'):
+        for d in ('contracts', 'rehearsals', 'docs', 'tests', 'tools', 'supabase', 'app', 'server', 'functions'):
             src = ROOT / d
             if src.exists(): shutil.copytree(src, repo / d, ignore=shutil.ignore_patterns('__pycache__', '*.local.json', 'node_modules'))
         run = lambda *a: subprocess.check_call(['git', '-C', str(repo), *a], env=ENV, stdout=subprocess.DEVNULL)
@@ -125,6 +125,21 @@ class GamedayBundles(unittest.TestCase):
             self.assertFalse(p.endswith(('.py', '.sql', '.sh', '.log', '.local.json')), p)
         self.assertNotIn('app/spectator.html', self.staff_files)
         self.assertNotIn('app/tv.html', self.staff_files)
+    def test_staff_bundle_ships_registration_screens_but_never_the_server_adapter(self):
+        for need in ('app/view_players.mjs', 'app/view_events.mjs', 'contracts/registration_client.mjs', 'contracts/registration_model.mjs'):
+            self.assertIn(need, self.staff_files)
+        for p in self.staff_files | self.spect_files:
+            self.assertFalse(p.startswith(('server/', 'functions/')), p)
+        import re
+        for d in (self.staff, self.spect):
+            blob = '\n'.join((d / p).read_text(errors='replace') for p in json.loads((d / 'MANIFEST.json').read_text())['files'] if p.endswith(('.mjs', '.html', '.json', '.css')))
+            for pattern in (r'PRIVATE KEY', r'GOOGLE_SA_', r'REGISTRATION_REF_SECRET', r'sheets\.googleapis\.com', r'oauth2\.googleapis\.com', r'private_key', r'client_secret'):
+                self.assertIsNone(re.search(pattern, blob), pattern)
+    def test_spectator_bundle_has_no_registration_code(self):
+        for p in self.spect_files: self.assertNotRegex(p, r'registration|view_players|view_events')
+    def test_builder_refuses_server_code_in_a_browser_bundle(self):
+        self.assertTrue(B.SENSITIVE.search('server/registration/handler.mjs'))
+        self.assertTrue(B.SENSITIVE.search('functions/api/registrations.js'))
     def test_spectator_bundle_has_no_staff_capability(self):
         for need in ('app/spectator.html', 'app/tv.html', 'app/spectator.mjs', 'app/tv.mjs', 'contracts/gameday_public.mjs', 'app/app.css', '_headers', '_redirects'):
             self.assertIn(need, self.spect_files)

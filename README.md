@@ -22,6 +22,7 @@ A lightweight, single-file tournament desk for **Forging Fellowship Table Tennis
 **October 21:** the first real hosted PKCE sign-in and authorized read-only Match Desk **passed** (operator-observed, synthetic only, localhost). A local multi-device operations batch (device-origin policy and staff page, revocation lifecycle, TV board, organizer fallback ledger, six-client acceptance harness) is implemented and tested against simulated infrastructure only; **physical-device acceptance has not been run and is not authorized**. See the [implementation record](docs/MILESTONE1_MULTI_DEVICE_OPERATIONS_2026-10-21.md) and the [prepared runbook](docs/MILESTONE1_PHYSICAL_DEVICE_RUNBOOK_2026-10-21.md).
 
 **October 23:** game-day staff sign-in direction changed to a $0 web-hosted design with **email/password** (optional emailed code for recovery) and anonymous spectators. A synthetic local candidate with a fail-closed session lifecycle, narrow staging/production origin policy and sanitized export tooling is implemented and tested against simulated infrastructure only; **it is not enabled on the hosted project, not deployed and not released**. See [authentication design](docs/MILESTONE1_STAFF_PASSWORD_AUTH_2026-10-23.md) and [hosting and staging plan](docs/MILESTONE1_STAGING_HOSTING_2026-10-23.md).
+**October 26 (game-day staging, synthetic only, unmerged PR #19):** configurable match formats (Best of 1 or 3, games to 11 or 21; Best of 5 only as a *historical* format), a read-only registration check-in workflow with a server-side adapter and a private CSV fallback, event filtering/archive/restore/guarded deletion, sign-in by event name, and a UI polish and accessibility pass. Additive SQL is in `supabase/proposals/GAMEDAY_TOURNAMENT_V4_STAGING.sql` and is **not applied to any hosted project**; nothing is deployed and no real participant data is involved. See [the V4 record](docs/GAMEDAY_V4_2026-10-26.md) and the [registration integration](docs/REGISTRATION_INTEGRATION_2026-10-26.md) (including what is still needed to connect a real sheet). Three-match guarantee, Swiss and double elimination remain **deferred**; Championship + Consolation is unchanged.
 ## Roadmap
 
 Christopher approved a **three-milestone delivery plan** on October 12, 2026. See [ROADMAP.md](ROADMAP.md) for scope, sequencing, original phase-number mapping and explicit approval gates:
@@ -63,9 +64,9 @@ The [social image build workflow](.github/workflows/render-social-card.yml) can 
 
 The interface uses Christopher's approved light-gray, charcoal and pastel [FFTT design system](docs/DESIGN_SYSTEM.md), with an off-white icon sidebar, readable forms, status pills and bracket controls. The design phase was accepted on October 8, 2026. The organizer's FFTT artwork is embedded as the app icon and browser favicon. Styling is still embedded locally in `index.html`, with no framework, font request or runtime image dependency.
 
-## Registration sheet integration (planned)
+## Registration sheet integration (single-file app: planned; game-day staging app: implemented against synthetic data)
 
-The organizer maintains event sign-ups in a separate private Google Sheet with playing-history and self-assessment questions. **This build does not fetch that Sheet or automatically import its rows.** Current seeding operates on FFTT ratings entered by staff. A future organizer-only, review-before-import workflow could read names and playing-assessment answers, suggest *provisional* ratings, let staff confirm them, and then build balanced opening matchups. Contact fields (email and phone) should not be imported into the bracket or exposed in a public-facing view. Avoid embedding private Sheet credentials, access tokens, or unprotected participant data in this public GitHub Pages app.
+The organizer maintains event sign-ups in a separate private Google Sheet with playing-history and self-assessment questions. **This single-file build does not fetch that Sheet or automatically import its rows.** (The separate game-day staging app has an organizer-only, read-only adapter, documented in [REGISTRATION_INTEGRATION_2026-10-26.md](docs/REGISTRATION_INTEGRATION_2026-10-26.md); it is not connected to the real sheet.) Current seeding operates on FFTT ratings entered by staff. A future organizer-only, review-before-import workflow could read names and playing-assessment answers, suggest *provisional* ratings, let staff confirm them, and then build balanced opening matchups. Contact fields (email and phone) should not be imported into the bracket or exposed in a public-facing view. Avoid embedding private Sheet credentials, access tokens, or unprotected participant data in this public GitHub Pages app.
 
 ## Important data behavior
 
@@ -101,5 +102,16 @@ python -m unittest discover -s tests -p 'test_phase1a_contract.py' -v
 ```
 
 The three Playwright suites run in an isolated browser with synthetic players and simulated local storage. The Phase 1A standard-library suite tests an **in-memory contract reference**, not real authorization, synchronization, or Supabase. No suite touches the live event's data. A GitHub Actions browser-regression workflow also runs these checks when the application or tests change. The UI smoke test covers select arrow/spacing, roster labels, winner radio-group labeling, and the mobile player form. On systems with a separately installed Chromium, set `FFTT_CHROMIUM_BIN` to its executable path.
+
+Game-day staging app tests (Node 22+; the SQL tests use an in-process PostgreSQL, the browser tests use installed Chrome):
+
+```sh
+node --test tests/gameday_*.test.mjs tests/registration_*.test.mjs tests/milestone1_*.test.mjs tests/phase1c*.test.mjs   # zero network
+(cd tests/e2e && npm ci)
+node --test tests/e2e/gameday_server.test.mjs tests/e2e/gameday_v4_server.test.mjs tests/e2e/gameday_core.test.mjs \
+  tests/e2e/gameday_v4_core.test.mjs tests/e2e/registration_integration.test.mjs
+node --test tests/e2e/gameday_browser*.test.mjs tests/e2e/gameday_v4_browser.test.mjs tests/e2e/gameday_registration_browser.test.mjs \
+  tests/e2e/gameday_events_browser.test.mjs tests/e2e/gameday_ui_audit.test.mjs                                          # real Chrome, intercepted network
+```
 
 Keep changes lightweight; preserve a backup before event day. This public code repository is distinct from the private FFTT event-planning and historical-record repository.

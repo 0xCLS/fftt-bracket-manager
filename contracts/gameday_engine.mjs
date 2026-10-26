@@ -57,28 +57,49 @@ export function roundName(totalRounds, r, kind) {
   return r === 0 ? 'Opening Round' : `Round ${r + 1}`;
 }
 
+/** Match formats. NEW configuration allows Best of 1 or 3, games to 11 or 21, always won by two.
+ * Best of 5 appears ONLY on historical matches (played before formats were configurable) and is never offered. */
+export const FORMAT_KEYS = Object.freeze(['champ', 'champ_final', 'cons', 'cons_final', 'doubles']);
+export const FORMAT_LABELS = Object.freeze({champ: 'Championship matches', champ_final: 'Championship Final',
+  cons: 'Consolation matches', cons_final: 'Consolation Final', doubles: 'Mixed-Skill Doubles Finale'});
+export const ALLOWED_BEST_OF = Object.freeze([1, 3]);
+export const ALLOWED_POINTS = Object.freeze([11, 21]);
+export const DEFAULT_FORMATS = Object.freeze({
+  champ: Object.freeze({bestOf: 3, points: 11}), champ_final: Object.freeze({bestOf: 3, points: 11}),
+  cons: Object.freeze({bestOf: 1, points: 21}), cons_final: Object.freeze({bestOf: 1, points: 21}),
+  doubles: Object.freeze({bestOf: 3, points: 11}),
+});
+/** "Best of 3 · to 11" — the one wording used by every screen, export and display. */
+export const formatLabel = (f, {separator = ' · '} = {}) => `Best of ${f.bestOf}${separator}to ${f.points}`;
+export const gamesToWin = bestOf => (bestOf + 1) / 2;
+/** Which configured category a match belongs to; the last match of a bracket is its final. */
+export const matchCategory = (bracket, isLastMatch) => (bracket === 'championship' ? (isLastMatch ? 'champ_final' : 'champ') : (isLastMatch ? 'cons_final' : 'cons'));
+/** Back-compatible helper for the HISTORICAL rule (regular Bo3, championship final Bo5). */
 export const bestOf = (kind, isFinal, event) =>
   (kind === 'championship' && isFinal) ? (event.final_best_of ?? 5) : (event.regular_best_of ?? 3);
 
 /** Mirror of the server's score rules, for immediate feedback only. Blank = winner only.
+ * Works for any odd best-of and for 11- or 21-point games (win by two; exactly two once past the target).
  * Returns {ok:true,text} or {ok:false,error}. */
-export function normalizeGameScores(raw, best, p1Won) {
+export function normalizeGameScores(raw, best, p1Won, points = 11) {
   const value = String(raw ?? '').trim();
   if (value === '') return {ok: true, text: ''};
   const needed = (best + 1) / 2;
   const games = value.split(',').map(x => x.trim());
   if (games.length < needed || games.length > best) {
-    return {ok: false, error: `Enter ${needed} to ${best} completed game scores separated by commas, or leave blank.`};
+    return {ok: false, error: needed === best
+      ? `Enter the one game that was played, such as ${points}-${Math.max(0, points - 6)}.`
+      : `Enter ${needed} to ${best} completed game scores separated by commas, or leave blank.`};
   }
   let w1 = 0, w2 = 0;
   const out = [];
   for (let i = 0; i < games.length; i++) {
     const m = games[i].match(/^(\d{1,2})\s*[-–—]\s*(\d{1,2})$/);
-    if (!m) return {ok: false, error: 'Use game scores such as 11-8, 8-11, 11-7.'};
+    if (!m) return {ok: false, error: `Use game scores such as ${points}-${Math.max(0, points - 3)}${best > 1 ? `, ${Math.max(0, points - 3)}-${points}` : ''}.`};
     const a = Number(m[1]), b = Number(m[2]);
     const hi = Math.max(a, b), lo = Math.min(a, b);
-    if (hi < 11 || hi - lo < 2 || (hi > 11 && hi - lo !== 2)) {
-      return {ok: false, error: 'Each game goes to 11 and must be won by 2 (exactly 2 after deuce).'};
+    if (hi < points || hi - lo < 2 || (hi > points && hi - lo !== 2)) {
+      return {ok: false, error: `Each game goes to ${points} and must be won by 2 (exactly 2 after ${points - 1}-${points - 1}).`};
     }
     if (a > b) w1++; else w2++;
     if (i < games.length - 1 && Math.max(w1, w2) >= needed) {

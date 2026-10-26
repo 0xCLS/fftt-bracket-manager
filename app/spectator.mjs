@@ -14,10 +14,12 @@ function standings(ev) {
   const f = ev.finale;
   return computeStandings({matches, finale: f ? {team1: f.team1, team2: f.team2, winnerTeam: f.winnerTeam} : null});
 }
+const formatLine = m => (m?.bestOf && m?.points ? `Best of ${m.bestOf} · to ${m.points}` : '');
 const matchCard = m => h('div', {class: 'board-match'},
   m.table ? h('div', {class: 'tbl', text: `Table ${m.table}`}) : null,
   h('div', {class: 'names', text: `${m.name1} vs ${m.name2}`}),
-  h('div', {class: 'muted', text: `${m.bracket === 'championship' ? 'Championship' : 'Consolation'} · Round ${m.round + 1}`}));
+  h('div', {class: 'muted', text: `${m.bracket === 'championship' ? 'Championship' : 'Consolation'} · Round ${m.round + 1}`}),
+  formatLine(m) ? h('div', {class: 'fmt-line', text: formatLine(m)}) : null);
 
 function viewNow(ev, board) {
   return h('div', {},
@@ -30,6 +32,7 @@ function viewNow(ev, board) {
 function finaleCard(f) {
   return h('div', {class: 'card'}, h('h2', {text: 'Mixed-Skill Doubles finale'}),
     h('div', {class: 'grid two'}, h('div', {class: 'stat ice'}, h('b', {text: 'Team A'}), h('span', {text: f.team1.join(' + ')})), h('div', {class: 'stat lav'}, h('b', {text: 'Team B'}), h('span', {text: f.team2.join(' + ')}))),
+    f.bestOf && f.points ? h('p', {class: 'fmt-line', text: `Best of ${f.bestOf} · to ${f.points}`}) : null,
     f.winnerTeam ? h('div', {class: 'notice good', text: `Winners: ${(f.winnerTeam === 1 ? f.team1 : f.team2).join(' + ')}${f.scores ? ' · ' + f.scores : ''}`}) : h('p', {class: 'muted', text: 'Coming up after the championship final.'}));
 }
 function viewBracket(ev) {

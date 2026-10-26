@@ -19,17 +19,20 @@ function label(m) {
   return ['Waiting', ''];
 }
 
-export function bracketView(matches, kind, {finalBestOf = 5, regularBestOf = 3} = {}) {
+const formatText = m => (m.bestOf && m.points ? `Best of ${m.bestOf} · to ${m.points}` : null);
+
+/** Bracket for staff and spectators. Each match shows ITS OWN format (a historical Best of 5 stays Best of 5). */
+export function bracketView(matches, kind) {
   const rounds = groupRounds(matches);
   if (!rounds.length) return h('div', {class: 'empty-state', text: 'Bracket not built yet.'});
-  return h('div', {class: 'bracket', role: 'group', 'aria-label': kind === 'championship' ? 'Championship bracket' : 'Consolation bracket'},
+  return h('div', {class: 'bracket', role: 'group', tabindex: '0', 'aria-label': kind === 'championship' ? 'Championship bracket' : 'Consolation bracket'},
     rounds.map((round, r) => h('div', {class: 'round'},
       h('div', {class: 'round-title', text: roundName(rounds.length, r, kind)}),
       round.filter(m => m.status !== 'empty').map(m => {
         const [text, tone] = label(m);
-        const best = (kind === 'championship' && r === rounds.length - 1) ? finalBestOf : regularBestOf;
+        const format = m.status === 'bye' ? null : formatText(m);
         return h('div', {class: 'match' + (m.status === 'pending' && m.table && m.name1 && m.name2 ? ' playing' : '')},
-          h('div', {class: 'match-head'}, h('span', {text: m.status === 'bye' ? 'Bye' : `Best of ${best}`}),
+          h('div', {class: 'match-head'}, h('span', {text: m.status === 'bye' ? 'Bye' : (format ?? 'Match')}),
             h('span', {class: 'pill mini' + (tone ? ' ' + tone : ''), text})),
           [['name1', m.name1], ['name2', m.name2]].map(([, name]) => {
             const win = name && m.winnerName === name;
