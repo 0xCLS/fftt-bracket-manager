@@ -1,6 +1,6 @@
 # Event-specific registration sources and the UI/UX polish pass (October 27, 2026)
 
-_Status: implemented and tested on the integration branch (PR #19, still an open draft). Synthetic staging only. The live Google connection is **not** enabled anywhere; reading a real sheet for event operations needs a separate, isolated real-event environment (section 7)._
+_Status as of October 27: implemented and deployed on synthetic staging; PR #19 remains open/draft/unmerged. Christopher's authenticated **read-only actual Google Sheets diagnostic passed**. Live Google registration **loading/import remains disabled** and requires an isolated real-event environment. See section 7._
 
 ## 1. Why registrations did not load (root cause)
 
@@ -77,6 +77,12 @@ Fail-closed rules: a live Google source is **never** served for a synthetic even
 Full-page screenshots at 1440, 820 and 390 px were produced by the polish suite (`FFTT_SHOTS=<dir>`) and inspected by eye, not only by assertions. That review found and fixed: labels that lost their top margin (sign-in/recovery fields touching), the Overview date field pushed below the name field by the shared rule, format dropdowns clipped to "Games to 1" on a phone, a notification covering the status pills, and a pill overflowing the mapping row at tablet width.
 
 ## 7. Real FFTT3 sheet: what is and is not verified, and the owner steps
+
+### October 27 authenticated real-sheet diagnostic — PASS (supersedes the earlier setup instructions below)
+
+Christopher tested the deployed V5 Staff site as Organizer with the real FFTT3 response sheet (`Form Responses 1`) and provided an on-screen recording. Status **Ready to read**; service-account authentication, sheet access, worksheet, and registration-model compatibility all passed. The diagnostic detected **12 columns**, **21 response rows** (not a verified unique-player count), and **six of seven optional assessment headings**. **Playing profile / description** mapped successfully; the separate optional **Self-described level** heading was not found. It read no participant answer rows and imported nothing. Synthetic staging stays `REGISTRATION_GOOGLE_MODE=diagnostic`; its completed fictional event was not changed. The steps below describe the *earlier, pre-test state* and should not be repeated.
+
+**Important production-readiness correction:** Existing V3/V4/V5 STAGING SQL deliberately enforces `synthetic_only=true` in both the schema and multiple server routines. The earlier proposal below to create a real project, apply V5 and flip configuration is **not executable as written**. A separately reviewed, real-event-capable SQL/RPC release, matching security tests and isolated auth/deployment acceptance are required before enabling actual Google loads. Do not weaken protections on the existing synthetic project.
 
 **Not verified against the real sheet.** No Google service account exists yet and none was created (this session cannot, and must not, create credentials). The connection diagnostic is complete and tested against a faithful fake. To validate the real sheet, the owner needs to:
 
