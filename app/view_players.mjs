@@ -323,7 +323,7 @@ export function createPlayersView(ctx) {
     const hint = h('span', {class: 'muted', text: '· ' + ratingName(rating)});
     const ratingSeg = h('div', {class: 'seg', role: 'radiogroup', 'aria-label': 'FFTT rating'},
       [1, 2, 3, 4, 5].map(n => h('label', {}, h('input', {type: 'radio', name: 'pRating', value: n, checked: n === rating, on: {change: () => { rating = n; remember('pRating', n); hint.textContent = '· ' + ratingName(n); }}}), h('span', {text: String(n)}))));
-    const bulk = h('textarea', {id: 'pBulk', 'data-draft': 'pBulk', placeholder: 'One player per line:  Name, rating (1-5), provisional|established\nAda Q., 3, provisional'});
+    const bulk = h('textarea', {id: 'pBulk', 'data-draft': 'pBulk', placeholder: 'One player per line:  Name, rating (1-5), provisional|established\nAda Quill, 3, provisional'});
     return h('details', {class: 'card details-card', 'data-draft': 'manualOpen', open: draft('manualOpen', sn.players.length === 0 && !s.registrations.payload)},
       h('summary', {}, h('span', {class: 'summary-title', text: 'Enter names by hand'}), h('span', {class: 'muted', text: 'Add several names at once; use walk-in check-in for individual arrivals.'})),
       h('div', {class: 'grid two manual-grid'},

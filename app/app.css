@@ -143,6 +143,8 @@ dialog form,dialog .dlg{padding:18px}
 .dlg-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px}
 .games{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:6px 8px;align-items:center}
 .games input{text-align:center;padding:8px}
+.games b{min-width:0;overflow-wrap:anywhere;line-height:1.2;text-align:center}
+.pill.table-pill{white-space:normal;max-width:100%;overflow-wrap:anywhere;border-radius:14px}
 .winner-pick{display:grid;gap:8px}
 .winner-pick label{margin:0}
 .winner-pick input{position:absolute;opacity:0}

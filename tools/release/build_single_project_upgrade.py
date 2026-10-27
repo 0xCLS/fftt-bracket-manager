@@ -63,7 +63,8 @@ def find_definitions(text: str, name: str) -> list[str]:
         definitions.append(text[start:end])
     return definitions
 
-def generate() -> str:
+def load_latest():
+    """Verify every pinned source blob, then return ({function: (path, last definition)}, [(path, code)])."""
     latest = {}
     files = []
     for path, sha, _ in SOURCES:
@@ -78,6 +79,10 @@ def generate() -> str:
                 latest[name] = (path, defs[-1])
     if set(latest) != set(TARGETS):
         raise ValueError(f"Missing pinned routines: {sorted(set(TARGETS)-set(latest))}")
+    return latest, files
+
+def generate() -> str:
+    latest, files = load_latest()
 
     # If a new synthetic-only predicate appears in any routine in a pinned
     # source file, fail closed rather than silently leave an inaccessible RPC.
@@ -151,13 +156,56 @@ commit;
 """
     return header + "\n\n".join(routines) + "\n" + footer
 
+def generate_rollback() -> str:
+    """Inverse of generate(): the pinned ORIGINAL routines, the synthetic CHECK and no mode trigger.
+
+    Refuses (and changes nothing) once any real event exists: a real event cannot satisfy the synthetic
+    CHECK, and deleting real data is never done implicitly. In that case restore from the private backup
+    or archive the real event first.
+    """
+    latest, _ = load_latest()
+    routines = []
+    for name in TARGETS:
+        path, definition = latest[name]
+        definition = re.sub(r"(?i)^create(?: or replace)? function\s+", "create or replace function ", definition, count=1)
+        routines.append(f"-- Restore original pinned routine from {path}\n" + definition)
+    header = """-- FFTT EXISTING-PROJECT LAUNCH UPGRADE ROLLBACK — DO NOT RUN WITHOUT APPROVAL
+-- Restores the pre-upgrade (synthetic-only) schema state. Refuses if a real event exists.
+begin;
+do $rollback_preflight$
+begin
+  if exists (select 1 from fftt_private.events where synthetic_only is distinct from true) then
+    raise exception 'FFTT rollback refused: a real (non-synthetic) event exists; back it up and archive it first';
+  end if;
+  if exists (select 1 from pg_constraint where conrelid='fftt_private.events'::regclass and conname='events_synthetic_only_check') then
+    raise exception 'FFTT rollback preflight: synthetic CHECK already present (upgrade not applied?)';
+  end if;
+end
+$rollback_preflight$;
+
+drop trigger fftt_events_event_mode_immutable on fftt_private.events;
+drop function fftt_private.prevent_event_mode_change();
+alter table fftt_private.events add constraint events_synthetic_only_check check (synthetic_only = true);
+
+"""
+    return header + "\n\n".join(routines) + "\nnotify pgrst, 'reload schema';\ncommit;\n"
+
 def main() -> int:
     arg = argparse.ArgumentParser(description=__doc__)
     group = arg.add_mutually_exclusive_group(required=True)
     group.add_argument("--check", action="store_true")
     group.add_argument("--out", type=Path, help="NEW nonexistent file to create (offline SQL only)")
+    group.add_argument("--rollback-out", type=Path, help="NEW nonexistent file for the matching ROLLBACK SQL (offline only)")
     opt = arg.parse_args()
     try:
+        if opt.rollback_out:
+            sql = generate_rollback()
+            if opt.rollback_out.exists():
+                raise ValueError("Refusing to overwrite an existing rollback SQL file")
+            opt.rollback_out.parent.mkdir(parents=True, exist_ok=True)
+            opt.rollback_out.write_text(sql, encoding="utf-8", newline="\n")
+            print(f"PASS: rollback candidate; {len(TARGETS)} functions; {len(sql)} bytes; NOT RUN")
+            return 0
         sql = generate()
         if opt.out:
             if opt.out.exists():

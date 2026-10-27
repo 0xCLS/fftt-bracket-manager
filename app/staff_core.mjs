@@ -38,7 +38,7 @@ const DETAIL = Object.freeze({
   'event-limit': 'The limit on open events has been reached. Archive an old event first.',
   'doubles-complete': 'The doubles finale already has a result.',
   'teams-not-set': 'Choose the two doubles teams first.',
-  'duplicate-name': 'Two players cannot share the same name. Add a last initial.',
+  'duplicate-name': 'Two players cannot share the same name. Enter each full first and last name.',
   'player-name': 'Player names cannot contain e-mail addresses or phone numbers.',
   'player-rating': 'Ratings are 1 to 5.',
   'reason': 'A short reason (3 to 300 characters) is required.',

@@ -4,6 +4,8 @@
  * Real GoTrue + multi-connection concurrency are covered separately by the CI `disposable-db` job. */
 import {PGlite} from '@electric-sql/pglite';
 import fs from 'node:fs';
+import os from 'node:os';
+import {spawnSync} from 'node:child_process';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
@@ -35,11 +37,23 @@ grant usage on schema public to anon, authenticated;
 alter default privileges in schema public grant execute on functions to public;
 `;
 
-export async function createLocalDb({sqlFiles = SQL_FILES} = {}) {
+export async function createLocalDb({sqlFiles = SQL_FILES, upgraded = process.env.FFTT_UPGRADED === '1'} = {}) {
   const db = new PGlite();
   await db.exec(AUTH_STUB);
   for (const f of sqlFiles) await db.exec(fs.readFileSync(path.isAbsolute(f) ? f : path.join(ROOT, f), 'utf8'));
+  // FFTT_UPGRADED=1: also apply the reviewed in-place launch upgrade, so every suite exercises REAL-mode events (synthetic_only = false).
+  if (upgraded) await db.exec(buildUpgradeSql());
   return new LocalDb(db);
+}
+
+export function buildUpgradeSql() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fftt-upgrade-'));
+  try {
+    const out = path.join(dir, 'upgrade.sql');
+    const gen = spawnSync('python3', [path.join(ROOT, 'tools/release/build_single_project_upgrade.py'), '--out', out], {encoding: 'utf8', timeout: 30000});
+    if (gen.status !== 0) throw new Error(gen.stderr || gen.stdout);
+    return fs.readFileSync(out, 'utf8');
+  } finally { fs.rmSync(dir, {recursive: true, force: true}); }
 }
 
 export class RpcError extends Error {

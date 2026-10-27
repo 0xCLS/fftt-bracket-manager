@@ -22,8 +22,10 @@ export async function launch() {
   catch { return chromium.launch(); }
 }
 
-export async function createBrowserWorld({ttlSeconds = 3600, players = 0, registration = 'synthetic-fixture', google = null} = {}) {
-  const fake = await createFakeSupabase({ttlSeconds});
+/** `real: true` runs on the UPGRADED single-project schema with a real-mode (synthetic_only = false) event; FFTT_UPGRADED=1 does the same for every world. */
+export async function createBrowserWorld({ttlSeconds = 3600, players = 0, registration = 'synthetic-fixture', google = null, real = undefined} = {}) {
+  const isReal = real ?? process.env.FFTT_UPGRADED === '1';
+  const fake = await createFakeSupabase({ttlSeconds, upgraded: isReal});
   const accounts = {
     org: ['organizer@fftt-staging.invalid', 'org-' + Math.random().toString(36).slice(2) + 'Aa1!'],
     a: ['scorekeeper-a@fftt-staging.invalid', 'a-' + Math.random().toString(36).slice(2) + 'Aa1!'],
@@ -32,8 +34,8 @@ export async function createBrowserWorld({ttlSeconds = 3600, players = 0, regist
   };
   const ids = {};
   for (const [k, [email, pw]] of Object.entries(accounts)) ids[k] = await fake.addAccount(email, pw, {platformOrganizer: k === 'org'});
-  const [ev] = await fake.local.admin(`insert into fftt_private.events(event_name,event_date,table_count,created_by)
-     values ('Synthetic Rehearsal Games','2026-11-22',3,$1) returning id`, [ids.org]);
+  const [ev] = await fake.local.admin(`insert into fftt_private.events(event_name,event_date,table_count,created_by,synthetic_only)
+     values ($2,'2026-11-22',3,$1,$3) returning id`, [ids.org, 'Synthetic Rehearsal Games', !isReal]);
   await fake.local.admin(`insert into fftt_private.event_staff(event_id,user_id,role) values ($1,$2,'organizer'),($1,$3,'scorekeeper'),($1,$4,'scorekeeper')`,
     [ev.id, ids.org, ids.a, ids.b]);
   if (players) await fake.local.rpc(ids.org, 'fftt_upsert_players_v3', {p_event_id: ev.id, p_players: roster(players)});

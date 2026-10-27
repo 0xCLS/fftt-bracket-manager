@@ -326,7 +326,7 @@ export function createStaffUi({core, els, config, signOut}) {
     const usage = new Map(rows.filter(r => r.table).map(r => [r.table, r]));
     children.push(h('section', {class: 'card', 'aria-labelledby': 'tablesTitle'}, h('h2', {id: 'tablesTitle', class: 'card-title', text: 'Tables'}), h('div', {class: 'row'},
       Array.from({length: tables}, (_, i) => { const m = usage.get(i + 1);
-        return pill(m ? `Table ${i + 1} · ${m.players[0].name.split(' ')[0]} v ${m.players[1].name.split(' ')[0]}` : `Table ${i + 1} · free`, m ? 'blue' : 'good'); }))));
+        return pill(m ? `Table ${i + 1} · ${m.players[0].name} v ${m.players[1].name}` : `Table ${i + 1} · free`, (m ? 'blue' : 'good') + ' table-pill'); }))));
     children.push(h('h2', {class: 'page-h2', text: `Ready to play (${rows.length})`}));
     children.push(rows.length ? h('div', {class: 'queue'}, rows.map(r => queueCard(r, tables, org)))
       : h('div', {class: 'empty-state', text:
@@ -415,7 +415,7 @@ export function createStaffUi({core, els, config, signOut}) {
         }));
       function form() {
         gameInputs.length = 0;
-        const grid = h('div', {class: 'games'}, h('span'), h('b', {text: row.players[0].name.split(' ')[0]}), h('span'), h('b', {text: row.players[1].name.split(' ')[0]}));
+        const grid = h('div', {class: 'games'}, h('span'), h('b', {text: row.players[0].name}), h('span'), h('b', {text: row.players[1].name}));
         for (let g = 1; g <= best; g++) {
           const a = h('input', {type: 'text', inputmode: 'numeric', maxlength: 2, 'aria-label': `Game ${g}, ${row.players[0].name}`, pattern: '[0-9]*', value: draftGames[g - 1][0]});
           const b = h('input', {type: 'text', inputmode: 'numeric', maxlength: 2, 'aria-label': `Game ${g}, ${row.players[1].name}`, pattern: '[0-9]*', value: draftGames[g - 1][1]});

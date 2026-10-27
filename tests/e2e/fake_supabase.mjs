@@ -14,8 +14,8 @@ export const PUBLISHABLE = 'sb_publishable_lupD9JDsWFQ_65LuwVL1Fg_O-V5Era0';
 const TABLE_FUNCTIONS = new Set(['fftt_matchdesk_v1', 'fftt_matchdesk_v2']);
 const b64 = o => Buffer.from(JSON.stringify(o)).toString('base64url');
 
-export async function createFakeSupabase({ttlSeconds = 3600, now = () => Date.now()} = {}) {
-  const local = await createLocalDb();
+export async function createFakeSupabase({ttlSeconds = 3600, now = () => Date.now(), upgraded = undefined} = {}) {
+  const local = await createLocalDb(upgraded === undefined ? {} : {upgraded});
   const accounts = new Map();   // email -> {id, password, disabled, signedOutBefore}
   const byId = new Map();
   const families = new Map();   // familyId -> {userId, current, revoked, created}

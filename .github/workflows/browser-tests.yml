@@ -130,6 +130,25 @@ jobs:
         env:
           FFTT_CHROME_CHANNEL: none
         run: node --test tests/e2e/gameday_ui_audit.test.mjs
+      - name: LAUNCH MODE - server, client stack and V4 logic on the UPGRADED single-project schema with real-mode events (scoring, formats, brackets, tables, consolation, doubles, recovery)
+        env:
+          FFTT_UPGRADED: '1'
+        run: node --test tests/e2e/gameday_server.test.mjs tests/e2e/gameday_core.test.mjs tests/e2e/gameday_v4_server.test.mjs tests/e2e/gameday_v4_core.test.mjs
+      - name: LAUNCH MODE - browser rehearsal, failures, formats and events on a real-mode event (organizer, two scorekeepers, spectator, TV, outsider)
+        env:
+          FFTT_CHROME_CHANNEL: none
+          FFTT_UPGRADED: '1'
+        run: node --test tests/e2e/gameday_browser.test.mjs tests/e2e/gameday_browser_failures.test.mjs tests/e2e/gameday_v4_browser.test.mjs tests/e2e/gameday_events_browser.test.mjs
+      - name: LAUNCH MODE - Google Sheets registration on a real-mode event (fake Google; organizer-only, allowlist, full names, no contact leakage)
+        env:
+          FFTT_CHROME_CHANNEL: none
+        run: node --test tests/e2e/gameday_launch_google_browser.test.mjs
+      - name: LAUNCH MODE - long full names on staff, spectator and TV (no overflow or clipped names; same first names stay distinguishable)
+        env:
+          FFTT_CHROME_CHANNEL: none
+        run: node --test tests/e2e/gameday_fullnames_layout.test.mjs
+      - name: Backup export, disposable restore, in-place upgrade and rollback rehearsal (fictional data; tampering must fail)
+        run: node --test tests/e2e/ops_restore_rehearsal.test.mjs
       - name: Check UI, labels and dropdowns
         run: python tests/ui_smoke.py
       - name: Check tournament safety
