@@ -7,7 +7,7 @@ Run on **real devices** after the cutover (and again, shorter, on Nov 8 and Nov 
 
 ## 1. Organizer (laptop)
 - [ ] Sign in with e-mail + password; the event picker shows **FFTT3 by name** and the fictional events only under "Archived/other"; no technical id is shown.
-- [ ] Overview: name, date **Nov 22, 2026**, table count, match formats (regular Bo3 to 11; championship final Bo5; consolation single game to 21; doubles Bo3) are correct. Public visibility is **off** (the button reads "Publish to spectators").
+- [ ] Overview: name, date **Nov 22, 2026**, table count, match formats (regular Bo3 to 11; championship final defaults to Bo3 to 11 (confirm the organizer-approved format; Bo5 is not offered for new matches); consolation single game to 21; doubles Bo3) are correct. Public visibility is **off** (the button reads "Publish to spectators").
 - [ ] Staff tab lists exactly: the Organizer, Scorekeeper A, Scorekeeper B. Revoking and re-granting a scorekeeper takes effect on that phone on its next action.
 - [ ] Players → Registration settings shows **Google Sheet** (no demo option) and "Connected"; **Test connection** is green; counts shown are counts only.
 - [ ] **Load registrations**: names are **full first and last names**; duplicates are grouped; unrecognised/contradictory answers show "Organizer review" and no level is invented; contact details appear only as masked hints (`a•••@b•••`), never full.
