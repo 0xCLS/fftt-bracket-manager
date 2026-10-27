@@ -1,6 +1,6 @@
 # Event-specific registration sources and the UI/UX polish pass (October 27, 2026)
 
-_Status as of October 27: implemented and deployed on synthetic staging; PR #19 remains open/draft/unmerged. Christopher's authenticated **read-only actual Google Sheets diagnostic passed**. Live Google registration **loading/import remains disabled** and requires an isolated real-event environment. See section 7._
+_Current status, October 27: registration-settings UI polish is deployed to **existing synthetic Staff staging** from commit `00068134`; PR #19 remains open/draft/unmerged. Christopher's authenticated **read-only actual Google Sheets diagnostic passed**. Live Google registration **loading/import remains disabled** pending the reviewed **in-place real-event upgrade of the existing Supabase project** and launch acceptance. See the current deployment note and section 7._
 
 ## Current UI staging deployment (October 27, 2026; after the V5 diagnostic)
 
@@ -97,9 +97,11 @@ Christopher tested the deployed V5 Staff site as Organizer with the real FFTT3 r
 
 Keep `REGISTRATION_GOOGLE_MODE` at `diagnostic` on staging: the database refuses to enable a live source on a synthetic event.
 
-### Activating a real-event environment later (no rewrite)
+### Superseded planning note — separate real-event environment (historical only)
 
-A separate Supabase project and Cloudflare pair for the real event, with V5 applied and events that are not `synthetic_only`; set `REGISTRATION_GOOGLE_MODE=enabled`, `REGISTRATION_REF_SECRET`, `REGISTRATION_EVENT_IDS` (the one real event) and the Google secrets; share the real response sheet with the service account; the Organizer then selects it in Registration settings and switches the connection on. Nothing in the application code changes. Requirements before doing so: privacy review of what is stored (nothing but the source description), a decision on who may be organizer, and a rehearsal on the isolated environment.
+**Source conflict / resolution (October 27):** The following historical proposal is **NOT the current launch plan**, and applying V5 unchanged would not work for real events. Christopher chose a safe **in-place upgrade of the existing Supabase project** and continued use of the two existing Cloudflare Pages sites. The current plan and remaining launch gates are in `docs/FFTT3_LAUNCH_READINESS_2026-10-27.md`.
+
+Earlier proposal (superseded): a separate Supabase project and Cloudflare pair for the real event, with V5 applied and events that are not `synthetic_only`; set `REGISTRATION_GOOGLE_MODE=enabled`, `REGISTRATION_REF_SECRET`, `REGISTRATION_EVENT_IDS` (the one real event) and the Google secrets; share the real response sheet with the service account; the Organizer then selects it in Registration settings and switches the connection on. Nothing in the application code changes. Requirements before doing so: privacy review of what is stored (nothing but the source description), a decision on who may be organizer, and a rehearsal on the isolated environment.
 
 ## 8. Hosted staging record (October 27, 2026)
 
