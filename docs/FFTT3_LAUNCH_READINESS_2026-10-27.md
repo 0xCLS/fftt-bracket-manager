@@ -13,6 +13,14 @@ The October 27 screenshot showed a lengthy rehearsal-oriented Registration setti
 
 **Status:** Source and browser regression test updates committed on draft PR #19. Not deployed to the current Staff URL. Live Google operations stay off on synthetic staging; enabling actual FFTT3 response reading still requires migration, release gates and distinct organizer approval.
 
+## Players & check-in and score-tile polish — October 27
+
+Christopher supplied screenshots of the Players & check-in workspace and recent results. The branch now presents the **registration setup and list** together as the primary workflow, with **quick walk-in check-in alongside on sufficiently wide content areas**; on tablet and phone these stack. The roster is full-width beneath the workspace, with concise private-rating guidance and clearer mobile table labels. Important bracket-rebuild warnings, roster permissions, duplicate review, CSV/manual entry and check-in behavior are retained. The existing synthetic demo is still labeled honestly; no real registrations are loaded.
+
+Result display-only score squares are reduced **30 → 26 CSS px** (compact bracket squares **24 → 22 CSS px**) with slightly tighter spacing and smaller text while preserving square geometry, winner/loser colors, tabular numerals and accessibility text. No match scores or winning logic changed.
+
+The existing Chromium regression now checks workspace layout at desktop/tablet/phone widths and 26px score tiles. **Code-only changes on draft PR #19; not deployed to Cloudflare.**
+
 ## Critical path to launch
 1. **Implement a safe, in-place event-mode release, not a fresh-database replacement.** Current live schema enforces `synthetic_only=true` and multiple staff/score RPCs filter on that field. Create a reviewed change that preserves all existing synthetic events and historical results, allows clearly identified new real events, authorizes each operation by active event-scoped Auth grant and lifecycle, audits changes, and prevents a fictional fixture from being used for a real event. The existing *real-only fresh-database* SQL generator is a reference candidate, **not safe to run unchanged on the populated Supabase project**.
 2. **Preflight with a populated disposable clone**: preserve synthetic fixtures, score decisions, event revisions, staff roles, export and rollback. Test every relevant V3–V5 operation, real-event creation, cross-event denial, staff revoke, check-in, 1-match/Bo3 formats, bracket generation, table reservation, consolation and doubles.
