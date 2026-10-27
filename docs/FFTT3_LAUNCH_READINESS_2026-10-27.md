@@ -15,10 +15,16 @@
 5. **Reuse existing Staff and Spectator deployments**: verify signed login, server-only Google credentials, origin allowlist, private registration data handling, read-only spectator projection, device/TV performance, fail-closed errors and publication defaults. Explicitly authorize the hosted migration and any real registration loads; do not expose contacts or private ratings.
 6. **Onsite rehearsal:** **November 8, 2026 at 10:00 AM** (confirmed). **Event:** **November 22, 2026 at 1:00 PM** (confirmed). Reverify access, sync, backup and device recovery before game day.
 
+## New single-project upgrade candidate — tested offline
+
+- `tools/release/build_single_project_upgrade.py` generates a **source-pinned, non-destructive, in-place SQL candidate** which retains existing synthetic history, opens a separate real-event mode for newly created events, and makes each event's mode immutable. The effective V2–V4 authorization and scoring RPCs continue to enforce current, active, event-scoped staff grants. Registration fixtures stay prohibited on real events, and Google sources stay disabled for synthetic events.
+- `tests/e2e/gameday_single_project_upgrade.test.mjs` creates a **populated fictional synthetic tournament**, upgrades its disposable PGlite DB, checks that the original roster, staff access and event survive, confirms synthetic-mode immutability, creates a new real event, exercises Google/fixture guards, verifies both private exports mark their correct mode and confirms zero unapproved publication.
+- The new CI test **passed in run [40544275690](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/40544275690)**. The existing disposable PostgreSQL job also passed; the full browser regression was still running at documentation time. **This is not a hosted migration or proof of signed real GoTrue sessions.**
+
 ## Readiness acceptance
 | Area | Must-pass evidence | Status as of decision |
 | --- | --- | --- |
-| In-place schema | Tested migration on **populated** disposable DB, no synthetic-data loss, verified backup/restore | **Pending** — fresh-DB real-mode SQL CI passed only |
+| In-place schema | Tested migration on **populated** disposable DB, no synthetic-data loss, verified backup/restore | **Targeted PGlite in-place preservation test passed** (CI run 40544275690); populated hosted Auth/backup/restore acceptance pending |
 | Access | Independent signed Auth, event-scoped organizer/scorers, outsider denial and instant revocation | **Pending in real-event mode** |
 | Scoring | Two-scorer concurrency, formats, brackets, table conflict, consolation, doubles, audit and recovery | Synthetic tests passed; **real-mode acceptance pending** |
 | Registration | Private verified Google source, reviewed heading mapping, per-player reconciliation, no contact leakage | Metadata diagnostic passed; **no real answers imported** |
