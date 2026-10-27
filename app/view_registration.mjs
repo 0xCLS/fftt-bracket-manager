@@ -56,12 +56,13 @@ export function createRegistrationSettings(ctx) {
     return h('div', {class: 'field'}, h('label', {for: id, text: label}), input, help ? h('p', {class: 'help', id: id + 'Help', text: help}) : null);
   }
 
-  function sharing(caps) {
+  function sharing(caps, verified) {
+    if (verified) return null;
     if (!caps?.serviceAccountEmail) return null;
     const copy = h('button', {type: 'button', class: 'small', text: st.copied ? 'Copied' : 'Copy e-mail', 'aria-label': 'Copy the connection account e-mail',
       on: {click: async () => { try { await navigator.clipboard.writeText(caps.serviceAccountEmail); st.copied = true; rerender(); setTimeout(() => { st.copied = false; rerender(); }, 2500); } catch { toast('Select the e-mail and copy it.', 'warn'); } }}});
-    return h('div', {class: 'notice', role: 'note'},
-      h('b', {text: 'Share the sheet first. '}), 'In Google Sheets choose Share, add this account as ', h('b', {text: 'Viewer'}), ' (read-only), then check the sheet here:',
+    return h('div', {class: 'reg-share-help', role: 'note'},
+      h('b', {text: 'Sheet access: '}), 'Share the Google Sheet with this connection account as Viewer (read-only):',
       h('div', {class: 'copy-line'}, h('code', {class: 'account-email', text: caps.serviceAccountEmail}), copy));
   }
 
@@ -129,10 +130,10 @@ export function createRegistrationSettings(ctx) {
     const editable = (sn.event.lifecycle === 'draft' || sn.event.lifecycle === 'active');
     const busy = rs.busy !== null;
     const googleAllowedHere = !src?.eventSynthetic;
-    const kind = st.kind ?? (src?.configured ? src.kind : (caps?.fixtureAvailable && src?.eventSynthetic !== false ? 'fixture' : null));
+    const kind = st.kind ?? (src?.configured ? src.kind : (src?.eventSynthetic === false ? 'google-sheets' : (caps?.fixtureAvailable ? 'fixture' : null)));
     const head = h('div', {class: 'card-head'},
       h('div', {}, h('h2', {id: 'regSetTitle', text: 'Registration settings'}),
-        h('p', {class: 'card-sub', text: 'Where this event\'s sign-ups come from. Read-only: the app never writes to your sheet, never saves registration rows and never shows contact details.'})),
+        h('p', {class: 'card-sub', text: 'Choose where this event’s sign-ups come from. Google Sheets is read-only.'})),
       h('div', {class: 'row'}, pill(info.label, info.tone),
         h('button', {type: 'button', class: 'small', id: 'regSetToggle', 'aria-expanded': String(st.open), 'aria-controls': 'regSetBody', text: st.open ? 'Hide settings' : 'Registration settings',
           on: {click: () => { st.open = !st.open; rerender(); }}})));
@@ -154,9 +155,9 @@ export function createRegistrationSettings(ctx) {
       h('span', {class: 'choice-card'}, h('strong', {text: label}), h('span', {class: 'muted', text})));
     body.push(h('fieldset', {class: 'choice-group'}, h('legend', {text: 'Registration source'}),
       h('div', {class: 'choices'},
-        choice('fixture', 'Fictional demo data', 'Made-up people for rehearsal.', !caps?.fixtureAvailable || src?.eventSynthetic === false),
-        choice('google-sheets', 'Google Sheet', googleAllowedHere ? 'Read-only link to a Google Form\'s response sheet.' : 'Connect and test now; reading is off on this site.', false)),
-      h('p', {class: 'help', text: 'A private CSV file and walk-in registration are always available below the list.'})));
+        choice('google-sheets', 'Google Sheet', googleAllowedHere ? 'Use this event’s online sign-ups.' : 'Test the connection; live reading is off in staging.', false),
+        src?.eventSynthetic === false ? null : choice('fixture', 'Fictional demo data', 'For rehearsal only; no real players.', !caps?.fixtureAvailable)),
+      st.dirty ? h('p', {class: 'help reg-unsaved', role: 'status', text: 'Unsaved changes. Complete the connection details below, then save.'}) : null));
 
     if (kind === 'google-sheets') {
       const insp = rs.inspect, diag = rs.diagnostic;
@@ -166,37 +167,39 @@ export function createRegistrationSettings(ctx) {
       const tabSel = h('select', {id: 'regTab', 'aria-describedby': 'regTabHelp', disabled: !editable || !writable() || busy || tabs.length === 0,
         on: {change: async ev => { st.worksheet = ev.target.value; st.mapping = {}; st.dirty = true; await runTest(); }}},
         tabs.length ? tabs.map(w => h('option', {value: w.title, text: w.title, selected: w.title === st.worksheet})) : h('option', {value: '', text: 'Check the sheet to list its tabs'}));
-      body.push(sharing(caps));
+      body.push(sharing(caps, !!diag?.ok && !!insp?.spreadsheetId && parseSpreadsheetRef(st.text) === insp.spreadsheetId));
       body.push(h('div', {class: 'field'}, h('label', {for: 'regSheet', text: 'Spreadsheet link or ID'}),
         h('div', {class: 'input-action'}, sheetInput,
           h('button', {type: 'button', class: 'primary', id: 'regCheck', disabled: !editable || !writable() || busy || !caps?.googleConfigured, text: rs.busy === 'inspect' ? 'Checking…' : 'Check sheet', 'aria-busy': String(rs.busy === 'inspect'), on: {click: runInspect}})),
         h('p', {class: 'help', id: 'regSheetHelp', text: caps?.googleConfigured === false ? 'The Google connection is not set up on this site yet, so a sheet cannot be checked. The administrator needs to add the connection account (see the deployment notes).'
           : 'Only a Google Sheets link or ID is accepted. The sheet\'s title is shown after it is checked.'})));
-      body.push(field('Worksheet (tab)', 'regTab', tabSel, 'The tab that holds the form\'s responses (usually “Form responses 1”).'));
+      body.push(field('Worksheet (tab)', 'regTab', tabSel, 'Select the tab containing registration responses.'));
       if (insp || src?.spreadsheetTitle) body.push(h('p', {class: 'help'}, 'Sheet: ', h('b', {text: insp?.title ?? src.spreadsheetTitle})));
-      body.push(h('div', {class: 'sub-block'}, h('h3', {text: 'Column mapping'}),
-        h('p', {class: 'help', text: 'Familiar FFTT form headings are recognized automatically. If a future form words a question differently, choose the matching column. Without playing-assessment columns, no level is suggested and you review each one.'}),
-        mappingTable(diag, !editable)));
       body.push(h('div', {class: 'row'}, h('button', {type: 'button', id: 'regTest', disabled: !editable || !writable() || busy || !st.worksheet || !caps?.googleConfigured, text: rs.busy === 'test' ? 'Testing…' : 'Test connection', 'aria-busy': String(rs.busy === 'test'), on: {click: runTest}}),
         h('span', {class: 'muted', text: 'Reads only the column headings and a response count. No answers are read.'})));
       body.push(diagnosticList(diag));
+      if (diag?.columns?.length) body.push(h('div', {class: 'sub-block'}, h('h3', {text: 'Column mapping (if needed)'}),
+        h('p', {class: 'help', text: 'We match familiar form headings automatically. Adjust only unmatched columns; levels without assessment answers require your review.'}),
+        mappingTable(diag, !editable)));
       if (diag && !diag.ok && diag.checks.some(c => c.status === 'fail' && ['spreadsheet', 'worksheet'].includes(c.id)) && caps?.serviceAccountEmail)
         body.push(h('p', {class: 'help'}, 'If the sheet is not shared yet, share it with ', h('code', {text: caps.serviceAccountEmail}), ' as Viewer, then test again.'));
       const allowedToEnable = googleAllowedHere && caps?.googleMode === 'enabled';
       body.push(h('label', {class: 'check', id: 'regEnableRow'}, h('input', {type: 'checkbox', id: 'regEnable', checked: st.enabled && allowedToEnable, disabled: !editable || !writable() || busy || !allowedToEnable,
         on: {change: ev => { st.enabled = ev.target.checked; st.dirty = true; }}}),
-        h('span', {}, h('b', {text: 'Allow reading this sheet for this event'}), h('span', {class: 'muted', text: allowedToEnable ? ' Turn off at any time; nothing is deleted.'
-          : ' Not available here: this is a synthetic staging site, so a live Google Sheet can be saved and tested but not read for event operations.'}))));
+        h('span', {}, h('b', {text: 'Allow reading this sheet for this event'}), h('span', {class: 'muted', text: allowedToEnable ? ' Turn off at any time.'
+          : src?.eventSynthetic ? ' This synthetic staging site allows connection tests, not live registration reading.'
+          : caps?.googleMode !== 'enabled' ? ' Connection-test mode is active; live reading is not enabled on this site.'
+          : ' Live reading is not available.'}))));
       if (src?.configured && src.kind === 'google-sheets') {
         const checked = when(src.lastCheckedAt), ok = when(src.lastOkAt);
         body.push(h('dl', {class: 'status-list'}, h('dt', {text: 'Status'}), h('dd', {text: ({untested: 'Not tested yet', ready: 'Ready', 'needs-attention': 'Needs attention', failed: 'Last test failed'})[src.status]}),
           h('dt', {text: 'Last checked'}), h('dd', {text: checked ?? 'Never'}), h('dt', {text: 'Last successful read'}), h('dd', {text: ok ?? 'Never'}),
           src.lastResponseCount !== null ? [h('dt', {text: 'Responses'}), h('dd', {text: String(src.lastResponseCount)})] : null));
       }
-      body.push(h('p', {class: 'help', role: 'note'}, h('b', {text: 'Read-only. '}), 'The app can only read. Nothing is written to your sheet, and registration rows are never saved: only the people you check in are added to the roster.'));
+      body.push(h('p', {class: 'help', role: 'note', text: 'Only players you check in join the tournament roster. The sheet is never changed and contact details are not displayed.'}));
     }
     if (kind === 'fixture') {
-      body.push(h('div', {class: 'notice', role: 'note'}, h('b', {text: 'Fictional demo data. '}), 'Twenty made-up registrations in the approved form\'s exact shape, for rehearsal. No real people.'));
+      body.push(h('p', {class: 'help', role: 'note', text: 'This practice list contains 20 fictional registrations. It does not include actual players.'}));
     }
     if (st.message) body.push(h('div', {class: 'notice ' + st.messageTone, role: st.messageTone === 'bad' ? 'alert' : 'status', id: 'regSetMsg', text: st.message}));
 
@@ -214,6 +217,6 @@ export function createRegistrationSettings(ctx) {
         const r = await core.actions.clearRegistrationSource();
         if (r.ok) { Object.assign(st, {kind: null, text: '', worksheet: '', mapping: {}, enabled: false, dirty: false, message: null}); toast('Registration source removed.'); rerender(); } else say(r.message);
       }}}) : null));
-    return h('section', {class: 'card reg-settings', 'aria-labelledby': 'regSetTitle'}, head, summary, h('div', {id: 'regSetBody', class: 'reg-set-body', 'aria-busy': String(busy)}, body));
+    return h('section', {class: 'card reg-settings', 'aria-labelledby': 'regSetTitle'}, head, h('div', {id: 'regSetBody', class: 'reg-set-body', 'aria-busy': String(busy)}, body));
   };
 }
