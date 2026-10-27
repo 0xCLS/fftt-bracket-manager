@@ -2,6 +2,10 @@
 
 _Status as of October 27: implemented and deployed on synthetic staging; PR #19 remains open/draft/unmerged. Christopher's authenticated **read-only actual Google Sheets diagnostic passed**. Live Google registration **loading/import remains disabled** and requires an isolated real-event environment. See section 7._
 
+## Current UI staging deployment (October 27, 2026; after the V5 diagnostic)
+
+The registration-settings *interface polish* from approved application commit `00068134f3fa74cd1bec6e9b32071cd17c2e0544` is now deployed to the existing Staff synthetic staging site at https://fftt3-staff-stg.pages.dev (Cloudflare deployment `944c112b-25ad-4ef2-9d81-c47acf1eb477`), alongside Spectator deployment `d877dd90-7e75-476c-8c27-204ac84e1352`. Existing Function/secrets and `REGISTRATION_GOOGLE_MODE=diagnostic` are unchanged. **UI deployment ≠ permission to load actual response rows; Organizer-authenticated visual acceptance is pending.** See `docs/FFTT3_LAUNCH_READINESS_2026-10-27.md` for the rollout record and the current **single-existing-Supabase-project** launch plan. The older section 7 suggestion to create a separate Supabase+Cloudflare setup was **superseded** by Christopher's later simplicity instruction; retain it as historical provenance, not an active deployment plan.
+
 ## 1. Why registrations did not load (root cause)
 
 The deployed staff Function reported "The registration sheet could not be read right now" even though staging was set to the fictional fixture. Reproduced locally in the same runtime Cloudflare uses (`workerd`):
