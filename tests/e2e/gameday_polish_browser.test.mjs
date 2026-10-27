@@ -122,6 +122,21 @@ test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Sta
       const tops = await org.page.evaluate(() => ['evName', 'evDate'].map(id => document.getElementById(id).getBoundingClientRect().top));
       if (vp !== 'phone') assert.ok(Math.abs(tops[0] - tops[1]) < 1, `event name and date fields share a baseline @ ${vp}: ${tops}`);
       await goTab(org.page, 'Players');
+      // Check-in workspace is a single accessible flow on tablet/phone and a
+      // two-column registration + walk-in station on roomy desktop.
+      const layout = await org.page.evaluate(() => {
+        const page = document.querySelector('.players-page').getBoundingClientRect();
+        const settings = document.querySelector('.players-main .reg-settings').getBoundingClientRect();
+        const reg = document.querySelector('.players-main .reg-card').getBoundingClientRect();
+        const walk = document.querySelector('.players-side #walkTitle').closest('.card').getBoundingClientRect();
+        const roster = document.getElementById('rosterTitle').closest('.card').getBoundingClientRect();
+        return {width:page.width,settings:{top:settings.top,left:settings.left},reg:{top:reg.top,bottom:reg.bottom,left:reg.left,right:reg.right},walk:{top:walk.top,left:walk.left,bottom:walk.bottom},rosterTop:roster.top,score:getComputedStyle(document.documentElement).getPropertyValue('--tile').trim()};
+      });
+      assert.equal(layout.score, '26px', 'scores use the reduced size');
+      assert.ok(layout.settings.top < layout.reg.top, 'registration configuration comes before loading');
+      if (layout.width >= 980) assert.ok(layout.walk.left >= layout.reg.right - 2, `walk-in is beside registration when room permits @ ${vp}`);
+      else assert.ok(layout.walk.top >= layout.reg.bottom - 2, `walk-in stacks after registration on smaller screens @ ${vp}`);
+      assert.ok(layout.rosterTop >= Math.max(layout.reg.bottom,layout.walk.bottom) - 2, 'full-width roster follows the check-in workspace');
       await org.page.locator('#regSetToggle').click();
       await org.page.locator('#regSetBody').waitFor();
       await org.page.locator('.choice', {hasText: 'Google Sheet'}).click();
@@ -254,7 +269,7 @@ test('SCORE TILES: equal squares, tabular numerals, green winner / red loser per
       const tiles = await org.page.evaluate(() => [...document.querySelectorAll('.scores-cell .score-tile')].map(t => { const r = t.getBoundingClientRect(), cs = getComputedStyle(t); return {w: r.width, h: r.height, cls: t.className, text: t.textContent, ff: cs.fontVariantNumeric, radius: parseFloat(cs.borderTopLeftRadius), bg: cs.backgroundColor, color: cs.color}; }));
       assert.ok(tiles.length >= 8, 'recent results render tiles');
       assert.ok(tiles.every(t => Math.abs(t.w - t.h) < 0.5), 'every tile is square');
-      assert.ok(tiles.every(t => Math.abs(t.w - 30) < 0.5), `standard tiles are 30px squares (${tiles[0].w})`);
+      assert.ok(tiles.every(t => Math.abs(t.w - 26) < 0.5), `standard tiles are 26px squares (${tiles[0].w})`);
       assert.ok(tiles.every(t => Math.abs(t.w - tiles[0].w) < 0.5 && Math.abs(t.h - tiles[0].h) < 0.5), `identical width and height for every tile (${tiles[0].w}px) incl. double digits @ ${vp}`);
       assert.ok(tiles.some(t => t.text.length === 2) && tiles.some(t => t.text.length === 1), 'single and double digits both present');
       assert.ok(tiles.every(t => t.ff.includes('tabular-nums') && t.radius >= 5 && t.radius <= 9), 'tabular numerals and a consistent modest radius');
