@@ -57,7 +57,8 @@ async function stageTournament(w, {doubles = false} = {}) {
 const SPACING = () => {
   const VERT = 10, HORIZ = 6;
   const vis = e => { const r = e.getBoundingClientRect(), cs = getComputedStyle(e); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && !e.closest('[hidden]') && !e.closest('.sr-only') && !(e.closest('details:not([open])') && !e.closest('summary')); };
-  const controls = [...document.querySelectorAll('button, select, input:not([type=radio]):not([type=checkbox]):not([type=file]):not([type=hidden]), textarea')]
+  const scope = document.querySelector('dialog[open]') ?? document;   // behind a modal dialog the page is inert: audit what the person can actually reach
+  const controls = [...scope.querySelectorAll('button, select, input:not([type=radio]):not([type=checkbox]):not([type=file]):not([type=hidden]), textarea')]
     .filter(vis).filter(e => !e.classList.contains('pw-toggle') && !e.closest('.seg, nav.tabs, .toasts, .chips, .games, .reg-pick, .bracket'));
   const name = e => `${e.tagName.toLowerCase()}${e.id ? '#' + e.id : ''}${e.getAttribute('aria-label') ? `[${e.getAttribute('aria-label').slice(0, 24)}]` : ''}${e.textContent && e.tagName === 'BUTTON' ? `"${e.textContent.trim().slice(0, 22)}"` : ''}`;
   const out = [];
@@ -72,7 +73,7 @@ const SPACING = () => {
     }
   }
   // a label sits just above its own field (not floating away, not glued on)
-  for (const l of document.querySelectorAll('label[for]')) {
+  for (const l of scope.querySelectorAll('label[for]')) {
     if (!vis(l) || l.classList.contains('check') || l.closest('.map-row')) continue;
     const f = document.getElementById(l.getAttribute('for'));
     if (!f || !vis(f)) continue;
