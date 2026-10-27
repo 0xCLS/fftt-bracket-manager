@@ -2,6 +2,12 @@
 
 _Last organized: October 12, 2026. This roadmap is a planning record, **not** a claim that proposed features are implemented or approved for delivery. Christopher's latest explicit instructions supersede this document._
 
+## Current directive — simplify and ship FFTT3 (October 27, 2026)
+
+**Latest organizer instruction supersedes older synthetic-only and two-project proposals:** treat the Bracket Manager as **direct-to-launch**, not ongoing prototype work. Prefer **one existing Supabase project** (`fftt-bracket-manager-dev`) and **the two existing isolated Cloudflare Pages sites** for staff and spectators; do not add another Supabase project/extra Pages as the default. Preserve synthetic history, strong event-scoped Auth, privacy, zero-cost setup, backups and the requirement to prove the in-place conversion safe before touching hosted data.
+
+**Consolidated next delivery:** safe in-place real-event SQL/RPC candidate with populated-disposable-db and signed Auth tests; actual registration gating; staff/spectator device acceptance; backup and recovery; **November 8 at 10:00 AM** onsite rehearsal and **November 22 at 1:00 PM** event. The previously prepared **fresh-project real-only** SQL candidate cannot simply be applied to the populated existing database. [Direct launch-readiness plan](docs/FFTT3_LAUNCH_READINESS_2026-10-27.md) governs future work. Preserve old history below; it is not current architecture approval.
+
 ## Product direction and sequencing
 
 **Design decision (October 8, 2026):** Christopher explicitly accepted the current UI ("I'm satisfied with the design for now. Let's move on"). **Phase 0 visual approval is complete. On October 12, Christopher approved consolidating the remaining work into three milestones (1–3), while keeping Phase 1 security and production authorization gates intact.** The format remains Championship Bracket + Consolation Bracket with one Mixed-Skill Doubles finale, preserving fellowship and at least two competitive matches per player when practical.
