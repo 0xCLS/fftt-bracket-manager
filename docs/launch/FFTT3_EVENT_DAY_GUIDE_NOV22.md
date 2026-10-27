@@ -62,4 +62,4 @@ Results & Export → **Private backup** (the app's own download; it contains lev
 4. Switch `REGISTRATION_GOOGLE_MODE` back to `diagnostic` (owner) once check-in is closed.
 
 ## Numbers to remember
-Event: Sunday Nov 22, 1:00 PM. Rehearsal: Nov 8, 10:00 AM. Formats: regular Bo3 to 11; championship final Bo5 to 11; consolation single game to 21; doubles Bo3 to 11. Levels 1–5 are private (never shown publicly).
+Event: Sunday Nov 22, 1:00 PM. Rehearsal: Nov 8, 10:00 AM. Formats: regular Bo3 to 11; championship final defaults to Bo3 to 11 (confirm approved format; only Bo1/Bo3 selectable); consolation single game to 21; doubles Bo3 to 11. Levels 1–5 are private (never shown publicly).
