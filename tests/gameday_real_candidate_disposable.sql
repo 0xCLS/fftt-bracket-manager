@@ -30,11 +30,11 @@ select set_config('request.jwt.claims',
  '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated","aud":"authenticated"}',true);
 
 select (public.fftt_create_event_v3('FICTIONAL REAL-MODE CI','2026-11-22',2)->>'event_id') as event_id \gset
+select set_config('fftt.candidate_event_id', :'event_id', true);
 
 do $real$
 begin
-  if not exists (select 1 from public.fftt_my_events_v4() as events
-      where events::text like '%FICTIONAL REAL-MODE CI%') then
+  if public.fftt_my_events_v4()::text not like '%FICTIONAL REAL-MODE CI%' then
     -- Not an authorization failure; the listing must find an event created by the organizer.
     raise exception 'organizer event discovery failed';
   end if;
@@ -43,20 +43,20 @@ $real$;
 
 -- Service credentials and actual Sheets rows are never accessed. The ID below is fictional.
 select public.fftt_set_registration_source_v5(
- :'event_id'::uuid,
+ current_setting('fftt.candidate_event_id')::uuid,
  jsonb_build_object('kind','google-sheets','spreadsheet_id','FAKE_FFTT_CI_SHEET_ID_123456789',
  'spreadsheet_title','Fictional sheet','worksheet','Form Responses 1','column_map','{}'::jsonb,'enabled',true));
 
 do $source$
 declare v jsonb;
 begin
-  v:=public.fftt_registration_source_v5(:'event_id'::uuid);
+  v:=public.fftt_registration_source_v5(current_setting('fftt.candidate_event_id')::uuid);
   if v->>'event_synthetic' <> 'false' or v->>'enabled' <> 'true'
      or v->>'kind' <> 'google-sheets' then
     raise exception 'real-only Google source configuration unavailable';
   end if;
   begin
-    perform public.fftt_set_registration_source_v5(:'event_id'::uuid,
+    perform public.fftt_set_registration_source_v5(current_setting('fftt.candidate_event_id')::uuid,
         '{"kind":"fixture","enabled":true}'::jsonb);
     raise exception 'synthetic fixture incorrectly enabled';
   exception when others then
@@ -66,7 +66,7 @@ end
 $source$;
 
 -- Auth/scorer role segregation; event-scoped access must fail for an outsider.
-select public.fftt_set_staff_v3(:'event_id'::uuid,'scorer@fftt-ci.invalid','grant','scorekeeper');
+select public.fftt_set_staff_v3(current_setting('fftt.candidate_event_id')::uuid,'scorer@fftt-ci.invalid','grant','scorekeeper');
 select set_config('request.jwt.claim.sub','a0000000-0000-4000-8000-000000000003',true);
 select set_config('request.jwt.claims',
  '{"sub":"a0000000-0000-4000-8000-000000000003","role":"authenticated","aud":"authenticated"}',true);
@@ -77,7 +77,7 @@ begin
     raise exception 'outsider discovered protected event';
   end if;
   begin
-    perform public.fftt_registration_source_v5(:'event_id'::uuid);
+    perform public.fftt_registration_source_v5(current_setting('fftt.candidate_event_id')::uuid);
     raise exception 'outsider read registration settings';
   exception when others then
     if sqlerrm='outsider read registration settings' then raise; end if;
@@ -89,7 +89,7 @@ $outsider$;
 select set_config('request.jwt.claim.sub','a0000000-0000-4000-8000-000000000001',true);
 select set_config('request.jwt.claims',
  '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated","aud":"authenticated"}',true);
-select public.fftt_set_staff_v3(:'event_id'::uuid,'scorer@fftt-ci.invalid','revoke',null);
+select public.fftt_set_staff_v3(current_setting('fftt.candidate_event_id')::uuid,'scorer@fftt-ci.invalid','revoke',null);
 
 select set_config('request.jwt.claim.sub','a0000000-0000-4000-8000-000000000002',true);
 select set_config('request.jwt.claims',
@@ -101,7 +101,7 @@ begin
     raise exception 'revoked scorer discovered protected event';
   end if;
   begin
-    perform * from public.fftt_matchdesk_v2(:'event_id'::uuid);
+    perform * from public.fftt_matchdesk_v2(current_setting('fftt.candidate_event_id')::uuid);
     raise exception 'revoked scorer accessed Match Desk';
   exception when others then
     if sqlerrm='revoked scorer accessed Match Desk' then raise; end if;
@@ -113,7 +113,7 @@ reset role;
 do $postflight$
 declare c boolean;
 begin
-  select synthetic_only into c from fftt_private.events where id=:'event_id'::uuid;
+  select synthetic_only into c from fftt_private.events where id=current_setting('fftt.candidate_event_id')::uuid;
   if c is distinct from false then raise exception 'real-only event flag not enforced'; end if;
   if exists (select 1 from public.fftt_published_events)
      then raise exception 'unapproved public event projection'; end if;
