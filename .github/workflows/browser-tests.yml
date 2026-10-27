@@ -90,6 +90,8 @@ jobs:
           npx playwright-core install chromium
       - name: Verify offline real-event SQL candidate in separate PGlite instance (fictional only, never deployed)
         run: node --test tests/e2e/gameday_real_event_candidate.test.mjs
+      - name: In-place FFTT3 single-project migration proof on populated synthetic DB (zero hosted traffic)
+        run: node --test tests/e2e/gameday_single_project_upgrade.test.mjs
       - name: Game-day server logic against the real SQL (local PostgreSQL), parity with the approved engine
         run: node --test tests/e2e/gameday_server.test.mjs
       - name: Game-day real client stack (session, API, score transport, core) against the real SQL
