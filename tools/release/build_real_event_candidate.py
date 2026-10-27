@@ -59,7 +59,7 @@ SOURCES = [
 ]
 
 def git_blob_sha(payload: bytes) -> str:
-    return hashlib.sha1(b"blob " + str(len(payload)).encode() + b"\\0" + payload).hexdigest()
+    return hashlib.sha1(b"blob " + str(len(payload)).encode() + b"\0" + payload).hexdigest()
 
 def candidate_sql(path: str, sha: str, replacements: list) -> str:
     source = (ROOT / path).read_bytes()
@@ -72,12 +72,12 @@ def candidate_sql(path: str, sha: str, replacements: list) -> str:
         if n != expected:
             raise ValueError(f"Unexpected guard count {path}: expected {expected}, got {n} for {before!r}")
         code = code.replace(before, after)
-    if re.search(r"\\bsynthetic_only\\s*=\\s*true\\b|\\band\\s+e\\.synthetic_only\\b", code):
+    if re.search(r"\bsynthetic_only\s*=\s*true\b|\band\s+e\.synthetic_only\b", code):
         raise ValueError(f"Unconverted synthetic-only operation in {path}")
     # The real-only CHECK makes it impossible to accidentally insert a synthetic
     # fixture into this DB. V5 continues to reject fixture registration sources.
-    return ("-- REAL FFTT EVENT CANDIDATE; OFFLINE VALIDATION ONLY. NOT AUTHORIZED FOR DEPLOYMENT.\\n"
-            "-- Generated from " + path + " at Git blob " + sha + ". DO NOT APPLY TO SYNTHETIC STAGING.\\n"
+    return ("-- REAL FFTT EVENT CANDIDATE; OFFLINE VALIDATION ONLY. NOT AUTHORIZED FOR DEPLOYMENT.\n"
+            "-- Generated from " + path + " at Git blob " + sha + ". DO NOT APPLY TO SYNTHETIC STAGING.\n"
             + code)
 
 def build(out_dir: Path | None) -> list[tuple[str, str, str]]:
