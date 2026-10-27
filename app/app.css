@@ -676,7 +676,7 @@ td.scores-cell{min-width:150px}
 .reg-body>*+*{margin-top:var(--gap-field)}
 .reg-body>.reg-meta{gap:var(--gap-label) var(--gap-inline)}
 .reg-body>.reg-meta+.notice,.reg-body>.notice+.notice{margin-top:var(--gap-inline)}
-.reg-body .reg-tools{gap:var(--gap-inline) var(--gap-field)}
+.reg-body .reg-tools{gap:var(--gap-inline) var(--gap-field);align-items:center} /* center filter buttons vertically against the search field, including after responsive wrapping */
 .reg-body .reg-tools .chips{margin:0}
 .reg-body>.reg-count{margin-top:var(--gap-inline)}
 .reg-body>.bulk-bar{margin-top:var(--gap-field)}
