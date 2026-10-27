@@ -337,7 +337,7 @@ export function createStaffUi({core, els, config, signOut}) {
     if (org && s.snapshot) {
       const done = normalizeSnapshotMatches(s.snapshot).filter(m => m.status === 'complete').sort((a, b) => b.round - a.round).slice(0, 12);
       children.push(h('section', {class: 'card', 'aria-labelledby': 'recentTitle'}, h('h2', {id: 'recentTitle', class: 'card-title', text: 'Recent results (organizer corrections)'}),
-        done.length ? h('div', {class: 'scroll-x'}, h('table', {class: 'responsive-table'}, h('tbody', {}, done.map(m => h('tr', {}, h('td', {'data-label': 'Match'}, `${m.name1} v ${m.name2}`), h('td', {'data-label': 'Winner'}, `${m.winnerName} won`), h('td', {'data-label': 'Scores', class: 'scores-cell'}, scoreTiles(m.scores, {left: m.name1, right: m.name2})),
+        done.length ? h('div', {class: 'scroll-x'}, h('table', {class: 'responsive-table'}, h('tbody', {}, done.map(m => h('tr', {}, h('td', {'data-label': 'Match'}, `${m.name1} v ${m.name2}`), h('td', {'data-label': 'Winner'}, `${m.winnerName} won`), h('td', {'data-label': 'Scores', class: 'scores-cell'}, scoreTiles(m.scores, {left: m.name1, right: m.name2, caption: false})),
           h('td', {'data-label': 'Format'}, h('span', {class: 'muted', text: m.bestOf ? `${formatText({bestOf: m.bestOf, points: m.points})}${m.formatLegacy ? ' (historical)' : ''}` : ''})),
           h('td', {}, h('button', {class: 'small', type: 'button', disabled: !core.canWrite(), text: 'Correct…', 'aria-label': `Correct the result of ${m.name1} versus ${m.name2}`, on: {click: () => openCorrection(m)}})))))))
           : h('div', {class: 'muted', text: 'No results yet.'})));

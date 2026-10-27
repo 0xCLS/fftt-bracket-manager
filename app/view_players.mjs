@@ -205,7 +205,7 @@ export function createPlayersView(ctx) {
           rg.code === 'not-configured' ? ' A private CSV file is read in this browser only; it is not uploaded or saved.' : null);
       } else body = h('div', {class: 'empty-state', text: loading ? 'Reading the registrations…' : 'Load the registrations to search them and check people in with one click.'});
     } else {
-      body = h('div', {},
+      body = h('div', {class: 'reg-body'},
         h('div', {class: 'reg-meta'},
           pill(STATE_TEXT[SOURCE_STATE[rg.payload.source]]?.label ?? 'Registrations', STATE_TEXT[SOURCE_STATE[rg.payload.source]]?.tone ?? ''),
           rg.payload.sourceName ? h('span', {class: 'muted', text: rg.payload.sourceName}) : null,
@@ -219,7 +219,7 @@ export function createPlayersView(ctx) {
         countEl, bulkEl, listEl);
     }
     queueMicrotask(paintList);
-    return h('section', {class: 'card', 'aria-labelledby': 'regTitle'}, head, body);
+    return h('section', {class: 'card reg-card', 'aria-labelledby': 'regTitle'}, head, body);
   }
 
   // ---------------------------------------------------------------- duplicates

@@ -563,7 +563,7 @@ body.tv .playerline{font-size:.85rem}
  --gap-actions:20px;   /* between the last field of a group and its action buttons */
  --gap-inline:12px;    /* beside each other: input + button, button + button */
  --gap-section:24px;   /* between sections / cards */
- --tile:34px;          /* score tile edge */
+ --tile:30px;          /* score tile edge */
  --win-bg:#e6f3e2;--win-line:#a9d1a3;--win-ink:#1c5a3f;
  --lose-bg:#fdeced;--lose-line:#eab3b9;--lose-ink:#8f3340;
 }
@@ -666,6 +666,21 @@ td.scores-cell{min-width:150px}
 @media(max-width:520px){#app .overview-formats .format-controls{grid-template-columns:minmax(0,1fr)}   /* two dropdowns do not fit side by side on a phone: never clip "Games to 11" */
  #app .overview-formats .formats-card{padding:20px}}
 #app .overview-formats .setup-save{display:flex;flex-wrap:wrap;align-items:center;gap:var(--gap-inline);margin-top:var(--gap-actions)}
+
+/* Registrations card: badges, warnings, search/filters and the bulk panel each get a real gap (tokens only); header copy and actions are separated */
+#app .reg-card>.card-head{gap:var(--gap-field) var(--gap-section);margin-bottom:0}
+#app .reg-card>.card-head>div:first-child{flex:1 1 320px;min-width:0}
+#app .reg-card>.card-head>.row{flex:0 1 auto;justify-content:flex-start}
+#app .reg-card>.card-head+*{margin-top:var(--gap-actions)}
+.reg-body>*{margin-bottom:0}
+.reg-body>*+*{margin-top:var(--gap-field)}
+.reg-body>.reg-meta{gap:var(--gap-label) var(--gap-inline)}
+.reg-body>.reg-meta+.notice,.reg-body>.notice+.notice{margin-top:var(--gap-inline)}
+.reg-body .reg-tools{gap:var(--gap-inline) var(--gap-field)}
+.reg-body .reg-tools .chips{margin:0}
+.reg-body>.reg-count{margin-top:var(--gap-inline)}
+.reg-body>.bulk-bar{margin-top:var(--gap-field)}
+.reg-body>.reg-list{margin-top:var(--gap-field)}
 
 /* registration settings */
 .reg-settings .reg-source-line{margin:0;font-size:13px;color:#46525f}

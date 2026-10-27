@@ -54,7 +54,7 @@ function viewResults(ev, board) {
       st.doubles ? h('p', {text: `Doubles winners: ${st.doubles.winners.join(' + ')}`}) : null) : null,
     h('div', {class: 'card'}, h('h2', {text: 'Completed matches'}),
       board.recent.length ? h('table', {}, h('tbody', {}, board.recent.map(m => h('tr', {}, h('td', {text: m.bracket === 'championship' ? 'Champ.' : 'Cons.'}),
-        h('td', {text: `${m.name1} vs ${m.name2}`}), h('td', {text: `${m.winnerName} won`}), h('td', {class: 'scores-cell'}, scoreTiles(m.scores, {left: m.name1, right: m.name2})))))) : h('div', {class: 'empty-state', text: 'No results yet.'})));
+        h('td', {text: `${m.name1} vs ${m.name2}`}), h('td', {text: `${m.winnerName} won`}), h('td', {class: 'scores-cell'}, scoreTiles(m.scores, {left: m.name1, right: m.name2, caption: false})))))) : h('div', {class: 'empty-state', text: 'No results yet.'})));
 }
 
 function render(view) {

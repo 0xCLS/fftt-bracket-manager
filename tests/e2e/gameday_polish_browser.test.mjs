@@ -133,6 +133,29 @@ test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Sta
       await shot(org.page, `${vp}-registration-settings`);
       await org.page.locator('#regLoad').scrollIntoViewIfNeeded();
       await spacing(org.page, `Players @ ${vp}`);
+      await org.page.locator('#regLoad').click();
+      await org.page.locator('.reg-body .reg-meta').waitFor({timeout: T});
+      await org.page.locator('.reg-body .reg-row').first().waitFor({timeout: T});
+      await org.page.locator('.reg-row .reg-pick input:enabled').first().check();   // opens the bulk-selection panel
+      await org.page.locator('.bulk-bar').waitFor({state: 'visible', timeout: T});
+      const regGaps = await org.page.evaluate(() => {
+        const kids = [...document.querySelectorAll('.reg-body>*')].filter(e => !e.hidden && e.getBoundingClientRect().height > 0 && !e.classList.contains('reg-list'));
+        const gaps = kids.slice(1).map((e, i) => ({a: kids[i].className, b: e.className, gap: e.getBoundingClientRect().top - kids[i].getBoundingClientRect().bottom}));
+        const head = document.querySelector('.reg-card>.card-head'), first = head.querySelector(':scope>div'), actions = head.querySelector(':scope>.row');
+        const f = first.getBoundingClientRect(), a = actions.getBoundingClientRect();
+        const cardGap = head.nextElementSibling.getBoundingClientRect().top - head.getBoundingClientRect().bottom;
+        // title copy and action buttons: side by side with a real horizontal gap, or stacked with a real vertical gap
+        const side = a.top < f.bottom - 1, between = side ? a.left - f.right : a.top - f.bottom;
+        return {gaps, between, side, cardGap, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth};
+      });
+      assert.ok(regGaps.gaps.length >= 3, `meta, tools, count and bulk panel are all present (${regGaps.gaps.map(g => g.b).join(' | ')})`);
+      for (const g of regGaps.gaps) assert.ok(g.gap >= 12, `Registrations: ${g.a} -> ${g.b} separated by ${g.gap}px @ ${vp}`);
+      assert.ok(regGaps.gaps.find(g => /reg-tools/.test(g.a) === false && /reg-tools/.test(g.b)).gap >= 16, 'badges to search/filter controls: at least one field gap');
+      assert.ok(regGaps.between >= 16, `Registrations title copy to actions: ${regGaps.between}px (${regGaps.side ? 'side by side' : 'stacked'}) @ ${vp}`);
+      assert.ok(regGaps.cardGap >= 20 && regGaps.cardGap <= 40, `header to content: ${regGaps.cardGap}px (not cramped, not excessive) @ ${vp}`);
+      assert.ok(regGaps.overflow <= 0, 'no horizontal page overflow');
+      await spacing(org.page, `Registrations loaded @ ${vp}`);
+      await shot(org.page, `${vp}-registrations-loaded`);
       await shot(org.page, `${vp}-players`);
       await goTab(org.page, 'Doubles Finale');
       await org.page.locator('button', {hasText: 'Suggest balanced partners'}).waitFor({timeout: T});
@@ -231,6 +254,7 @@ test('SCORE TILES: equal squares, tabular numerals, green winner / red loser per
       const tiles = await org.page.evaluate(() => [...document.querySelectorAll('.scores-cell .score-tile')].map(t => { const r = t.getBoundingClientRect(), cs = getComputedStyle(t); return {w: r.width, h: r.height, cls: t.className, text: t.textContent, ff: cs.fontVariantNumeric, radius: parseFloat(cs.borderTopLeftRadius), bg: cs.backgroundColor, color: cs.color}; }));
       assert.ok(tiles.length >= 8, 'recent results render tiles');
       assert.ok(tiles.every(t => Math.abs(t.w - t.h) < 0.5), 'every tile is square');
+      assert.ok(tiles.every(t => Math.abs(t.w - 30) < 0.5), `standard tiles are 30px squares (${tiles[0].w})`);
       assert.ok(tiles.every(t => Math.abs(t.w - tiles[0].w) < 0.5 && Math.abs(t.h - tiles[0].h) < 0.5), `identical width and height for every tile (${tiles[0].w}px) incl. double digits @ ${vp}`);
       assert.ok(tiles.some(t => t.text.length === 2) && tiles.some(t => t.text.length === 1), 'single and double digits both present');
       assert.ok(tiles.every(t => t.ff.includes('tabular-nums') && t.radius >= 5 && t.radius <= 9), 'tabular numerals and a consistent modest radius');
@@ -243,11 +267,12 @@ test('SCORE TILES: equal squares, tabular numerals, green winner / red loser per
       const rows = await org.page.evaluate(() => [...document.querySelectorAll('#recentTitle ~ .scroll-x tbody tr, section[aria-labelledby=recentTitle] tbody tr')].map(tr => ({
         match: tr.querySelector('td[data-label=Match]').textContent, winner: tr.querySelector('td[data-label=Winner]').textContent,
         games: [...tr.querySelectorAll('.score-game')].map(g => [...g.querySelectorAll('.score-tile')].map(t => ({n: Number(t.textContent), win: t.classList.contains('win'), lose: t.classList.contains('lose')}))),
-        sr: [...tr.querySelectorAll('.score-game .sr-only')].map(x => x.textContent), caption: tr.querySelector('.score-caption')?.textContent})));
+        sr: [...tr.querySelectorAll('.score-game .sr-only')].map(x => x.textContent), caption: tr.querySelector('.score-caption')?.textContent, group: tr.querySelector('.score-tiles')?.getAttribute('aria-label')})));
       assert.ok(rows.length >= 8);
       for (const r of rows) {
         const [n1, n2] = r.match.split(' v ');
-        assert.equal(r.caption, `${n1} · ${n2}`, 'the caption names the tiles in reading order');
+        assert.equal(r.caption, undefined, 'no redundant player-name caption: the row already names the matchup');
+        assert.equal(r.group, `Game scores, ${n1} first, then ${n2}`, 'the tiles still identify both players accessibly, in reading order');
         for (const [i, g] of r.games.entries()) {
           assert.equal(g.length, 2);
           assert.ok(g[0].n !== g[1].n && (g[0].n > g[1].n ? g[0].win && g[1].lose : g[1].win && g[0].lose), `game ${i + 1} of ${r.match}: higher score green, lower red`);
