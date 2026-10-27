@@ -92,7 +92,7 @@ test('registration workflow: load, search, one-click and bulk check-in, merge du
     await toast(org.page, /Walt Winters checked in/);
     const walk = await w.fake.local.admin("select rating, rating_confirmed, source, checked_in from fftt_private.players where display_name = 'Walt Winters'");
     assert.deepEqual(walk, [{rating: 4, rating_confirmed: true, source: 'walk_in', checked_in: true}]);
-    await org.page.fill('#wName', 'ben m.');   // already on the roster
+    await org.page.fill('#wName', 'ben marlowe');   // case-insensitive duplicate of the full name already on the roster
     await org.page.locator('.walk-form button', {hasText: 'Add and check in'}).click();
     await org.page.locator('#wMsg', {hasText: 'already on the roster'}).waitFor();
 
