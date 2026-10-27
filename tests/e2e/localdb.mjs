@@ -35,10 +35,10 @@ grant usage on schema public to anon, authenticated;
 alter default privileges in schema public grant execute on functions to public;
 `;
 
-export async function createLocalDb() {
+export async function createLocalDb({sqlFiles = SQL_FILES} = {}) {
   const db = new PGlite();
   await db.exec(AUTH_STUB);
-  for (const f of SQL_FILES) await db.exec(fs.readFileSync(path.join(ROOT, f), 'utf8'));
+  for (const f of sqlFiles) await db.exec(fs.readFileSync(path.isAbsolute(f) ? f : path.join(ROOT, f), 'utf8'));
   return new LocalDb(db);
 }
 
