@@ -189,7 +189,7 @@ export function createPlayersView(ctx) {
     const loading = rg.status === 'loading';
     const head = h('div', {class: 'card-head'},
       h('div', {}, h('h2', {id: 'regTitle', text: 'Registrations'}),
-        h('p', {class: 'card-sub', text: 'Read-only. Registrants are listed with a suggested level; nothing is added to the roster until you check someone in.'})),
+        h('p', {class: 'card-sub', text: 'Find a name, review any suggested level, and check in. Only checked-in players join the roster.'})),
       h('div', {class: 'row'},
         h('button', {type: 'button', class: 'primary', id: 'regLoad', disabled: loading || !writable(), text: loading ? 'Loading…' : rg.payload ? 'Reload from the sheet' : 'Load registrations', 'aria-busy': String(loading),
           on: {click: async () => { const r = await core.actions.loadRegistrations(); if (r.ok) toast(`${r.payload.registrants.length} registrants loaded.`); /* a failure is explained once, inline, below */ }}}),
@@ -203,7 +203,7 @@ export function createPlayersView(ctx) {
         // ONE persistent, plain explanation (never also a toast): what happened, and what to do
         body = h('div', {class: 'notice ' + (st.tone || 'warn'), role: 'alert', id: 'regError'}, h('b', {text: st.label + '. '}), rg.error,
           rg.code === 'not-configured' ? ' A private CSV file is read in this browser only; it is not uploaded or saved.' : null);
-      } else body = h('div', {class: 'empty-state', text: loading ? 'Reading the registrations…' : 'Load the registrations to search them and check people in with one click.'});
+      } else body = h('div', {class: 'empty-state', text: loading ? 'Reading the registrations…' : 'Load sign-ups to search and check in players. To change the source, use Registration settings above.'});
     } else {
       body = h('div', {class: 'reg-body'},
         h('div', {class: 'reg-meta'},
@@ -271,8 +271,8 @@ export function createPlayersView(ctx) {
       if (result(await core.actions.checkinRegistrants([{name: v, rating, source: 'walk_in'}], true), `${v} checked in.`)) { name.value = ''; forget('walk'); rerender(); document.getElementById('wName')?.focus(); }
     };
     return h('section', {class: 'card', 'aria-labelledby': 'walkTitle'},
-      h('div', {class: 'card-head'}, h('div', {}, h('h2', {id: 'walkTitle', text: 'Walk-in registration'}),
-        h('p', {class: 'card-sub', id: 'wHelp', text: 'Someone who did not sign up ahead of time. Add them and check them in together. Names only: no phone numbers or e-mail addresses.'}))),
+      h('div', {class: 'card-head'}, h('div', {}, h('h2', {id: 'walkTitle', text: 'Quick walk-in check-in'}),
+        h('p', {class: 'card-sub', id: 'wHelp', text: 'Add someone who did not register online. Name only, no contact details.'}))),
       h('form', {class: 'walk-form', novalidate: true, on: {submit: ev => { ev.preventDefault(); go(); }}},
         h('div', {class: 'walk-name'}, h('label', {for: 'wName', text: 'Name'}), name),
         h('fieldset', {class: 'walk-level'}, h('legend', {}, 'FFTT level ', hint), seg),
@@ -304,14 +304,14 @@ export function createPlayersView(ctx) {
         on: {click: async () => { if (await confirmDialog('Remove player?', `Remove ${p.name} from the roster?`, 'Remove', {danger: true})) result(await core.actions.removePlayer(p.id), 'Player removed.'); }}}))));
     return h('section', {class: 'card', 'aria-labelledby': 'rosterTitle'},
       h('div', {class: 'card-head'}, h('div', {}, h('h2', {id: 'rosterTitle', text: `Roster · ${checked} of ${sn.players.length} checked in`}),
-        h('p', {class: 'card-sub', text: 'Levels guide seeding and are never shown to spectators. “Suggested” levels come from the sign-up answers until you confirm them.'})),
+        h('p', {class: 'card-sub', text: 'Review playing levels and attendance before seeding. Ratings stay private to staff.'})),
         h('div', {class: 'row'},
           unconfirmed.length ? h('button', {type: 'button', class: 'small primary', disabled: !writable(), text: `Confirm ${unconfirmed.length} suggested level${unconfirmed.length === 1 ? '' : 's'}`,
             on: {click: async () => { if (await confirmDialog('Confirm all suggested levels?', `This marks the ${unconfirmed.length} suggested level${unconfirmed.length === 1 ? '' : 's'} as reviewed. Change any you disagree with first.`, 'Confirm levels')) result(await core.actions.confirmRatings(unconfirmed.map(p => ({id: p.id, rating: p.rating}))), 'Levels confirmed.'); }}}) : null,
           h('button', {class: 'small', type: 'button', disabled: !writable(), text: 'Check in all', on: {click: async () => result(await core.actions.setCheckinAll(true))}}),
           h('button', {class: 'small', type: 'button', disabled: !writable() || built, text: 'Clear check-ins', title: built ? 'Not possible once a bracket is built' : null, on: {click: async () => result(await core.actions.setCheckinAll(false))}}))),
       sn.players.length ? h('div', {class: 'scroll-x'}, h('table', {class: 'responsive-table'},
-        h('thead', {}, h('tr', {}, ['Player', 'Level', 'Rating', 'Basis', 'Checked in', ''].map(t => h('th', {scope: 'col', text: t})))),
+        h('thead', {}, h('tr', {}, ['Player', 'Level', 'Review', 'Experience', 'Checked in', ''].map(t => h('th', {scope: 'col', text: t})))),
         h('tbody', {}, rows)))
         : h('div', {class: 'empty-state', text: 'No players yet. Load the registrations, add a walk-in or enter names by hand.'}));
   }
@@ -325,7 +325,7 @@ export function createPlayersView(ctx) {
       [1, 2, 3, 4, 5].map(n => h('label', {}, h('input', {type: 'radio', name: 'pRating', value: n, checked: n === rating, on: {change: () => { rating = n; remember('pRating', n); hint.textContent = '· ' + ratingName(n); }}}), h('span', {text: String(n)}))));
     const bulk = h('textarea', {id: 'pBulk', 'data-draft': 'pBulk', placeholder: 'One player per line:  Name, rating (1-5), provisional|established\nAda Q., 3, provisional'});
     return h('details', {class: 'card details-card', 'data-draft': 'manualOpen', open: draft('manualOpen', sn.players.length === 0 && !s.registrations.payload)},
-      h('summary', {}, h('span', {class: 'summary-title', text: 'Enter names by hand'}), h('span', {class: 'muted', text: 'For rehearsals or a quick list; ratings you type here count as confirmed.'})),
+      h('summary', {}, h('span', {class: 'summary-title', text: 'Enter names by hand'}), h('span', {class: 'muted', text: 'Add several names at once; use walk-in check-in for individual arrivals.'})),
       h('div', {class: 'grid two manual-grid'},
         h('form', {class: 'manual-form', on: {submit: async ev => { ev.preventDefault();
           if (result(await core.actions.addPlayers([{name: name.value, rating, rating_status: 'provisional'}]), 'Player added.')) { name.value = ''; forget('pName'); document.getElementById('pName')?.focus(); } }}},
@@ -352,11 +352,14 @@ export function createPlayersView(ctx) {
     const onRoster = rg ? new Set(sn.players.flatMap(p => p.registrationRefs)) : null;
     const kpi = (n, label, tone) => h('div', {class: 'mini-kpi ' + (tone ?? '')}, h('strong', {text: String(n)}), h('span', {text: label}));
     return h('div', {class: 'players-page'},
-      built ? h('div', {class: 'notice warn', role: 'status', text: 'A bracket is already built. Players added or checked in now will not be in it until you rebuild the championship bracket.'}) : null,
+      built ? h('div', {class: 'notice warn players-bracket-notice', role: 'status', text: 'Championship bracket already built. New check-ins will not appear until you rebuild it.'}) : null,
       h('div', {class: 'mini-kpis', role: 'group', 'aria-label': 'Check-in summary'},
         kpi(checked, 'Checked in', 'ice'), kpi(sn.players.length, 'On the roster', 'lav'),
         rg ? kpi(rg.registrants.filter(r => !onRoster.has(r.ref)).length, 'Registered, not here yet', 'lime') : null,
         kpi(unconfirmed, 'Levels to confirm', unconfirmed ? 'butter' : '')),
-      settingsCard(sn), registrationCard(sn), duplicatesCard(sn), walkInCard(sn), rosterCard(sn), manualCard(sn));
+      h('div', {class: 'players-workspace'},
+        h('div', {class: 'players-main'}, settingsCard(sn), registrationCard(sn), duplicatesCard(sn)),
+        h('div', {class: 'players-side'}, walkInCard(sn))),
+      rosterCard(sn), manualCard(sn));
   };
 }
