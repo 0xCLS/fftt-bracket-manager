@@ -56,6 +56,8 @@ He also accepted enabling the actual **read-only Google Sheets registration work
 - `tests/e2e/gameday_single_project_upgrade.test.mjs` creates a **populated fictional synthetic tournament**, upgrades its disposable PGlite DB, checks that the original roster, staff access and event survive, confirms synthetic-mode immutability, creates a new real event, exercises Google/fixture guards, verifies both private exports mark their correct mode and confirms zero unapproved publication.
 - The new CI test **passed in run [40544275690](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/40544275690)**. The existing disposable PostgreSQL job also passed; the full browser regression was still running at documentation time. **This is not a hosted migration or proof of signed real GoTrue sessions.**
 
+**New local verification:** the populated-postgreSQL promotion step and **independently signed GoTrue real-event authorization/concurrent scoring step** both passed in disposable GitHub Actions run `40563013082`. The earlier in-process migration test remains green. The authenticated Organizer browser review on Cloudflare, private hosted backup/restore and authorized cutover remain pending. Current Staff deployment is still application code `00068134`; the full-name change is integration-branch code and is **not yet redeployed**.
+
 ## Readiness acceptance
 | Area | Must-pass evidence | Status as of decision |
 | --- | --- | --- |
