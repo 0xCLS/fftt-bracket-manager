@@ -34,7 +34,7 @@ export const maskPhone = p => (p ? `•••• ${p.slice(-2)}` : null);
 
 /** "Ada  Quill " -> "ada quill" (accents, case, punctuation and spacing ignored). */
 export const nameKey = v => fold(v).replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
-/** Public bracket convention: first name + last initial ("Ada Q."). A single word stays as it is. */
+/** Legacy optional abbreviated-name helper. Staff registration/check-in and new roster entries use the full sanitized `name` instead; keep this export for older callers and fixtures. */
 export function shortName(full) {
   const parts = clean(full).split(' ').filter(Boolean);
   if (parts.length <= 1) return parts[0] ?? '';
