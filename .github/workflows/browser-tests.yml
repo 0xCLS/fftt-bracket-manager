@@ -210,6 +210,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: bash tests/gameday_real_candidate_postgres.sh
+      - name: Validate in-place real-event launch upgrade on populated local PostgreSQL (no hosted change)
+        env:
+          PGPASSWORD: postgres
+        run: bash tests/gameday_single_project_postgres.sh
       - name: Assert game-day V5 privileges and structure (anon/authenticated/helpers/no private data/synthetic rule)
         env:
           PGPASSWORD: postgres
