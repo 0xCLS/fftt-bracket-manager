@@ -29,27 +29,28 @@ test('registration workflow: load, search, one-click and bulk check-in, merge du
     await org.page.fill('#regSearch', '');
 
     // the suggested level and its reasons come from the approved form's exact answers (provisional, until confirmed)
-    assert.match(await row(org.page, 'Hal W.').innerText(), /Level 3 · Intermediate\s+Suggested/);
-    await row(org.page, 'Hal W.').locator('button', {hasText: 'Edit'}).click();
+    assert.equal(await org.page.locator('.reg-name', {hasText: /^Ben Marlowe$/}).count(), 1, 'registration list preserves the full sanitized name from the form');
+    assert.match(await row(org.page, 'Hal Wintersby').innerText(), /Level 3 · Intermediate\s+Suggested/);
+    await row(org.page, 'Hal Wintersby').locator('button', {hasText: 'Edit'}).click();
     const why = await org.page.locator('.reg-basis').innerText();
     assert.match(why, /Chose the Intermediate profile/);
     assert.match(why, /Sustains rallies consistently and controls placement/);
-    await row(org.page, 'Hal W.').locator('button', {hasText: 'Done'}).click();
-    assert.match(await row(org.page, 'Eli B.').innerText(), /Level 1 · Beginner/);
+    await row(org.page, 'Hal Wintersby').locator('button', {hasText: 'Done'}).click();
+    assert.match(await row(org.page, 'Eli Brandtley').innerText(), /Level 1 · Beginner/);
 
     // one-click check-in creates the roster player (rating suggested, unconfirmed) and checks them in
-    await row(org.page, 'Ben M.').locator('button', {hasText: 'Check in'}).click();
-    await toast(org.page, /Ben M\. checked in/);
+    await row(org.page, 'Ben Marlowe').locator('button', {hasText: 'Check in'}).click();
+    await toast(org.page, /Ben Marlowe checked in/);
     await org.page.locator('.mini-kpi', {hasText: 'Checked in'}).locator('strong', {hasText: '1'}).waitFor({timeout: T});
     await org.page.locator('.chip', {hasText: /^Everyone/}).click();
-    assert.match(await row(org.page, 'Ben M.').innerText(), /Checked in/);
+    assert.match(await row(org.page, 'Ben Marlowe').innerText(), /Checked in/);
     await org.page.locator('.chip', {hasText: /^Not checked in/}).click();
     let players = await w.fake.local.admin('select display_name, rating, rating_confirmed, source, checked_in from fftt_private.players where event_id = $1', [w.eventId]);
-    assert.deepEqual(players, [{display_name: 'Ben M.', rating: 2, rating_confirmed: false, source: 'registration', checked_in: true}]);
-    assert.equal(await row(org.page, 'Ben M.').count(), 0, 'checked-in people leave the default "Not checked in" view');
+    assert.deepEqual(players, [{display_name: 'Ben Marlowe', rating: 2, rating_confirmed: false, source: 'registration', checked_in: true}]);
+    assert.equal(await row(org.page, 'Ben Marlowe').count(), 0, 'checked-in people leave the default "Not checked in" view');
 
     // an edited name and level are what get checked in (and count as confirmed)
-    await row(org.page, 'Cy F.').locator('button', {hasText: 'Edit'}).click();
+    await row(org.page, 'Cy Fennelwick').locator('button', {hasText: 'Edit'}).click();
     await org.page.locator('.reg-edit input').fill('Cy Fennel');
     await org.page.locator('.reg-edit select').selectOption('4');
     await row(org.page, 'Cy Fennel').locator('button', {hasText: 'Check in'}).waitFor();
@@ -59,9 +60,9 @@ test('registration workflow: load, search, one-click and bulk check-in, merge du
     assert.deepEqual(players, [{rating: 4, rating_confirmed: true}]);
 
     // bulk: tick two rows, check in both at once; rows in an unresolved duplicate group cannot be ticked
-    assert.equal(await row(org.page, 'Ada Q.').first().locator('input[type=checkbox]').isDisabled(), true);
-    await row(org.page, 'Dee L.').locator('input[type=checkbox]').check();
-    await row(org.page, 'Eli B.').locator('input[type=checkbox]').check();
+    assert.equal(await row(org.page, 'Ada Quillfeather').first().locator('input[type=checkbox]').isDisabled(), true);
+    await row(org.page, 'Dee Larkspur').locator('input[type=checkbox]').check();
+    await row(org.page, 'Eli Brandtley').locator('input[type=checkbox]').check();
     await org.page.locator('.bulk-bar', {hasText: '2 selected'}).waitFor();
     await org.page.locator('.bulk-bar button', {hasText: 'Check in 2 selected'}).click();
     await toast(org.page, /2 players checked in/);
@@ -72,24 +73,24 @@ test('registration workflow: load, search, one-click and bulk check-in, merge du
     await dups.locator('h2', {hasText: 'Possible duplicates (2)'}).waitFor();
     const adaGroup = dups.locator('.dup-group', {hasText: 'Same e-mail'});
     await adaGroup.locator('button', {hasText: 'Same person'}).click();
-    await toast(org.page, /Ada Q\. checked in \(3 registrations merged\)/);
-    const adaRows = await w.fake.local.admin(`select p.display_name, count(l.ref)::int as refs from fftt_private.players p join fftt_private.registration_links l on l.player_id = p.id where p.display_name = 'Ada Q.' group by 1`);
-    assert.deepEqual(adaRows, [{display_name: 'Ada Q.', refs: 3}]);
+    await toast(org.page, /Ada Quillfeather checked in \(3 registrations merged\)/);
+    const adaRows = await w.fake.local.admin(`select p.display_name, count(l.ref)::int as refs from fftt_private.players p join fftt_private.registration_links l on l.player_id = p.id where p.display_name = 'Ada Quillfeather' group by 1`);
+    assert.deepEqual(adaRows, [{display_name: 'Ada Quillfeather', refs: 3}]);
     await org.page.locator('#dups h2', {hasText: 'Possible duplicates (1)'}).waitFor({timeout: T});
     await org.page.locator('#dups button', {hasText: 'Different people'}).click();
     await toast(org.page, /different people/);
     await org.page.locator('#dups').waitFor({state: 'detached', timeout: T});
-    assert.equal(await row(org.page, 'Jo M.').locator('input[type=checkbox]').isDisabled(), false, 'dismissed duplicates can be checked in normally');
+    assert.equal(await row(org.page, 'Jo Marchettis').locator('input[type=checkbox]').isDisabled(), false, 'dismissed duplicates can be checked in normally');
 
     // a name that contained a phone number is cleaned, flagged and still safe to check in
     assert.match(await org.page.locator('.reg-row', {hasText: 'Lia'}).first().innerText(), /removed from the name/);
 
     // walk-in
-    await org.page.fill('#wName', 'Walt W.');
+    await org.page.fill('#wName', 'Walt Winters');
     await org.page.locator('.walk-form .seg label', {hasText: /^4$/}).click();
     await org.page.locator('.walk-form button', {hasText: 'Add and check in'}).click();
-    await toast(org.page, /Walt W\. checked in/);
-    const walk = await w.fake.local.admin("select rating, rating_confirmed, source, checked_in from fftt_private.players where display_name = 'Walt W.'");
+    await toast(org.page, /Walt Winters checked in/);
+    const walk = await w.fake.local.admin("select rating, rating_confirmed, source, checked_in from fftt_private.players where display_name = 'Walt Winters'");
     assert.deepEqual(walk, [{rating: 4, rating_confirmed: true, source: 'walk_in', checked_in: true}]);
     await org.page.fill('#wName', 'ben m.');   // already on the roster
     await org.page.locator('.walk-form button', {hasText: 'Add and check in'}).click();
@@ -111,7 +112,7 @@ test('registration workflow: load, search, one-click and bulk check-in, merge du
     await w.fake.local.rpc(w.ids.org, 'fftt_set_visibility_v3', {p_event_id: w.eventId, p_visible: true});
     assert.ok(!/@|REGREF|registration/i.test(JSON.stringify(await w.fake.local.publicTournaments())));
     const audit = JSON.stringify(await w.fake.local.rpc(w.ids.org, 'fftt_audit_log_v3', {p_event_id: w.eventId, p_limit: 200}));
-    assert.ok(!/example\.invalid|Ben M\.|Ada Q\./.test(audit));
+    assert.ok(!/example\.invalid|Ben Marlowe|Ada Quillfeather/.test(audit));
     assert.deepEqual(w.pageErrors, []);
     assert.deepEqual(w.consoleErrors.filter(e => !/net::ERR|Failed to load resource/.test(e)), []);
   } finally { await w.close(); }
@@ -127,7 +128,7 @@ test('input survives background refreshes: search text, selections, edits, walk-
     await org.page.locator('#regLoad').click();
     await org.page.locator('.reg-row').first().waitFor({timeout: T});
     await org.page.fill('#regSearch', 'Pia');
-    await row(org.page, 'Pia D.').locator('input[type=checkbox]').check();
+    await row(org.page, 'Pia Dunmoor').locator('input[type=checkbox]').check();
     await org.page.fill('#wName', 'Half typed na');
     await org.page.locator('details.details-card summary').click();           // opens the manual-entry section
     await org.page.fill('#pBulk', 'Unsaved Pasted, 3, provisional');
@@ -135,7 +136,7 @@ test('input survives background refreshes: search text, selections, edits, walk-
     await w.fake.local.rpc(w.ids.org, 'fftt_upsert_players_v3', {p_event_id: w.eventId, p_players: [{name: 'Remote R.', rating: 2, rating_status: 'provisional'}]});
     await org.page.locator('h2', {hasText: /Roster · 0 of 1/}).waitFor({timeout: 30000});
     assert.equal(await org.page.inputValue('#regSearch'), 'Pia');
-    assert.equal(await row(org.page, 'Pia D.').locator('input[type=checkbox]').isChecked(), true, 'the ticked row stays ticked');
+    assert.equal(await row(org.page, 'Pia Dunmoor').locator('input[type=checkbox]').isChecked(), true, 'the ticked row stays ticked');
     assert.equal(await org.page.inputValue('#wName'), 'Half typed na');
     assert.equal(await org.page.inputValue('#pBulk'), 'Unsaved Pasted, 3, provisional');
     assert.equal(await org.page.locator('details.details-card').evaluate(e => e.open), true, 'the opened section stays open');
@@ -165,8 +166,8 @@ test('without a connected sheet: a clear message, the private CSV fallback works
     await org.page.locator('.reg-row').first().waitFor({timeout: T});
     assert.match(await org.page.locator('.reg-meta').innerText(), /Private CSV · this browser only/);
     assert.equal(w.requests.length, before, 'reading the file sent nothing anywhere');
-    await row(org.page, 'Pia D.').locator('button', {hasText: 'Check in'}).click();
-    await toast(org.page, /Pia D\. checked in/);
+    await row(org.page, 'Pia Dunmoor').locator('button', {hasText: 'Check in'}).click();
+    await toast(org.page, /Pia Dunmoor checked in/);
     // re-importing the same file knows who is already checked in (stable references per event)
     await org.page.locator('#regFile').setInputFiles({name: 'form-responses.csv', mimeType: 'text/csv', buffer: Buffer.from(SYNTHETIC_FORM_CSV)});
     await org.page.locator('.reg-meta').waitFor();
@@ -186,8 +187,8 @@ test('without a connected sheet: a clear message, the private CSV fallback works
       .map((x, i) => i === 0 ? x : x.map(q).join(',')).join('\n');
     await org.page.locator('#regFile').setInputFiles({name: 'contradictions.csv', mimeType: 'text/csv', buffer: Buffer.from(extra)});
     await org.page.locator('.reg-row').first().waitFor({timeout: T});
-    const quinn = org.page.locator('.reg-row', {has: org.page.locator('.reg-name', {hasText: /^Quinn B\.$/})});
-    const rory = org.page.locator('.reg-row', {has: org.page.locator('.reg-name', {hasText: /^Rory A\.$/})});
+    const quinn = org.page.locator('.reg-row', {has: org.page.locator('.reg-name', {hasText: /^Quinn Brightwater$/})});
+    const rory = org.page.locator('.reg-row', {has: org.page.locator('.reg-name', {hasText: /^Rory Ashgrove$/})});
     assert.match(await quinn.innerText(), /Level 4 · Strong Intermediate/);
     assert.match(await quinn.innerText(), /Organizer review: the answers disagree with the chosen profile/);
     assert.match(await rory.innerText(), /Level 2 · Recreational/);
@@ -198,8 +199,8 @@ test('without a connected sheet: a clear message, the private CSV fallback works
     assert.match(await org.page.locator('.reg-basis').innerText(), /Organizer review: other answers point 3 levels higher than the chosen profile/);
     await quinn.locator('button', {hasText: 'Done'}).click();
     await quinn.locator('button', {hasText: 'Check in'}).click();
-    await toast(org.page, /Quinn B\. checked in/);
-    const stored = await w.fake.local.admin("select rating, rating_confirmed from fftt_private.players where display_name = 'Quinn B.'");
+    await toast(org.page, /Quinn Brightwater checked in/);
+    const stored = await w.fake.local.admin("select rating, rating_confirmed from fftt_private.players where display_name = 'Quinn Brightwater'");
     assert.deepEqual(stored, [{rating: 4, rating_confirmed: false}], 'the suggestion is stored as provisional until the organizer confirms it');
     // an unreadable file is refused plainly
     await org.page.locator('#regFile').setInputFiles({name: 'x.csv', mimeType: 'text/csv', buffer: Buffer.from('Timestamp,Email\n2026/11/01,a@b.invalid\n')});
