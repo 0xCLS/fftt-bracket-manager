@@ -10,7 +10,7 @@ import {setupEvent, deskOf, buildChampionship} from './helpers.mjs';
 
 test('one existing project: preserve synthetic event, enable real mode, guard roles and exports', async () => {
   const ctx = await setupEvent({players: 4, tables: 2});
-  const {db,E,org,skA,outsider} = ctx;
+  const {db,E,org,skA,skB,outsider} = ctx;
   const directory=fs.mkdtempSync(path.join(os.tmpdir(),'fftt-inplace-launch-'));
   try {
     // Preserve a completed score/receipt before upgrading in place.
@@ -53,6 +53,21 @@ test('one existing project: preserve synthetic event, enable real mode, guard ro
     const real=await db.rpc(org,'fftt_registration_source_v5',{p_event_id:R});
     assert.equal(real.event_synthetic,false);
     assert.equal(real.enabled,true);
+    // EVENT ISOLATION between the historical fictional event and the new real one, in both directions
+    const mine=await db.rpc(skA,'fftt_my_events_v4');
+    assert.deepEqual(mine.map(ev=>ev.event_id),[E],'a legacy scorekeeper sees only their own (fictional) event');
+    await assert.rejects(db.rpc(skA,'fftt_matchdesk_v2',{p_event_id:R},{rows:true}),'legacy scorekeeper cannot open the real event desk');
+    await assert.rejects(db.rpc(skA,'fftt_organizer_snapshot_v3',{p_event_id:R}),'legacy scorekeeper cannot read the real roster');
+    const other=await db.addUser('second-platform-organizer@fftt-staging.invalid',{platformOrganizer:true});
+    await assert.rejects(db.rpc(other,'fftt_organizer_snapshot_v3',{p_event_id:R}),'a platform organizer without a grant on the real event is refused');
+    await assert.rejects(db.rpc(other,'fftt_organizer_snapshot_v3',{p_event_id:E}),'and on the fictional event');
+    assert.deepEqual(await db.rpc(other,'fftt_my_events_v4'),[],'and lists no events');
+    // the real event's staff cannot touch the fictional event either
+    await db.rpc(org,'fftt_set_staff_v3',{p_event_id:R,p_email:'scorekeeper-b@fftt-staging.invalid',p_action:'grant',p_role:'scorekeeper'});
+    assert.deepEqual((await db.rpc(skB,'fftt_my_events_v4')).map(ev=>ev.event_id).sort(),[E,R].sort(),'skB holds grants on both events (set up in this test)');
+    await db.rpc(org,'fftt_set_staff_v3',{p_event_id:R,p_email:'scorekeeper-b@fftt-staging.invalid',p_action:'revoke',p_role:null});
+    await assert.rejects(db.rpc(skB,'fftt_matchdesk_v2',{p_event_id:R},{rows:true}),'a revoked scorekeeper is refused immediately on the real event');
+    assert.ok((await deskOf(ctx,skB)).length>=0,'while their fictional-event grant is unaffected');
     const syntheticExport=await db.rpc(org,'fftt_export_event_v3',{p_event_id:E});
     const realExport=await db.rpc(org,'fftt_export_event_v3',{p_event_id:R});
     assert.equal(syntheticExport.synthetic_only,true);

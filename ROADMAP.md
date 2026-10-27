@@ -8,6 +8,8 @@ _Last organized: October 12, 2026. This roadmap is a planning record, **not** a 
 
 **In-place candidate prepared:** `tools/release/build_single_project_upgrade.py` and its populated disposable test `tests/e2e/gameday_single_project_upgrade.test.mjs` passed their focused GitHub CI step (run 40544275690). **Still missing:** hosted Auth/GoTrue multi-account acceptance, migration rehearsal on a realistic populated clone, private backup/restore and cutover checks. No hosted configuration changed.
 
+**Launch-readiness package (October 27 evening):** full-name clarity fixes, real-mode acceptance suites, a tested private backup/restore/rollback procedure, the cutover runbook, acceptance and rehearsal checklists and the event-day guide are on draft PR #19 (`docs/launch/`). Hosted migration, real-event creation, Google activation and deployment await one consolidated organizer approval.
+
 **Consolidated next delivery:** safe in-place real-event SQL/RPC candidate with populated-disposable-db and signed Auth tests; actual registration gating; staff/spectator device acceptance; backup and recovery; **November 8 at 10:00 AM** onsite rehearsal and **November 22 at 1:00 PM** event. The previously prepared **fresh-project real-only** SQL candidate cannot simply be applied to the populated existing database. [Direct launch-readiness plan](docs/FFTT3_LAUNCH_READINESS_2026-10-27.md) governs future work. Preserve old history below; it is not current architecture approval.
 
 ## Product direction and sequencing

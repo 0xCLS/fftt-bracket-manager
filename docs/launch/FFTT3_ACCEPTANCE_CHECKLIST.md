@@ -11,7 +11,8 @@ Run on **real devices** after the cutover (and again, shorter, on Nov 8 and Nov 
 - [ ] Staff tab lists exactly: the Organizer, Scorekeeper A, Scorekeeper B. Revoking and re-granting a scorekeeper takes effect on that phone on its next action.
 - [ ] Players → Registration settings shows **Google Sheet** (no demo option) and "Connected"; **Test connection** is green; counts shown are counts only.
 - [ ] **Load registrations**: names are **full first and last names**; duplicates are grouped; unrecognised/contradictory answers show "Organizer review" and no level is invented; contact details appear only as masked hints (`a•••@b•••`), never full.
-- [ ] Check in one person with a suggested level, edit a level, merge a duplicate group ("Same person"), dismiss one ("Different people"), add a **walk-in with a full name**; a second walk-in with the same name is refused.
+- [ ] A registration whose name is one word or ends in an initial (e.g., “Tia M.”) shows **Organizer review: only a first name or an initial was given**; it can still be checked in after you correct the name (Edit).
+- [ ] Check in one person with a suggested level, edit a level, merge a duplicate group ("Same person"), dismiss one ("Different people"), add a **walk-in with a full name**; a second walk-in with the same name is refused; a one-word walk-in name is asked about once (“Enter the full first and last name … Press Add again”) and accepted as written on the second press.
 - [ ] Championship preview matches the checked-in count; building the bracket warns before replacing an existing one.
 - [ ] Results & Export: Results (text), Matches (CSV), Private backup download and Print work; **Mark event complete** is available only while the event is active; the text/CSV contain names and results only (no levels, ids or e-mails).
 

@@ -58,6 +58,17 @@ He also accepted enabling the actual **read-only Google Sheets registration work
 
 **New local verification:** the populated-postgreSQL promotion step and **independently signed GoTrue real-event authorization/concurrent scoring step** both passed in disposable GitHub Actions run `40563013082`. The earlier in-process migration test remains green. The authenticated Organizer browser review on Cloudflare, private hosted backup/restore and authorized cutover remain pending. Current Staff deployment is still application code `00068134`; the full-name change is integration-branch code and is **not yet redeployed**.
 
+## Launch-readiness engineering package — October 27 (evening), pre-approval
+
+Everything that can be done **without** touching the hosted database, Cloudflare configuration or real registration answers is done; the runbooks are in `docs/launch/`.
+
+* **Full names:** table pills and the score dialog no longer shorten names to the first word (two players named "Alexandria" were indistinguishable); the bulk-entry example and the duplicate-name message no longer ask for initials; registrations with a one-word name or an initial last name carry an Organizer-review note; one-word walk-in/manual names are asked about once. Historical synthetic names are untouched.
+* **Real-mode acceptance (local, signed + PGlite):** the server, client-stack, V4 and browser suites now also run on the **upgraded** schema with real-mode events (`FFTT_UPGRADED=1`); a new browser test drives the whole Google Sheets path on a real-mode event with a fake Google (organizer-only, allowlist, diagnostic switch, full names, no contact data in rows, audit, export or public projection); a long-name layout test covers staff, spectator and TV.
+* **Hosted facts established read-only:** the hosted schema fingerprint (148 columns, 88 constraints, 93 functions with every body hash and grant, 14 RLS tables, 4 triggers, 2 views) is **identical** to a database built from the repository's SQL; public sign-ups, anonymous sign-ins are off and e-mail confirmation is on; Staff Production variables hold the Google credentials, `REGISTRATION_GOOGLE_MODE=diagnostic` and no event allowlist or reference secret yet.
+* **Backup and recovery:** a private backup of the existing project was taken and **restored into a disposable database with equal counts and fingerprints and all 35 foreign keys satisfied**; the in-place upgrade preserved every table, the matching rollback restored the exact pre-upgrade schema fingerprint, and the rollback refuses once a real event exists (`docs/launch/FFTT3_BACKUP_RECOVERY.md`, `tools/ops/`, CI test `ops_restore_rehearsal.test.mjs`).
+* **Release build:** Staff (36 files) and Spectator (17 files) were built from the exact CI-verified commit and their manifests verified hash for hash; the Spectator bundle contains no staff, session or Function code.
+* **Still requires the organizer's approval:** the hosted migration, creating the real event, enabling Google reads for it, deploying the verified bundles, publishing real names, and merging PR #19 (kept as a draft). See `docs/launch/FFTT3_CUTOVER_RUNBOOK.md`.
+
 ## Readiness acceptance
 | Area | Must-pass evidence | Status as of decision |
 | --- | --- | --- |

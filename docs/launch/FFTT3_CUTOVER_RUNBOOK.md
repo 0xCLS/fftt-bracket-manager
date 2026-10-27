@@ -48,6 +48,8 @@ Expected on the release commit (the generator is source-pinned by Git blob SHA; 
 * The existing Staff site (old bundle) still signs in and shows the completed rehearsal event: no regression for existing events.
 
 ## Step 4 — deploy the verified bundles (existing projects, from a clean detached worktree)
+**Release commit:** `efcdc0003e24ac183be0ab4b010c79a0d6ba88c8` (the last CI-verified code commit; later commits on the branch are documentation only and are not deployed). Dry-run build on October 27: Staff 36 files, Spectator 17 files, every file hash equal to its `MANIFEST.json`, manifest `commit` = this SHA, target `staging`.
+
 ```
 git worktree add --detach /private/tmp/fftt-release <RELEASE_SHA_FULL>
 cd /private/tmp/fftt-release && rm -rf .wrangler
@@ -55,9 +57,14 @@ python3 tools/staging/build_export.py --checkout . --commit <RELEASE_SHA_FULL> -
 python3 tools/staging/build_export.py --checkout . --commit <RELEASE_SHA_FULL> --environment staging --origin https://fftt3-games-stg.pages.dev --target spectator --out ../spectator-bundle
 # staff: run from the repo root so functions/ is included; spectator: from a directory WITHOUT functions/
 npx wrangler@4 pages deploy ../staff-bundle --project-name fftt3-staff-stg --branch main --commit-hash <RELEASE_SHA_FULL>
-(cd ../spectator-bundle/.. && npx wrangler@4 pages deploy spectator-bundle --project-name fftt3-games-stg --branch main --commit-hash <RELEASE_SHA_FULL>)
+(cd .. && npx wrangler@4 pages deploy spectator-bundle --project-name fftt3-games-stg --branch main --commit-hash <RELEASE_SHA_FULL>)
 ```
-(Use the exact recipe recorded in the project memory if the flags differ; `wrangler login` is an owner click if the OAuth token expired.) Then compare each live `MANIFEST.json` with the local build (hash for hash), check headers (CSP, no-store, noindex), that `/api/registrations` returns 405 for GET and 401 without a token on the staff origin only, and that the spectator origin serves no staff or Function code.
+(Use the exact recipe recorded in the project memory if the flags differ; `wrangler login` is an owner click if the OAuth token expired.) Then verify both live sites against the local bundles (read-only; exit code 0 only if everything passes):
+```
+python3 tools/ops/verify_deployment.py --bundle ../staff-bundle --base https://fftt3-staff-stg.pages.dev --kind staff
+python3 tools/ops/verify_deployment.py --bundle ../spectator-bundle --base https://fftt3-games-stg.pages.dev --kind spectator
+```
+It compares every served file's SHA-256 and the live `MANIFEST.json` with the local build, checks CSP/nosniff/no-referrer/no-store/noindex/HSTS, that `server/`, `functions/`, SQL, tests, docs and dotfiles are not served, that `/api/registrations` answers 405 (GET) and 401 (no token) on the staff origin, and that the spectator origin serves no Function and no staff page. (Run against today's live sites with the `00068134` bundles it printed `ALL LIVE CHECKS PASSED` for both, so the rollback references below are exactly what is live now.)
 **Rollback references (keep):** Staff `944c112b-25ad-4ef2-9d81-c47acf1eb477` (live now) → before it `6ffe2598-b0f7-47fa-b411-0a89034eb269`; Spectator `d877dd90-7e75-476c-8c27-204ac84e1352` → before it `a367d9f9-af87-4518-a42f-c152ea1a2823`. There is no `wrangler` rollback command: redeploy an old export or use the dashboard's "Rollback to this deployment".
 
 ## Step 5 — create the real event and grant staff (in the Staff app, signed in as the Organizer)
