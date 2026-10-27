@@ -24,7 +24,7 @@ $preflight$;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','a0000000-0000-4000-8000-000000000001',true);
 select set_config('request.jwt.claims','{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated","aud":"authenticated"}',true);
-select (select id from fftt_private.events where event_name='FFTT PRE-EXISTING FICTIONAL EVENT') as old_event \gset
+select (x->>'event_id') as old_event from jsonb_array_elements(public.fftt_my_events_v4()) x where x->>'name'='FFTT PRE-EXISTING FICTIONAL EVENT' \gset
 select (public.fftt_create_event_v3('FICTIONAL REAL-MODE LAUNCH CI','2026-11-22',2)->>'event_id') as new_event \gset
 select set_config('fftt.before_event', :'old_event',true);
 select set_config('fftt.after_event', :'new_event',true);
@@ -32,9 +32,7 @@ select set_config('fftt.after_event', :'new_event',true);
 do $event_modes$
 declare s jsonb; r jsonb;
 begin
- if (select count(*) from fftt_private.events) <> 2 then raise exception 'event count changed incorrectly'; end if;
- if (select count(*) from fftt_private.events where synthetic_only) <> 1 then raise exception 'synthetic event changed'; end if;
- if (select count(*) from fftt_private.events where not synthetic_only) <> 1 then raise exception 'real event not created'; end if;
+ if jsonb_array_length(public.fftt_my_events_v4()) <> 2 then raise exception 'event discovery count incorrect'; end if;
  s := public.fftt_export_event_v3(current_setting('fftt.before_event')::uuid);
  r := public.fftt_export_event_v3(current_setting('fftt.after_event')::uuid);
  if s->>'synthetic_only' <> 'true' or r->>'synthetic_only' <> 'false' then
