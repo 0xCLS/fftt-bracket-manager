@@ -134,7 +134,7 @@ export function createRegistrationSettings(ctx) {
     const head = h('div', {class: 'card-head'},
       h('div', {}, h('h2', {id: 'regSetTitle', text: 'Registration settings'}),
         h('p', {class: 'card-sub', text: 'Choose where this event’s sign-ups come from. Google Sheets is read-only.'})),
-      h('div', {class: 'row'}, pill(info.label, info.tone),
+      h('div', {class: 'row'}, pill(st.dirty ? 'Current: ' + info.label : info.label, info.tone),
         h('button', {type: 'button', class: 'small', id: 'regSetToggle', 'aria-expanded': String(st.open), 'aria-controls': 'regSetBody', text: st.open ? 'Hide settings' : 'Registration settings',
           on: {click: () => { st.open = !st.open; rerender(); }}})));
     const summary = h('p', {class: 'reg-source-line', id: 'regSourceLine'}, h('b', {text: info.label + '. '}), info.detail,
