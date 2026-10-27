@@ -16,6 +16,8 @@ Organizer laptop + charger; two scorekeeper phones (different people, different 
 - [ ] Take a private backup (`tools/ops/hosted_export.sql`) and run `restore_verify.mjs --rehearse` on it.
 - [ ] Organizer and both scorekeepers have signed in successfully at least once from their own phones (passwords known; password reset works for each).
 
+- [ ] **Supabase Free limits:** the project must not be paused (Free projects pause after about a week with no activity; any Staff sign-in or SQL query counts as activity — keep using it weekly until Nov 22). Do not rely on e-mailed password-reset codes on the day: Free-plan Auth e-mail is heavily rate-limited, so every volunteer must **already know a working password** and have signed in once.
+
 ## 10:00 — network and devices (20 min)
 - [ ] Venue Wi-Fi: open the Staff page on 3 devices at once; sign in as Organizer, Scorekeeper A, Scorekeeper B. Note the time each takes. Repeat on the hotspot.
 - [ ] Spectator page on 3 attendee-style phones (cellular and Wi-Fi), TV page on the real screen: legible from the farthest seat? Sleep/screen-lock disabled on the TV device.

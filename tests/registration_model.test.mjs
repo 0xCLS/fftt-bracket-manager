@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseCsv, mapHeaders, buildRegistrants, suggestRating, parseRegistrationPayload, importCsv, safeName, shortName, nameKey,
-  similarNames, normEmail, normPhone, maskEmail, maskPhone, looksLikeContact, REF_PATTERN,
+  similarNames, incompleteName, normEmail, normPhone, maskEmail, maskPhone, looksLikeContact, REF_PATTERN,
   profileLevel, rallyLevel, spinLevel, attackLevel, frequencyLevel, experienceLevel} from '../contracts/registration_model.mjs';
 
 import {SYNTHETIC_FORM_CSV as FIXTURE} from '../server/registration/synthetic_fixture.mjs';
@@ -98,8 +98,14 @@ test('names that carry contact details or formulas are cleaned and flagged, neve
   assert.equal(safeName('see https://x.invalid Ada').text, 'see Ada');
   assert.deepEqual([safeName('Bob 734-555-0100').text, safeName('x@y.org').text, safeName('  ').text], ['Bob', 'Unnamed registrant', 'Unnamed registrant']);
   assert.equal(safeName("Mary-Jane O'Neil").issue, null, 'hyphens and apostrophes inside a name are fine');
+  // full first and last names are the default: an incomplete name is flagged (never blocked, never rewritten)
+  for (const ok of ['Ada Quill', 'Li Wei', 'Ana María de la Cruz', 'José Núñez', 'Dr. Ben Marlow Jr.']) assert.equal(incompleteName(ok), false, ok);
+  for (const bad of ['Ada', 'Tia M.', 'Tia M', 'Madonna', '  ']) assert.equal(incompleteName(bad), true, bad);
+  assert.equal(safeName('Madonna').text, 'Madonna', 'the text is kept as typed');
+  assert.match(safeName('Madonna').issue, /full first and last name/);
   assert.equal(r.summary.needsNameFix, r.registrants.filter(x => x.nameIssue).length);
-  assert.equal(r.summary.needsNameFix, 3);
+  assert.equal(r.summary.needsNameFix, 4, 'Lia (cleaned), two unnamed rows, and the abbreviated "Ada Q" fixture row');
+  assert.match(r.registrants.find(x => x.name === 'Ada Q').nameIssue, /full first and last name/);
   assert.equal(r.warnings.length, 1);
   assert.match(r.warnings[0], /without a name/);
 });

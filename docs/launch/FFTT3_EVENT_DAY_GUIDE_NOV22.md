@@ -41,7 +41,7 @@ Results & Export → **Private backup** (the app's own download; it contains lev
 | Symptom | Do |
 | --- | --- |
 | "Registration could not be read / Connection off" | Check-in by walk-in or the CSV import (Players → Import a private CSV, stays in the browser). Ask the owner to check `REGISTRATION_GOOGLE_MODE`. |
-| A scorekeeper cannot sign in | Password reset from the sign-in page; if the e-mail code is not arriving, use another scorekeeper's phone for scoring; the Organizer can also record results on the Match Desk. |
+| A scorekeeper cannot sign in | Re-type the password carefully (show/hide eye in the field). E-mailed reset codes can be slow or rate-limited on the Free plan — do not wait for one: use another scorekeeper's phone for scoring, or the Organizer records results on the Match Desk. |
 | Scorekeeper's phone is lost/stolen | Staff tab → **Revoke** that person (immediate), grant a replacement. |
 | TV frozen or says **stale** | Refresh the TV page; if it still says stale, the network is down — keep playing, the TV catches up. Hide public view if it shows anything wrong. |
 | Two phones show different things | Pull to refresh. The database is the authority; the paper sheet is the tie-breaker. |

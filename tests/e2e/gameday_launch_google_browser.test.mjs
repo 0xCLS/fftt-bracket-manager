@@ -93,6 +93,24 @@ test('LAUNCH MODE: real-mode event, Organizer connects the form sheet, loads, de
     assert.ok(players.every(p => p.checked_in && p.display_name.split(' ').length >= 2), 'every checked-in player has a full first and last name');
     assert.ok(players.every(p => p.display_name.trim().split(/\s+/)[1].length > 1), 'no last initial');
 
+    // 5b. a one-word walk-in name is a SOFT rule: asked once for the full name, accepted as written on the second press
+    await page.fill('#wName', 'Prince');
+    await page.locator('.walk-form button', {hasText: 'Add and check in'}).click();
+    await page.locator('#wMsg', {hasText: 'full first and last name'}).waitFor();
+    assert.equal((await w.fake.local.admin("select count(*)::int n from fftt_private.players where display_name = 'Prince'"))[0].n, 0, 'nothing is added on the first press');
+    await page.locator('.walk-form button', {hasText: 'Add and check in'}).click();
+    await toast(page, /Prince checked in/);
+    assert.equal((await w.fake.local.admin("select count(*)::int n from fftt_private.players where display_name = 'Prince'"))[0].n, 1, 'accepted as written on the second press');
+
+    await page.locator('details.details-card summary').click();
+    await page.fill('#pName', 'Cher');
+    await page.getByRole('button', {name: 'Add player', exact: true}).click();
+    await toast(page, /full first and last name/);
+    assert.equal((await w.fake.local.admin("select count(*)::int n from fftt_private.players where display_name = 'Cher'"))[0].n, 0, 'manual entry also asks once');
+    await page.getByRole('button', {name: 'Add player', exact: true}).click();
+    await toast(page, /Player added/);
+    assert.equal((await w.fake.local.admin("select count(*)::int n from fftt_private.players where display_name = 'Cher'"))[0].n, 1);
+
     // 6. PRIVACY: contacts and questionnaire answers never reach tournament records, audit log, exports, spectator view or the page
     const E = w.eventId, O = w.ids.org;
     // participant contacts use example.invalid; the staff list in the Organizer export legitimately carries staff sign-in addresses (fftt-staging.invalid)

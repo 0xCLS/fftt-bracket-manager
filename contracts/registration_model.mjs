@@ -45,6 +45,13 @@ const PHONE_LIKE = /\d[^\d]{0,2}\d[^\d]{0,2}\d[^\d]{0,2}\d[^\d]{0,2}\d[^\d]{0,2}
 export const looksLikeContact = t => /@/.test(t) || PHONE_LIKE.test(t);
 /** A name that is safe to show and to send to the roster: any word carrying an "@" or a digit is dropped (people
  * sometimes type a phone number into the name box). `issue` says why the organizer should look at it. */
+/** True when a name is not a full first and last name: one word, or a last name that is only an initial ("Tia M."). Soft rule: it flags, never blocks. */
+export function incompleteName(v) {
+  const words = clean(v).split(' ').filter(Boolean);
+  if (words.length < 2) return true;
+  return Array.from(words[words.length - 1].replace(/[^\p{L}]/gu, '')).length < 2;
+}
+export const INCOMPLETE_NAME_ISSUE = 'Only a first name or an initial was given; ask for the full first and last name.';
 export function safeName(v) {
   const original = clean(v);
   // words carrying "@" or a digit go; markup/quoting characters go; a leading spreadsheet-formula character goes
@@ -52,7 +59,7 @@ export function safeName(v) {
   if (!original) return {text: 'Unnamed registrant', issue: 'No name was given.'};
   if (!kept) return {text: 'Unnamed registrant', issue: 'The name contained only contact details or numbers; enter the name.'};
   if (kept !== original) return {text: kept, issue: 'Contact details, numbers or symbols were removed from the name; check it.'};
-  return {text: kept, issue: null};
+  return {text: kept, issue: incompleteName(kept) ? INCOMPLETE_NAME_ISSUE : null};
 }
 // A registration time is shown as text; only a plain date/time shape is ever forwarded (never arbitrary cell content).
 const STAMP = /^\d{1,4}[-/]\d{1,2}[-/]\d{1,4}( \d{1,2}:\d{2}(:\d{2})?( ?[AP]M)?)?$/i;

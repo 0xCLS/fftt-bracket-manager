@@ -8,7 +8,7 @@
  * UI-only choices (search text, filter, ticked rows, edited names/levels, dismissed duplicate groups) live in this
  * closure, so the background refresh that rebuilds the pane can never reset them. */
 import {ratingName} from '../contracts/gameday_engine.mjs';
-import {nameKey, similarNames} from '../contracts/registration_model.mjs';
+import {nameKey, similarNames, incompleteName} from '../contracts/registration_model.mjs';
 import {createRegistrationSettings, registrationState, STATE_TEXT} from './view_registration.mjs';
 
 const SOURCE_STATE = {'google-sheets': 'connected', 'synthetic-fixture': 'fictional', 'csv-import': 'csv'};
@@ -259,6 +259,7 @@ export function createPlayersView(ctx) {
     let rating = draft('walkRating', 3);
     const name = h('input', {type: 'text', id: 'wName', maxlength: 80, autocomplete: 'off', placeholder: 'First and last name', 'data-draft': 'walkName', required: true, 'aria-describedby': 'wHelp'});
     const msg = h('p', {class: 'status bad', role: 'alert', id: 'wMsg'});
+    let warnedName = null;   // a one-word name is accepted on the SECOND press with the same text: a soft rule, never a dead end
     const hint = h('span', {class: 'muted', text: ratingName(rating)});
     const seg = h('div', {class: 'seg', role: 'radiogroup', 'aria-label': 'FFTT level for the walk-in'},
       [1, 2, 3, 4, 5].map(n => h('label', {}, h('input', {type: 'radio', name: 'wRating', value: n, checked: n === rating,
@@ -267,6 +268,7 @@ export function createPlayersView(ctx) {
       msg.textContent = '';
       const v = name.value.trim().replace(/\s+/g, ' ');
       if (!v) { msg.textContent = 'Enter the walk-in’s name.'; name.focus(); return; }
+      if (incompleteName(v) && warnedName !== v) { warnedName = v; msg.textContent = `Enter the full first and last name (for example “Ada Quill”). Press Add again to add “${v}” as written.`; name.focus(); return; }
       if (sn.players.some(p => nameKey(p.name) === nameKey(v))) { msg.textContent = `${v} is already on the roster. Check the full name before adding another player.`; name.focus(); return; }
       if (result(await core.actions.checkinRegistrants([{name: v, rating, source: 'walk_in'}], true), `${v} checked in.`)) { name.value = ''; forget('walk'); rerender(); document.getElementById('wName')?.focus(); }
     };
@@ -320,6 +322,7 @@ export function createPlayersView(ctx) {
   function manualCard(sn) {
     const name = h('input', {type: 'text', id: 'pName', maxlength: 80, autocomplete: 'off', placeholder: 'First and last name', 'data-draft': 'pName', required: true});
     let rating = draft('pRating', 3);
+    let warnedManual = null;
     const hint = h('span', {class: 'muted', text: '· ' + ratingName(rating)});
     const ratingSeg = h('div', {class: 'seg', role: 'radiogroup', 'aria-label': 'FFTT rating'},
       [1, 2, 3, 4, 5].map(n => h('label', {}, h('input', {type: 'radio', name: 'pRating', value: n, checked: n === rating, on: {change: () => { rating = n; remember('pRating', n); hint.textContent = '· ' + ratingName(n); }}}), h('span', {text: String(n)}))));
@@ -328,6 +331,8 @@ export function createPlayersView(ctx) {
       h('summary', {}, h('span', {class: 'summary-title', text: 'Enter names by hand'}), h('span', {class: 'muted', text: 'Add several names at once; use walk-in check-in for individual arrivals.'})),
       h('div', {class: 'grid two manual-grid'},
         h('form', {class: 'manual-form', on: {submit: async ev => { ev.preventDefault();
+          const typed = name.value.trim().replace(/\s+/g, ' ');
+          if (incompleteName(typed) && typed && warnedManual !== typed) { warnedManual = typed; toast(`Enter the full first and last name. Press Add player again to add “${typed}” as written.`, 'warn'); name.focus(); return; }
           if (result(await core.actions.addPlayers([{name: name.value, rating, rating_status: 'provisional'}]), 'Player added.')) { name.value = ''; forget('pName'); document.getElementById('pName')?.focus(); } }}},
           h('h3', {text: 'Add a player'}), h('label', {for: 'pName', text: 'Name'}), name,
           h('fieldset', {}, h('legend', {}, 'FFTT rating ', hint), ratingSeg),
