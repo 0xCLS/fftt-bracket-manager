@@ -422,7 +422,9 @@ test('REGISTRATION SETTINGS (event-specific Google Sheet, fake Google): recogniz
     assert.match(await page.locator('.reg-meta').innerText(), /Fictional demo data/);
     // 2. open settings: read-only statement, the account to share with, nothing else
     await page.locator('#regSetToggle').click();
-    assert.match(await page.locator('.reg-settings').first().innerText(), /Read-only: the app never writes to your sheet, never saves registration rows and never shows contact details/);
+    assert.match(await page.locator('.reg-settings').first().innerText(), /Google Sheets is read-only/);
+    assert.deepEqual(await page.locator('.choice-card strong').allInnerTexts(), ['Google Sheet', 'Fictional demo data'], 'live registration is the primary choice, demo is visibly secondary');
+    assert.equal(await page.locator('#regSourceLine').count(), 0, 'expanded form does not repeat the current-source summary');
     await page.locator('.choice', {hasText: 'Google Sheet'}).click();
     assert.equal((await page.locator('.account-email').innerText()).trim(), FAKE_SA);
     assert.ok(await page.locator('#regEnable').isDisabled(), 'enabling is not offered on a synthetic site');
@@ -442,6 +444,8 @@ test('REGISTRATION SETTINGS (event-specific Google Sheet, fake Google): recogniz
     await page.locator('#regCheck').click();
     await page.locator('.diag', {hasText: 'Ready to read'}).waitFor({timeout: T});
     assert.deepEqual(await page.locator('#regTab option').allInnerTexts(), [TAB, 'Notes']);
+    assert.equal(await page.locator('.reg-share-help').count(), 0, 'sharing instructions disappear after verified access');
+    assert.match(await page.locator('.sub-block').first().innerText(), /Column mapping \(if needed\)/);
     assert.deepEqual(await page.locator('.diag-list li').evaluateAll(els => els.map(e => e.className)), Array(6).fill('diag-pass'));
     assert.match(await page.locator('.diag').innerText(), /21 responses \(a count only; no answers were read\)/);
     assert.match(await page.locator('#map-rallies option:checked').innerText(), /^Detected: /);
@@ -459,8 +463,9 @@ test('REGISTRATION SETTINGS (event-specific Google Sheet, fake Google): recogniz
     // 7. save: stored for THIS event; reading a live sheet is not allowed on this synthetic site, said plainly
     await page.locator('#regSave').click();
     await toast(page, /Registration source saved/);
-    assert.match(await page.locator('#regSourceLine').innerText(), /Not available on this site\. Reading a live Google Sheet is not allowed on this synthetic staging site/);
-    assert.match(await page.locator('#regSourceLine').innerText(), /FFTT3 Sign-ups \(fictional copy\)/);
+    assert.match(await page.locator('.reg-settings .card-head').innerText(), /Not available on this site/);
+    assert.match(await page.locator('#regEnableRow').innerText(), /synthetic staging site/);
+    assert.equal(await page.locator('#regSheet').inputValue(), url(SHEET_OK));
     const saved = await w.fake.local.admin('select kind, spreadsheet_id, worksheet, column_map, enabled, status from fftt_private.registration_sources where event_id = $1', [w.eventId]);
     assert.deepEqual(saved.map(r => [r.kind, r.spreadsheet_id, r.worksheet, r.column_map, r.enabled]), [['google-sheets', SHEET_OK, TAB, {description: '(none)'}, false]]);
     assert.ok(['ready', 'needs-attention', 'untested'].includes(saved[0].status));
