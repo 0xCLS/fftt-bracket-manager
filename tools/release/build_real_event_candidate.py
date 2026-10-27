@@ -72,7 +72,7 @@ def candidate_sql(path: str, sha: str, replacements: list) -> str:
         if n != expected:
             raise ValueError(f"Unexpected guard count {path}: expected {expected}, got {n} for {before!r}")
         code = code.replace(before, after)
-    if re.search(r"\bsynthetic_only\s*=\s*true\b|\band\s+e\.synthetic_only\b", code):
+    if re.search(r"\bsynthetic_only\s*=\s*true\b|\band\s+e\.synthetic_only\b(?!\s*=)", code):
         raise ValueError(f"Unconverted synthetic-only operation in {path}")
     # The real-only CHECK makes it impossible to accidentally insert a synthetic
     # fixture into this DB. V5 continues to reject fixture registration sources.
