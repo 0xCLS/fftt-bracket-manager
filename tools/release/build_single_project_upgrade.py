@@ -91,7 +91,7 @@ def generate() -> str:
                     continue  # V5 must keep conditional fixture/Google restrictions
                 if "synthetic_only" in line and (" = true" in line or "=true" in line or "and e.synthetic_only" in line or "'synthetic_only', true" in line):
                     guard_hints.append((path, no, line.strip()))
-    if len(guard_hints) != 12:
+    if len(guard_hints) != 13:
         raise ValueError(f"Unexpected synthetic-only guards ({len(guard_hints)}); manual security review needed: {guard_hints}")
 
     routines = []
