@@ -6,6 +6,8 @@ _Last organized: October 12, 2026. This roadmap is a planning record, **not** a 
 
 **Latest organizer instruction supersedes older synthetic-only and two-project proposals:** treat the Bracket Manager as **direct-to-launch**, not ongoing prototype work. Prefer **one existing Supabase project** (`fftt-bracket-manager-dev`) and **the two existing isolated Cloudflare Pages sites** for staff and spectators; do not add another Supabase project/extra Pages as the default. Preserve synthetic history, strong event-scoped Auth, privacy, zero-cost setup, backups and the requirement to prove the in-place conversion safe before touching hosted data.
 
+**In-place candidate prepared:** `tools/release/build_single_project_upgrade.py` and its populated disposable test `tests/e2e/gameday_single_project_upgrade.test.mjs` passed their focused GitHub CI step (run 40544275690). **Still missing:** hosted Auth/GoTrue multi-account acceptance, migration rehearsal on a realistic populated clone, private backup/restore and cutover checks. No hosted configuration changed.
+
 **Consolidated next delivery:** safe in-place real-event SQL/RPC candidate with populated-disposable-db and signed Auth tests; actual registration gating; staff/spectator device acceptance; backup and recovery; **November 8 at 10:00 AM** onsite rehearsal and **November 22 at 1:00 PM** event. The previously prepared **fresh-project real-only** SQL candidate cannot simply be applied to the populated existing database. [Direct launch-readiness plan](docs/FFTT3_LAUNCH_READINESS_2026-10-27.md) governs future work. Preserve old history below; it is not current architecture approval.
 
 ## Product direction and sequencing
