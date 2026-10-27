@@ -7,11 +7,24 @@
 - **One codebase:** existing `0xCLS/fftt-bracket-manager` repository and draft PR #19; preserve historical rehearsals and existing event-scoped grants. No new application/repository or subscription.
 - **Google:** keep the already verified service account and real FFTT3 sheet. The October 27 diagnostic passed (12 columns, 21 response rows) but **read no participant answers**. It does not authorize actual importing, and response count is not proof of unique registrants.
 
+## October 27 staging UI deployments — verified by Claude Code report
+
+Claude Code reported the successful **synthetic staging-only** release of approved application commit `00068134f3fa74cd1bec6e9b32071cd17c2e0544` after GitHub Actions [run 40550825642](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/40550825642) **passed both jobs**. These reports describe operator verification, not an independently authenticated Organizer UI review by ChatGPT.
+
+| Existing staging service | Cloudflare deployment ID | Deployment-specific preview | Prior deployment (rollback reference) |
+| --- | --- | --- | --- |
+| Staff (`fftt3-staff-stg`) | `944c112b-25ad-4ef2-9d81-c47acf1eb477` | https://944c112b.fftt3-staff-stg.pages.dev | `6ffe2598` |
+| Spectator/TV (`fftt3-games-stg`) | `d877dd90-7e75-476c-8c27-204ac84e1352` | https://d877dd90.fftt3-games-stg.pages.dev | `a367d9f9` |
+
+**Stable site URLs:** https://fftt3-staff-stg.pages.dev and https://fftt3-games-stg.pages.dev. The operator reported **36/36 Staff** and **17/17 Spectator** served files matching manifests/hashes at both stable and deployment-specific URLs. Both served the expected `staging` target, approved Git SHA, `_headers` security policies (including no-store/noindex), and resolved the public site/Staff/Spectator/TV pages without console errors or horizontal overflow in tested viewports. The Cloudflare-consumed `_headers` and `_redirects` files returning 404 when requested directly is expected. Live CSS confirmed `--tile:26px` on Staff, Spectator and TV, with the intended Players workspace code on the Staff bundle. The operator did **not** sign in to inspect the Organizer-only Players tab, so **visual acceptance still awaits Christopher**.
+
+**Non-changes / safeguards:** The existing Staff registration Function and Cloudflare environment variables were preserved. GET to `/api/registrations` returned 405; unauthenticated POST returned 401. No SQL migration, new infrastructure, real participant import, PR merge, production release or changes to synthetic data. Cloudflare Pages deployments changed **only** the two existing staging projects. Do not confuse this UI release with a production-ready registration cutover: Google response reading remains diagnostic-only, and the existing single-project in-place migration remains pending approval and launch acceptance.
+
 ## Registration settings polish — launch-directed UI update
 
 The October 27 screenshot showed a lengthy rehearsal-oriented Registration settings form, with repeated source labels, duplicate read-only instructions and column mapping presented before connection testing. The integration branch now offers a shorter workflow: choose **Google Sheet** (first, and the only listed option for a real event), enter link, check tabs and test connection, review the mapping only after test results, and save. The previously selected source is labelled as **current** while an unsaved change is being prepared; verbose sharing instructions disappear when the selected spreadsheet's access has already been verified. The demo source remains available only for synthetic events, with clear diagnostic-only wording on synthetic staging. No data loading, credentials, source persistence or access rules were changed by this UI polish.
 
-**Status:** Source and browser regression test updates committed on draft PR #19. Not deployed to the current Staff URL. Live Google operations stay off on synthetic staging; enabling actual FFTT3 response reading still requires migration, release gates and distinct organizer approval.
+**Current deployment status:** the revised registration UI is deployed on the existing Staff **synthetic staging** URL at `944c112b` (see staging-release record above). Live Google response loading is still disabled; real-data operation requires the reviewed in-place migration, launch gates and distinct organizer approval.
 
 ## Players & check-in and score-tile polish — October 27
 
@@ -19,7 +32,7 @@ Christopher supplied screenshots of the Players & check-in workspace and recent 
 
 Result display-only score squares are reduced **30 → 26 CSS px** (compact bracket squares **24 → 22 CSS px**) with slightly tighter spacing and smaller text while preserving square geometry, winner/loser colors, tabular numerals and accessibility text. No match scores or winning logic changed.
 
-The existing Chromium regression now checks workspace layout at desktop/tablet/phone widths and 26px score tiles. **Code-only changes on draft PR #19; not deployed to Cloudflare.**
+The existing Chromium regression now checks workspace layout at desktop/tablet/phone widths and 26px score tiles. **Deployed to the existing synthetic Cloudflare staging sites from `00068134` as recorded above; PR #19 remains draft/unmerged.**
 
 ## Critical path to launch
 1. **Implement a safe, in-place event-mode release, not a fresh-database replacement.** Current live schema enforces `synthetic_only=true` and multiple staff/score RPCs filter on that field. Create a reviewed change that preserves all existing synthetic events and historical results, allows clearly identified new real events, authorizes each operation by active event-scoped Auth grant and lifecycle, audits changes, and prevents a fictional fixture from being used for a real event. The existing *real-only fresh-database* SQL generator is a reference candidate, **not safe to run unchanged on the populated Supabase project**.
