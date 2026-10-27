@@ -189,7 +189,7 @@ export function createPlayersView(ctx) {
     const loading = rg.status === 'loading';
     const head = h('div', {class: 'card-head'},
       h('div', {}, h('h2', {id: 'regTitle', text: 'Registrations'}),
-        h('p', {class: 'card-sub', text: 'Find a name, review any suggested level, and check in. Only checked-in players join the roster.'})),
+        h('p', {class: 'card-sub', text: 'Find a name, review any suggested level, and check in. Checking in adds a player to the roster if needed.'})),
       h('div', {class: 'row'},
         h('button', {type: 'button', class: 'primary', id: 'regLoad', disabled: loading || !writable(), text: loading ? 'Loading…' : rg.payload ? 'Reload from the sheet' : 'Load registrations', 'aria-busy': String(loading),
           on: {click: async () => { const r = await core.actions.loadRegistrations(); if (r.ok) toast(`${r.payload.registrants.length} registrants loaded.`); /* a failure is explained once, inline, below */ }}}),
@@ -292,10 +292,10 @@ export function createPlayersView(ctx) {
       h('td', {'data-label': 'Level'}, h('select', {'aria-label': `Level for ${p.name}`, disabled: !writable(),
         on: {change: async ev => result(await core.actions.confirmRatings([{id: p.id, rating: Number(ev.target.value)}]), `${p.name}: level confirmed.`)}},
         [1, 2, 3, 4, 5].map(n => h('option', {value: n, text: levelLabel(n), selected: n === p.rating})))),
-      h('td', {'data-label': 'Rating'}, p.ratingConfirmed ? pill('Confirmed', 'good')
+      h('td', {'data-label': 'Review'}, p.ratingConfirmed ? pill('Confirmed', 'good')
         : h('span', {class: 'row tight'}, pill('Suggested', 'warn'), h('button', {type: 'button', class: 'small', disabled: !writable(), text: 'Confirm', 'aria-label': `Confirm level ${p.rating} for ${p.name}`,
           on: {click: async () => result(await core.actions.confirmRatings([{id: p.id, rating: p.rating}]), `${p.name}: level ${p.rating} confirmed.`)}}))),
-      h('td', {'data-label': 'Basis'}, h('select', {'aria-label': `Rating basis for ${p.name}`, disabled: !writable(),
+      h('td', {'data-label': 'Experience'}, h('select', {'aria-label': `Rating basis for ${p.name}`, disabled: !writable(),
         on: {change: async ev => result(await core.actions.updatePlayer({...p, ratingStatus: ev.target.value}))}},
         [['provisional', 'Provisional'], ['established', 'Established']].map(([v, t]) => h('option', {value: v, text: t, selected: v === p.ratingStatus})))),
       h('td', {'data-label': 'Checked in'}, h('label', {class: 'check'}, h('input', {type: 'checkbox', checked: p.checkedIn, disabled: !writable() || (inBracket.has(p.id) && p.checkedIn), 'aria-label': `${p.name} checked in`,
