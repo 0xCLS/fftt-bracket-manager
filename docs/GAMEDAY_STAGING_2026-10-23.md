@@ -30,6 +30,8 @@ Existing PKCE evidence, the hosted V2 audit and the three consumed fixtures are 
 * **Real Chrome, isolated contexts:** a full rehearsal (organizer desktop, two phone-sized scorekeepers, spectator phone, TV, outsider) and six failure-path tests. **These are browser-simulated contexts on one machine, not physical devices.**
 * **CI (GitHub Actions):** includes real local Supabase GoTrue + PostgreSQL with concurrent scorekeepers. The run for each commit is recorded in the batch record that introduced it (latest: [GAMEDAY_V4_2026-10-26.md](GAMEDAY_V4_2026-10-26.md)); this page does not carry a run number that could go stale.
 
+**Update, October 27, 2026:** V5 (event-specific registration sources) and the UI/UX polish pass are deployed; see [REGISTRATION_SETTINGS_2026-10-27.md](REGISTRATION_SETTINGS_2026-10-27.md) section 8.
+
 **Update, October 26, 2026:** V4 (formats, registration check-in, event management) was applied to the synthetic project and both bundles were redeployed from commit `c1e589c`; the exact record is in [GAMEDAY_V4_2026-10-26.md](GAMEDAY_V4_2026-10-26.md) section 8. The older statements below describe the October 23 V3 build and are kept as history.
 
 ## 4. Not yet verified / open

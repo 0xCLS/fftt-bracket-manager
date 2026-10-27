@@ -91,6 +91,21 @@ Keep `REGISTRATION_GOOGLE_MODE` at `diagnostic` on staging: the database refuses
 
 A separate Supabase project and Cloudflare pair for the real event, with V5 applied and events that are not `synthetic_only`; set `REGISTRATION_GOOGLE_MODE=enabled`, `REGISTRATION_REF_SECRET`, `REGISTRATION_EVENT_IDS` (the one real event) and the Google secrets; share the real response sheet with the service account; the Organizer then selects it in Registration settings and switches the connection on. Nothing in the application code changes. Requirements before doing so: privacy review of what is stored (nothing but the source description), a decision on who may be organizer, and a rehearsal on the isolated environment.
 
-## 8. Hosted staging record
+## 8. Hosted staging record (October 27, 2026)
 
-See the "Deployment record" appended below once the release is made.
+| Item | Value |
+| --- | --- |
+| Application commit deployed | `e938f76539b07b5c07285c0b748d2b1af2ec4f7a` (branch `integration/milestone1-secure-foundation`, PR #19 open draft). App/server files are identical to `e978ca4`/`413e830`; the last commit changed only a test. |
+| Migration | `supabase/proposals/GAMEDAY_TOURNAMENT_V5_STAGING.sql`, SHA-256 `f537da164412a9daf53631c266aec6877f14047483fe135a9341dc2e10912e98` (16,774 bytes; the file fetched from the commit was compared byte-for-byte before it ran), applied once, additively, to the **synthetic** project `fftt-bracket-manager-dev`. Backward compatible: the previous V4 bundle keeps working against a V5 database, so the migration ran first and both bundles followed within minutes. |
+| Staff deployment | `9e6d0794-3b6f-4e00-b324-7df14e0f4c65` (https://fftt3-staff-stg.pages.dev, with the registration Function) |
+| Spectator deployment | `d4bb5de4-298b-4710-81b5-6efbfaa31246` (https://fftt3-games-stg.pages.dev) |
+| Rollback references (unchanged, listed) | staff `ead402a1-7995-4acd-8ccc-c323d2a28428` (`c1e589c`), spectator `116de70c-28fa-4ae5-8cca-31c7708107ce` (`c1e589c`); the V4 bundles also run on the V5 database. |
+| Function settings | unchanged: the fixture is allowed (`REGISTRATION_SOURCE=synthetic-fixture`); `REGISTRATION_GOOGLE_MODE` is unset (= off); no Google credential exists. |
+
+**Verified after deployment:** live `MANIFEST.json` equals the local build for both sites (34 and 15 served files, 0 hash mismatches); an invalid-shaped token now returns the honest `401 access-rejected` (the pre-fix deployment returned `503`); no token 401, foreign origin 403, GET 405, spectator origin 405; `server/`, `functions/`, the SQL and test scripts return 404.
+
+**Database after V5:** 4 public V5 functions, none executable by `anon`, all by `authenticated`; `registration_sources` exists with row-level security on and no API access; 0 sources saved. Preserved exactly: 4 events (3 active, 1 complete at revision 45), 18 players, 25 matches, 52 audit rows, 20 score decisions, 13 staff grants (same fingerprint), 0 published events, 0 tombstones/links, completed-event match fingerprint `fa83a90f35d2a0cb6be46bc382054fb3` (unchanged).
+
+**Hosted acceptance:** [`tests/hosted_v5_acceptance_rollback.sql`](../tests/hosted_v5_acceptance_rollback.sql) ran on the hosted database in one always-rolled-back transaction as the existing organizer and a scorekeeper: **PASSED=23 FAILED=0** (privileges, organizer/event scope, a scorekeeper/outsider/anonymous refused, two events with two different sheets, the synthetic rule, validation, no credential smuggling, status handling, audit without the sheet id, cascade); zero disposable events remained.
+
+**Not run:** the signed-in browser flows on the live staff site (needs an organizer password the release session does not have, and may not enter). The same code passed the full local browser suites (desktop/tablet/phone) and the files served are hash-identical to it.
