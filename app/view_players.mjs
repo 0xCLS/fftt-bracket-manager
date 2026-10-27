@@ -44,7 +44,7 @@ export function createPlayersView(ctx) {
     const rows = payload.registrants.map(r => {
       const player = byRef.get(r.ref) ?? null;
       const edit = reg.edits.get(r.ref) ?? {};
-      const name = (edit.name ?? r.shortName).trim();
+      const name = (edit.name ?? r.name).trim();
       const key = nameKey(name);
       const rosterMatch = player ? null : (rosterKeys.find(x => x.key === key) ?? rosterKeys.find(x => similarNames(x.key, key)))?.p ?? null;
       const dupOpen = r.duplicate && open.has(r.duplicate.group);
@@ -66,7 +66,7 @@ export function createPlayersView(ctx) {
     const clash = new Map();
     for (const row of rows) { const k = nameKey(row.name); clash.set(k, [...(clash.get(k) ?? []), row.name]); }
     const same = [...clash.values()].find(v => v.length > 1);
-    if (same) { toast(`${same[0]} appears more than once in this selection. Edit one name (add a last initial) first.`, 'bad'); return false; }
+    if (same) { toast(`${same[0]} appears more than once in this selection. Review the full names and clarify one entry first.`, 'bad'); return false; }
     const ok = result(await core.actions.checkinRegistrants(rows.map(itemFor), true), label);
     if (ok) for (const row of rows) { reg.selected.delete(row.r.ref); reg.edits.delete(row.r.ref); }
     return ok;
@@ -257,7 +257,7 @@ export function createPlayersView(ctx) {
   // ---------------------------------------------------------------- walk-ins
   function walkInCard(sn) {
     let rating = draft('walkRating', 3);
-    const name = h('input', {type: 'text', id: 'wName', maxlength: 80, autocomplete: 'off', placeholder: 'First name and last initial', 'data-draft': 'walkName', required: true, 'aria-describedby': 'wHelp'});
+    const name = h('input', {type: 'text', id: 'wName', maxlength: 80, autocomplete: 'off', placeholder: 'First and last name', 'data-draft': 'walkName', required: true, 'aria-describedby': 'wHelp'});
     const msg = h('p', {class: 'status bad', role: 'alert', id: 'wMsg'});
     const hint = h('span', {class: 'muted', text: ratingName(rating)});
     const seg = h('div', {class: 'seg', role: 'radiogroup', 'aria-label': 'FFTT level for the walk-in'},
@@ -267,7 +267,7 @@ export function createPlayersView(ctx) {
       msg.textContent = '';
       const v = name.value.trim().replace(/\s+/g, ' ');
       if (!v) { msg.textContent = 'Enter the walk-in’s name.'; name.focus(); return; }
-      if (sn.players.some(p => nameKey(p.name) === nameKey(v))) { msg.textContent = `${v} is already on the roster. Add a last initial to tell them apart.`; name.focus(); return; }
+      if (sn.players.some(p => nameKey(p.name) === nameKey(v))) { msg.textContent = `${v} is already on the roster. Check the full name before adding another player.`; name.focus(); return; }
       if (result(await core.actions.checkinRegistrants([{name: v, rating, source: 'walk_in'}], true), `${v} checked in.`)) { name.value = ''; forget('walk'); rerender(); document.getElementById('wName')?.focus(); }
     };
     return h('section', {class: 'card', 'aria-labelledby': 'walkTitle'},
@@ -318,7 +318,7 @@ export function createPlayersView(ctx) {
 
   // ---------------------------------------------------------------- manual entry (names only)
   function manualCard(sn) {
-    const name = h('input', {type: 'text', id: 'pName', maxlength: 80, autocomplete: 'off', placeholder: 'First name and last initial', 'data-draft': 'pName', required: true});
+    const name = h('input', {type: 'text', id: 'pName', maxlength: 80, autocomplete: 'off', placeholder: 'First and last name', 'data-draft': 'pName', required: true});
     let rating = draft('pRating', 3);
     const hint = h('span', {class: 'muted', text: '· ' + ratingName(rating)});
     const ratingSeg = h('div', {class: 'seg', role: 'radiogroup', 'aria-label': 'FFTT rating'},
