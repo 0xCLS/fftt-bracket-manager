@@ -10,8 +10,7 @@ insert into fftt_private.platform_organizers(user_id) values ('a0000000-0000-400
 set local role authenticated;
 select set_config('request.jwt.claim.sub','a0000000-0000-4000-8000-000000000001',true);
 select set_config('request.jwt.claims','{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated","aud":"authenticated"}',true);
-select public.fftt_create_event_v3('FFTT PRE-EXISTING FICTIONAL EVENT','2026-11-08',2);
-select (select id from fftt_private.events where event_name='FFTT PRE-EXISTING FICTIONAL EVENT') as before_event \gset
+select (public.fftt_create_event_v3('FFTT PRE-EXISTING FICTIONAL EVENT','2026-11-08',2)->>'event_id') as before_event \gset
 select public.fftt_upsert_players_v3(:'before_event'::uuid, '[{"name":"Ada Quillfeather","rating":3,"rating_status":"provisional"},{"name":"Ben Marlowe","rating":2,"rating_status":"provisional"}]'::jsonb);
 reset role;
 commit;
