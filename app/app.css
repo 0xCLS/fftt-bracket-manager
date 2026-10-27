@@ -155,15 +155,10 @@ dialog form,dialog .dlg{padding:18px}
 .signin{max-width:490px;margin:clamp(24px,5vh,52px) auto;padding:0 18px}
 .signin .card{padding:clamp(20px,3vw,30px)}
 .signin .brand{margin-bottom:12px}
-.signin #loginForm>label:not(.check){display:block;margin-top:16px;margin-bottom:6px;font-weight:700}
-.signin #loginForm>.row{align-items:center;gap:8px}
-.signin #password{flex:1;min-width:0}
-.signin #togglePassword{flex:none;padding:10px 14px}
-.signin #loginForm>p{margin:13px 0}
-.signin #loginForm>.check{margin-top:17px}
 .signin details{margin-top:14px}
 .signin details summary{cursor:pointer;line-height:1.4;font-weight:600}
 .signin details[open]{padding-bottom:7px}
+#signin details[open]>summary+*{margin-top:8px}   /* beats the shared rhythm: a summary sits close to what it opens */
 .signin details[open] .help{line-height:1.5}
 .event-filter{display:flex;align-items:center;gap:8px}
 .event-filter label{margin:0}
@@ -171,10 +166,6 @@ dialog form,dialog .dlg{padding:18px}
 @media(max-width:580px){.signin{margin:15px auto}.event-filter{flex-wrap:wrap}.event-filter select{min-width:130px}}
 .banner{display:inline-block;padding:3px 10px;border-radius:999px;background:var(--warning-soft);color:var(--warning);font-size:.75rem;font-weight:700;letter-spacing:.04em}
 .checks{list-style:none;padding:0;margin:8px 0 0;font-size:.8rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 14px}
-.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--accent);color:#fff;padding:10px 18px;border-radius:999px;
- z-index:50;max-width:92vw;box-shadow:var(--shadow)}
-.toast.bad{background:var(--negative)}
-
 /* ---- spectator + TV */
 .public-head{padding:16px;background:var(--surface);border-bottom:1px solid var(--line)}
 .public-wrap{max-width:1100px;margin:0 auto;padding:16px}
@@ -378,7 +369,7 @@ dialog h3{font-size:1.15rem;margin-bottom:var(--space-3)}
 .signin .signin-advanced{margin:16px 0 0}
 .signin .signin-advanced summary{cursor:pointer;font-weight:600;color:#46525f;min-height:36px;display:flex;align-items:center}
 .signin .signin-advanced[open]{padding:0 0 4px}
-.signin .wide-button{margin-top:6px}
+.signin .wide-button{margin-top:0}
 .signin .developer-credit{margin:18px 0 0;color:#56626d;font-size:11px;font-weight:700;text-align:center}
 .event-chooser h2{font-size:1.2rem;margin:18px 0 4px}
 .chooser-list{display:grid;gap:10px;margin:14px 0}
@@ -430,7 +421,7 @@ body.tv .playerline{font-size:.85rem}
 #app .sidebar-bottom{margin-top:auto;padding:16px 4px 0;border-top:1px solid #e2e6eb}
 #app .sidebar-sync{margin:0 0 2px;color:#216b54;font-size:11px;font-weight:750}
 #app .sidebar-caution{margin:0 0 12px;color:#56626d;font-size:11px;line-height:1.5}
-#app .sidebar-actions{display:grid;gap:7px}
+#app .sidebar-actions{display:grid;gap:10px}
 #app .sidebar-actions button{min-height:37px;width:100%;padding:6px 10px;text-align:center;background:#fff;border-radius:5px;font-size:11px;font-weight:700}
 #app .sidebar-actions button:last-child{border-color:#29313c;background:#29313c;color:#fff}
 #app .developer-credit{margin:13px 0 0;color:#56626d;font-size:10px;font-weight:700;text-align:center}
@@ -559,3 +550,154 @@ body.tv .playerline{font-size:.85rem}
  #app main.content{max-width:none;padding:0}
  #app .card{box-shadow:none!important}
 }
+
+
+/* ===================================================================================================
+   UI/UX polish pass (2026-10-27): ONE spacing system, in-field password toggle, square score tiles, compact
+   notifications, full-width Overview formats, registration settings. The charcoal-and-pastel language is unchanged.
+   Fix the PATTERN, not the screenshot: every related-control gap below comes from these tokens.
+   =================================================================================================== */
+:root{
+ --gap-label:6px;      /* a label sits this far above its own field */
+ --gap-field:16px;     /* between one field (or block) and the next */
+ --gap-actions:20px;   /* between the last field of a group and its action buttons */
+ --gap-inline:12px;    /* beside each other: input + button, button + button */
+ --gap-section:24px;   /* between sections / cards */
+ --tile:34px;          /* score tile edge */
+ --win-bg:#e6f3e2;--win-line:#a9d1a3;--win-ink:#1c5a3f;
+ --lose-bg:#fdeced;--lose-line:#eab3b9;--lose-ink:#8f3340;
+}
+
+/* labels and fields: a label belongs to the field BELOW it */
+:where(#app,dialog,.signin) label{margin:0 0 var(--gap-label)}
+:where(#app,dialog,.signin) :is(.check,.reg-pick,.dup-member,.chooser-option,.choice,.seg label,.winner-pick label){margin:0}
+
+/* vertical rhythm for every form-like container: siblings are separated by --gap-field, never by luck */
+:is(#app .card,#app form,#app .reg-set-body,#app .sub-block,#app .field,dialog .dlg,.signin form,.signin details,.signin .event-chooser)>*+*{margin-top:var(--gap-field)}
+:is(#app .card,#app form,#app .reg-set-body,#app .sub-block,dialog .dlg,.signin form,.signin details,.signin .event-chooser)>:last-child{margin-bottom:0}
+/* grid/flex forms lay their own cells out: the stacking rhythm must not push a cell down */
+#app form.form-grid>*,#app form.walk-form>*,#app form.signin-grid>*{margin-top:0}
+/* a field is attached to its label, help text and message */
+:is(#app,dialog,.signin) label:not(.check)+:is(input,select,textarea,.pw-field,.input-action,.seg,.select-wrap),
+:is(#app .card,#app form,#app .field,dialog .dlg,.signin form,.signin details)>label:not(.check)+*{margin-top:var(--gap-label)}
+:is(#app,dialog,.signin) :is(input,select,textarea,.pw-field,.input-action)+:is(.help,.status){margin-top:8px}
+/* input -> its action buttons: always a real gap (the defect this replaces: buttons touching their dropdowns) */
+:is(#app,dialog,.signin) :is(input,select,textarea,.field,.input-action,.pw-field,.grid,fieldset,.map-grid,.seg,.diag,.choice-group)+:is(.row,.actions,.dlg-actions){margin-top:var(--gap-actions)}
+:is(#app,dialog,.signin) :is(.row,.actions){gap:var(--gap-inline)}
+.actions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--gap-inline)}
+.signin .actions{margin-bottom:0}
+dialog .dlg>.dlg-actions{margin-top:var(--gap-actions)}
+:is(#app,dialog) :is(.grid.two,.grid.three){gap:var(--gap-field) var(--gap-section)}
+:is(#app,dialog) .grid>div>label+:is(select,input,textarea){margin-top:0}
+/* inline input + button (e.g. spreadsheet link + "Check sheet"): same row when there is room, stacked with a gap when not */
+.input-action{display:flex;flex-wrap:wrap;gap:var(--gap-inline);align-items:stretch}
+.input-action>input{flex:1 1 260px;min-width:0}
+.input-action>button{flex:0 0 auto}
+/* notices and messages */
+:is(#app .card,#app form,dialog .dlg)>.notice,#app .card .notice{margin-bottom:0}
+:is(#app,dialog) .notice+.notice{margin-top:var(--gap-inline)}
+:is(#app,dialog,.signin) .status{min-height:0;margin-bottom:0}
+:is(#app,dialog,.signin) .status:empty{display:none}
+:is(#app,dialog,.signin) .status:not(:empty){padding:8px 12px;border-radius:5px;background:var(--surface-soft);border-left:3px solid var(--line-strong);line-height:1.45}
+:is(#app,dialog,.signin) .status.bad:not(:empty){background:var(--negative-soft);border-left-color:#d98a92}
+:is(#app,dialog,.signin) .status.good:not(:empty){background:var(--positive-soft);border-left-color:#8ec79b}
+/* sections */
+#app .card{margin-bottom:var(--gap-section)}
+#app .overview-main .card{margin-bottom:0}
+/* mobile: button groups stack full-width, input+button stacks */
+@media(max-width:520px){
+ :is(#app,dialog) .actions>button,:is(#app,dialog) .row.actions>button{flex:1 1 100%}
+ .input-action>*{flex:1 1 100%}
+ :is(#app,dialog,.signin) .grid.two{grid-template-columns:1fr}
+}
+
+/* password field: the show/hide eye lives INSIDE the field, at the right */
+.pw-field{position:relative}
+.pw-field>input{padding-right:50px}
+.pw-field>.pw-toggle{position:absolute;top:0;right:0;width:46px;height:100%;min-height:44px;padding:0;margin:0;border:0;border-radius:0 5px 5px 0;background:transparent;color:#56616e;
+ display:grid;place-items:center}
+.pw-field>.pw-toggle:hover:not(:disabled){background:#f0f3f5;color:var(--ink);border:0}
+.pw-field>.pw-toggle:focus-visible{outline:3px solid var(--focus);outline-offset:-3px}
+.pw-toggle .eye-icon{display:block;pointer-events:none}
+.signin .pw-field{margin-bottom:0}
+
+/* score tiles: identical rounded squares, tabular numerals, pastel winner/loser per game */
+.score-tiles{position:relative;display:inline-flex;flex-direction:column;gap:4px;max-width:100%}   /* positioned: the screen-reader sentences stay inside it (and inside any scroller) */
+.score-games{display:flex;flex-wrap:wrap;gap:6px 10px;list-style:none;margin:0;padding:0}
+.score-game{display:inline-flex;gap:3px}
+.score-tile{box-sizing:border-box;flex:none;width:var(--tile);height:var(--tile);display:inline-grid;place-items:center;border-radius:7px;font-size:14px;line-height:1;
+ font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;text-align:center;border:1px solid transparent}
+.score-tile.win{background:var(--win-bg);border:1.5px solid var(--win-line);color:var(--win-ink);font-weight:800}
+.score-tile.lose{background:var(--lose-bg);border:1px dashed var(--lose-line);color:var(--lose-ink);font-weight:600}
+.score-caption{margin:0;font-size:11px;line-height:1.3;color:#3f4b56;max-width:30ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.score-tiles.compact{--tile:24px;gap:0}
+.score-tiles.compact .score-tile{font-size:11.5px;border-radius:5px}
+.score-tiles.compact .score-games{gap:4px 7px}
+.score-text{font-size:.9rem}
+.match-foot .score-tiles{display:flex}
+td.scores-cell{min-width:150px}
+.notice .score-tiles{margin-top:10px}
+
+/* notifications: compact, restrained, never over the bottom action bars */
+.toasts{position:fixed;z-index:60;top:64px;right:16px;   /* below the status bar, so it never covers the status pills */
+ display:flex;flex-direction:column;gap:8px;width:min(360px,calc(100vw - 24px));pointer-events:none}
+.toast{pointer-events:auto;position:static;transform:none;display:flex;align-items:flex-start;gap:10px;padding:9px 10px 9px 12px;border-radius:8px;background:#fff;color:var(--ink);
+ border:1px solid var(--line-strong);border-left:4px solid var(--accent);box-shadow:0 6px 18px rgba(41,49,60,.14);font-size:13px;line-height:1.4;max-width:none;animation:toast-in .16s ease-out}
+.toast.bad{border-left-color:#c8505b;background:#fff8f8}
+.toast.warn{border-left-color:#c79a2c;background:#fffbf0}
+.toast-mark{flex:none;width:18px;height:18px;margin-top:1px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;background:var(--positive-soft);color:var(--positive)}
+.toast.bad .toast-mark{background:var(--negative-soft);color:var(--negative)}
+.toast.warn .toast-mark{background:var(--warning-soft);color:var(--warning)}
+.toast-text{flex:1;min-width:0;overflow-wrap:anywhere}
+.toast-close{flex:none;min-height:36px;width:36px;height:36px;margin:-8px -4px -8px 0;padding:0;border:0;border-radius:50%;background:transparent;color:var(--muted);font-size:16px;line-height:1;display:grid;place-items:center}
+.toast-close:hover:not(:disabled){background:#f0f3f5;color:var(--ink);border:0}
+@keyframes toast-in{from{transform:translateY(-4px)}to{transform:none}}   /* no opacity ramp: contrast is correct from the first frame */
+@media(prefers-reduced-motion:reduce){.toast{animation:none}}
+@media(max-width:560px){.toasts{top:calc(8px + env(safe-area-inset-top));left:12px;right:12px;width:auto}}
+@media print{.toasts{display:none}}
+
+/* Overview: "How each match is scored" is the LAST section and spans the whole content width */
+#app .overview-formats{margin:var(--gap-section) 0 0;width:100%}
+#app .overview-formats .formats-card{padding:30px}
+#app .overview-formats .format-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:var(--gap-field);border-top:0;margin-bottom:var(--gap-actions)}
+#app .overview-formats .format-row{display:flex;flex-direction:column;align-items:stretch;gap:var(--gap-inline);padding:16px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface-soft)}
+#app .overview-formats .format-row.is-locked{background:#fffdf5;border-color:#f2e1ad}
+#app .overview-formats .format-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap-inline)}
+@media(max-width:520px){#app .overview-formats .format-controls{grid-template-columns:minmax(0,1fr)}   /* two dropdowns do not fit side by side on a phone: never clip "Games to 11" */
+ #app .overview-formats .formats-card{padding:20px}}
+#app .overview-formats .setup-save{display:flex;flex-wrap:wrap;align-items:center;gap:var(--gap-inline);margin-top:var(--gap-actions)}
+
+/* registration settings */
+.reg-settings .reg-source-line{margin:0;font-size:13px;color:#46525f}
+.reg-set-body{display:block}
+.choice-group{border:0;margin:0;padding:0;min-width:0}
+.choice-group legend{padding:0;margin-bottom:var(--gap-label);font-weight:700;font-size:12.5px;color:#46525f}
+.choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:var(--gap-inline)}
+.choice{display:block;position:relative;cursor:pointer}
+.choice input{position:absolute;opacity:0;width:1px;height:1px}
+.choice-card{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:2px solid var(--line-strong);border-radius:var(--radius);background:#fff}
+.choice-card strong{font-size:13.5px}
+.choice-card .muted{font-size:12px}
+.choice input:checked+.choice-card{border-color:var(--accent);background:#f3f6f8}
+.choice input:focus-visible+.choice-card{outline:3px solid var(--focus);outline-offset:2px}
+.choice.is-off .choice-card{opacity:.55;cursor:not-allowed}
+.copy-line{display:flex;flex-wrap:wrap;align-items:center;gap:var(--gap-inline);margin-top:10px}
+.account-email{padding:4px 8px;border-radius:5px;background:#fff;border:1px solid var(--line);font-size:12.5px;overflow-wrap:anywhere}
+.sub-block h3{margin:0 0 6px;font-size:15px}
+.map-grid{display:grid;gap:var(--gap-field)}
+.map-group{border:1px solid var(--line);border-radius:var(--radius);margin:0;padding:10px 14px 14px}
+.map-group legend{font-size:12px;font-weight:750;color:#46525f;padding:0 6px}
+.map-row{display:grid;grid-template-columns:minmax(120px,1fr) minmax(0,1.5fr) minmax(0,.9fr);gap:var(--gap-inline);align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.map-row:last-child{border-bottom:0}
+.map-row label{margin:0!important;font-size:12.5px}
+.map-state{display:flex;min-width:0}
+.map-state .pill{white-space:normal;line-height:1.3;text-align:left}
+.map-row select{min-width:0}
+@media(max-width:760px){.map-row{grid-template-columns:1fr;gap:6px}}
+.diag{padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface-soft)}
+.diag-list{list-style:none;margin:var(--gap-inline) 0 0;padding:0;display:grid;gap:8px;font-size:12.5px}
+.diag-list li{display:flex;gap:10px;align-items:flex-start}
+.diag-mark{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;background:#eef0f3;color:var(--muted)}
+.diag-mark.good{background:var(--positive-soft);color:var(--positive)}.diag-mark.bad{background:var(--negative-soft);color:var(--negative)}.diag-mark.warn{background:var(--warning-soft);color:var(--warning)}
+.status-list{display:grid;grid-template-columns:max-content 1fr;gap:6px var(--gap-section);margin:0;font-size:12.5px}
+.status-list dt{color:var(--muted);font-weight:650}.status-list dd{margin:0}

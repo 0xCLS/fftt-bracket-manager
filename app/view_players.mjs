@@ -9,19 +9,17 @@
  * closure, so the background refresh that rebuilds the pane can never reset them. */
 import {ratingName} from '../contracts/gameday_engine.mjs';
 import {nameKey, similarNames} from '../contracts/registration_model.mjs';
+import {createRegistrationSettings, registrationState, STATE_TEXT} from './view_registration.mjs';
 
-const SOURCE_TEXT = {
-  'google-sheets': 'Google Sheet · read-only',
-  'synthetic-fixture': 'Sample registrations (fictional people)',
-  'csv-import': 'Private CSV import · this browser only',
-};
+const SOURCE_STATE = {'google-sheets': 'connected', 'synthetic-fixture': 'fictional', 'csv-import': 'csv'};
 const REASON_TEXT = {'same-email': 'Same e-mail', 'same-phone': 'Same phone', 'same-name': 'Same name', 'similar-name': 'Similar name'};
 const FILTERS = [['todo', 'Not checked in'], ['all', 'Everyone'], ['in', 'Checked in'], ['attention', 'Needs a look']];
-const CONFIDENCE_TEXT = {high: 'confident', medium: 'fairly sure', low: 'a guess'};
+const CONFIDENCE_TEXT = {high: 'confident', medium: 'fairly sure', low: 'a guess', none: 'no suggestion'};
 const ago = ms => { const s = Math.max(0, Math.round(ms / 1000)); return s < 5 ? 'just now' : s < 90 ? `${s} seconds ago` : `${Math.round(s / 60)} minutes ago`; };
 
 export function createPlayersView(ctx) {
   const {core, s, h, clear, pill, toast, result, confirmDialog, remember, draft, forget, rerender} = ctx;
+  const settingsCard = createRegistrationSettings(ctx);
   const reg = {query: '', filter: null, selected: new Set(), edits: new Map(), merge: new Map(), paint: {list: () => {}, bulk: () => {}}, model: () => null};
   const fresh = ref => reg.model()?.rows.find(x => x.r.ref === ref) ?? null;
   const dismissedKey = () => `fftt.reg.dismissed.v1.${s.eventId}`;
@@ -50,9 +48,9 @@ export function createPlayersView(ctx) {
       const key = nameKey(name);
       const rosterMatch = player ? null : (rosterKeys.find(x => x.key === key) ?? rosterKeys.find(x => similarNames(x.key, key)))?.p ?? null;
       const dupOpen = r.duplicate && open.has(r.duplicate.group);
-      const attention = !!(r.nameIssue || dupOpen || r.ratingConfidence === 'low' || r.ratingReview || rosterMatch);
+      const attention = !!(r.nameIssue || dupOpen || r.ratingConfidence === 'low' || r.ratingConfidence === 'none' || r.ratingReview || rosterMatch);
       const state = player ? (player.checkedIn ? 'in' : 'roster') : 'new';
-      return {r, player, name, edit, rosterMatch, dupOpen: !!dupOpen, attention, state, rating: edit.rating ?? r.suggestedRating};
+      return {r, player, name, edit, rosterMatch, dupOpen: !!dupOpen, attention, state, rating: edit.rating ?? r.suggestedRating ?? null};
     });
     return {rows, open: payload.duplicates.filter(g => open.has(g.id)), byRef};
   }
@@ -63,6 +61,8 @@ export function createPlayersView(ctx) {
   async function checkInRows(refs, label) {
     const rows = refs.map(fresh).filter(Boolean);      // always the CURRENT edits, never a stale copy
     if (!rows.length) return false;
+    const unrated = rows.find(x => x.rating === null);
+    if (unrated) { toast(`Choose a level for ${unrated.name} first: no level could be suggested.`, 'warn'); return false; }
     const clash = new Map();
     for (const row of rows) { const k = nameKey(row.name); clash.set(k, [...(clash.get(k) ?? []), row.name]); }
     const same = [...clash.values()].find(v => v.length > 1);
@@ -78,8 +78,8 @@ export function createPlayersView(ctx) {
     const stateText = row.state === 'in' ? ['Checked in', 'good'] : row.state === 'roster' ? ['On roster, not checked in', 'blue']
       : row.dupOpen ? ['Possible duplicate', 'warn'] : row.rosterMatch ? ['Looks like a roster player', 'warn'] : ['Not checked in', ''];
     const editing = reg.edits.has(r.ref) && reg.edits.get(r.ref).open === true;
-    const canAct = row.state !== 'in' && writable();
-    const selectable = row.state !== 'in' && !row.dupOpen;
+    const canAct = row.state !== 'in' && writable() && row.rating !== null;
+    const selectable = row.state !== 'in' && !row.dupOpen && row.rating !== null;
     const primary = row.state === 'in'
       ? h('button', {type: 'button', class: 'small', disabled: !writable() || !player, text: 'Undo', 'aria-label': `Undo check-in for ${row.name}`,
         on: {click: async () => result(await core.actions.checkinRegistrants([{ref: r.ref, name: row.name, rating: row.rating, source: 'registration'}], false), `${row.name} is no longer checked in.`)}})
@@ -100,12 +100,13 @@ export function createPlayersView(ctx) {
           r.name !== row.name && r.name !== 'Unnamed registrant' ? `Registered as ${r.name}` : null,
           r.hint.email || r.hint.phone ? h('span', {class: 'reg-hint', text: [r.hint.email, r.hint.phone].filter(Boolean).join(' · '), title: 'Masked: full contact details are never shown here.'}) : null),
         r.nameIssue ? h('span', {class: 'reg-note warn', text: r.nameIssue}) : null,
-        r.ratingReview && row.edit.rating === undefined ? h('span', {class: 'reg-note warn', text: 'Organizer review: the answers disagree with the chosen profile. Check the suggested level.'}) : null,
+        r.suggestedRating === null && row.edit.rating === undefined ? h('span', {class: 'reg-note warn', text: 'No playing-assessment answers: choose this player\'s level before checking in.'}) : null,
+        r.ratingReview && r.suggestedRating !== null && row.edit.rating === undefined ? h('span', {class: 'reg-note warn', text: 'Organizer review: the answers disagree with the chosen profile. Check the suggested level.'}) : null,
         row.rosterMatch && row.state === 'new' ? h('span', {class: 'reg-note', text: `Roster already has “${row.rosterMatch.name}”.`}) : null),
       h('div', {class: 'reg-level'},
-        h('span', {class: 'rating-chip', 'aria-hidden': 'true', text: String(row.rating)}),
-        h('span', {class: 'reg-level-text'}, h('span', {text: levelLabel(row.rating)}),
-          h('span', {class: 'muted', text: row.edit.rating !== undefined ? 'Your choice' : `Suggested · ${CONFIDENCE_TEXT[r.ratingConfidence]}`}))),
+        h('span', {class: 'rating-chip', 'aria-hidden': 'true', text: row.rating === null ? '–' : String(row.rating)}),
+        h('span', {class: 'reg-level-text'}, h('span', {text: row.rating === null ? 'No level yet' : levelLabel(row.rating)}),
+          h('span', {class: 'muted', text: row.edit.rating !== undefined ? 'Your choice' : row.rating === null ? 'Choose one to check in' : `Suggested · ${CONFIDENCE_TEXT[r.ratingConfidence]}`}))),
       h('div', {class: 'reg-state'}, pill(...stateText)),
       h('div', {class: 'reg-actions'}, primary,
         row.state !== 'in' ? h('button', {type: 'button', class: 'small ghost', 'aria-expanded': String(editing), 'aria-controls': nameId + '-edit', text: editing ? 'Done' : 'Edit',
@@ -117,6 +118,7 @@ export function createPlayersView(ctx) {
             on: {input: ev => { reg.edits.set(r.ref, {...(reg.edits.get(r.ref) ?? {}), open: true, name: ev.target.value}); }}})),
         h('div', {}, h('label', {for: nameId + '-lv', text: 'FFTT level'}),
           h('select', {id: nameId + '-lv', on: {change: ev => { reg.edits.set(r.ref, {...(reg.edits.get(r.ref) ?? {}), open: true, rating: Number(ev.target.value)}); reg.paint.list(); }}},
+            row.rating === null ? h('option', {value: '', text: 'Choose a level', selected: true, disabled: true}) : null,
             [1, 2, 3, 4, 5].map(n => h('option', {value: n, text: levelLabel(n), selected: n === row.rating})))),
         r.ratingBasis.length ? h('div', {class: 'reg-basis'}, h('b', {text: 'Why this suggestion'}), h('ul', {}, r.ratingBasis.map(b => h('li', {text: b})))) : null) : null);
   }
@@ -141,8 +143,8 @@ export function createPlayersView(ctx) {
     }
     function paintBulk() {
       if (!view) return;
-      const picked = view.rows.filter(x => reg.selected.has(x.r.ref) && x.state !== 'in' && !x.dupOpen);
-      const ready = view.rows.filter(x => x.state !== 'in' && !x.dupOpen && matches(x));
+      const picked = view.rows.filter(x => reg.selected.has(x.r.ref) && x.state !== 'in' && !x.dupOpen && x.rating !== null);
+      const ready = view.rows.filter(x => x.state !== 'in' && !x.dupOpen && x.rating !== null && matches(x));
       clear(bulkEl); bulkEl.hidden = picked.length === 0 && ready.length === 0;
       bulkEl.append(
         h('span', {class: 'bulk-count', text: picked.length ? `${picked.length} selected` : `${ready.length} ready to check in`}),
@@ -182,33 +184,36 @@ export function createPlayersView(ctx) {
         if (f.size > 1_000_000) { toast('That file is too large for a sign-up sheet.', 'bad'); return; }
         const r = await core.actions.importRegistrationsCsv(await f.text());
         if (r.ok) { reg.selected.clear(); reg.edits.clear(); toast(`${r.payload.registrants.length} registrants read from the file. They stay in this browser only.`); }
-        else toast(r.message, 'bad');
+        else toast(r.message, 'warn');
       }}});
     const loading = rg.status === 'loading';
     const head = h('div', {class: 'card-head'},
-      h('div', {}, h('h2', {id: 'regTitle', text: 'Registration sheet'}),
+      h('div', {}, h('h2', {id: 'regTitle', text: 'Registrations'}),
         h('p', {class: 'card-sub', text: 'Read-only. Registrants are listed with a suggested level; nothing is added to the roster until you check someone in.'})),
       h('div', {class: 'row'},
         h('button', {type: 'button', class: 'primary', id: 'regLoad', disabled: loading || !writable(), text: loading ? 'Loading…' : rg.payload ? 'Reload from the sheet' : 'Load registrations', 'aria-busy': String(loading),
-          on: {click: async () => { const r = await core.actions.loadRegistrations(); if (r.ok) toast(`${r.payload.registrants.length} registrants loaded.`); else toast(r.message, 'bad'); }}}),
+          on: {click: async () => { const r = await core.actions.loadRegistrations(); if (r.ok) toast(`${r.payload.registrants.length} registrants loaded.`); /* a failure is explained once, inline, below */ }}}),
         h('button', {type: 'button', id: 'regImport', text: 'Import a private CSV…', on: {click: () => fileInput.click()}}),
         fileInput,
         rg.payload ? h('button', {type: 'button', class: 'ghost', text: 'Clear list', title: 'Forget the loaded registrations in this browser', on: {click: () => { reg.selected.clear(); reg.edits.clear(); core.actions.clearRegistrations(); }}}) : null));
     let body;
     if (!rg.payload) {
-      body = rg.status === 'error' && rg.code === 'not-configured'
-        ? h('div', {class: 'notice'}, h('b', {text: 'The registration sheet is not connected on this site yet. '}),
-          'You can still add people as walk-ins below, or choose “Import a private CSV…” with a CSV export of the sign-up sheet. The file is read in this browser only; it is not uploaded or saved.')
-        : rg.status === 'error' ? h('div', {class: 'notice bad', role: 'alert', text: rg.error})
-        : h('div', {class: 'empty-state', text: loading ? 'Reading the registration sheet…' : 'Load the registrations to search them and check people in with one click.'});
+      if (rg.status === 'error') {
+        const st = STATE_TEXT[registrationState({code: rg.code})];
+        // ONE persistent, plain explanation (never also a toast): what happened, and what to do
+        body = h('div', {class: 'notice ' + (st.tone || 'warn'), role: 'alert', id: 'regError'}, h('b', {text: st.label + '. '}), rg.error,
+          rg.code === 'not-configured' ? ' A private CSV file is read in this browser only; it is not uploaded or saved.' : null);
+      } else body = h('div', {class: 'empty-state', text: loading ? 'Reading the registrations…' : 'Load the registrations to search them and check people in with one click.'});
     } else {
       body = h('div', {},
         h('div', {class: 'reg-meta'},
-          pill(SOURCE_TEXT[rg.payload.source] ?? 'Registrations', rg.payload.source === 'google-sheets' ? 'blue' : 'warn'),
+          pill(STATE_TEXT[SOURCE_STATE[rg.payload.source]]?.label ?? 'Registrations', STATE_TEXT[SOURCE_STATE[rg.payload.source]]?.tone ?? ''),
+          rg.payload.sourceName ? h('span', {class: 'muted', text: rg.payload.sourceName}) : null,
           h('span', {class: 'muted', text: `Loaded ${ago(Date.now() - rg.at)}`}),
           rg.error ? pill('Reload failed — showing the last list', 'bad') : null,
+          rg.payload.summary.needsRating ? pill(`${rg.payload.summary.needsRating} need a level`, 'warn') : null,
           rg.payload.summary.needsNameFix ? pill(`${rg.payload.summary.needsNameFix} name${rg.payload.summary.needsNameFix === 1 ? '' : 's'} to check`, 'warn') : null),
-        rg.error ? h('div', {class: 'notice warn', role: 'alert', text: rg.error}) : null,
+        rg.error ? h('div', {class: 'notice warn', role: 'alert', id: 'regError', text: rg.error}) : null,
         rg.payload.warnings.map(w => h('div', {class: 'notice warn', text: w})),
         h('div', {class: 'reg-tools'}, h('div', {class: 'reg-search'}, h('label', {for: 'regSearch', class: 'sr-only', text: 'Search registrants'}), search), chipsEl),
         countEl, bulkEl, listEl);
@@ -352,6 +357,6 @@ export function createPlayersView(ctx) {
         kpi(checked, 'Checked in', 'ice'), kpi(sn.players.length, 'On the roster', 'lav'),
         rg ? kpi(rg.registrants.filter(r => !onRoster.has(r.ref)).length, 'Registered, not here yet', 'lime') : null,
         kpi(unconfirmed, 'Levels to confirm', unconfirmed ? 'butter' : '')),
-      registrationCard(sn), duplicatesCard(sn), walkInCard(sn), rosterCard(sn), manualCard(sn));
+      settingsCard(sn), registrationCard(sn), duplicatesCard(sn), walkInCard(sn), rosterCard(sn), manualCard(sn));
   };
 }

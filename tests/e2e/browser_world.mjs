@@ -8,6 +8,7 @@ import {chromium} from 'playwright-core';
 import {createFakeSupabase, PROJECT} from './fake_supabase.mjs';
 import {roster} from './helpers.mjs';
 import {createRegistrationHandler, createHandlerState} from '../../server/registration/handler.mjs';
+import {createFakeGoogle, fakeGoogleEnv, GOOGLE_HOSTS} from './fake_google.mjs';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const STAFF = 'https://fftt-staff-test.pages.dev';
@@ -21,7 +22,7 @@ export async function launch() {
   catch { return chromium.launch(); }
 }
 
-export async function createBrowserWorld({ttlSeconds = 3600, players = 0, registration = 'synthetic-fixture'} = {}) {
+export async function createBrowserWorld({ttlSeconds = 3600, players = 0, registration = 'synthetic-fixture', google = null} = {}) {
   const fake = await createFakeSupabase({ttlSeconds});
   const accounts = {
     org: ['organizer@fftt-staging.invalid', 'org-' + Math.random().toString(36).slice(2) + 'Aa1!'],
@@ -41,9 +42,19 @@ export async function createBrowserWorld({ttlSeconds = 3600, players = 0, regist
   // The registration adapter runs unmodified behind the staff origin; it reaches Supabase through the SAME fake backend
   // (so its organizer-only check is the real database function). `registration: null` leaves it unconfigured.
   world.registrationEnv = registration ? {REGISTRATION_ENABLED: 'true', STAFF_ORIGIN: STAFF, SUPABASE_URL: PROJECT,
-    SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_lupD9JDsWFQ_65LuwVL1Fg_O-V5Era0', REGISTRATION_SOURCE: registration} : {};
+    SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_lupD9JDsWFQ_65LuwVL1Fg_O-V5Era0', REGISTRATION_SOURCE: registration,
+    ...(google ? {REGISTRATION_GOOGLE_MODE: google.mode ?? 'diagnostic', ...fakeGoogleEnv} : {})} : {};
   const registrationState = createHandlerState();
-  const adapterFetch = fake.clientFetch('registration-adapter');
+  world.google = google ? createFakeGoogle({sheets: google.sheets}) : null;
+  const supabaseFetch = fake.clientFetch('registration-adapter');
+  // the adapter's outbound network: the fake Supabase over the real SQL, the fake Google (if any), and NOTHING else. Like the
+  // Cloudflare runtime, it throws on redirect:"error" and on any cache option, so the original deployment defect cannot hide.
+  const adapterFetch = async (url, init = {}) => {
+    if (init.redirect === 'error' || 'cache' in init) throw new TypeError('option not supported by the Workers runtime');
+    const host = new URL(url).host;
+    if (GOOGLE_HOSTS.includes(host)) { if (!world.google) throw new TypeError('no route to host'); return world.google.fetch(url, init); }
+    return supabaseFetch(url, init);
+  };
 
   function headersFor(origin, file) {
     const connect = "connect-src 'self' " + PROJECT;

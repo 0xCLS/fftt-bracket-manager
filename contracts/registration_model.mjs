@@ -17,6 +17,8 @@
  * ever suggests a PROVISIONAL FFTT Level 1-5; the organizer confirms (or changes) every rating.
  */
 
+import {NO_COLUMN} from './registration_source.mjs';
+export {NO_COLUMN};
 export const MAX_REGISTRANTS = 200;
 export const MAX_FIELD_LENGTH = 400;
 
@@ -110,17 +112,33 @@ const FIELD_PATTERNS = [
   ['description', /(which|what).*(statement|description|describes|best matches)|describe your (game|play)|playing description|your game/i],
   ['selfLevel', /(skill|ability|experience|playing) level|how would you (rate|describe) (your|yourself)|beginner.*intermediate|self[- ]?(rating|assessment)/i],
 ];
-/** Returns {index: {field: columnIndex}, missing: [fields]}. First matching column wins; one column feeds one field. */
-export function mapHeaders(headerRow) {
-  const index = {}, used = new Set();
+const ASSESSMENT = ['frequency', 'experience', 'rallies', 'spin', 'attack', 'description', 'selfLevel'];
+/** Maps a sheet's header row to registration fields.
+ *   overrides  optional {field: header text} chosen by the organizer; matched by exact (cleaned) header text. An explicit
+ *              mapping whose header is no longer in the sheet is REPORTED in `unmatched` and the field stays unmapped (it does
+ *              not silently fall back to guessing, so a renamed question is noticed rather than read from the wrong column).
+ * Returns {index: {field: columnIndex}, missing, unmatched, columns: [{index, header, field, how}], assessment: {found, absent}}.
+ * First matching column wins; one column feeds one field. `columns` carries header TEXT only, never a cell value. */
+export function mapHeaders(headerRow, overrides = {}) {
+  const index = {}, used = new Set(), unmatched = [], skipped = new Set();
   const headers = headerRow.map(h => clean(h));
+  const columns = headers.map((header, i) => ({index: i, header, field: null, how: null}));
+  for (const [field, header] of Object.entries(overrides ?? {})) {
+    if (!FIELD_PATTERNS.some(([f]) => f === field)) continue;
+    if (header === NO_COLUMN) { skipped.add(field); continue; }
+    const at = headers.findIndex((h, i) => !used.has(i) && h !== '' && h === clean(header));
+    if (at < 0) { unmatched.push(field); skipped.add(field); continue; }
+    index[field] = at; used.add(at); columns[at].field = field; columns[at].how = 'manual'; skipped.add(field);
+  }
   for (const [field, pattern] of FIELD_PATTERNS) {
+    if (skipped.has(field)) continue;
     const at = headers.findIndex((h, i) => !used.has(i) && h !== '' && pattern.test(h));
-    if (at >= 0) { index[field] = at; used.add(at); }
+    if (at >= 0) { index[field] = at; used.add(at); columns[at].field = field; columns[at].how = 'auto'; }
   }
   const missing = [];
   if (index.name === undefined && index.firstName === undefined) missing.push('name');
-  return {index, missing};
+  const found = ASSESSMENT.filter(f => index[f] !== undefined);
+  return {index, missing, unmatched, columns, assessment: {found, absent: ASSESSMENT.filter(f => index[f] === undefined)}};
 }
 
 // ---------------------------------------------------------------- rating suggestion
@@ -233,7 +251,8 @@ const WEIGHT = {profile: 4, rally: 3, spin: 1.5, attack: 1.5, frequency: 1, expe
 const levelFromScore = x => (x < .12 ? 1 : x < .38 ? 2 : x < .60 ? 3 : x < .82 ? 4 : 5);
 
 /** answers: raw strings {frequency, experience, rallies, spin, attack, description (= the playing profile), selfLevel}.
- * Returns {level 1-5, confidence 'low'|'medium'|'high', basis: string[], review: boolean}. Never throws.
+ * Returns {level 1-5 | null, confidence 'none'|'low'|'medium'|'high', basis: string[], review: boolean}. Never throws.
+ * With no answered question the level is null (never an invented default) and the organizer must choose one.
  *
  * How it decides (all of it shown to the organizer): every ANSWERED question points part-way up the Level 1-5 scale and
  * the weighted average gives the level. Self-assessment is one input, not a verdict: the chosen profile carries the largest
@@ -260,7 +279,8 @@ export function suggestRating(input) {
   if (sig.spin !== null && sig.spin > 0) basis.push(SPIN_TEXT[sig.spin]);
   if (sig.attack !== null && sig.attack > 0) basis.push(ATTACK_TEXT[sig.attack]);
   if (sig.self !== null && sig.profile === null) basis.push(SELF_TEXT[sig.self]);
-  if (given.length === 0) return {level: 3, confidence: 'low', basis: ['No playing details were given; starting at Intermediate'], review: false};
+  // Nothing to go on: NO level and NO confidence are invented. The organizer must choose one.
+  if (given.length === 0) return {level: null, confidence: 'none', basis: ['No playing-assessment answers were available, so no level is suggested. Choose the level yourself.'], review: true};
   const used = given.filter(([k]) => !(k === 'self' && sig.profile !== null));   // an old label never competes with the real profile
   const score = used.reduce((t, [k, v]) => t + WEIGHT[k] * FRAC[k][v], 0) / used.reduce((t, [k]) => t + WEIGHT[k], 0);
   let level = levelFromScore(score), review = false;
@@ -283,13 +303,14 @@ export function suggestRating(input) {
  * @param refFor      async (identity: string) => opaque reference. The identity is the row's stable key (never shown).
  * @returns {registrants, duplicates, summary, warnings}
  */
-export async function buildRegistrants(rows, {refFor} = {}) {
+export async function buildRegistrants(rows, {refFor, mapping = {}} = {}) {
   if (typeof refFor !== 'function') throw new TypeError('refFor is required');
   if (!Array.isArray(rows) || rows.length === 0) return {registrants: [], duplicates: [], summary: summarize([], []), warnings: ['The sheet has no rows.']};
-  const {index, missing} = mapHeaders(rows[0]);
-  if (missing.length) return {registrants: [], duplicates: [], summary: summarize([], []), warnings: ['No name column was found in the sheet header.']};
+  const {index, missing, unmatched, assessment} = mapHeaders(rows[0], mapping);
+  if (missing.length) return {registrants: [], duplicates: [], summary: summarize([], [], assessment), warnings: ['No name column was found in the sheet header.']};
   const cell = (row, field) => (index[field] === undefined ? '' : clean(row[index[field]]));
   const out = [], warnings = [];
+  for (const f of unmatched) warnings.push(`The column chosen for “${FIELD_LABEL[f] ?? f}” is no longer in the sheet. Check the column mapping.`);
   let skipped = 0;
   const seenIdentity = new Map();
   for (let r = 1; r < rows.length && out.length < MAX_REGISTRANTS; r++) {
@@ -315,8 +336,11 @@ export async function buildRegistrants(rows, {refFor} = {}) {
   if (skipped) warnings.push(`${skipped} row${skipped === 1 ? '' : 's'} without a name ${skipped === 1 ? 'was' : 'were'} skipped.`);
   const groups = groupDuplicates(out);
   const registrants = out.map((x, i) => toRegistrant(x, groups.byIndex.get(i) ?? null));
-  return {registrants, duplicates: groups.list, summary: summarize(registrants, groups.list), warnings};
+  if (assessment.found.length === 0) warnings.push('No playing-assessment columns were recognized, so no levels are suggested. Choose each player\'s level yourself.');
+  return {registrants, duplicates: groups.list, summary: summarize(registrants, groups.list, assessment), warnings};
 }
+const FIELD_LABEL = {name: 'name', firstName: 'first name', lastName: 'last name', timestamp: 'registration time', email: 'e-mail', phone: 'phone',
+  frequency: 'how often they play', experience: 'experience', rallies: 'rally consistency', spin: 'spin', attack: 'attacking', description: 'playing profile', selfLevel: 'self-described level'};
 
 function groupDuplicates(list) {
   const parent = list.map((_, i) => i);
@@ -361,9 +385,10 @@ function toRegistrant(x, dup) {
     duplicate: dup ? Object.freeze({group: dup.group, reasons: Object.freeze([...dup.reasons]), strength: dup.strength}) : null,
   });
 }
-function summarize(registrants, groups) {
+function summarize(registrants, groups, assessment = {found: []}) {
   return Object.freeze({total: registrants.length, duplicateGroups: groups.length,
-    needsNameFix: registrants.filter(r => r.nameIssue).length, lowConfidence: registrants.filter(r => r.ratingConfidence === 'low').length});
+    needsNameFix: registrants.filter(r => r.nameIssue).length, lowConfidence: registrants.filter(r => r.ratingConfidence === 'low').length,
+    needsRating: registrants.filter(r => r.suggestedRating === null).length, assessmentRecognized: assessment.found.length});
 }
 
 // ---------------------------------------------------------------- the wire contract (server -> browser), validated strictly
@@ -374,8 +399,9 @@ const keysOk = (o, keys) => plain(o) && Object.keys(o).length === keys.length &&
 /** Validates a registration payload; throws on anything outside the contract (a contact detail can never pass). */
 export function parseRegistrationPayload(raw) {
   const fail = () => { throw new TypeError('invalid registration payload'); };
-  if (!plain(raw) || Object.keys(raw).some(k => !['source', 'fetchedAt', 'registrants', 'duplicates', 'summary', 'warnings'].includes(k))
+  if (!plain(raw) || Object.keys(raw).some(k => !['source', 'sourceName', 'fetchedAt', 'registrants', 'duplicates', 'summary', 'warnings'].includes(k))
     || !['google-sheets', 'synthetic-fixture', 'csv-import'].includes(raw.source) || typeof raw.fetchedAt !== 'string'
+    || !(raw.sourceName === undefined || raw.sourceName === null || (typeof raw.sourceName === 'string' && raw.sourceName.length <= 200 && !looksLikeContact(raw.sourceName)))
     || !Array.isArray(raw.registrants) || raw.registrants.length > MAX_REGISTRANTS || !Array.isArray(raw.duplicates) || raw.duplicates.length > MAX_REGISTRANTS
     || !Array.isArray(raw.warnings) || raw.warnings.length > 50) fail();
   const refs = new Set();
@@ -383,8 +409,8 @@ export function parseRegistrationPayload(raw) {
     if (!keysOk(r, REG_KEYS) || typeof r.ref !== 'string' || !REF_PATTERN.test(r.ref) || refs.has(r.ref)
       || typeof r.name !== 'string' || r.name.length > 120 || typeof r.shortName !== 'string' || r.shortName.length > 80
       || typeof r.registeredAt !== 'string' || r.registeredAt.length > 40 || (r.registeredAt !== '' && !STAMP.test(r.registeredAt))
-      || !Number.isInteger(r.suggestedRating) || r.suggestedRating < 1 || r.suggestedRating > 5
-      || typeof r.ratingReview !== 'boolean' || !['low', 'medium', 'high'].includes(r.ratingConfidence) || !Array.isArray(r.ratingBasis) || r.ratingBasis.length > 8
+      || !(r.suggestedRating === null ? r.ratingConfidence === 'none' && r.ratingReview === true : Number.isInteger(r.suggestedRating) && r.suggestedRating >= 1 && r.suggestedRating <= 5 && r.ratingConfidence !== 'none')
+      || typeof r.ratingReview !== 'boolean' || !['none', 'low', 'medium', 'high'].includes(r.ratingConfidence) || !Array.isArray(r.ratingBasis) || r.ratingBasis.length > 8
       || !r.ratingBasis.every(b => typeof b === 'string' && b.length <= 120)
       || !(r.nameIssue === null || (typeof r.nameIssue === 'string' && r.nameIssue.length <= 120))
       || !keysOk(r.hint, ['email', 'phone']) || !(r.hint.email === null || (typeof r.hint.email === 'string' && /^.•••@.•••\.[^.@]+$/u.test(r.hint.email)))
@@ -403,9 +429,12 @@ export function parseRegistrationPayload(raw) {
       || !d.refs.every(x => refs.has(x))) fail();
     return Object.freeze({id: d.id, reasons: Object.freeze([...d.reasons]), strength: d.strength, refs: Object.freeze([...d.refs])});
   });
-  if (!plain(raw.summary) || !['total', 'duplicateGroups', 'needsNameFix', 'lowConfidence'].every(k => Number.isInteger(raw.summary[k]))) fail();
-  return Object.freeze({source: raw.source, fetchedAt: raw.fetchedAt.slice(0, 40), registrants: Object.freeze(registrants),
-    duplicates: Object.freeze(duplicates), summary: Object.freeze({...raw.summary}), warnings: Object.freeze(raw.warnings.map(w => String(w).slice(0, 200)))});
+  const counts = ['total', 'duplicateGroups', 'needsNameFix', 'lowConfidence'];
+  if (!plain(raw.summary) || !counts.every(k => Number.isInteger(raw.summary[k]))
+    || !['needsRating', 'assessmentRecognized'].every(k => raw.summary[k] === undefined || Number.isInteger(raw.summary[k]))) fail();
+  const summary = Object.freeze({...Object.fromEntries(counts.map(k => [k, raw.summary[k]])), needsRating: raw.summary.needsRating ?? 0, assessmentRecognized: raw.summary.assessmentRecognized ?? 0});
+  return Object.freeze({source: raw.source, sourceName: typeof raw.sourceName === 'string' ? raw.sourceName.slice(0, 200) : null, fetchedAt: raw.fetchedAt.slice(0, 40), registrants: Object.freeze(registrants),
+    duplicates: Object.freeze(duplicates), summary, warnings: Object.freeze(raw.warnings.map(w => String(w).slice(0, 200)))});
 }
 
 /** Browser-side private import: a CSV file the organizer picked. `refSalt` should be the event id so the same

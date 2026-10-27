@@ -84,7 +84,7 @@ test('registrations: organizer-only, in memory only, and dropped with every othe
   // an unconfigured adapter gives a plain answer and keeps nothing
   w.registrationEnv = {};
   const none = await org.core.actions.loadRegistrations();
-  assert.equal(none.ok, false); assert.match(none.message, /not connected on this site yet/);
+  assert.equal(none.ok, false); assert.match(none.message, /No registration source is set up for this event yet/);
   assert.equal(org.core.state.registrations.payload ? 'kept' : 'cleared', 'kept', 'a previously loaded list stays visible, marked as failed to reload');
   assert.equal(org.core.state.registrations.error !== null, true);
   await org.session.signOut(); org.core.signedOut();

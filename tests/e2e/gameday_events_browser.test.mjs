@@ -6,7 +6,7 @@ import {roster} from './helpers.mjs';
 
 const T = 20000;
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i;
-const toast = (page, re, timeout = T) => page.locator('#toast:not([hidden])', {hasText: re}).waitFor({timeout});
+const toast = (page, re, timeout = T) => page.locator('#toasts .toast', {hasText: re}).waitFor({timeout});
 const eventRow = (page, name) => page.locator('tbody tr', {has: page.locator('strong', {hasText: name})});
 const chip = (page, text) => page.locator('.events-card .chip', {hasText: text});
 

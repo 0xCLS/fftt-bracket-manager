@@ -17,6 +17,7 @@ export const SQL_FILES = [
   'supabase/proposals/MILESTONE1_DURABLE_SCORING_V2_DO_NOT_APPLY.sql',
   'supabase/proposals/GAMEDAY_TOURNAMENT_V3_STAGING.sql',
   'supabase/proposals/GAMEDAY_TOURNAMENT_V4_STAGING.sql',
+  'supabase/proposals/GAMEDAY_TOURNAMENT_V5_STAGING.sql',
 ];
 
 const AUTH_STUB = `

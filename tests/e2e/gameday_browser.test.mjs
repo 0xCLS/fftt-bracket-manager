@@ -16,7 +16,7 @@ const T = 20000;
 
 const goTab = (page, name) => page.locator('nav.tabs button', {hasText: new RegExp('^' + name + '$')}).click();
 async function waitToast(page, re, timeout = T) {
-  await page.locator('#toast:not([hidden])', {hasText: re}).waitFor({timeout});
+  await page.locator('#toasts .toast', {hasText: re}).waitFor({timeout});
 }
 /** Record a result through the dialog. `winnerFirst`: is the first-listed player the winner. */
 async function recordViaUi(page, card, {winnerFirst = true, games = null, table = null} = {}) {

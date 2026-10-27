@@ -22,9 +22,9 @@
    <label for="email">Email</label>
    <input id="email" name="username" type="email" autocomplete="username" inputmode="email" enterkeyhint="next" autocapitalize="none" autocorrect="off" spellcheck="false" required>
    <label for="password">Password</label>
-   <div class="row">
+   <div class="pw-field">
     <input id="password" name="password" type="password" autocomplete="current-password" enterkeyhint="go" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="128" required>
-    <button id="togglePassword" type="button" aria-pressed="false" aria-controls="password">Show</button>
+    <button id="togglePassword" class="pw-toggle" type="button" aria-pressed="false" aria-controls="password" aria-label="Show password" title="Show password"></button>
    </div>
    <details id="eventIdBox" class="signin-advanced">
     <summary>Have an event link or ID? (optional)</summary>
@@ -33,14 +33,14 @@
     <input id="eventId" name="event" type="text" autocomplete="off" inputmode="text" enterkeyhint="go" autocapitalize="none" spellcheck="false" placeholder="only if you were given one">
    </details>
    <label class="check" for="keepSignedIn"><input id="keepSignedIn" type="checkbox"> <span>Keep me signed in on this tab. Ends when you close the tab; use only on a device you control.</span></label>
-   <p><button id="signIn" class="primary wide-button" type="submit" disabled>Sign in</button></p>
+   <p class="actions"><button id="signIn" class="primary wide-button" type="submit" disabled>Sign in</button></p>
    <p id="signInStatus" class="status" role="status" aria-live="polite"></p>
   </form>
   <section id="eventChooser" class="event-chooser" hidden aria-labelledby="chooserTitle">
    <h2 id="chooserTitle">Choose your event</h2>
    <p class="help">You can switch events later from the top of the page.</p>
    <div id="chooserList" class="chooser-list" role="radiogroup" aria-labelledby="chooserTitle"></div>
-   <p class="chooser-actions"><button id="chooserGo" class="primary wide-button" type="button">Continue</button> <button id="chooserCancel" type="button">Cancel</button></p>
+   <p class="chooser-actions actions"><button id="chooserGo" class="primary wide-button" type="button">Continue</button> <button id="chooserCancel" type="button">Cancel</button></p>
    <p id="chooserStatus" class="status" role="status" aria-live="polite"></p>
   </section>
   <details id="recoveryBox">
@@ -48,10 +48,10 @@
    <p class="help">Only for accounts the organizer created. We never reveal whether an address has an account.</p>
    <label for="recoveryEmail">Email</label>
    <input id="recoveryEmail" type="email" autocomplete="email" inputmode="email" autocapitalize="none" autocorrect="off" spellcheck="false">
-   <p><button id="requestCode" type="button" disabled>Email me a code</button></p>
+   <p class="actions"><button id="requestCode" type="button" disabled>Email me a code</button></p>
    <label for="code">6-digit code</label>
    <input id="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" enterkeyhint="go">
-   <p><button id="verifyCode" class="primary" type="button" disabled>Sign in with code</button></p>
+   <p class="actions"><button id="verifyCode" class="primary" type="button" disabled>Sign in with code</button></p>
    <p id="recoveryStatus" class="status" role="status" aria-live="polite"></p>
   </details>
   <details><summary>Device check</summary><ul id="readiness" class="checks"></ul></details>

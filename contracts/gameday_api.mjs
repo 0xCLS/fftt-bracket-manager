@@ -8,6 +8,7 @@
  * rather than silently resend. Scoring is NOT here: it uses the single-use, receipt-recovering score session.
  */
 import {C3_HOST} from './phase1c_c3_readonly_supabase_transport.mjs';
+import {parseSourceRecord} from './registration_source.mjs';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const JWT = /^[A-Za-z0-9_-]{2,}\.[A-Za-z0-9_-]{2,}\.[A-Za-z0-9_-]{2,}$/;
 const KEY = /^sb_publishable_[A-Za-z0-9_-]{8,}$/;
@@ -46,11 +47,11 @@ const WRITE_ROUTES = Object.freeze([
   'fftt_build_consolation_v3', 'fftt_assign_table_v3', 'fftt_forfeit_match_v3', 'fftt_correct_result_v3',
   'fftt_set_doubles_teams_v3', 'fftt_record_doubles_result_v3', 'fftt_set_staff_v3',
   'fftt_set_formats_v4', 'fftt_set_match_format_v4', 'fftt_checkin_registrants_v4', 'fftt_confirm_ratings_v4',
-  'fftt_restore_event_v4', 'fftt_delete_event_v4',
+  'fftt_restore_event_v4', 'fftt_delete_event_v4', 'fftt_set_registration_source_v5', 'fftt_clear_registration_source_v5',
 ]);
 const READ_ROUTES = Object.freeze([
   'fftt_my_events_v3', 'fftt_my_events_v4', 'fftt_event_brief_v3', 'fftt_organizer_snapshot_v3', 'fftt_audit_log_v3',
-  'fftt_export_event_v3', 'fftt_matchdesk_v1', 'fftt_matchdesk_v2',
+  'fftt_export_event_v3', 'fftt_matchdesk_v1', 'fftt_matchdesk_v2', 'fftt_registration_source_v5',
 ]);
 
 // ---------------------------------------------------------------- response models
@@ -258,6 +259,9 @@ export function createGamedayApi({projectUrl = C3_HOST, publishableKey, fetchImp
     confirmRatings: w('fftt_confirm_ratings_v4'),
     restoreEvent: w('fftt_restore_event_v4'),
     deleteEvent: w('fftt_delete_event_v4'),
+    registrationSource: r('fftt_registration_source_v5', parseSourceRecord),
+    setRegistrationSource: w('fftt_set_registration_source_v5'),
+    clearRegistrationSource: w('fftt_clear_registration_source_v5'),
     getRequestCount: () => requests,
   });
 }

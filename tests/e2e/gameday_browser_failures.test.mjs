@@ -148,7 +148,7 @@ test('heartbeat preserves the organizer opening-round preview and occupied table
     await cards.first().waitFor({timeout: T});
     assert.ok(await cards.count() >= 2);
     await cards.first().locator('select[aria-label^="Table for"]').selectOption('1');
-    await org.page.locator('#toast:not([hidden])', {hasText: 'Assigned to table 1'}).waitFor({timeout: T});
+    await org.page.locator('#toasts .toast', {hasText: 'Assigned to table 1'}).waitFor({timeout: T});
     const occupiedOption = cards.nth(1).locator('select[aria-label^="Table for"] option[value="1"]');
     await occupiedOption.waitFor({state: 'attached', timeout: T});
     assert.equal(await occupiedOption.isDisabled(), true, 'occupied table is unavailable for a second match');

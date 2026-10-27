@@ -2,6 +2,7 @@
  * records ({round, slot, name1, name2, winnerName, status, scores, table, phase}); names are display text
  * only and are placed with textContent. */
 import {h} from './dom.mjs';
+import {scoreTiles} from './game_tiles.mjs';
 import {roundName} from '../contracts/gameday_engine.mjs';
 
 export function groupRounds(matches) {
@@ -39,6 +40,6 @@ export function bracketView(matches, kind) {
             return h('div', {class: 'playerline' + (win ? ' winner' : '') + (name ? '' : ' empty')},
               h('span', {text: name || '—'}), h('span', {text: win ? '✓' : ''}));
           }),
-          (m.status === 'complete' && m.scores) ? h('div', {class: 'match-foot', text: m.scores}) : null);
+          (m.status === 'complete' && m.scores) ? h('div', {class: 'match-foot'}, scoreTiles(m.scores, {left: m.name1 || 'First player', right: m.name2 || 'Second player', compact: true, caption: false})) : null);
       }))));
 }

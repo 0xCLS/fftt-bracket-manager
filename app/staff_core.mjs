@@ -99,19 +99,27 @@ export function createPendingLedger(storage) {
   });
 }
 
+// One vocabulary for every registration problem: what happened, whose move it is, and what is safe (nothing was changed).
 const REG_ERRORS = Object.freeze({
-  'not-configured': 'The registration sheet is not connected on this site yet. Import a private CSV file instead, or add walk-ins by hand.',
-  'not-enabled': 'The registration sheet is not enabled for this event.',
+  'not-configured': 'No registration source is set up for this event yet. Choose one in Registration settings, import a private CSV, or add walk-ins by hand.',
+  'not-enabled': 'The registration source is not enabled for this event.',
+  'source-disabled': 'The Google Sheet saved for this event is switched off. Switch it on in Registration settings to read it.',
+  'not-allowed-here': 'Reading a live Google Sheet is not allowed on this synthetic staging site. Use the fictional demo data or a private CSV.',
   'forbidden': 'Only an organizer of this event can load registrations.',
   'access-rejected': 'Your sign-in expired. Sign in again.',
   'rate-limited': 'Registrations were loaded a moment ago. Wait a little, then try again.',
-  'source-unauthorized': 'The registration sheet is not shared with the connection account, or its access was removed. Ask the administrator.',
-  'source-not-found': 'The registration sheet or tab could not be found. Ask the administrator to check the connection.',
-  'source-busy': 'The registration sheet is busy. Try again in a minute.',
-  'source-unavailable': 'The registration sheet could not be read right now. Try again, or import a private CSV file.',
+  'source-unauthorized': 'The sheet is not shared with the connection account, or its access was removed. Share it as Viewer with the account shown in Registration settings.',
+  'source-auth': 'The connection account could not sign in to Google. Ask the administrator to check the connection.',
+  'source-not-found': 'The spreadsheet could not be found. Check the link or ID in Registration settings.',
+  'source-worksheet': 'The worksheet (tab) could not be found. Choose it again in Registration settings.',
+  'source-columns': 'The sheet\'s columns changed and no name column could be found. Check the column mapping in Registration settings.',
+  'source-busy': 'Google asked us to slow down. Try again in a minute.',
+  'source-unavailable': 'The registrations are temporarily unavailable. Nothing was changed. Try again shortly, or import a private CSV.',
+  'invalid-spreadsheet': 'That does not look like a Google Sheets link or ID. Paste the sheet\'s address (docs.google.com/spreadsheets/d/…).',
   'network': 'You appear to be offline. Nothing was sent.',
   'malformed': 'The registration answer was not in the expected form, so nothing was shown.',
 });
+export const REGISTRATION_MESSAGES = REG_ERRORS;
 
 export function createStaffCore({session, api, scoreTransport, registrationClient = null, ledger, now = () => Date.now(),
   randomId = () => crypto.randomUUID(), isOnline = () => true, onChange = () => {}} = {}) {
@@ -122,6 +130,8 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     lastScoreMessage: null,
     // organizer-only, in memory only, dropped with every other private view: {status, payload, error, at}
     registrations: {status: 'idle', payload: null, error: null, at: 0},
+    // organizer-only settings for THIS event's registration source: {status, source, capabilities, inspect, diagnostic, error}
+    registrationSettings: {status: 'idle', source: null, capabilities: null, capabilitiesError: null, inspect: null, diagnostic: null, error: null, busy: null},
   };
   let confirming = false;
   const refused = new Map();   // submission id -> reason: the database REFUSED it (validation), so nothing was recorded
@@ -185,6 +195,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
   function clearPrivate(reason = null) {
     s.snapshot = null; s.brief = null; s.pulse = null; s.desk = []; s.deskStatus = 'idle'; s.audit = null;
     s.registrations = {status: 'idle', payload: null, error: null, at: 0};
+    s.registrationSettings = {status: 'idle', source: null, capabilities: null, capabilitiesError: null, inspect: null, diagnostic: null, error: null, busy: null};
     rawDesk = new Map(); lastFullAt = 0;
     if (reason) s.endedReason = reason;
   }
@@ -304,6 +315,28 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
       return {ok: false, message: describeError(e), kind: e.kind ?? null, detail: e.detail ?? null};
     } finally { s.busy = false; emit(); }
   }
+  let registrationSeq = 0;
+  /** One organizer-only registration call (Function) with uniform busy + error handling; `keep` stores a successful result. */
+  async function registrationCall(label, fn, keep) {
+    if (!registrationClient) return {ok: false, message: REG_ERRORS['not-configured'], kind: 'not-configured'};
+    if (s.role !== 'organizer' || !s.eventId) return {ok: false, message: REG_ERRORS.forbidden, kind: 'forbidden'};
+    if (!isOnline()) return {ok: false, message: REG_ERRORS.network, kind: 'network'};
+    const at = s.eventId, mine = ++registrationSeq;
+    // no emit here: the settings view paints once when it starts and once when it ends, so the screen is never rebuilt twice in a row
+    s.registrationSettings = {...s.registrationSettings, busy: label, error: null};
+    try {
+      const result = await session.authorized(ctx => { if (ctx.role !== 'organizer') throw new RegistrationClientError('forbidden'); return fn(ctx); });
+      if (at !== s.eventId || !s.signedIn) return {ok: false, message: 'The event changed. Try again.', kind: 'stale'};
+      if (mine !== registrationSeq) return {ok: false, message: '', kind: 'superseded'};   // a newer request is the one the person is waiting for
+      keep(result);
+      return {ok: true, result};
+    } catch (e) {
+      if (isSessionEnded(e)) { endSession(e.kind); return {ok: false, message: describeError(e)}; }
+      if (mine !== registrationSeq) return {ok: false, message: '', kind: 'superseded'};
+      const kind = e instanceof RegistrationClientError ? e.kind : 'source-unavailable';
+      return {ok: false, message: REG_ERRORS[kind] ?? REG_ERRORS['source-unavailable'], kind, serviceAccountEmail: e?.serviceAccountEmail ?? null};
+    } finally { if (mine === registrationSeq) s.registrationSettings = {...s.registrationSettings, busy: null}; }
+  }
   const E = () => s.eventId;
   const organizerOnly = () => s.role === 'organizer';
   const actions = {
@@ -409,6 +442,54 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
       } catch { return {ok: false, message: 'That file could not be read as a registration sheet. Export the sheet as CSV (with its header row) and try again.'}; }
     },
     clearRegistrations() { s.registrations = {status: 'idle', payload: null, error: null, at: 0}; emit(); },
+    // ---- Registration settings (organizer, this event only). The server decides what is allowed; this only asks.
+    /** The saved source (from the database, under the person's own token) and what this deployment can do (from the Function). */
+    async loadRegistrationSettings() {
+      if (s.role !== 'organizer' || !s.eventId) return {ok: false, message: REG_ERRORS.forbidden};
+      const at = s.eventId;
+      s.registrationSettings = {...s.registrationSettings, status: 'loading', error: null}; emit();
+      try {
+        const [source, capabilities] = await session.authorized(async ctx => {
+          const src = await api.registrationSource(ctx.token, {p_event_id: ctx.eventId}).catch(e => {
+            if (isSessionEnded(e)) throw e;
+            return null;                                   // the V5 database objects may not be installed on an older project
+          });
+          let caps = null, capsError = null;
+          if (registrationClient) { try { caps = await registrationClient.capabilities(ctx.token, {eventId: ctx.eventId}); } catch (e) { if (isSessionEnded(e)) throw e; capsError = e instanceof RegistrationClientError ? e.kind : 'source-unavailable'; } }
+          else capsError = 'not-configured';
+          return [src, {caps, capsError}];
+        }).then(([src, c]) => [src, c]);
+        if (at !== s.eventId || !s.signedIn) return {ok: false, message: 'The event changed while loading. Try again.'};
+        s.registrationSettings = {...s.registrationSettings, status: 'ready', source, capabilities: capabilities.caps, capabilitiesError: capabilities.capsError, error: null}; emit();
+        return {ok: true};
+      } catch (e) {
+        if (isSessionEnded(e)) { endSession(e.kind); return {ok: false, message: describeError(e)}; }
+        s.registrationSettings = {...s.registrationSettings, status: 'error', error: describeError(e)}; emit();
+        return {ok: false, message: describeError(e)};
+      }
+    },
+    /** Spreadsheet title + worksheet names for a pasted link/ID (the Function checks the sheet is shared with the connection account). */
+    async inspectSheet(spreadsheet) {
+      return registrationCall('inspect', ctx => registrationClient.inspect(ctx.token, {eventId: ctx.eventId, spreadsheet}), r => { s.registrationSettings = {...s.registrationSettings, inspect: r, diagnostic: null}; });
+    },
+    /** The read-only connection diagnostic: readiness only, never rows. */
+    async testSheet({spreadsheet, worksheet, mapping}) {
+      return registrationCall('test', ctx => registrationClient.test(ctx.token, {eventId: ctx.eventId, spreadsheet, worksheet, mapping}), r => { s.registrationSettings = {...s.registrationSettings, diagnostic: r}; });
+    },
+    /** source: {kind:'fixture'|'google-sheets', spreadsheetId?, spreadsheetTitle?, worksheet?, columnMap?, enabled?} */
+    async saveRegistrationSource(source) {
+      const body = {kind: source.kind, enabled: source.enabled === true,
+        ...(source.kind === 'google-sheets' ? {spreadsheet_id: source.spreadsheetId, spreadsheet_title: source.spreadsheetTitle ?? null, worksheet: source.worksheet, column_map: source.columnMap ?? {}} : {})};
+      const r = await act(ctx => api.setRegistrationSource(ctx.token, {p_event_id: E(), p_source: body}), {refreshAfter: false});
+      if (r.ok) { await actions.loadRegistrationSettings(); s.registrations = {status: 'idle', payload: null, error: null, at: 0}; emit(); }
+      else if (r.detail === 'google-not-allowed-synthetic') r.message = REG_ERRORS['not-allowed-here'];
+      return r;
+    },
+    async clearRegistrationSource() {
+      const r = await act(ctx => api.clearRegistrationSource(ctx.token, {p_event_id: E()}), {refreshAfter: false});
+      if (r.ok) { await actions.loadRegistrationSettings(); s.registrations = {status: 'idle', payload: null, error: null, at: 0}; emit(); }
+      return r;
+    },
     async loadAudit() { const r = await act(async ctx => { s.audit = await api.auditLog(ctx.token, {p_event_id: E(), p_limit: 100}); }, {refreshAfter: false}); emit(); return r; },
     async exportEvent() {
       if (!isOnline()) return {ok: false, message: 'You appear to be offline. Nothing was sent.'};

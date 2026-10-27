@@ -69,7 +69,7 @@ export function createEventsView(ctx) {
       h('p', {class: 'section-description', text: 'Best of 1 or Best of 3, games to 11 or 21, always won by two points. A format can be changed until a result is recorded for it.'}),
       !editable ? h('div', {class: 'notice warn', text: 'This event is finished or archived, so its formats are read-only.'}) : null,
       legacy.length ? h('div', {class: 'notice', role: 'note'}, h('b', {text: 'Historical matches keep their original format. '}),
-        `${legacy.length} match${legacy.length === 1 ? '' : 'es'} in this event were set up before formats were configurable (for example a Best of 5 final). They are never rewritten, and their results and corrections still follow that format.`) : null,
+        `${legacy.length} match${legacy.length === 1 ? '' : 'es'} in this event ${legacy.length === 1 ? 'was' : 'were'} set up before formats were configurable (for example a Best of 5 final). They are never rewritten, and their results and corrections still follow that format.`) : null,
       h('div', {class: 'format-grid'}, rows),
       h('div', {class: 'setup-save'}, save, reset,
         h('span', {class: 'setup-help', text: 'Recommended: championship Best of 3 to 11 · consolation Best of 1 to 21 · doubles finale Best of 3 to 11.'})));

@@ -144,16 +144,18 @@ test('rating suggestion on the fixture: levels follow the approved answers, with
   assert.equal(lv('Ada Quillfeather'), 3); assert.equal(lv('Hal Wintersby'), 3); assert.equal(lv('Oli Sparkman'), 3);
   assert.equal(lv('Jo Marchettis'), 4, 'Strong Intermediate without organized-play experience');
   assert.equal(lv('Cy Fennelwick'), 5); assert.equal(lv('Nia Rowland'), 5); assert.equal(lv('Fay Hollowell'), 5);
-  assert.equal(by(r, 'Kit Alderman').ratingConfidence, 'low');
-  assert.equal(by(r, 'Kit Alderman').suggestedRating, 3);
-  assert.deepEqual(by(r, 'Kit Alderman').ratingBasis, ['No playing details were given; starting at Intermediate']);
+  // a registrant who answered NOTHING gets no invented level and no invented confidence: the organizer must choose
+  assert.equal(by(r, 'Kit Alderman').ratingConfidence, 'none');
+  assert.equal(by(r, 'Kit Alderman').suggestedRating, null);
+  assert.equal(by(r, 'Kit Alderman').ratingReview, true);
+  assert.match(by(r, 'Kit Alderman').ratingBasis[0], /No playing-assessment answers were available/);
   assert.ok(by(r, 'Cy Fennelwick').ratingBasis.includes('Quite a bit of league, club or school-team experience'));
   assert.ok(by(r, 'Eli Brandtley').ratingBasis.includes('Has not played yet, so rally consistency is unknown'));
-  assert.ok(r.registrants.every(x => x.suggestedRating >= 1 && x.suggestedRating <= 5));
+  assert.ok(r.registrants.every(x => x.suggestedRating === null ? x.ratingConfidence === 'none' && x.ratingReview : x.suggestedRating >= 1 && x.suggestedRating <= 5));
   // provisional: the model never marks anything confirmed (the organizer's confirmation is a separate, server-side step)
   assert.ok(r.registrants.every(x => !('confirmed' in x) && !('ratingConfirmed' in x)));
   // junk never throws
-  for (const bad of [undefined, null, {}, {frequency: 5}, {spin: {}}, {description: '💥'.repeat(500)}]) assert.ok(suggestRating(bad).level >= 1);
+  for (const bad of [undefined, null, {}, {frequency: 5}, {spin: {}}, {description: '💥'.repeat(500)}]) { const x = suggestRating(bad); assert.ok(x.level === null ? x.confidence === 'none' && x.review === true : x.level >= 1); }
 });
 
 test('REGRESSION: every approved answer choice is recognized, in order, from the exact wording', () => {
@@ -351,4 +353,45 @@ test('helpers: contact normalization and masking', () => {
   assert.equal(maskPhone('7345550142'), '•••• 42');
   assert.equal(shortName('Ada'), 'Ada');
   assert.equal(shortName('Ada van der Quill'), 'Ada Q.');
+});
+
+
+test('column mapping: familiar headings are recognized, explicit choices win, a renamed column is reported (never guessed), none-of-these is honoured', async () => {
+  const {mapHeaders, NO_COLUMN, buildRegistrants} = await import('../contracts/registration_model.mjs');
+  const auto = mapHeaders(['Timestamp', 'Your name', 'Email address', 'Phone number', 'How often do you play table tennis?']);
+  assert.deepEqual([auto.index.timestamp, auto.index.name, auto.index.email, auto.index.phone, auto.index.frequency], [0, 1, 2, 3, 4]);
+  assert.ok(auto.columns.every(c => c.how === 'auto'));
+  assert.deepEqual(auto.assessment.found, ['frequency']);
+  // explicit mapping for unfamiliar wording
+  const manual = mapHeaders(['When', 'Competitor', 'Mail'], {name: 'Competitor', timestamp: 'When', email: 'Mail'});
+  assert.deepEqual([manual.index.name, manual.index.timestamp, manual.index.email, manual.columns[1].how], [1, 0, 2, 'manual']);
+  // the chosen header vanished: reported, and the field is NOT silently re-guessed from a different column
+  const gone = mapHeaders(['Timestamp', 'Full name', 'Spin question v2'], {spin: 'Spin question'});
+  assert.deepEqual(gone.unmatched, ['spin']); assert.equal(gone.index.spin, undefined);
+  // "this field is not in my form" also skips auto-detection
+  const none = mapHeaders(['Timestamp', 'Name', 'Do you use spin?'], {spin: NO_COLUMN});
+  assert.equal(none.index.spin, undefined); assert.deepEqual(none.unmatched, []);
+  // a column feeds one field only
+  const dup = mapHeaders(['Name', 'Name'], {name: 'Name', description: 'Name'});
+  assert.equal(Object.values(dup.index).filter(i => i === 0).length, 1);
+  // unknown field names in an override are ignored, not trusted
+  assert.deepEqual(mapHeaders(['Name'], {__proto__x: 'Name', constructor: 'Name'}).unmatched, []);
+  // end to end: contact columns are used for duplicate detection only, and never leave
+  const rows = [['When', 'Competitor', 'Mail'], ['2026/11/01 10:00:00', 'Pat Ngo', 'pat@example.invalid'], ['2026/11/01 10:30:00', 'Pat Ngo', 'pat@example.invalid']];
+  const built = await buildRegistrants(rows, {refFor: async i => 'r'.repeat(10) + Buffer.from(i).toString('base64url').slice(0, 20), mapping: {name: 'Competitor', timestamp: 'When', email: 'Mail'}});
+  assert.equal(built.duplicates.length, 1); assert.deepEqual(built.duplicates[0].reasons.slice(0, 1), ['same-email']);
+  assert.ok(!JSON.stringify(built).includes('pat@example.invalid'));
+});
+
+test('payload contract: a missing level must come with confidence "none" and a review flag; sourceName cannot carry contact data', async () => {
+  const {parseRegistrationPayload, buildRegistrants} = await import('../contracts/registration_model.mjs');
+  const built = await buildRegistrants([['Name'], ['Pat Ngo']], {refFor: async i => 'abcdefghij0123456789' + i.length});
+  const ok = parseRegistrationPayload({source: 'google-sheets', sourceName: 'Spring sign-ups', fetchedAt: '2026-11-01T00:00:00Z', ...built});
+  assert.equal(ok.registrants[0].suggestedRating, null); assert.equal(ok.sourceName, 'Spring sign-ups'); assert.equal(ok.summary.needsRating, 1);
+  const raw = JSON.parse(JSON.stringify({source: 'google-sheets', fetchedAt: 'x', ...built}));
+  for (const mutate of [r => { r.registrants[0].ratingConfidence = 'high'; }, r => { r.registrants[0].ratingReview = false; }, r => { r.registrants[0].suggestedRating = 6; }, r => { r.registrants[0].suggestedRating = 3; }]) {
+    const copy = JSON.parse(JSON.stringify(raw)); mutate(copy);
+    assert.throws(() => parseRegistrationPayload(copy), TypeError);
+  }
+  assert.throws(() => parseRegistrationPayload({source: 'google-sheets', sourceName: 'mail me at a@b.co', fetchedAt: 'x', ...built}), TypeError);
 });

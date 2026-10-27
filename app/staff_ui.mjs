@@ -7,6 +7,7 @@ import {suggestPartners, enginePlayers, seedSlots, roundName, partnerCandidates,
 import {normalizeSnapshotMatches, standingsFromSnapshot, resultsText, matchesCsv} from './exports.mjs';
 import {createPlayersView} from './view_players.mjs';
 import {createEventsView} from './view_events.mjs';
+import {scoreTiles} from './game_tiles.mjs';
 
 const ORGANIZER_TABS = [['overview', 'Overview'], ['players', 'Players'], ['championship', 'Championship'],
   ['consolation', 'Consolation'], ['desk', 'Match Desk'], ['finale', 'Doubles Finale'], ['results', 'Results & Export'], ['staff', 'Staff']];
@@ -219,7 +220,7 @@ export function createStaffUi({core, els, config, signOut}) {
               field('Tables in use', 'evTables', form.tables, 'third'),
               h('div', {class: 'setup-save'},
                 h('button', {class: 'primary', type: 'submit', disabled: !core.canWrite(), text: 'Save event setup  →'})))),
-          formatsCard(sn)),
+          ),
         h('section', {class: 'overview-snapshot', 'aria-label': 'Tournament at a glance'},
           h('div', {class: 'side-section-heading'}, h('span', {class: 'section-overline', text: 'LIVE SNAPSHOT'}), h('h2', {text: 'At a glance'})),
           h('div', {class: 'kpis'},
@@ -234,7 +235,9 @@ export function createStaffUi({core, els, config, signOut}) {
         h('p', {class: 'format-footnote', text: 'Ratings stay private. Consolation matchups are reviewed before the bracket is built.'})),
       stand.champion ? h('div', {class: 'champion-banner'},
         h('h2', {text: 'Champion: ' + stand.champion}), h('p', {text: 'Runner-up: ' + stand.runnerUp})) : null,
-      h('section', {class: 'overview-history'}, eventsCard()));
+      h('section', {class: 'overview-history'}, eventsCard()),
+      // LAST on the page and the full width of it: the scoring formats are a configuration reference, not first-run setup
+      h('section', {class: 'overview-formats', 'aria-label': 'Match scoring formats'}, formatsCard(sn)));
   }
 
   function normalized(kind) {
@@ -334,7 +337,7 @@ export function createStaffUi({core, els, config, signOut}) {
     if (org && s.snapshot) {
       const done = normalizeSnapshotMatches(s.snapshot).filter(m => m.status === 'complete').sort((a, b) => b.round - a.round).slice(0, 12);
       children.push(h('section', {class: 'card', 'aria-labelledby': 'recentTitle'}, h('h2', {id: 'recentTitle', class: 'card-title', text: 'Recent results (organizer corrections)'}),
-        done.length ? h('div', {class: 'scroll-x'}, h('table', {class: 'responsive-table'}, h('tbody', {}, done.map(m => h('tr', {}, h('td', {'data-label': 'Match'}, `${m.name1} v ${m.name2}`), h('td', {'data-label': 'Winner'}, `${m.winnerName} won`), h('td', {'data-label': 'Scores', class: 'mono', text: m.scores}),
+        done.length ? h('div', {class: 'scroll-x'}, h('table', {class: 'responsive-table'}, h('tbody', {}, done.map(m => h('tr', {}, h('td', {'data-label': 'Match'}, `${m.name1} v ${m.name2}`), h('td', {'data-label': 'Winner'}, `${m.winnerName} won`), h('td', {'data-label': 'Scores', class: 'scores-cell'}, scoreTiles(m.scores, {left: m.name1, right: m.name2})),
           h('td', {'data-label': 'Format'}, h('span', {class: 'muted', text: m.bestOf ? `${formatText({bestOf: m.bestOf, points: m.points})}${m.formatLegacy ? ' (historical)' : ''}` : ''})),
           h('td', {}, h('button', {class: 'small', type: 'button', disabled: !core.canWrite(), text: 'Correct…', 'aria-label': `Correct the result of ${m.name1} versus ${m.name2}`, on: {click: () => openCorrection(m)}})))))))
           : h('div', {class: 'muted', text: 'No results yet.'})));
@@ -531,7 +534,8 @@ export function createStaffUi({core, els, config, signOut}) {
       d?.partner1 && d?.partner2 ? h('section', {class: 'card', 'aria-labelledby': 'teamsTitle'}, h('h2', {id: 'teamsTitle', class: 'card-title', text: 'Teams'}),
         h('div', {class: 'grid two'}, h('div', {class: 'stat ice'}, h('b', {text: 'Team A'}), h('span', {text: teamLine(d.finalist1, d.partner1)})),
           h('div', {class: 'stat lav'}, h('b', {text: 'Team B'}), h('span', {text: teamLine(d.finalist2, d.partner2)}))),
-        locked ? h('div', {class: 'notice good', text: `Result: ${d.winnerTeam === 1 ? 'Team A' : 'Team B'} won${d.scores ? ' · ' + d.scores : ''} · ${formatText(fmt)}.`})
+        locked ? h('div', {class: 'notice good', id: 'doublesResult'}, h('p', {text: `Result: ${d.winnerTeam === 1 ? 'Team A' : 'Team B'} won · ${formatText(fmt)}.`}),
+          d.scores ? scoreTiles(d.scores, {left: 'Team A', right: 'Team B'}) : null)
           : h('form', {on: {submit: async ev => { ev.preventDefault(); msg.textContent = '';
               const team = Number(new FormData(ev.target).get('team'));
               if (!team) { msg.textContent = 'Choose the winning team.'; return; }
@@ -651,10 +655,12 @@ export function createStaffUi({core, els, config, signOut}) {
       s.pulse?.revision, s.pulse?.generation, s.snapshot?.event.revision,
       s.brief?.lifecycle, s.deskStatus, s.pending?.submissionId, s.score.status,
       s.events.map(e => e.eventId + e.lifecycle + e.players + e.deletable).join(), s.audit?.length, s.busy,
-      s.registrations.status, s.registrations.at]);
+      s.registrations.status, s.registrations.at, s.registrationSettings.status, s.registrationSettings.busy, s.registrationSettings.source?.updatedAt,
+      s.registrationSettings.inspect?.spreadsheetId, s.registrationSettings.diagnostic?.checks.map(c => c.status).join(), s.registrationSettings.capabilities?.googleMode]);
     if (!force && paneKey === lastPaneKey) { syncConnectionGuard(); return; }
     const active = document.activeElement;
-    const typing = active && els.main.contains(active) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName) && Date.now() - lastInputAt < 15000;
+    // typing: text being entered (15 s); a drop-down only protects its own just-made choice for a moment (2 s)
+    const typing = active && els.main.contains(active) && Date.now() - lastInputAt < (active.tagName === 'SELECT' ? 2000 : 15000) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName);
     if (!force && (typing || dirtyDialog > 0)) { syncConnectionGuard(); return; } // never rebuild under a person's fingers
     const ui = captureUi();
     const view = views[tab] ?? views.desk;

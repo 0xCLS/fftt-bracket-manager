@@ -1,5 +1,7 @@
 # Registration integration — contract, adapter and connection requirements (October 26, 2026)
 
+> **Superseded in part on October 27, 2026.** The deployment-wide single sheet (`REGISTRATION_SHEET_ID` / `REGISTRATION_SHEET_RANGE`, `REGISTRATION_SOURCE=google-sheets`) described in section 3 no longer exists: each event now has its own saved source, chosen in the app, and the Function settings changed. See [REGISTRATION_SETTINGS_2026-10-27.md](REGISTRATION_SETTINGS_2026-10-27.md). The privacy contract and the registration model described here still apply.
+
 _Scope: the organizer's existing **private** Google Sheet of sign-up responses → an organizer-only, read-only list inside the staff app, with one-click check-in. **Live synchronization is not claimed**: the adapter is implemented and tested against a mocked Google; connecting a real sheet is an owner step below. No real FFTT3 participant record was retrieved, copied or imported._
 
 ## 1. Design in one paragraph

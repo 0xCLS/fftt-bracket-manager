@@ -7,7 +7,7 @@ import {SYNTHETIC_FORM_CSV} from '../../server/registration/synthetic_fixture.mj
 
 const T = 20000;
 const goTab = (page, name) => page.locator('nav.tabs button', {hasText: new RegExp('^' + name + '$')}).click();
-const toast = (page, re, timeout = T) => page.locator('#toast:not([hidden])', {hasText: re}).waitFor({timeout});
+const toast = (page, re, timeout = T) => page.locator('#toasts .toast', {hasText: re}).waitFor({timeout});
 const row = (page, name) => page.locator('.reg-row', {has: page.locator('.reg-name', {hasText: new RegExp('^' + name + '$')})});
 
 test('registration workflow: load, search, one-click and bulk check-in, merge duplicates, walk-in, confirm levels; no contact data anywhere', {timeout: 400000}, async () => {
@@ -19,8 +19,9 @@ test('registration workflow: load, search, one-click and bulk check-in, merge du
     await goTab(org.page, 'Players');
     await org.page.locator('#regLoad').click();
     await org.page.locator('.reg-row').first().waitFor({timeout: T});
-    assert.match(await org.page.locator('.reg-meta').innerText(), /Sample registrations \(fictional people\)/);
-    assert.equal(w.requests.filter(r => r.path === '/api/registrations' && r.auth).length, 1);
+    assert.match(await org.page.locator('.reg-meta').innerText(), /Fictional demo data/);
+    // the Players screen asks what the deployment can do once (capabilities), and loading is the second, deliberate request
+    assert.equal(w.requests.filter(r => r.path === '/api/registrations' && r.auth).length, 2);
 
     // search
     await org.page.fill('#regSearch', 'ben');
@@ -155,11 +156,14 @@ test('without a connected sheet: a clear message, the private CSV fallback works
     await org.page.locator('#evName').waitFor({timeout: T});
     await goTab(org.page, 'Players');
     await org.page.locator('#regLoad').click();
-    await org.page.locator('.notice', {hasText: 'not connected on this site yet'}).waitFor({timeout: T});
+    // ONE persistent, plain explanation (no duplicate toast): the state, then what to do
+    await org.page.locator('#regError', {hasText: 'Not configured'}).waitFor({timeout: T});
+    assert.match(await org.page.locator('#regError').innerText(), /Choose one in Registration settings, import a private CSV, or add walk-ins by hand/);
+    assert.equal(await org.page.locator('#toasts .toast').count(), 0, 'the failure is explained once, inline, not also as a toast');
     const before = w.requests.length;
     await org.page.locator('#regFile').setInputFiles({name: 'form-responses.csv', mimeType: 'text/csv', buffer: Buffer.from(SYNTHETIC_FORM_CSV)});
     await org.page.locator('.reg-row').first().waitFor({timeout: T});
-    assert.match(await org.page.locator('.reg-meta').innerText(), /Private CSV import · this browser only/);
+    assert.match(await org.page.locator('.reg-meta').innerText(), /Private CSV · this browser only/);
     assert.equal(w.requests.length, before, 'reading the file sent nothing anywhere');
     await row(org.page, 'Pia D.').locator('button', {hasText: 'Check in'}).click();
     await toast(org.page, /Pia D\. checked in/);

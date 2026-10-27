@@ -10,7 +10,7 @@ import {seedSlots, enginePlayers} from '../../contracts/gameday_engine.mjs';
 const T = 20000;
 const PHONE = {viewport: {width: 390, height: 844}, mobile: true};
 const goTab = (page, name) => page.locator('nav.tabs button', {hasText: new RegExp('^' + name + '$')}).click();
-const toast = (page, re, timeout = T) => page.locator('#toast:not([hidden])', {hasText: re}).waitFor({timeout});
+const toast = (page, re, timeout = T) => page.locator('#toasts .toast', {hasText: re}).waitFor({timeout});
 
 async function seed(w, n, {build = false} = {}) {
   const l = w.fake.local, E = w.eventId, org = w.ids.org;

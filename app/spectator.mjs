@@ -3,6 +3,7 @@ import {h, clear, fill, $} from './dom.mjs';
 import {startPublicFeed, pickEvent} from './public_core.mjs';
 import {deriveBoard} from '../contracts/gameday_public.mjs';
 import {bracketView} from './bracket_view.mjs';
+import {scoreTiles} from './game_tiles.mjs';
 import {computeStandings} from '../contracts/gameday_engine.mjs';
 
 let tab = 'now', last = null, wanted = new URLSearchParams(location.search).get('e');
@@ -33,7 +34,8 @@ function finaleCard(f) {
   return h('div', {class: 'card'}, h('h2', {text: 'Mixed-Skill Doubles finale'}),
     h('div', {class: 'grid two'}, h('div', {class: 'stat ice'}, h('b', {text: 'Team A'}), h('span', {text: f.team1.join(' + ')})), h('div', {class: 'stat lav'}, h('b', {text: 'Team B'}), h('span', {text: f.team2.join(' + ')}))),
     f.bestOf && f.points ? h('p', {class: 'fmt-line', text: `Best of ${f.bestOf} · to ${f.points}`}) : null,
-    f.winnerTeam ? h('div', {class: 'notice good', text: `Winners: ${(f.winnerTeam === 1 ? f.team1 : f.team2).join(' + ')}${f.scores ? ' · ' + f.scores : ''}`}) : h('p', {class: 'muted', text: 'Coming up after the championship final.'}));
+    f.winnerTeam ? h('div', {class: 'notice good'}, h('p', {text: `Winners: ${(f.winnerTeam === 1 ? f.team1 : f.team2).join(' + ')}`}),
+      f.scores ? scoreTiles(f.scores, {left: 'Team A', right: 'Team B'}) : null) : h('p', {class: 'muted', text: 'Coming up after the championship final.'}));
 }
 function viewBracket(ev) {
   return h('div', {},
@@ -52,7 +54,7 @@ function viewResults(ev, board) {
       st.doubles ? h('p', {text: `Doubles winners: ${st.doubles.winners.join(' + ')}`}) : null) : null,
     h('div', {class: 'card'}, h('h2', {text: 'Completed matches'}),
       board.recent.length ? h('table', {}, h('tbody', {}, board.recent.map(m => h('tr', {}, h('td', {text: m.bracket === 'championship' ? 'Champ.' : 'Cons.'}),
-        h('td', {text: `${m.name1} vs ${m.name2}`}), h('td', {text: `${m.winnerName} won`}), h('td', {class: 'mono', text: m.scores}))))) : h('div', {class: 'empty-state', text: 'No results yet.'})));
+        h('td', {text: `${m.name1} vs ${m.name2}`}), h('td', {text: `${m.winnerName} won`}), h('td', {class: 'scores-cell'}, scoreTiles(m.scores, {left: m.name1, right: m.name2})))))) : h('div', {class: 'empty-state', text: 'No results yet.'})));
 }
 
 function render(view) {

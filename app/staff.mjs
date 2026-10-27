@@ -14,7 +14,7 @@ import {createRegistrationClient} from '../contracts/registration_client.mjs';
 import {createStaffCore, createPendingLedger, POLL_MS} from './staff_core.mjs';
 import {createStaffUi} from './staff_ui.mjs';
 import {PUBLISHABLE_KEY} from './config.mjs';
-import {$, toast, h, clear} from './dom.mjs';
+import {$, toast, h, clear, attachPasswordToggle} from './dom.mjs';
 
 const PAGE = '/app/staff.html';
 // Enabled by the organizer's October 23, 2026 consolidated synthetic staging approval. The sign-in
@@ -120,11 +120,7 @@ async function enter(r, eventIdHint) {
   await loaded;
 }
 for (const ev of ['pointerdown', 'keydown', 'touchstart']) document.addEventListener(ev, () => session?.touch(), {passive: true});
-$('togglePassword').addEventListener('click', () => {
-  const shown = $('password').type === 'text';
-  $('password').type = shown ? 'password' : 'text'; $('togglePassword').textContent = shown ? 'Show' : 'Hide';
-  $('togglePassword').setAttribute('aria-pressed', String(!shown));
-});
+attachPasswordToggle($('password'), $('togglePassword'));
 // ---- choosing an event by NAME (after the password / code proof, when no event id was given)
 let choice = null;
 function hideChooser() { $('eventChooser').hidden = true; clear($('chooserList')); $('chooserStatus').textContent = ''; choice = null; }

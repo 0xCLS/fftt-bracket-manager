@@ -116,6 +116,12 @@ jobs:
         env:
           FFTT_CHROME_CHANNEL: none
         run: node --test tests/e2e/gameday_events_browser.test.mjs
+      - name: V5 event-specific registration source against the real SQL (organizer-only, event-scoped, synthetic rule, status, audit, cascade)
+        run: node --test tests/e2e/gameday_v5_server.test.mjs
+      - name: UI/UX polish in real Chrome - spacing system, password toggle, score tiles, Overview layout, notifications, Registration settings (fake Google)
+        env:
+          FFTT_CHROME_CHANNEL: none
+        run: node --test tests/e2e/gameday_polish_browser.test.mjs
       - name: V4 browser - responsive layout, accessibility (axe-core), keyboard and tap targets
         env:
           FFTT_CHROME_CHANNEL: none
@@ -190,3 +196,15 @@ jobs:
         run: |
           python -m py_compile tests/gameday_v4_signed_http.py
           python tests/gameday_v4_signed_http.py
+      - name: Apply game-day V5 ONLY to ephemeral local PostgreSQL
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres \
+            -f supabase/proposals/GAMEDAY_TOURNAMENT_V5_STAGING.sql
+      - name: Assert game-day V5 privileges and structure (anon/authenticated/helpers/no private data/synthetic rule)
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres \
+            -f tests/gameday_v5_disposable.sql
