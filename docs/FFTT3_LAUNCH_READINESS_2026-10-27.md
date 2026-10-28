@@ -34,6 +34,14 @@ Result display-only score squares are reduced **30 → 26 CSS px** (compact brac
 
 The existing Chromium regression now checks workspace layout at desktop/tablet/phone widths and 26px score tiles. **Deployed to the existing synthetic Cloudflare staging sites from `00068134` as recorded above; PR #19 remains draft/unmerged.**
 
+## October 27 approved final UI: rank shields, compact check-in, form-aware mapping
+
+The organizer approved the final **five-color rank-shield visual language**, superseding the earlier separate-square/circle/hexagon/diamond/Level 5 shield experiment. Each rank icon has an equal **40 × 40 CSS px** footprint and a matching **40 × 40 SVG viewBox**. The shared shield silhouette is gray (Level 1 Beginner), green (Level 2 Recreational), blue (Level 3 Intermediate), orange (Level 4 Strong intermediate), or purple (Level 5 Advanced/Competitive). Levels 1–4 contain one to four white chevrons; Level 5 has a **classic five-point white star** with broad horizontal arms and pointed top, as in the organizer-provided star reference. There are **no feathers, laurels, or additional bottom stars**. The adjacent text still names the precise level for accessibility.
+
+The Staff registration list now has the full container width beneath the registration-settings/quick-walk-in workspace; compact responsive rows keep name, masked matching hint, level and one-click Check in/Edit together, without a repetitive **Not checked in** pill. Alert, duplicate and checked-in states are still visible. The optional separate First name, Last name and Self-described level mapping rows are hidden **only when absent and unnecessary**, while their existing parser contract remains supported for other forms.
+
+Changes are presentation-only in `app/view_players.mjs`, `app/view_registration.mjs`, and `app/app.css`, with updated `tests/e2e/gameday_polish_browser.test.mjs`; no hosted database, Google permissions, registration rows or check-in decisions are modified. **Not yet deployed** to the FFTT3 Staff site. The application remains on draft PR #19 pending completed CI, visual review and separate staging-release decision.
+
 ## New October 27 decision: full names and operational Google Sheets are launch-critical
 
 Christopher explicitly accepted **full first-and-last names** by default for new Staff registration/check-in, walk-ins and manual players; do not truncate to an initial. Preserve historic synthetic names. Public spectator displays should recognize participants by full names **only after verifying notice/publication policy**, never contact details or private playing-level assessments.
