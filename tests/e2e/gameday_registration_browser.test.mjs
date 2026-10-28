@@ -85,15 +85,23 @@ test('registration workflow: load, search, one-click and bulk check-in, merge du
     // a name that contained a phone number is cleaned, flagged and still safe to check in
     assert.match(await org.page.locator('.reg-row', {hasText: 'Lia'}).first().innerText(), /removed from the name/);
 
-    // walk-in
+    // Unified add-player workspace: one name/level form has distinct actions.
+    assert.equal(await org.page.locator('.add-players-card').count(), 1);
+    assert.deepEqual(await org.page.locator('.add-mode-switch button').allInnerTexts(), ['One player', 'Paste a list']);
+    await org.page.fill('#wName', 'Nina Orchard');
+    await org.page.locator('.walk-form .seg label', {hasText: /^2$/}).click();
+    await org.page.locator('.walk-form button', {hasText: 'Add to roster'}).click();
+    await toast(org.page, /Nina Orchard added to the roster/);
+    const addedOnly = await w.fake.local.admin("select rating, source, checked_in from fftt_private.players where display_name='Nina Orchard'");
+    assert.deepEqual(addedOnly, [{rating: 2, source: 'manual', checked_in: false}], 'Add to roster never checks the player in');
     await org.page.fill('#wName', 'Walt Winters');
     await org.page.locator('.walk-form .seg label', {hasText: /^4$/}).click();
-    await org.page.locator('.walk-form button', {hasText: 'Add and check in'}).click();
+    await org.page.locator('.walk-form button', {hasText: 'Add & check in'}).click();
     await toast(org.page, /Walt Winters checked in/);
     const walk = await w.fake.local.admin("select rating, rating_confirmed, source, checked_in from fftt_private.players where display_name = 'Walt Winters'");
     assert.deepEqual(walk, [{rating: 4, rating_confirmed: true, source: 'walk_in', checked_in: true}]);
     await org.page.fill('#wName', 'ben marlowe');   // case-insensitive duplicate of the full name already on the roster
-    await org.page.locator('.walk-form button', {hasText: 'Add and check in'}).click();
+    await org.page.locator('.walk-form button', {hasText: 'Add & check in'}).click();
     await org.page.locator('#wMsg', {hasText: 'already on the roster'}).waitFor();
 
     // roster: suggested levels are visible and can be confirmed in one step
@@ -130,7 +138,7 @@ test('input survives background refreshes: search text, selections, edits, walk-
     await org.page.fill('#regSearch', 'Pia');
     await row(org.page, 'Pia Dunmoor').locator('input[type=checkbox]').check();
     await org.page.fill('#wName', 'Half typed na');
-    await org.page.locator('details.details-card summary').click();           // opens the manual-entry section
+    await org.page.locator('#addModeBulk').click(); // switches the shared Add players workspace to bulk
     await org.page.fill('#pBulk', 'Unsaved Pasted, 3, provisional');
     // something else changes on the server: every device's pane is rebuilt on its next poll
     await w.fake.local.rpc(w.ids.org, 'fftt_upsert_players_v3', {p_event_id: w.eventId, p_players: [{name: 'Remote R.', rating: 2, rating_status: 'provisional'}]});
@@ -139,13 +147,16 @@ test('input survives background refreshes: search text, selections, edits, walk-
     assert.equal(await row(org.page, 'Pia Dunmoor').locator('input[type=checkbox]').isChecked(), true, 'the ticked row stays ticked');
     assert.equal(await org.page.inputValue('#wName'), 'Half typed na');
     assert.equal(await org.page.inputValue('#pBulk'), 'Unsaved Pasted, 3, provisional');
-    assert.equal(await org.page.locator('details.details-card').evaluate(e => e.open), true, 'the opened section stays open');
-    // typing in the walk-in field is not interrupted: focus and caret stay where they were across a rebuild
+    assert.equal(await org.page.locator('#addModeBulk').getAttribute('aria-selected'), 'true', 'bulk mode persists across refresh');
+    await org.page.locator('#addModeOne').click();
+    // typing in the unified name field is not interrupted: focus and caret stay where they were across a rebuild
     await org.page.focus('#wName'); await org.page.keyboard.press('End'); await org.page.keyboard.type(' me');
     await w.fake.local.rpc(w.ids.org, 'fftt_upsert_players_v3', {p_event_id: w.eventId, p_players: [{name: 'Remote S.', rating: 2, rating_status: 'provisional'}]});
     await org.page.locator('h2', {hasText: /Roster · 0 of 2/}).waitFor({timeout: 40000});
     assert.equal(await org.page.inputValue('#wName'), 'Half typed na me');
     assert.equal(await org.page.evaluate(() => document.activeElement?.id), 'wName', 'focus stays in the field');
+    await org.page.locator('#addModeBulk').click();
+    assert.equal(await org.page.inputValue('#pBulk'), 'Unsaved Pasted, 3, provisional', 'unsaved bulk text persists between modes');
   } finally { await w.close(); }
 });
 
