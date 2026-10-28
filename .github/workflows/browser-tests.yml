@@ -39,6 +39,8 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
+      - name: Test CI routing safeguards (no network)
+        run: python3 -m unittest discover -s tests -p 'test_ci_impact.py' -v
       - name: Classify the complete incremental push (fail closed)
         id: impact
         env:
