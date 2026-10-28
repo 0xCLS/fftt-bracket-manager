@@ -273,14 +273,14 @@ body.tv .champ{font-size:clamp(26px,3vw,50px);color:#f7e99b;font-weight:800}
   max-width:32px;max-height:32px;flex:0 0 32px;
   font-size:15px;font-weight:750;line-height:1}
 .rank-badge svg{display:block;width:32px;height:32px;overflow:hidden}
-.rank-badge[data-level="1"]{--rank-edge:#4d5965;--rank-face:#717b87}
-.rank-badge[data-level="2"]{--rank-edge:#3d685c;--rank-face:#548979}
-.rank-badge[data-level="3"]{--rank-edge:#4a6688;--rank-face:#6b87a9}
-.rank-badge[data-level="4"]{--rank-edge:#806345;--rank-face:#b18a62}
-.rank-badge[data-level="5"]{--rank-edge:#675578;--rank-face:#8a759e}
+.rank-badge[data-level="1"]{--rank-edge:#596570;--rank-face:#78838e}
+.rank-badge[data-level="2"]{--rank-edge:#216b54;--rank-face:#4f8d71}
+.rank-badge[data-level="3"]{--rank-edge:#315e6e;--rank-face:#468998}
+.rank-badge[data-level="4"]{--rank-edge:#80663f;--rank-face:#a88a58}
+.rank-badge[data-level="5"]{--rank-edge:#67557c;--rank-face:#8972a0}
 .rank-edge{fill:var(--rank-edge)}
 .rank-face{fill:var(--rank-face);stroke:rgba(255,255,255,.65);stroke-width:.65px;stroke-linejoin:round}
-.rank-chevron{fill:none;stroke:#fff;stroke-width:3px;stroke-linejoin:round;stroke-linecap:square}
+.rank-chevron{fill:none;stroke:#fff;stroke-width:2.1px;stroke-linejoin:round;stroke-linecap:round}
 .rank-star{fill:#fff;stroke-linejoin:round}
 .rank-badge.is-unset{border:1px dashed #64748b;border-radius:7px;background:#f1f2f4;color:#475569}
 
@@ -746,20 +746,94 @@ td.scores-cell{min-width:150px}
 
 
 
-/* Settings and quick walk-in share a workspace; the high-volume registrant
-   list occupies full width below so staff can scan more rows at once. */
+/* Same visual hierarchy as Overview: primary Add players card beside
+   2x2 live snapshot, with the long registration configuration full-width below. */
 .players-page{container-type:inline-size}
-#app .players-workspace{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--gap-section);align-items:start;margin-bottom:var(--gap-section)}
-#app .players-main,#app .players-side{min-width:0}
-#app .players-workspace .card{margin-bottom:0}
-#app .players-workspace .reg-settings .card-sub{max-width:46ch}
-#app .players-workspace .walk-form .walk-name input{width:100%;min-width:0}
+#app .players-overview{display:grid;grid-template-columns:minmax(0,1.26fr) minmax(300px,.88fr);
+  gap:19px;align-items:start;margin:0 0 22px}
+#app .players-add-column,#app .players-snapshot{min-width:0}
+#app .players-add-column>.card{height:100%;margin:0}
+#app .players-snapshot .side-section-heading{margin:8px 0 14px}
+#app .players-snapshot .section-overline{display:block;color:#56626d;font-size:10px;
+  font-weight:800;letter-spacing:.15em}
+#app .players-snapshot .side-section-heading h2{margin:4px 0 0;color:#29313c;
+  font-size:21px;font-weight:750;letter-spacing:-.04em}
+#app .players-snapshot .mini-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;margin:0}
+#app .players-snapshot .mini-kpi{min-width:0;min-height:139px;padding:19px 17px;
+  border:1px solid #29313c0d;border-radius:6px;box-shadow:none;
+  display:flex;flex-direction:column;justify-content:space-between}
+#app .players-snapshot .mini-kpi strong{color:#29313c;font-size:clamp(31px,3vw,42px);
+  font-weight:750;line-height:1.07}
+#app .players-snapshot .mini-kpi span{color:#3f4b56;font-size:11px;font-weight:680;line-height:1.5}
+#app .players-snapshot .mini-kpi.ice{background:#d1eff5}
+#app .players-snapshot .mini-kpi.lav{background:#e9d7f3}
+#app .players-snapshot .mini-kpi.lime{background:#bbd98f}
+#app .players-snapshot .mini-kpi.butter{background:#f7e99b}
+#app .players-registration-config{width:100%;min-width:0;margin-bottom:22px}
+#app .players-registration-config>.reg-settings{width:100%;margin:0}
 #app .players-page>.reg-card{margin-bottom:var(--gap-section)}
 #app .players-page>.reg-card .empty-state{padding-block:16px}
-@container (min-width:980px){
-  #app .players-workspace{grid-template-columns:minmax(0,1.65fr) minmax(310px,.95fr)}
-  #app .players-side .walk-form{grid-template-columns:minmax(0,1fr);align-items:start;gap:var(--gap-field)}
-  #app .players-side .walk-go button{width:100%}
+@container (max-width:980px){
+  #app .players-overview{grid-template-columns:minmax(0,1fr)}
+  #app .players-snapshot .mini-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+  #app .players-snapshot .mini-kpi{min-height:110px}
+}
+@container (max-width:700px){
+  #app .players-snapshot .mini-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+/* Registration settings: full-width status panel, legible connection controls,
+   then progressive disclosure for optional mapping. No behavior/permissions
+   are inferred from these UI styles. */
+#app .players-registration-config .reg-settings{padding:25px 29px}
+#app .players-registration-config .reg-settings>.card-head{gap:18px;margin-bottom:18px}
+#app .players-registration-config .reg-settings>.card-head .card-sub{max-width:62ch}
+#app .players-registration-config .reg-source-line{display:flex;flex-wrap:wrap;
+  align-items:center;justify-content:space-between;gap:12px 24px;
+  padding:14px 18px;border:1px solid #dbe6e5;border-radius:6px;
+  background:#f2f7f5;color:#43515b;font-size:12px;line-height:1.5;margin:0}
+#app .reg-source-heading{display:flex;flex-wrap:wrap;gap:7px 12px;align-items:baseline}
+#app .reg-source-heading b{color:#216b54}
+#app .reg-source-facts{display:flex;flex-wrap:wrap;gap:8px 22px;color:#56626d}
+#app .reg-source-facts b{color:#46525f}
+#app .players-registration-config .reg-set-body{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));
+  gap:20px 18px}
+#app .players-registration-config .reg-set-body>*{grid-column:1/-1;min-width:0;margin:0}
+#app .players-registration-config .reg-set-body>.choice-group{grid-column:1/-1}
+#app .players-registration-config .choice-group .choices{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+#app .players-registration-config .choice-card{padding:13px 16px}
+#app .players-registration-config .reg-set-body>.field{display:flex;flex-direction:column;gap:6px}
+#app .players-registration-config .field>label{font-weight:700;font-size:12px}
+#app .players-registration-config .field .input-action{display:flex;align-items:center;gap:12px}
+#app .players-registration-config .field .input-action input{min-width:0;flex:1}
+#app .players-registration-config .field>.help{margin:0}
+#app .players-registration-config .reg-set-body>.row{display:flex;align-items:center;flex-wrap:wrap;gap:12px 18px}
+#app .players-registration-config .reg-set-body>.row>.muted{max-width:68ch;font-size:12px}
+#app .players-registration-config .diag{padding:17px 20px;background:#f6f9fa}
+#app .players-registration-config .diag-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 22px}
+#app .players-registration-config .reg-mapping-disclosure{border:1px solid #dce2e8;
+  border-radius:6px;padding:0;background:#fff}
+#app .players-registration-config .reg-mapping-disclosure>summary{min-height:54px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  flex-wrap:wrap;cursor:pointer;padding:13px 18px;color:#29313c}
+#app .players-registration-config .reg-mapping-disclosure>summary span{font-size:12px}
+#app .players-registration-config .reg-mapping-disclosure>summary .muted{font-weight:500;color:#56626d}
+#app .players-registration-config .reg-mapping-disclosure[open]>summary{border-bottom:1px solid #e4e7ec;margin-bottom:12px}
+#app .players-registration-config .reg-mapping-disclosure>p,
+#app .players-registration-config .reg-mapping-disclosure>.map-grid{margin:0 18px 18px}
+#app .players-registration-config .status-list{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:5px 16px;padding:14px 18px;border:1px solid #e4e7ec;border-radius:6px;background:#f9fafb}
+#app .players-registration-config .status-list dt{grid-row:1;color:#56626d}
+#app .players-registration-config .status-list dd{grid-row:2;margin:0;color:#29313c;font-weight:700}
+#app .players-registration-config .reg-set-body>.actions{padding-top:18px;border-top:1px solid #e4e7ec}
+@container (max-width:760px){
+  #app .players-registration-config .reg-settings{padding:20px 17px}
+  #app .players-registration-config .diag-list{grid-template-columns:1fr}
+  #app .players-registration-config .status-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 14px}
+  #app .players-registration-config .status-list dt,#app .players-registration-config .status-list dd{grid-row:auto}
+  #app .players-registration-config .field .input-action{align-items:stretch;flex-direction:column}
+  #app .players-registration-config .field .input-action button{width:100%}
 }
 /* Compact check-in list: the "Not checked in" state is implicit in the
    Check in action; exceptional statuses remain visible on their own line. */
