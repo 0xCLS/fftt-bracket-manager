@@ -35,7 +35,7 @@ Results & Export → **Private backup** (the app's own download; it contains lev
 * Match Desk → pick a ready match → choose a free **table** → play → **Record result**: tap the winner, enter game scores (e.g., `11-7, 9-11, 11-8`). If the screen says the match changed or is already recorded, **stop**: the other scorekeeper already entered it — tell the Organizer, do not re-enter.
 * **No-show/walkover:** Record a no-show (reason required).
 * Spotted a wrong score *after* saving? **Do not retype it.** Tell the Organizer (corrections are organizer-only and leave an audit entry).
-* Offline banner = the app is paused: write the result on the paper sheet; the app sends it once when the phone reconnects. Never enter it twice.
+* Offline banner = changes are paused. Write the score on paper. Reconnecting does **not** automatically submit an uncertain result: check the server record/receipt with the Organizer before any deliberate entry. Never enter an unverified score twice.
 
 ## Problems and fast fixes
 | Symptom | Do |
@@ -44,7 +44,7 @@ Results & Export → **Private backup** (the app's own download; it contains lev
 | A scorekeeper cannot sign in | Re-type the password carefully (show/hide eye in the field). E-mailed reset codes can be slow or rate-limited on the Free plan — do not wait for one: use another scorekeeper's phone for scoring, or the Organizer records results on the Match Desk. |
 | Scorekeeper's phone is lost/stolen | Staff tab → **Revoke** that person (immediate), grant a replacement. |
 | TV frozen or says **stale** | Refresh the TV page; if it still says stale, the network is down — keep playing, the TV catches up. Hide public view if it shows anything wrong. |
-| Two phones show different things | Pull to refresh. The database is the authority; the paper sheet is the tie-breaker. |
+| Two phones show different things | Pull to refresh. The database is the authority; use the paper sheet to investigate discrepancies with the Organizer. Do not retry an uncertain score before checking the server receipt. |
 | Someone appears twice / wrong name | Organizer edits the name/level on Players (before check-in) or corrects the result; do not delete players mid-bracket. |
 
 ## Manual scoring fallback (paper) — "system down" procedure

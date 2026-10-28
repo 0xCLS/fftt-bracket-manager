@@ -354,7 +354,16 @@ export function createStaffUi({core, els, config, signOut}) {
   };
   function queueCard(r, tables, org) {
     const fmt = formatOf(r);
-    const sel = h('select', {'aria-label': `Table for ${r.players[0].name} versus ${r.players[1].name}`, disabled: !core.canWrite(), on: {change: async ev => result(await core.actions.assignTable(r.matchId, ev.target.value ? Number(ev.target.value) : null), ev.target.value ? `Assigned to table ${ev.target.value}.` : 'Table cleared.')}},
+    const sel = h('select', {'aria-label': `Table for ${r.players[0].name} versus ${r.players[1].name}`, disabled: !core.canWrite(), on: {change: async ev => {
+      const choice = ev.target.value;
+      const saved = await core.actions.assignTable(r.matchId, choice ? Number(choice) : null);
+      if (!saved.ok) {
+        // Never leave a rejected assignment looking successful on the scorekeeper's phone.
+        ev.target.value = r.table ? String(r.table) : '';
+        if (saved.detail === 'table-in-use') render(true); // paint the authoritative refreshed desk
+      }
+      result(saved, choice ? `Assigned to table ${choice}.` : 'Table cleared.');
+    }}},
       h('option', {value: '', text: 'No table'}), Array.from({length: tables}, (_, i) => tableOption(r, i + 1)));
     const legacy = fmt.bestOf === 5;
     return h('article', {class: 'queue-card' + (r.table ? ' playing' : ''), 'aria-label': `${r.players[0].name} versus ${r.players[1].name}`},
@@ -374,7 +383,7 @@ export function createStaffUi({core, els, config, signOut}) {
       h('div', {class: 'row'},
         h('button', {class: 'primary small', type: 'button', text: 'Check what the server recorded', disabled: s.busy, on: {click: async () => { const r = await core.checkPendingScore(); toast(r.message, r.ok ? '' : 'bad'); render(true); }}}),
         h('button', {class: 'small', type: 'button', text: 'I verified it — dismiss', on: {click: async () => {
-          if (await confirmDialog('Dismiss this notice?', 'Only do this after the organizer has confirmed the match result. Entering the score again is safe: the server accepts only one result per match.', 'Dismiss')) core.dismissPendingScore(); }}})));
+          if (await confirmDialog('Dismiss this notice?', 'Only dismiss this after the organizer has checked the server result and paper record. If recorded, do not enter it again. If absent, ask the organizer before a fresh submission.', 'Dismiss')) core.dismissPendingScore(); }}})));
   }
 
   function openFormatDialog(row) {

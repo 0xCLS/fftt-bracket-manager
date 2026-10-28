@@ -109,6 +109,9 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
     await tv.page.locator('.tv-line .tbl', {hasText: 'Table 1'}).waitFor({timeout: 15000});
     await shot(spec, '05-spectator-now'); await shot(tv, '06-tv');
     await b.page.locator('.queue-card.playing').waitFor({timeout: 15000});   // the other scorekeeper sees the table too
+    const anotherMatch = b.page.locator('.queue-card:not(.playing)').first();
+    assert.equal(await anotherMatch.locator('select option[value="1"]').isDisabled(), true,
+      'an occupied table cannot be selected for another match from the other scorekeeper\'s phone');
 
     // ---------------------------------------------------------------- simultaneous score conflict from two phones
     const rowA = a.page.locator('.queue-card').nth(1), rowB = b.page.locator('.queue-card').nth(1);

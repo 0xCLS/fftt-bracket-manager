@@ -21,7 +21,7 @@ Organizer laptop + charger; two scorekeeper phones (different people, different 
 ## 10:00 — network and devices (20 min)
 - [ ] Venue Wi-Fi: open the Staff page on 3 devices at once; sign in as Organizer, Scorekeeper A, Scorekeeper B. Note the time each takes. Repeat on the hotspot.
 - [ ] Spectator page on 3 attendee-style phones (cellular and Wi-Fi), TV page on the real screen: legible from the farthest seat? Sleep/screen-lock disabled on the TV device.
-- [ ] Walk the Wi-Fi dead spots: with a score half-typed, step out of coverage and back; the phone says "paused", then sends once when back.
+- [ ] Walk the Wi-Fi dead spots: with a score half-typed, step out of coverage and back. The phone must pause writes; reconnecting alone must not resend an unconfirmed score. Check the server record and paper score before any deliberate submission.
 
 ## 10:20 — run a full fictional tournament (60–90 min)
 - [ ] Organizer: create rehearsal event (tables = the real table count), add 10–16 fictional walk-ins with full first and last names, confirm levels, build the championship (byes appear correctly).

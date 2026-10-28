@@ -20,7 +20,7 @@ Run on **real devices** after the cutover (and again, shorter, on Nov 8 and Nov 
 - [ ] Each sees **Match Desk only** (no Players, Overview or Staff tabs, no registration screen).
 - [ ] A and B both open the same ready match; A assigns Table 1; B sees it occupied within a few seconds and cannot choose Table 1 for another match.
 - [ ] A and B both submit a result for the **same match at the same moment**: exactly one is accepted; the other gets a clear "already recorded / out of date" message and the desk refreshes. No duplicate result, no lost result.
-- [ ] A puts the phone in airplane mode, enters a score, sees "paused"; reconnecting sends it once (no double entry). A stale tab (opened before the other scorekeeper's result) is told the match changed.
+- [ ] A puts the phone in airplane mode, attempts a score and sees "paused" (no write). Reconnecting alone does not send it; A checks the server/paper record before deliberately submitting. An uncertain submission is checked by its receipt, never automatically retried. A stale tab is told the match changed.
 - [ ] A no-show / walkover and a correction (organizer only) work and appear in the audit trail with the reason.
 - [ ] The score dialog and table pills show **full names**; two players with the same first name are distinguishable.
 

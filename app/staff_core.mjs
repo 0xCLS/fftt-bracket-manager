@@ -311,7 +311,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
       return {ok: true, res};
     } catch (e) {
       if (isSessionEnded(e)) { endSession(e.kind); return {ok: false, message: describeError(e)}; }
-      if (e instanceof GamedayApiError && (e.outcomeUnknown || e.kind === 'stale' || e.kind === 'not-found')) await refresh({force: true});
+      if (e instanceof GamedayApiError && (e.outcomeUnknown || e.kind === 'stale' || e.kind === 'not-found' || e.detail === 'table-in-use')) await refresh({force: true});
       return {ok: false, message: describeError(e), kind: e.kind ?? null, detail: e.detail ?? null};
     } finally { s.busy = false; emit(); }
   }
