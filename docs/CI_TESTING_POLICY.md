@@ -54,3 +54,11 @@ and require both `test` and `Disposable synthetic PostgreSQL` jobs to pass.
   layouts before deciding the UI release is accepted.
 - This change affects CI only; it does not modify any app release,
   staff credentials, real registration records or tournament results.
+
+## Verified implementation — October 28, 2026
+
+- CSS-only incremental PR commit `eebabb99cf4d05c6976eca4fd5d14c83b3817ead` triggered [GitHub Actions run 40641184551](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/40641184551): classifier **passed**, focused fictional Chromium UI check **passed**, full application job **skipped**, disposable PostgreSQL job **skipped**. This verifies the fast visual lane in the actual GitHub Actions runner.
+- An earlier exploratory fast-lane attempt failed because a legacy Python Playwright smoke script was invoked without its separate Python dependency; the redundant step was removed, and the corrected lane passed. The focused Node/Chromium fixture remains the browser acceptance gate.
+- Docs-only commit run 40640909104 completed successfully with both heavy jobs skipped; protected routing logic is exercised by `tests/test_ci_impact.py` in every classifier run.
+- The interaction-focused lane is covered by routing unit tests but has **not yet been separately exercised end-to-end** in GitHub Actions. It must still pass before relying on it for a JS UI iteration. A green targeted run does not satisfy the **mandatory full pre-deployment regression**.
+
