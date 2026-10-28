@@ -104,7 +104,7 @@ export function createPlayersView(ctx) {
         r.ratingReview && r.suggestedRating !== null && row.edit.rating === undefined ? h('span', {class: 'reg-note warn', text: 'Organizer review: the answers disagree with the chosen profile. Check the suggested level.'}) : null,
         row.rosterMatch && row.state === 'new' ? h('span', {class: 'reg-note', text: `Roster already has “${row.rosterMatch.name}”.`}) : null),
       h('div', {class: 'reg-level'},
-        h('span', {class: 'rating-chip', 'aria-hidden': 'true', text: row.rating === null ? '–' : String(row.rating)}),
+        h('span', {class: 'rating-chip', 'data-level': row.rating === null ? 'unset' : String(row.rating), 'aria-hidden': 'true', text: row.rating === null ? '–' : String(row.rating)}),
         h('span', {class: 'reg-level-text'}, h('span', {text: row.rating === null ? 'No level yet' : levelLabel(row.rating)}),
           h('span', {class: 'muted', text: row.edit.rating !== undefined ? 'Your choice' : row.rating === null ? 'Choose one to check in' : `Suggested · ${CONFIDENCE_TEXT[r.ratingConfidence]}`}))),
       h('div', {class: 'reg-state'}, pill(...stateText)),
