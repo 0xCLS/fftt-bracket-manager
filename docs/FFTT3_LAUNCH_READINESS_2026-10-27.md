@@ -34,6 +34,14 @@ Result display-only score squares are reduced **30 → 26 CSS px** (compact brac
 
 The existing Chromium regression now checks workspace layout at desktop/tablet/phone widths and 26px score tiles. **Deployed to the existing synthetic Cloudflare staging sites from `00068134` as recorded above; PR #19 remains draft/unmerged.**
 
+## October 27 follow-on UI revision — combined player entry and smaller muted badges
+
+The Organizer reviewed the live Staff screen and a recording, and requested that the three separate entry workflows (Quick walk-in check-in, Add a player, Paste a list) become a single Add players workspace. Two modes: One player (two explicit actions: Add to roster versus Add & check in) and Paste a list (roster additions only, never auto-check-in). Name checks, private ratings, duplicates and input persistence stay intact.
+
+The same five-level SVG shield family is now drawn in flat, muted gray/green/blue/orange/purple with exactly 32×32 CSS px footprints. No glints, shadows, gradients, feathers or bottom decoration. One to four chevrons for Levels 1–4 and a classic five-point star for Level 5; text still names the level.
+
+Status: draft PR #19 only. No Cloudflare deployment, hosted SQL, real registration response read, actual check-in or public release was performed. CI and authenticated Organizer visual acceptance remain gates.
+
 ## October 27 approved final UI: rank shields, compact check-in, form-aware mapping
 
 The organizer approved the final **five-color rank-shield visual language**, superseding the earlier separate-square/circle/hexagon/diamond/Level 5 shield experiment. Each rank icon has an equal **40 × 40 CSS px** footprint and a matching **40 × 40 SVG viewBox**. The shared shield silhouette is gray (Level 1 Beginner), green (Level 2 Recreational), blue (Level 3 Intermediate), orange (Level 4 Strong intermediate), or purple (Level 5 Advanced/Competitive). Levels 1–4 contain one to four white chevrons; Level 5 has a **classic five-point white star** with broad horizontal arms and pointed top, as in the organizer-provided star reference. There are **no feathers, laurels, or additional bottom stars**. The adjacent text still names the precise level for accessibility.
