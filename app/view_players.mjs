@@ -50,7 +50,7 @@ export function levelShield(level) {
   // Flat, single-face badge: no metallic glint or gradients.
   if (level === 5) {
     // Classic five-point star: broad horizontal arms and pointed top as approved.
-    const star = 'M20 12 L22.4 18 L29 18 L23.7 22.2 L25.7 28.6 L20 24.7 L14.3 28.6 L16.3 22.2 L11 18 L17.6 18 Z';
+    const star = 'M20 10.5 L22.4 16.5 L29 16.5 L23.7 20.7 L25.7 27.1 L20 23.2 L14.3 27.1 L16.3 20.7 L11 16.5 L17.6 16.5 Z';
     // Keep the single white star, without a raised shadow.
     path(star, 'rank-star');
     svg.dataset.emblem = 'five-point-star';
@@ -160,8 +160,8 @@ export function createPlayersView(ctx) {
           h('span', {class: 'muted', text: row.edit.rating !== undefined ? 'Your choice' : row.rating === null ? 'Choose one to check in' : `Suggested · ${CONFIDENCE_TEXT[r.ratingConfidence]}`}))),
       h('div', {class: 'reg-state'}, stateText[0] === 'Not checked in' ? null : pill(...stateText)),
       h('div', {class: 'reg-actions'}, primary,
-        row.state !== 'in' ? h('button', {type: 'button', class: 'small ghost', 'aria-expanded': String(editing), 'aria-controls': nameId + '-edit', text: editing ? 'Done' : 'Edit',
-          'aria-label': `${editing ? 'Finish editing' : 'Edit name and level for'} ${row.name}`,
+        row.state !== 'in' ? h('button', {type: 'button', class: 'small ghost', 'aria-expanded': String(editing), 'aria-controls': nameId + '-edit', text: editing ? 'Close' : 'Edit',
+          'aria-label': `${editing ? 'Close edit preview for' : 'Edit name and level for'} ${row.name}`,
           on: {click: () => { const e = reg.edits.get(r.ref) ?? {}; reg.edits.set(r.ref, {...e, open: !editing}); reg.paint.list(); }}}) : null),
       editing ? h('div', {class: 'reg-edit', id: nameId + '-edit'},
         h('div', {}, h('label', {for: nameId, text: 'Name on the bracket'}),
@@ -171,6 +171,7 @@ export function createPlayersView(ctx) {
           h('select', {id: nameId + '-lv', on: {change: ev => { reg.edits.set(r.ref, {...(reg.edits.get(r.ref) ?? {}), open: true, rating: Number(ev.target.value)}); reg.paint.list(); }}},
             row.rating === null ? h('option', {value: '', text: 'Choose a level', selected: true, disabled: true}) : null,
             [1, 2, 3, 4, 5].map(n => h('option', {value: n, text: levelLabel(n), selected: n === row.rating})))),
+        h('p', {class: 'help reg-edit-note', text: 'Preview only. For a new registrant, changes apply when you check in; the Google Sheet is never edited.'}),
         r.ratingBasis.length ? h('div', {class: 'reg-basis'}, h('b', {text: 'Why this suggestion'}), h('ul', {}, r.ratingBasis.map(b => h('li', {text: b})))) : null) : null);
   }
 
