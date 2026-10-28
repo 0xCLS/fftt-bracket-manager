@@ -8,8 +8,7 @@ Checks: every file listed in MANIFEST.json is served with the same SHA-256 (and 
 security headers; private paths (server/, functions/, SQL, tests, docs) answer 404; for `staff`, the registration Function
 refuses a GET (405) and a token-less POST (401) and, for `spectator`, serves no Function at all. Sends no credential, no data.
 Exit code 0 only if everything passed.
-`--static-only` (used by the pipeline on a throw-away PREVIEW deployment, before anything is promoted) skips the checks that
-depend on the production project's secrets and pinned origin: the token-less POST (401) and the Function's own headers. Uses a browser-like User-Agent (Cloudflare refuses the default Python agent)."""
+`--static-only` (used by the pipeline on a throw-away PREVIEW deployment, before anything is promoted) skips the token-less POST (401) check dependent on production secrets and pinned origin. It accepts only GET 405 or the explicit fail-closed 503 `registration-not-configured` from a preview that has no production environment secrets; all other 503s still fail. The stable live Staff URL must return 405/401. Uses a browser-like User-Agent (Cloudflare refuses the default Python agent)."""
 import argparse, hashlib, json, sys, urllib.error, urllib.request
 from pathlib import Path
 
@@ -22,6 +21,19 @@ def get(url, method='GET', data=None, headers=None):
     try:
         with urllib.request.urlopen(req, timeout=30) as r: return r.status, r.headers, r.read()
     except urllib.error.HTTPError as e: return e.code, e.headers, e.read()
+
+def staff_get_ok(status, body, static_only=False):
+    """An unconfigured preview is safe; a broken Function or live endpoint is not."""
+    if status == 405:
+        return True
+    if not static_only or status != 503:
+        return False
+    try:
+        payload = json.loads(body)
+    except (TypeError, ValueError):
+        return False
+    return isinstance(payload, dict) and payload == {'error': 'registration-not-configured'}
+
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument('--bundle', required=True); ap.add_argument('--base', required=True)
@@ -60,8 +72,11 @@ def main():
         check(get(base + p)[0] == 404, f'{p} is consumed by Cloudflare and not served')
     if a.kind == 'staff':
         origin = base
-        st, h, _ = get(base + '/api/registrations')
-        check(st == 405, f'GET /api/registrations -> {st} (expected 405)')
+        st, h, body = get(base + '/api/registrations')
+        expected = '405 or explicit unconfigured-preview 503' if a.static_only else '405'
+        check(staff_get_ok(st, body, a.static_only), f'GET /api/registrations -> {st} (expected {expected})')
+        if a.static_only:
+            check('no-store' in (h.get('Cache-Control') or ''), 'preview Function answers with Cache-Control: no-store')
         if not a.static_only:
             st, h, _ = get(base + '/api/registrations', 'POST', b'{"action":"capabilities","eventId":"00000000-0000-4000-8000-000000000000"}', {'Content-Type': 'application/json', 'Origin': origin})
             check(st == 401, f'token-less POST /api/registrations -> {st} (expected 401)')

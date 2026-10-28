@@ -6,6 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'tools' / 'ops'))
 import staging_release as R
+import verify_deployment as V
 
 SHA = 'a' * 40
 
@@ -70,6 +71,25 @@ class Decisions(unittest.TestCase):
         out = 'Take a peek over at https://1a2b3c4d.fftt3-staff-stg.pages.dev\nalias https://ci-verify.fftt3-staff-stg.pages.dev'
         self.assertEqual(R.preview_url(out, 'fftt3-staff-stg'), 'https://1a2b3c4d.fftt3-staff-stg.pages.dev')
         self.assertIsNone(R.preview_url(out, 'fftt3-games-stg'))
+
+
+class PreviewFunctionSafety(unittest.TestCase):
+    def test_preview_accepts_only_explicit_fail_closed_unconfigured_response(self):
+        safe = b'{"error":"registration-not-configured"}'
+        self.assertTrue(V.staff_get_ok(503, safe, static_only=True))
+        self.assertTrue(V.staff_get_ok(405, b'{"error":"method-not-allowed"}', static_only=True))
+        for body in [b'', b'error', b'{"error":"service-unavailable"}',
+                     b'{"error":"registration-not-configured","registrants":[]}',
+                     b'{"error":"registration-not-configured","debug":"internal"}',
+                     b'[]', b'{"error":"registration-not-configured"']:
+            self.assertFalse(V.staff_get_ok(503, body, static_only=True), body)
+        for code in [200, 401, 403, 404, 500, 502, 504]:
+            self.assertFalse(V.staff_get_ok(code, safe, static_only=True), code)
+
+    def test_live_still_requires_405_even_with_missing_configuration(self):
+        self.assertTrue(V.staff_get_ok(405, b'', static_only=False))
+        self.assertFalse(V.staff_get_ok(503, b'{"error":"registration-not-configured"}', static_only=False))
+        self.assertFalse(V.staff_get_ok(200, b'{"registrants":[]}', static_only=False))
 
 
 class Boundaries(unittest.TestCase):

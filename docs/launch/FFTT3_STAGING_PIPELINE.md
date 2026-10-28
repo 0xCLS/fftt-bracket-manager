@@ -9,7 +9,7 @@ Workflow `.github/workflows/deploy-staging.yml`, logic in `tools/ops/staging_rel
 2. **Gate.** Requires the **full regression** on that exact commit: `Full regression — browser and security foundation`, `Full regression — game-day and launch workflows` and `Disposable synthetic PostgreSQL` must all be green. It reuses the run the pull request already produced; if only a fast UI lane ran (or nothing), it starts the existing full run once (`workflow_dispatch`) and waits. A failure stops the release. If a newer commit has been pushed, the older release is dropped as superseded. This enforces `CI_TESTING_POLICY.md`: a green fast lane never deploys.
 3. **Release** (GitHub Environment `staging`, the only place the Cloudflare token exists), per app, Staff first:
    - the uploaded artifact is re-checked: manifest commit equals the tested commit, target and environment (`staging`) are right, every file hash matches, no extra files;
-   - upload to the throw-away preview branch `ci-verify`, then `verify_deployment.py --static-only` on that unique URL (hashes, CSP, headers, private paths not served). A failure here means **nothing is promoted**;
+   - upload to the throw-away preview branch `ci-verify`, then `verify_deployment.py --static-only` on that unique URL (hashes, CSP, headers, private paths not served). Preview Functions have no production-only variables/secrets, so GET `/api/registrations` may return **either** 405 (method rejected) **or only** the exact 503 JSON `{"error":"registration-not-configured"}` (fail-closed without configuration), with `Cache-Control: no-store`; any other response is a failure. A failure here means **nothing is promoted**;
    - upload the same bytes to production branch `main` of the staging project, then the full `verify_deployment.py` on the stable URL (files hash-identical to the manifest, live `MANIFEST.json` equals the tested bundle, security headers, private paths 404, Staff Function 405 on GET and 401 without a token, Spectator serves no Function or staff page), retried for edge propagation;
    - if the live check fails, the previous successful deployment is restored through the Cloudflare rollback API and the job fails.
 
@@ -28,6 +28,10 @@ Workflow `.github/workflows/deploy-staging.yml`, logic in `tools/ops/staging_rel
 | GitHub → Settings → Environments → `staging` | Deployment branches: only `integration/milestone1-secure-foundation`; secret `CLOUDFLARE_API_TOKEN`; variable `CLOUDFLARE_ACCOUNT_ID` |
 
 Rotate the token before it expires: create a new one, `gh secret set CLOUDFLARE_API_TOKEN --env staging`, delete the old one.
+
+## October 28 preview-function false failure and correction
+
+Release run [40734534618](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/40734534618) for `fd0a71a` passed all three full CI suites and the Staff preview's 34/34 file hashes, manifest and static/security checks, but the preview Function returned 503 on GET because the non-production preview lacks the configured production-only registration variables. The old verifier insisted on 405 even for an unconfigured preview; no deployment was promoted. The updated verifier accepts only an explicit `registration-not-configured` 503 in previews, not a generic 503; all stable Staff origin checks remain mandatory. The fix requires a new full regression and independently verified release before reporting the Staff update live.
 
 ## Recovery
 - **A release failed its checks:** nothing to do for a preview or gate failure (the live site is unchanged); a post-promotion failure restores the previous deployment automatically. Read the workflow log, fix on the branch, push.
