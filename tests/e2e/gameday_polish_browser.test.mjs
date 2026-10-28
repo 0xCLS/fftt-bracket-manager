@@ -128,7 +128,7 @@ test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Sta
         const page = document.querySelector('.players-page').getBoundingClientRect();
         const settings = document.querySelector('.players-main .reg-settings').getBoundingClientRect();
         const reg = document.querySelector('.players-page > .reg-card').getBoundingClientRect();
-        const walk = document.querySelector('.players-side #walkTitle').closest('.card').getBoundingClientRect();
+        const walk = document.querySelector('.players-side #addTitle').closest('.card').getBoundingClientRect();
         const roster = document.getElementById('rosterTitle').closest('.card').getBoundingClientRect();
         return {width:page.width,settings:{top:settings.top,left:settings.left},reg:{top:reg.top,bottom:reg.bottom,left:reg.left,right:reg.right},walk:{top:walk.top,left:walk.left,bottom:walk.bottom},rosterTop:roster.top,score:getComputedStyle(document.documentElement).getPropertyValue('--tile').trim()};
       });
@@ -140,6 +140,12 @@ test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Sta
       assert.ok(Math.abs(layout.reg.left - layout.settings.left) <= 2, 'registration list aligns with left edge of the workspace');
       assert.ok(layout.reg.right >= layout.walk.left, 'registration list spans the right side of the check-in workspace');
       assert.ok(layout.rosterTop >= layout.reg.bottom - 2, 'roster follows registrations');
+      assert.equal(await org.page.locator('.add-players-card').count(), 1, 'exactly one combined add-player workspace');
+      assert.equal(await org.page.locator('#addModeOne').getAttribute('aria-selected'), 'true', 'single-player entry is the default');
+      assert.equal(await org.page.locator('.add-one-actions button').count(), 2, 'Add to roster and Add & check in remain separate actions');
+      await org.page.locator('#addModeBulk').click();
+      assert.equal(await org.page.locator('#addModeBulk').getAttribute('aria-selected'), 'true', 'bulk entry is an alternative mode');
+      await org.page.locator('#addModeOne').click();
       await org.page.locator('#regSetToggle').click();
       await org.page.locator('#regSetBody').waitFor();
       await org.page.locator('.choice', {hasText: 'Google Sheet'}).click();
@@ -177,7 +183,7 @@ test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Sta
           host.remove();
           return result;
         });
-        assert.ok(shields.every(x => x.w === 40 && x.h === 40 && x.viewBox === '0 0 40 40'), 'all five icons have equal square dimensions');
+        assert.ok(shields.every(x => x.w === 32 && x.h === 32 && x.viewBox === '0 0 40 40'), 'all five compact icons have equal 32px square dimensions');
         assert.equal(new Set(shields.map(x => x.face)).size, 5, 'five distinct level colors');
         assert.deepEqual(shields.map(x => x.chevrons), [1, 2, 3, 4, 0], 'ranks 1–4 contain corresponding chevrons');
         assert.deepEqual(shields.map(x => x.stars), [0, 0, 0, 0, 1], 'only Level 5 contains a star');
