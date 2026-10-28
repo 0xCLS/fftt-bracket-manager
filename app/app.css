@@ -264,7 +264,7 @@ body.tv .champ{font-size:clamp(26px,3vw,50px);color:#f7e99b;font-weight:800}
 
 
 
-/* Fast visual CI canary: no styling change; exercises CSS-only routing. */
+/* Flat badge colors are scoped to the Staff theme and can be tuned without changing check-in logic. */
 /* FFTT ranks: small, flat, square-footprint shields.
    One geometric family, muted colors matching the Staff theme. Level text
    remains adjacent, so colors and insignia are never the only indicators. */
