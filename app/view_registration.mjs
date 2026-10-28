@@ -202,7 +202,7 @@ export function createRegistrationSettings(ctx) {
       body.push(h('div', {class: 'row'}, h('button', {type: 'button', id: 'regTest', disabled: !editable || !writable() || busy || !st.worksheet || !caps?.googleConfigured, text: rs.busy === 'test' ? 'Testing…' : 'Test connection', 'aria-busy': String(rs.busy === 'test'), on: {click: runTest}}),
         h('span', {class: 'muted', text: 'Reads only the column headings and a response count. No answers are read.'})));
       body.push(diagnosticList(diag));
-      if (diag?.columns?.length) body.push(h('details', {class: 'sub-block reg-mapping-disclosure', open: !src?.configured || !diag.ok},
+      if (diag?.columns?.length) body.push(h('details', {class: 'sub-block reg-mapping-disclosure', open: src?.kind !== 'google-sheets' || !diag.ok},
         h('summary', {},
           h('span', {}, h('strong', {text: 'Column mapping'}), h('span', {class: 'muted', text: ' · Advanced; review only if a heading needs correcting'})),
           pill(diag.ok ? 'Automatically recognized' : 'Needs review', diag.ok ? 'good' : 'warn')),
