@@ -71,7 +71,7 @@ const ago = ms => { const s = Math.max(0, Math.round(ms / 1000)); return s < 5 ?
 export function createPlayersView(ctx) {
   const {core, s, h, clear, pill, toast, result, confirmDialog, remember, draft, forget, rerender} = ctx;
   const settingsCard = createRegistrationSettings(ctx);
-  const reg = {query: '', filter: null, selected: new Set(), edits: new Map(), merge: new Map(), paint: {list: () => {}, bulk: () => {}}, model: () => null};
+  const reg = {query: '', filter: null, selected: new Set(), edits: new Map(), merge: new Map(), paint: {list: () => {}, bulk: () => {}, row: () => {}}, model: () => null};
   const fresh = ref => reg.model()?.rows.find(x => x.r.ref === ref) ?? null;
   const dismissedKey = () => `fftt.reg.dismissed.v1.${s.eventId}`;
   const readDismissed = () => { try { return new Set(JSON.parse(localStorage.getItem(dismissedKey()) ?? '[]')); } catch { return new Set(); } };
@@ -162,13 +162,13 @@ export function createPlayersView(ctx) {
       h('div', {class: 'reg-actions'}, primary,
         row.state !== 'in' ? h('button', {type: 'button', class: 'small ghost', 'aria-expanded': String(editing), 'aria-controls': nameId + '-edit', text: editing ? 'Close' : 'Edit',
           'aria-label': `${editing ? 'Close edit preview for' : 'Edit name and level for'} ${row.name}`,
-          on: {click: () => { const e = reg.edits.get(r.ref) ?? {}; reg.edits.set(r.ref, {...e, open: !editing}); reg.paint.list(); }}}) : null),
+          on: {click: ev => { const e = reg.edits.get(r.ref) ?? {}; reg.edits.set(r.ref, {...e, open: !editing}); reg.paint.row(r.ref, ev.currentTarget); }}}) : null),
       editing ? h('div', {class: 'reg-edit', id: nameId + '-edit'},
         h('div', {}, h('label', {for: nameId, text: 'Name on the bracket'}),
           h('input', {type: 'text', id: nameId, maxlength: 80, value: row.name, autocomplete: 'off',
             on: {input: ev => { reg.edits.set(r.ref, {...(reg.edits.get(r.ref) ?? {}), open: true, name: ev.target.value}); }}})),
         h('div', {}, h('label', {for: nameId + '-lv', text: 'FFTT level'}),
-          h('select', {id: nameId + '-lv', on: {change: ev => { reg.edits.set(r.ref, {...(reg.edits.get(r.ref) ?? {}), open: true, rating: Number(ev.target.value)}); reg.paint.list(); }}},
+          h('select', {id: nameId + '-lv', on: {change: ev => { reg.edits.set(r.ref, {...(reg.edits.get(r.ref) ?? {}), open: true, rating: Number(ev.target.value)}); reg.paint.row(r.ref, ev.currentTarget); }}},
             row.rating === null ? h('option', {value: '', text: 'Choose a level', selected: true, disabled: true}) : null,
             [1, 2, 3, 4, 5].map(n => h('option', {value: n, text: levelLabel(n), selected: n === row.rating})))),
         h('p', {class: 'help reg-edit-note', text: 'Preview only. For a new registrant, changes apply when you check in; the Google Sheet is never edited.'}),
@@ -184,7 +184,43 @@ export function createPlayersView(ctx) {
     const chipsEl = h('div', {class: 'chips', role: 'group', 'aria-label': 'Filter registrants'});
     let view = null;
     const current = () => (rg.payload ? model(sn, rg.payload) : null);
-    reg.model = current; reg.paint = {list: () => paintList(), bulk: () => paintBulk()};
+    reg.model = current; reg.paint = {list: () => paintList(), bulk: () => paintBulk(), row: (ref, via) => paintRow(ref, via)};
+    // A repaint must be invisible: the same control keeps keyboard focus (and caret) and stays where it was on screen. Rebuilt
+    // controls are found again by position inside their row/bar (ids and labels change with state). `via` is the control the person
+    // just used: Safari does not focus a button on click, so it cannot be read from document.activeElement.
+    const FOCUSABLE = 'a[href],button,input,select,textarea';
+    const focusKey = el => {
+      if (!el || el === document.body) return null;
+      const li = el.closest?.('.reg-row');
+      if (li && listEl.contains(li)) return {zone: 'row', ref: li.dataset.ref, idx: [...li.querySelectorAll(FOCUSABLE)].indexOf(el)};
+      if (chipsEl.contains(el)) return {zone: 'chips', idx: [...chipsEl.children].indexOf(el)};
+      if (bulkEl.contains(el)) return {zone: 'bulk', idx: [...bulkEl.querySelectorAll(FOCUSABLE)].indexOf(el)};
+      return null;
+    };
+    const refocus = key => {
+      let el = null;
+      if (key.zone === 'row') {
+        const li = [...listEl.children].find(x => x.dataset?.ref === key.ref);
+        const all = li ? [...li.querySelectorAll(FOCUSABLE)] : [];
+        el = all[key.idx] ?? null;
+        if (!el || el.disabled) el = li?.querySelector('.reg-actions .ghost') ?? all.find(x => !x.disabled) ?? null;   // the row's own Edit/Close button
+      } else if (key.zone === 'chips') el = chipsEl.children[key.idx] ?? null;
+      else el = [...bulkEl.querySelectorAll(FOCUSABLE)][key.idx] ?? null;
+      if (el && !el.disabled) el.focus({preventScroll: true});
+      return el;
+    };
+    function keepPlace(paint, via = null) {
+      const from = via ?? document.activeElement;
+      const key = focusKey(from);
+      const top = key ? from.getBoundingClientRect().top : null;
+      const caret = from?.matches?.('input[type=text],input[type=search],textarea') ? [from.selectionStart, from.selectionEnd] : null;
+      paint();
+      const el = key && refocus(key);
+      if (!el) return;
+      if (caret) { try { el.setSelectionRange(caret[0], caret[1]); } catch { /* not a text field any more */ } }
+      const moved = el.getBoundingClientRect().top - top;           // what the browser's own scroll anchoring would have held fixed
+      if (Math.abs(moved) > 1) window.scrollBy(0, moved);
+    }
     function matches(row) {
       const f = reg.filter ?? 'todo';
       if (f === 'todo' && row.state === 'in') return false;
@@ -209,10 +245,8 @@ export function createPlayersView(ctx) {
             h('button', {type: 'button', class: 'small', disabled: ready.length === 0 || !writable(), text: `Select all ${ready.length} shown`,
               on: {click: () => { for (const x of ready) reg.selected.add(x.r.ref); paintList(); }}})));
     }
-    function paintList() {
-      view = current();
-      clear(listEl); clear(chipsEl);
-      if (!view) return;
+    function paintChips() {
+      clear(chipsEl);
       const counts = {todo: view.rows.filter(x => x.state !== 'in').length, all: view.rows.length, in: view.rows.filter(x => x.state === 'in').length,
         attention: view.rows.filter(x => x.attention && x.state !== 'in').length};
       const active = reg.filter ?? 'todo';
@@ -220,12 +254,27 @@ export function createPlayersView(ctx) {
         chipsEl.append(h('button', {type: 'button', class: 'chip', 'aria-pressed': String(active === id), text: `${text} (${counts[id]})`,
           on: {click: () => { reg.filter = id; paintList(); }}}));
       }
-      const shown = view.rows.filter(matches);
-      for (const row of shown) listEl.append(registrantRow(row));
-      countEl.textContent = shown.length === view.rows.length ? `${shown.length} registrant${shown.length === 1 ? '' : 's'}`
-        : `Showing ${shown.length} of ${view.rows.length}`;
-      if (!shown.length) listEl.append(h('li', {class: 'empty-state', text: reg.query ? 'No one matches that search.' : active === 'todo' ? 'Everyone is checked in. 🎉' : 'Nothing in this view.'}));
-      paintBulk();
+    }
+    function paintList() {
+      keepPlace(() => {
+        view = current();
+        clear(listEl); clear(chipsEl);
+        if (!view) return;
+        paintChips();
+        const shown = view.rows.filter(matches);
+        for (const row of shown) listEl.append(registrantRow(row));
+        countEl.textContent = shown.length === view.rows.length ? `${shown.length} registrant${shown.length === 1 ? '' : 's'}`
+          : `Showing ${shown.length} of ${view.rows.length}`;
+        if (!shown.length) listEl.append(h('li', {class: 'empty-state', text: reg.query ? 'No one matches that search.' : (reg.filter ?? 'todo') === 'todo' ? 'Everyone is checked in. 🎉' : 'Nothing in this view.'}));
+        paintBulk();
+      });
+    }
+    /** Opening/closing one editor or choosing a level changes only that row: replace its <li> in place instead of tearing the whole list down. */
+    function paintRow(ref, via = null) {
+      const next = (view = current())?.rows.find(x => x.r.ref === ref);
+      const old = [...listEl.children].find(li => li.dataset?.ref === ref);
+      if (!next || !old || !matches(next)) return paintList();      // the list's shape changed: the full repaint is the safe path
+      keepPlace(() => { old.replaceWith(registrantRow(next)); paintChips(); paintBulk(); }, via);
     }
     const search = h('input', {type: 'search', id: 'regSearch', placeholder: 'Search by name', autocomplete: 'off', value: reg.query, 'aria-label': 'Search registrants by name',
       on: {input: ev => { reg.query = ev.target.value; paintList(); }}});
@@ -270,7 +319,9 @@ export function createPlayersView(ctx) {
         h('div', {class: 'reg-tools'}, h('div', {class: 'reg-search'}, h('label', {for: 'regSearch', class: 'sr-only', text: 'Search registrants'}), search), chipsEl),
         countEl, bulkEl, listEl);
     }
-    queueMicrotask(paintList);
+    // Filled NOW, not in a later microtask: the staff shell restores scroll and focus right after building the pane, and an
+    // empty list would be a short page with nothing to focus.
+    paintList();
     return h('section', {class: 'card reg-card', 'aria-labelledby': 'regTitle'}, head, body);
   }
 

@@ -209,7 +209,7 @@ test('without a connected sheet: a clear message, the private CSV fallback works
     assert.equal(await org.page.locator('.reg-row').count(), 2);
     await quinn.locator('button', {hasText: 'Edit'}).click();
     assert.match(await org.page.locator('.reg-basis').innerText(), /Organizer review: other answers point 3 levels higher than the chosen profile/);
-    await quinn.locator('button', {hasText: 'Done'}).click();
+    await quinn.locator('button', {hasText: 'Close'}).click();
     await quinn.locator('button', {hasText: 'Check in'}).click();
     await toast(org.page, /Quinn Brightwater checked in/);
     const stored = await w.fake.local.admin("select rating, rating_confirmed from fftt_private.players where display_name = 'Quinn Brightwater'");
