@@ -25,3 +25,26 @@
 ## Not done (not authorized or not possible)
 * No registration answer was read: reading needs the Organizer's own signed-in session (Players → Registration settings → paste the response-sheet link → Check sheet → Test connection → Enable/Save → Load registrations). No one was checked in; nothing is public.
 * No scorekeeper was granted; no account was created.
+
+---
+
+# Addendum — Staff UI release, October 27, 2026 (rank shields, compact registration list, simplified column mapping)
+
+**Approved by the organizer in chat. Staff project only; Supabase, Spectator, Cloudflare variables and event data untouched. PR #19 remains a draft and unmerged.**
+
+| Item | Result |
+| --- | --- |
+| Release commit | `8e783921a0de56925ae5a2781db3a5e9e7a30303`; CI run 40624210113 on that exact commit: both jobs green (Disposable synthetic PostgreSQL, test) |
+| Bundle | `build_export.py` from a clean detached worktree at that commit (staff target, staging environment, both origins pinned); 36 files, every file hash equal to `MANIFEST.json`, manifest `commit` = the release commit; the existing `functions/api/registrations.js` Pages Function included |
+| Deployment | **Staff `390e958a-79f3-4a2c-90bf-9a3056279050`** to the existing `fftt3-staff-stg` project (Production, branch `main`), `https://fftt3-staff-stg.pages.dev` |
+| Live verification | `verify_deployment.py --kind staff` on the stable URL: **ALL LIVE CHECKS PASSED** — 34/34 served files hash-identical (`_headers`/`_redirects` consumed by Cloudflare), live `MANIFEST.json` equals the local one, CSP self-only with only the pinned Supabase project, nosniff, no-referrer, no-store, noindex, HSTS, private paths 404, GET `/api/registrations` 405, token-less POST 401 |
+| Origin protection | POST from a foreign `Origin` → 403; the project still lists all nine secrets by name (`GOOGLE_SA_EMAIL`, `GOOGLE_SA_PRIVATE_KEY`, `REGISTRATION_ENABLED`, `REGISTRATION_EVENT_IDS`, `REGISTRATION_REF_SECRET`, `REGISTRATION_SOURCE`, `STAFF_ORIGIN`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_URL`); a deployment does not change project variables, and `REGISTRATION_GOOGLE_MODE` (a plain-text variable, not listed by name above) was not edited |
+| Shields (live code, rendered in real Chrome) | five `40×40` SVG badges at phone, tablet and desktop widths; face colors grey `#6b7280`, green `#23945b`, blue `#2679ce`, orange `#e88320`, purple `#9544bc` for Levels 1–5; 1–4 chevrons, a five-point star at Level 5; no feather, laurel or extra star elements |
+| Responsiveness / console | Staff page at 390×844 (touch, 2×), 768×1024 and 1440×900 in real Chrome: no horizontal overflow, **0 console warnings/errors, 0 failed requests** |
+| Registration list, column mapping, check-in, duplicate handling, accessibility | covered by the CI browser suite on the same commit (compact full-width list, simplified mapping, existing check-in/duplicate/axe behavior); **not** re-exercised on the live site because that needs the Organizer's signed-in session |
+
+**Not done (by instruction):** no Supabase change, no registration answer read or imported, nobody checked in, no change to event visibility, no Spectator deployment, no new infrastructure.
+
+**Rollback reference:** Staff `3be2a824-70c0-4dd2-a894-b5c527a53a81` (from `efcdc00`; before it `944c112b-25ad-4ef2-9d81-c47acf1eb477`) — Cloudflare dashboard "Rollback to this deployment", or redeploy that bundle. Older Staff bundles still work against the upgraded database. Spectator is unchanged (`c41ef841-d5d3-4f75-9d23-cc1678b50cb8`).
+
+**Organizer review tasks:** sign in, open Players → Registration settings and confirm the simplified mapping on the real response sheet; Load registrations and eyeball the shields, compact list and suggested levels on a laptop and a phone; confirm duplicate groups and one-tap check-in behave as before (do not check anyone in until the event); table count and formats on Overview.
