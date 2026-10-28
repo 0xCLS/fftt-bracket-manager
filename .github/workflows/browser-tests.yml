@@ -26,6 +26,11 @@ on:
       - supabase/**
   workflow_dispatch:
 
+# A newer PR update supersedes stale in-progress UI or full checks.
+concurrency:
+  group: browser-regression-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   classify:
     name: Select safe CI lane
