@@ -663,6 +663,12 @@ dialog .dlg>.dlg-actions{margin-top:var(--gap-actions)}
 .score-text{font-size:.9rem}
 .match-foot .score-tiles{display:flex}
 td.scores-cell{min-width:150px}
+/* Separate complete game-score pairs in organizer Recent results only.
+   Keep each pair together and retain horizontal scrolling on narrow screens. */
+[aria-labelledby="recentTitle"] .score-games{flex-wrap:nowrap;gap:0}
+[aria-labelledby="recentTitle"] .score-game{flex:none;position:relative}
+[aria-labelledby="recentTitle"] .score-game+.score-game{margin-left:13px;padding-left:13px}
+[aria-labelledby="recentTitle"] .score-game+.score-game::before{content:"";position:absolute;left:0;top:4px;bottom:4px;width:1px;background:#d3d9e0;pointer-events:none}
 .notice .score-tiles{margin-top:10px}
 
 /* notifications: compact, restrained, never over the bottom action bars */
