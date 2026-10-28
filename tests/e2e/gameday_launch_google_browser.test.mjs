@@ -82,10 +82,10 @@ test('LAUNCH MODE: real-mode event, Organizer connects the form sheet, loads, de
     await toast(page, /Ada Quillfeather checked in \(3 registrations merged\)/);
     await page.fill('#wName', 'Walt Winters');
     await page.locator('.walk-form .seg label', {hasText: /^4$/}).click();
-    await page.locator('.walk-form button', {hasText: 'Add and check in'}).click();
+    await page.locator('.walk-form button', {hasText: 'Add & check in'}).click();
     await toast(page, /Walt Winters checked in/);
     await page.fill('#wName', 'walt winters');
-    await page.locator('.walk-form button', {hasText: 'Add and check in'}).click();
+    await page.locator('.walk-form button', {hasText: 'Add & check in'}).click();
     await page.locator('#wMsg', {hasText: 'already on the roster'}).waitFor();
 
     const players = await w.fake.local.admin('select display_name, source, checked_in, rating_confirmed from fftt_private.players where event_id = $1 order by display_name', [w.eventId]);
@@ -95,21 +95,22 @@ test('LAUNCH MODE: real-mode event, Organizer connects the form sheet, loads, de
 
     // 5b. a one-word walk-in name is a SOFT rule: asked once for the full name, accepted as written on the second press
     await page.fill('#wName', 'Prince');
-    await page.locator('.walk-form button', {hasText: 'Add and check in'}).click();
+    await page.locator('.walk-form button', {hasText: 'Add & check in'}).click();
     await page.locator('#wMsg', {hasText: 'full first and last name'}).waitFor();
     assert.equal((await w.fake.local.admin("select count(*)::int n from fftt_private.players where display_name = 'Prince'"))[0].n, 0, 'nothing is added on the first press');
-    await page.locator('.walk-form button', {hasText: 'Add and check in'}).click();
+    await page.locator('.walk-form button', {hasText: 'Add & check in'}).click();
     await toast(page, /Prince checked in/);
     assert.equal((await w.fake.local.admin("select count(*)::int n from fftt_private.players where display_name = 'Prince'"))[0].n, 1, 'accepted as written on the second press');
 
-    await page.locator('details.details-card summary').click();
-    await page.fill('#pName', 'Cher');
-    await page.getByRole('button', {name: 'Add player', exact: true}).click();
-    await toast(page, /full first and last name/);
-    assert.equal((await w.fake.local.admin("select count(*)::int n from fftt_private.players where display_name = 'Cher'"))[0].n, 0, 'manual entry also asks once');
-    await page.getByRole('button', {name: 'Add player', exact: true}).click();
-    await toast(page, /Player added/);
-    assert.equal((await w.fake.local.admin("select count(*)::int n from fftt_private.players where display_name = 'Cher'"))[0].n, 1);
+    // The same single-player form now handles roster-only additions.
+    await page.fill('#wName', 'Cher');
+    await page.getByRole('button', {name: 'Add to roster', exact: true}).click();
+    await page.locator('#wMsg', {hasText: 'full first and last name'}).waitFor();
+    assert.equal((await w.fake.local.admin("select count(*)::int n from fftt_private.players where display_name = 'Cher'"))[0].n, 0, 'roster-only entry also asks once');
+    await page.getByRole('button', {name: 'Add to roster', exact: true}).click();
+    await toast(page, /Cher added to the roster/);
+    const cher = await w.fake.local.admin("select checked_in from fftt_private.players where display_name = 'Cher'");
+    assert.deepEqual(cher, [{checked_in: false}], 'roster entry does not imply a check-in');
 
     // 6. PRIVACY: contacts and questionnaire answers never reach tournament records, audit log, exports, spectator view or the page
     const E = w.eventId, O = w.ids.org;
