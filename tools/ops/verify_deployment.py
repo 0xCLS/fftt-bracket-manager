@@ -7,7 +7,9 @@
 Checks: every file listed in MANIFEST.json is served with the same SHA-256 (and the live MANIFEST.json equals the local one);
 security headers; private paths (server/, functions/, SQL, tests, docs) answer 404; for `staff`, the registration Function
 refuses a GET (405) and a token-less POST (401) and, for `spectator`, serves no Function at all. Sends no credential, no data.
-Exit code 0 only if everything passed. Uses a browser-like User-Agent (Cloudflare refuses the default Python agent)."""
+Exit code 0 only if everything passed.
+`--static-only` (used by the pipeline on a throw-away PREVIEW deployment, before anything is promoted) skips the checks that
+depend on the production project's secrets and pinned origin: the token-less POST (401) and the Function's own headers. Uses a browser-like User-Agent (Cloudflare refuses the default Python agent)."""
 import argparse, hashlib, json, sys, urllib.error, urllib.request
 from pathlib import Path
 
@@ -24,6 +26,7 @@ def get(url, method='GET', data=None, headers=None):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument('--bundle', required=True); ap.add_argument('--base', required=True)
     ap.add_argument('--kind', choices=['staff', 'spectator'], required=True)
+    ap.add_argument('--static-only', action='store_true')
     a = ap.parse_args(); base = a.base.rstrip('/'); root = Path(a.bundle)
     fails = []
     def check(ok, label):
@@ -59,9 +62,10 @@ def main():
         origin = base
         st, h, _ = get(base + '/api/registrations')
         check(st == 405, f'GET /api/registrations -> {st} (expected 405)')
-        st, h, _ = get(base + '/api/registrations', 'POST', b'{"action":"capabilities","eventId":"00000000-0000-4000-8000-000000000000"}', {'Content-Type': 'application/json', 'Origin': origin})
-        check(st == 401, f'token-less POST /api/registrations -> {st} (expected 401)')
-        check('no-store' in (h.get('Cache-Control') or ''), 'the Function answers with Cache-Control: no-store')
+        if not a.static_only:
+            st, h, _ = get(base + '/api/registrations', 'POST', b'{"action":"capabilities","eventId":"00000000-0000-4000-8000-000000000000"}', {'Content-Type': 'application/json', 'Origin': origin})
+            check(st == 401, f'token-less POST /api/registrations -> {st} (expected 401)')
+            check('no-store' in (h.get('Cache-Control') or ''), 'the Function answers with Cache-Control: no-store')
     else:
         st, _, _ = get(base + '/api/registrations', 'POST', b'{}', {'Content-Type': 'application/json', 'Origin': base})
         check(st in (404, 405), f'the spectator origin serves no registration Function (POST -> {st})')

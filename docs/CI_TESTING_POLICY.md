@@ -66,3 +66,7 @@ and require all three `foundation`, `test` and `Disposable synthetic PostgreSQL`
 ## Full-regression runtime improvement — 2026-10-28 (proposed CI branch)
 
 The broad application test job is partitioned into two independent jobs, `foundation` (Python browser/security and legacy checks) and `test` (game-day and launch-mode JavaScript/Chromium suites). Both retain their original test commands and execute concurrently with the disposable PostgreSQL job. Node npm downloads use lockfile-keyed setup-node caching. The full release gate now requires **all three** jobs green on the exact release SHA, not merely the previous two. No security or launch test is removed. The first CI run of this workflow change must itself use the full lane and must pass before adoption; runtime improvement remains unverified until then.
+
+## Automatic staging deployment — October 28, 2026
+
+`.github/workflows/deploy-staging.yml` now deploys the Staff and Spectator **staging** Pages projects automatically after the full regression (above) is green on the exact commit. It reuses the PR's full run or starts it once; it never deploys on a fast lane. See [FFTT3_STAGING_PIPELINE.md](launch/FFTT3_STAGING_PIPELINE.md).

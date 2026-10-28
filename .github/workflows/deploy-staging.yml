@@ -1,0 +1,112 @@
+name: Deploy FFTT3 staging
+
+# Automatic STAGING release of the Staff and Spectator Cloudflare Pages projects from the authoritative
+# integration branch. It can reach only fftt3-staff-stg and fftt3-games-stg (constants in
+# tools/ops/staging_release.py). It never touches production, GitHub Pages, Supabase, Cloudflare variables or secrets.
+# Process and recovery: docs/launch/FFTT3_STAGING_PIPELINE.md
+
+on:
+  push:
+    branches: [integration/milestone1-secure-foundation]
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Redeploy both apps even if the live content is already identical
+        type: boolean
+        default: false
+
+# One release at a time; a newer push waits behind the running one and the stale intermediate ones are dropped.
+concurrency:
+  group: staging-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Build and compare with live
+    if: github.ref == 'refs/heads/integration/milestone1-secure-foundation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      any: ${{ steps.plan.outputs.any }}
+      staff: ${{ steps.plan.outputs.staff }}
+      spectator: ${{ steps.plan.outputs.spectator }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Build both sanitized staging bundles from this exact commit
+        run: python3 tools/ops/staging_release.py build --commit "$GITHUB_SHA" --out "$RUNNER_TEMP/bundles"
+      - name: Decide what is not already live (docs-only and unrelated pushes deploy nothing)
+        id: plan
+        run: python3 tools/ops/staging_release.py plan --commit "$GITHUB_SHA" --bundles "$RUNNER_TEMP/bundles" ${{ inputs.force && '--force' || '' }}
+      - name: Keep the exact bytes that will be uploaded
+        if: steps.plan.outputs.any == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundles-${{ github.sha }}
+          path: ${{ runner.temp }}/bundles
+          retention-days: 14
+          if-no-files-found: error
+
+  gate:
+    name: Require the full regression on this commit
+    needs: plan
+    if: needs.plan.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      checks: read
+      actions: write   # start the full regression if only a fast UI lane ran for this commit
+    outputs:
+      superseded: ${{ steps.gate.outputs.superseded }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Wait for (or start) the full regression on this exact commit
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/ops/staging_release.py gate --commit "$GITHUB_SHA"
+
+  deploy:
+    name: Release, verify and promote
+    needs: [plan, gate]
+    if: needs.gate.outputs.superseded != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: staging
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: bundles-${{ github.sha }}
+          path: ${{ runner.temp }}/bundles
+      - name: Staff — preview check, promote, live check (auto-rollback on failure)
+        if: needs.plan.outputs.staff == 'true'
+        run: python3 tools/ops/staging_release.py release --kind staff --bundle "$RUNNER_TEMP/bundles/staff" --commit "$GITHUB_SHA"
+      - name: Spectator — preview check, promote, live check (auto-rollback on failure)
+        if: needs.plan.outputs.spectator == 'true'
+        run: python3 tools/ops/staging_release.py release --kind spectator --bundle "$RUNNER_TEMP/bundles/spectator" --commit "$GITHUB_SHA"
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### FFTT3 staging release ${GITHUB_SHA::7}"
+            echo "- Staff: ${{ needs.plan.outputs.staff == 'true' && 'released' || 'unchanged' }} — https://fftt3-staff-stg.pages.dev"
+            echo "- Spectator: ${{ needs.plan.outputs.spectator == 'true' && 'released' || 'unchanged' }} — https://fftt3-games-stg.pages.dev"
+            echo "- Job result: ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"
