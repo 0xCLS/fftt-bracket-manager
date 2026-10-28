@@ -15,6 +15,58 @@ const SOURCE_STATE = {'google-sheets': 'connected', 'synthetic-fixture': 'fictio
 const REASON_TEXT = {'same-email': 'Same e-mail', 'same-phone': 'Same phone', 'same-name': 'Same name', 'similar-name': 'Similar name'};
 const FILTERS = [['todo', 'Not checked in'], ['all', 'Everyone'], ['in', 'Checked in'], ['attention', 'Needs a look']];
 const CONFIDENCE_TEXT = {high: 'confident', medium: 'fairly sure', low: 'a guess', none: 'no suggestion'};
+
+/** Equal-width/equal-height vector rank shields. Decorative: the full accessible
+ * level name is printed beside each shield. No external image fetch or data use. */
+export function levelShield(level) {
+  if (level === null) {
+    const unset = document.createElement('span');
+    unset.className = 'rank-badge is-unset';
+    unset.dataset.level = 'unset';
+    unset.setAttribute('aria-hidden', 'true');
+    unset.textContent = '–';
+    return unset;
+  }
+  const tile = document.createElement('span');
+  tile.className = 'rank-badge';
+  tile.dataset.level = String(level);
+  tile.setAttribute('aria-hidden', 'true');
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 40 40');
+  svg.setAttribute('width', '40');
+  svg.setAttribute('height', '40');
+  svg.setAttribute('focusable', 'false');
+  svg.setAttribute('aria-hidden', 'true');
+  const path = (d, cls) => {
+    const el = document.createElementNS(ns, 'path');
+    el.setAttribute('d', d);
+    el.setAttribute('class', cls);
+    svg.append(el);
+  };
+  // Shield boundary covers a square 38 × 38 viewBox footprint.
+  path('M20 1 L39 11.5 V29 L20 39 L1 29 V11.5 Z', 'rank-edge');
+  path('M20 5 L35 13.5 V27 L20 35 L5 27 V13.5 Z', 'rank-face');
+  path('M20 2.5 L37 12 V15 M3 15 V12 L20 2.5', 'rank-glint');
+  if (level === 5) {
+    // Classic five-point star: broad horizontal arms and pointed top as approved.
+    const star = 'M20 9 L23.2 17 L32 17 L25 22.5 L27.7 31 L20 25.9 L12.3 31 L15 22.5 L8 17 L16.8 17 Z';
+    path(star, 'rank-star-shadow');
+    path(star, 'rank-star');
+    svg.dataset.emblem = 'five-point-star';
+  } else {
+    const positions = {1: [19], 2: [15.5, 22.5], 3: [12.5, 19, 25.5], 4: [10.5, 16.5, 22.5, 28.5]};
+    for (const y of positions[level] ?? []) {
+      const chevron = 'M12 ' + y + ' L20 ' + (y + 3.5) + ' L28 ' + y;
+      path(chevron, 'rank-chevron-shadow');
+      path(chevron, 'rank-chevron');
+    }
+    svg.dataset.emblem = 'chevrons';
+  }
+  tile.append(svg);
+  return tile;
+}
+
 const ago = ms => { const s = Math.max(0, Math.round(ms / 1000)); return s < 5 ? 'just now' : s < 90 ? `${s} seconds ago` : `${Math.round(s / 60)} minutes ago`; };
 
 export function createPlayersView(ctx) {
@@ -104,10 +156,10 @@ export function createPlayersView(ctx) {
         r.ratingReview && r.suggestedRating !== null && row.edit.rating === undefined ? h('span', {class: 'reg-note warn', text: 'Organizer review: the answers disagree with the chosen profile. Check the suggested level.'}) : null,
         row.rosterMatch && row.state === 'new' ? h('span', {class: 'reg-note', text: `Roster already has “${row.rosterMatch.name}”.`}) : null),
       h('div', {class: 'reg-level'},
-        h('span', {class: 'rating-chip', 'data-level': row.rating === null ? 'unset' : String(row.rating), 'aria-hidden': 'true', text: row.rating === null ? '–' : String(row.rating)}),
+        levelShield(row.rating),
         h('span', {class: 'reg-level-text'}, h('span', {text: row.rating === null ? 'No level yet' : levelLabel(row.rating)}),
           h('span', {class: 'muted', text: row.edit.rating !== undefined ? 'Your choice' : row.rating === null ? 'Choose one to check in' : `Suggested · ${CONFIDENCE_TEXT[r.ratingConfidence]}`}))),
-      h('div', {class: 'reg-state'}, pill(...stateText)),
+      h('div', {class: 'reg-state'}, stateText[0] === 'Not checked in' ? null : pill(...stateText)),
       h('div', {class: 'reg-actions'}, primary,
         row.state !== 'in' ? h('button', {type: 'button', class: 'small ghost', 'aria-expanded': String(editing), 'aria-controls': nameId + '-edit', text: editing ? 'Done' : 'Edit',
           'aria-label': `${editing ? 'Finish editing' : 'Edit name and level for'} ${row.name}`,
@@ -363,8 +415,8 @@ export function createPlayersView(ctx) {
         rg ? kpi(rg.registrants.filter(r => !onRoster.has(r.ref)).length, 'Registered, not here yet', 'lime') : null,
         kpi(unconfirmed, 'Levels to confirm', unconfirmed ? 'butter' : '')),
       h('div', {class: 'players-workspace'},
-        h('div', {class: 'players-main'}, settingsCard(sn), registrationCard(sn), duplicatesCard(sn)),
+        h('div', {class: 'players-main'}, settingsCard(sn)),
         h('div', {class: 'players-side'}, walkInCard(sn))),
-      rosterCard(sn), manualCard(sn));
+      registrationCard(sn), duplicatesCard(sn), rosterCard(sn), manualCard(sn));
   };
 }
