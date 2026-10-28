@@ -127,16 +127,19 @@ test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Sta
       const layout = await org.page.evaluate(() => {
         const page = document.querySelector('.players-page').getBoundingClientRect();
         const settings = document.querySelector('.players-main .reg-settings').getBoundingClientRect();
-        const reg = document.querySelector('.players-main .reg-card').getBoundingClientRect();
+        const reg = document.querySelector('.players-page > .reg-card').getBoundingClientRect();
         const walk = document.querySelector('.players-side #walkTitle').closest('.card').getBoundingClientRect();
         const roster = document.getElementById('rosterTitle').closest('.card').getBoundingClientRect();
         return {width:page.width,settings:{top:settings.top,left:settings.left},reg:{top:reg.top,bottom:reg.bottom,left:reg.left,right:reg.right},walk:{top:walk.top,left:walk.left,bottom:walk.bottom},rosterTop:roster.top,score:getComputedStyle(document.documentElement).getPropertyValue('--tile').trim()};
       });
       assert.equal(layout.score, '26px', 'scores use the reduced size');
       assert.ok(layout.settings.top < layout.reg.top, 'registration configuration comes before loading');
-      if (layout.width >= 980) assert.ok(layout.walk.left >= layout.reg.right - 2, `walk-in is beside registration when room permits @ ${vp}`);
-      else assert.ok(layout.walk.top >= layout.reg.bottom - 2, `walk-in stacks after registration on smaller screens @ ${vp}`);
-      assert.ok(layout.rosterTop >= Math.max(layout.reg.bottom,layout.walk.bottom) - 2, 'full-width roster follows the check-in workspace');
+      if (layout.width >= 980) assert.ok(layout.walk.left > layout.settings.left, `walk-in sits beside settings on roomy screens @ ${vp}`);
+      else assert.ok(layout.walk.top > layout.settings.top, `walk-in stacks after settings on smaller screens @ ${vp}`);
+      assert.ok(layout.reg.top >= layout.walk.bottom - 2, 'full-width registration list follows the settings and walk-in workspace');
+      assert.ok(Math.abs(layout.reg.left - layout.settings.left) <= 2, 'registration list aligns with left edge of the workspace');
+      assert.ok(layout.reg.right >= layout.walk.left, 'registration list spans the right side of the check-in workspace');
+      assert.ok(layout.rosterTop >= layout.reg.bottom - 2, 'roster follows registrations');
       await org.page.locator('#regSetToggle').click();
       await org.page.locator('#regSetBody').waitFor();
       await org.page.locator('.choice', {hasText: 'Google Sheet'}).click();
@@ -152,42 +155,42 @@ test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Sta
       await org.page.locator('.reg-body .reg-meta').waitFor({timeout: T});
       await org.page.locator('.reg-body .reg-row').first().waitFor({timeout: T});
 
-// Every level is independently recognizable by shape and color even without
-// looking at the label. Use isolated DOM specimens; no real registrants or writes.
-if (vp === 'desktop') {
-  const levelTiles = await org.page.evaluate(() => {
-    const host = document.createElement('div');
-    host.className = 'reg-level';
-    host.style.cssText = 'position:absolute;left:-9999px;top:-9999px';
-    document.body.append(host);
-    const items = [1, 2, 3, 4, 5].map(n => {
-      const tile = document.createElement('span');
-      tile.className = 'rating-chip';
-      tile.dataset.level = String(n);
-      tile.textContent = String(n);
-      host.append(tile);
-      const st = getComputedStyle(tile);
-      return {n, background:st.backgroundColor, foreground:st.color, clip:st.clipPath,
-        radius:st.borderRadius, width:tile.getBoundingClientRect().width, height:tile.getBoundingClientRect().height};
-    });
-    host.remove();
-    return items;
-  });
-  assert.equal(new Set(levelTiles.map(x => x.background)).size, 5, 'all five levels have distinct colors');
-  assert.ok(levelTiles.every(x => x.width === 38 && x.height === 38), 'level symbols align at identical dimensions');
-  assert.ok(levelTiles[0].radius.startsWith('9px'), 'Level 1 is a rounded square');
-  assert.equal(levelTiles[1].radius, '50%', 'Level 2 is circular');
-  for (const i of [2, 3, 4]) assert.match(levelTiles[i].clip, /polygon\(/, `Level ${i + 1} has a geometric shape`);
-  assert.equal(new Set(levelTiles.slice(2).map(x => x.clip)).size, 3, 'Levels 3–5 use different hexagon, diamond, shield silhouettes');
-  const visible = await org.page.locator('.reg-row .reg-level').first().evaluate(e => ({
-    level: e.querySelector('.rating-chip').dataset.level,
-    hidden: e.querySelector('.rating-chip').getAttribute('aria-hidden'),
-    text: e.querySelector('.reg-level-text').innerText
-  }));
-  assert.equal(visible.hidden, 'true', 'decorative numerals are hidden from assistive technology');
-  if (visible.level !== 'unset') assert.ok(visible.text.includes('Level ' + visible.level), 'accessible text retains the actual level number');
-}
 
+      // Same shield geometry for every rank, in a 40×40 square.
+      if (vp === 'desktop') {
+        const shields = await org.page.evaluate(async () => {
+          const {levelShield} = await import('/app/view_players.mjs');
+          const host = document.createElement('div');
+          host.className = 'reg-level';
+          document.body.append(host);
+          const result = [1, 2, 3, 4, 5].map(n => {
+            const tile = levelShield(n);
+            host.append(tile);
+            const box = tile.getBoundingClientRect(), svg = tile.querySelector('svg'), style = getComputedStyle(tile);
+            return {n, w:box.width, h:box.height, viewBox:svg.getAttribute('viewBox'),
+              face:style.getPropertyValue('--rank-face').trim(),
+              chevrons:svg.querySelectorAll('.rank-chevron').length,
+              stars:svg.querySelectorAll('.rank-star').length,
+              starPath:svg.querySelector('.rank-star')?.getAttribute('d') || '',
+              hidden:tile.getAttribute('aria-hidden')};
+          });
+          host.remove();
+          return result;
+        });
+        assert.ok(shields.every(x => x.w === 40 && x.h === 40 && x.viewBox === '0 0 40 40'), 'all five icons have equal square dimensions');
+        assert.equal(new Set(shields.map(x => x.face)).size, 5, 'five distinct level colors');
+        assert.deepEqual(shields.map(x => x.chevrons), [1, 2, 3, 4, 0], 'ranks 1–4 contain corresponding chevrons');
+        assert.deepEqual(shields.map(x => x.stars), [0, 0, 0, 0, 1], 'only Level 5 contains a star');
+        assert.ok(shields[4].starPath.includes('L32 17 L25 22.5'), 'Level 5 star uses the approved classic silhouette');
+        assert.ok(shields.every(x => x.hidden === 'true'), 'icon meaning is duplicated as text for assistive technology');
+        const seen = await org.page.locator('.reg-row .reg-level').first().evaluate(e => ({
+          level:e.querySelector('.rank-badge')?.dataset.level,
+          label:e.querySelector('.reg-level-text')?.innerText || ''
+        }));
+        if (seen.level !== 'unset') assert.ok(seen.label.includes('Level ' + seen.level), 'level text names the rank independently of shape and color');
+        assert.equal(await org.page.locator('.reg-row .reg-state', {hasText: 'Not checked in'}).count(), 0,
+          'ordinary unchecked registrants do not repeat a status pill');
+      }
       await org.page.locator('.reg-row .reg-pick input:enabled').first().check();   // opens the bulk-selection panel
       await org.page.locator('.bulk-bar').waitFor({state: 'visible', timeout: T});
       const regGaps = await org.page.evaluate(() => {
@@ -502,6 +505,9 @@ test('REGISTRATION SETTINGS (event-specific Google Sheet, fake Google): recogniz
     assert.match(await page.locator('.diag').innerText(), /21 responses \(a count only; no answers were read\)/);
     assert.match(await page.locator('#map-rallies option:checked').innerText(), /^Detected: /);
     assert.match(await page.locator('.map-row', {has: page.locator('#map-name')}).innerText(), /Recognized/);
+    assert.equal(await page.locator('#map-firstName').count(), 0, 'unused first name hidden when Full Name is present');
+    assert.equal(await page.locator('#map-lastName').count(), 0, 'unused last name hidden when Full Name is present');
+    assert.equal(await page.locator('#map-selfLevel').count(), 0, 'unprovided self-reported level hidden');
     // 6. explicit mapping choice + "not in my form"
     await idle(page);
     await page.selectOption('#map-description', '__none__');
