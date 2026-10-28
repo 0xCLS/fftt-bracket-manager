@@ -46,7 +46,11 @@ test('formats: configured on Overview, applied to the bracket, shown to scorekee
     await toast(org.page, /formats saved/i);
     await goTab(org.page, 'Players');
     await org.page.locator('h2', {hasText: /Roster/}).waitFor({timeout: T});
-    await org.page.locator('button', {hasText: 'Check in all'}).click();
+    await org.page.getByRole('button', {name: 'Check in all', exact: true}).click();
+    const checkInDialog = org.page.locator('dialog[open]');
+    assert.match(await checkInDialog.innerText(), /every roster player/i, 'bulk check-in requires explicit attendance confirmation');
+    await checkInDialog.getByRole('button', {name: 'Check in all players', exact: true}).click();
+    await org.page.locator('dialog[open]').waitFor({state: 'detached', timeout: T});
     await goTab(org.page, 'Championship');
     await org.page.locator('button', {hasText: 'Build championship bracket'}).click();
     await org.page.locator('h2', {hasText: /Ready to play/}).waitFor({timeout: T});
