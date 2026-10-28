@@ -5,7 +5,7 @@ import {h, clear, fill, toast, download, pill} from './dom.mjs';
 import {bracketView} from './bracket_view.mjs';
 import {suggestPartners, enginePlayers, seedSlots, roundName, partnerCandidates, normalizeGameScores, formatLabel, ALLOWED_BEST_OF, ALLOWED_POINTS} from '../contracts/gameday_engine.mjs';
 import {normalizeSnapshotMatches, standingsFromSnapshot, resultsText, matchesCsv} from './exports.mjs';
-import {createPlayersView} from './view_players.mjs';
+import {createPlayersView, levelShield} from './view_players.mjs';
 import {createEventsView} from './view_events.mjs';
 import {scoreTiles} from './game_tiles.mjs';
 
@@ -300,8 +300,8 @@ export function createStaffUi({core, els, config, signOut}) {
           h('b', {text: `${cands.length}`}), ` first-match loser${cands.length === 1 ? '' : 's'}. `,
           pending.length ? `${pending.length} player(s) have not yet played their first championship match: ${pending.slice(0, 6).map(nameOf).join(', ')}${pending.length > 6 ? '…' : ''}.`
             : 'Everyone has played a first match.'),
-        cands.length ? h('div', {class: 'scroll-x'}, h('table', {class: 'responsive-table'}, h('thead', {}, h('tr', {}, ['Include', 'Player', 'Rating'].map(t => h('th', {scope: 'col', text: t})))),
-          h('tbody', {}, cands.map(c => h('tr', {}, h('td', {'data-label': 'Include'}, cons ? pill(c.state, c.state === 'placed' ? 'good' : '') : checks.get(c.playerId)), h('td', {'data-label': 'Player'}, c.p.name), h('td', {'data-label': 'Rating'}, h('span', {class: 'rating-chip', text: String(c.p.rating)}))))))) : h('div', {class: 'empty-state', text: 'No candidates yet. They appear as first-round matches are decided.'}),
+        cands.length ? h('div', {class: 'scroll-x'}, h('table', {class: 'responsive-table'}, h('thead', {}, h('tr', {}, ['Include', 'Player', 'Level'].map(t => h('th', {scope: 'col', text: t})))),
+          h('tbody', {}, cands.map(c => h('tr', {}, h('td', {'data-label': 'Include'}, cons ? pill(c.state, c.state === 'placed' ? 'good' : '') : checks.get(c.playerId)), h('td', {'data-label': 'Player'}, c.p.name), h('td', {'data-label': 'Level'}, h('span', {class: 'cons-level', role: 'img', 'aria-label': `Level ${c.p.rating}`, title: `Level ${c.p.rating}`}, levelShield(c.p.rating)))))))) : h('div', {class: 'empty-state', text: 'No candidates yet. They appear as first-round matches are decided.'}),
         h('div', {class: 'row'},
           !cons ? h('button', {class: 'primary', type: 'button', disabled: !core.canWrite() || pending.length > 0 || cands.length < 2, text: 'Build consolation bracket',
             on: {click: async () => { const ids = cands.filter(c => checks.get(c.playerId).checked).map(c => c.playerId);

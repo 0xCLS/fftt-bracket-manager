@@ -261,7 +261,23 @@ test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Sta
       await spacing(org.page, `correction dialog @ ${vp}`);
       await shot(org.page, `${vp}-correction-dialog`);
       await org.page.keyboard.press('Escape');
-      for (const tab of ['Results & Export', 'Championship', 'Consolation']) { await goTab(org.page, tab); await org.page.waitForTimeout(300); await spacing(org.page, `${tab} @ ${vp}`); }
+      for (const tab of ['Results & Export', 'Championship', 'Consolation']) {
+        await goTab(org.page, tab);
+        await org.page.waitForTimeout(300);
+        await spacing(org.page, `${tab} @ ${vp}`);
+        if (tab === 'Consolation') {
+          const levels = await org.page.locator('[aria-labelledby="consTitle"] .cons-level').evaluateAll(els => els.map(el => ({
+            level: el.querySelector('.rank-badge')?.dataset.level,
+            accessible: el.getAttribute('aria-label'),
+            numericChip: !!el.querySelector('.rating-chip')
+          })));
+          assert.equal(levels.length, 5, 'all five fictional consolation entrants have level shields');
+          assert.ok(levels.every(x => x.level && x.accessible === 'Level ' + x.level && !x.numericChip),
+            'Consolation uses level shields with accessible numeric labels instead of old rating chips');
+          assert.equal(await org.page.locator('[aria-labelledby="consTitle"] th', {hasText: 'Level'}).count(), 1,
+            'Consolation table heading is Level');
+        }
+      }
       const spec = await w.device('spec-' + vp, opts);
       await spec.open(SPECT + '/');
       await spec.page.locator('#evName', {hasText: 'Synthetic'}).waitFor({timeout: T});
@@ -397,11 +413,15 @@ test('SCORE TILES: equal squares, tabular numerals, green winner / red loser per
       const cdims = await spec.page.evaluate(() => [...document.querySelectorAll('.match-foot .score-tile')].map(t => { const r = t.getBoundingClientRect(); return [r.width, r.height]; }));
       assert.ok(cdims.every(([a, b]) => Math.abs(a - b) < 0.5 && Math.abs(a - cdims[0][0]) < 0.5), 'bracket cards use equal compact squares');
       const rules = await spec.page.evaluate(() => [...document.querySelectorAll('.bracket .match-foot .score-game+.score-game')].map(g => {
-        const line = getComputedStyle(g, '::before');
-        return {height: parseFloat(line.height), width: parseFloat(line.width), content: line.content};
+        const line = getComputedStyle(g, '::before'), style = getComputedStyle(g);
+        return {height: parseFloat(line.height), width: parseFloat(line.width), content: line.content,
+          left: parseFloat(style.marginLeft), right: parseFloat(style.paddingLeft),
+          gap: parseFloat(getComputedStyle(g.parentElement).columnGap)};
       }));
       assert.ok(rules.length > 0 && rules.every(x => x.height === 14 && x.width === 1 && x.content !== 'none'),
         'championship and consolation game separators are shorter than their score squares');
+      assert.ok(rules.every(x => x.left === x.right && x.left === 10 && x.gap === 0),
+        'each divider has an equal 10px gap on both sides, with no inherited column gap');
       const ov = await spec.page.evaluate(() => [...document.querySelectorAll('.match')].filter(m => m.scrollWidth > m.clientWidth + 1).length);
       assert.equal(ov, 0, 'tiles never overflow a bracket card');
     }
@@ -533,9 +553,16 @@ test('REGISTRATION SETTINGS (event-specific Google Sheet, fake Google): recogniz
     assert.equal(await page.locator('.reg-share-help').count(), 0, 'sharing instructions disappear after verified access');
     assert.match(await page.locator('.sub-block').first().innerText(), /Column mapping/);
     const mappingSummary = page.locator('.reg-mapping-disclosure summary');
-    const beforeMappingToggle = await mappingSummary.evaluate(e => ({
-      open: e.parentElement.open, mark: getComputedStyle(e, '::after').content
-    }));
+    const beforeMappingToggle = await mappingSummary.evaluate(e => {
+      const mark = getComputedStyle(e, '::after');
+      const status = e.querySelector('.pill').getBoundingClientRect();
+      const header = e.getBoundingClientRect();
+      return {open: e.parentElement.open, mark: mark.content,
+        unboxed: parseFloat(mark.borderTopWidth) === 0 && mark.backgroundColor === 'rgba(0, 0, 0, 0)',
+        rightGroup: header.right - status.right < 70};
+    });
+    assert.ok(beforeMappingToggle.unboxed && beforeMappingToggle.rightGroup,
+      'plain unboxed plus/minus is grouped with recognition status at the right edge');
     assert.match(beforeMappingToggle.mark, beforeMappingToggle.open ? /−/ : /\+/, 'disclosure marks its current state');
     await mappingSummary.click();
     const afterMappingToggle = await mappingSummary.evaluate(e => ({

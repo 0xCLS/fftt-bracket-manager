@@ -52,6 +52,17 @@ test('fast Players UI: safe fictional Google headings, responsive Overview layou
       await org.page.locator('#regSheet').fill('https://docs.google.com/spreadsheets/d/'+SHEET+'/edit');
       await org.page.locator('#regCheck').click();
       await org.page.locator('.diag-list li').first().waitFor({timeout:20000});
+      const mapping = await org.page.evaluate(() => {
+        const summary = document.querySelector('.reg-mapping-disclosure summary');
+        const mark = getComputedStyle(summary, '::after'), badge = summary.querySelector('.pill').getBoundingClientRect();
+        const outer = summary.getBoundingClientRect();
+        return {border: parseFloat(mark.borderTopWidth), background: mark.backgroundColor,
+          badgeGap: outer.right - badge.right, marker: mark.content};
+      });
+      assert.equal(mapping.border, 0, 'expand marker has no box outline');
+      assert.equal(mapping.background, 'rgba(0, 0, 0, 0)', 'expand marker has no filled box');
+      assert.ok(mapping.badgeGap < 70 && mapping.badgeGap > 25, 'recognition pill sits near the right-hand plus');
+      assert.match(mapping.marker, /\\+/, 'column mapping is visibly expandable');
       // A read-only recheck of the same saved spreadsheet must not invent unsaved edits.
       await org.page.locator('#regSave').click();
       await org.page.locator('.reg-unsaved').waitFor({state:'detached',timeout:20000});
