@@ -804,7 +804,7 @@ td.scores-cell{min-width:150px}
 #app .players-registration-config .choice-group .choices{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
 #app .players-registration-config .choice-card{padding:13px 16px}
 #app .players-registration-config .reg-set-body>.field{display:flex;flex-direction:column;gap:6px}
-#app .players-registration-config .field>label{font-weight:700;font-size:12px}
+#app .players-registration-config .field>label{font-weight:700;font-size:12px;margin:0}
 #app .players-registration-config .field .input-action{display:flex;align-items:center;gap:12px}
 #app .players-registration-config .field .input-action input{min-width:0;flex:1}
 #app .players-registration-config .field>.help{margin:0}
