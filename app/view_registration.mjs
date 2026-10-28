@@ -70,7 +70,14 @@ export function createRegistrationSettings(ctx) {
     if (!diag || !diag.columns.length) return h('p', {class: 'help', text: 'Run “Test connection” to read the sheet\'s column headings and preview how they will be used.'});
     const headers = diag.columns.map(c => c.header);
     const byField = new Map(diag.columns.filter(c => c.field).map(c => [c.field, c]));
-    const rows = MAPPING_FIELDS.map(([key, label, group]) => {
+    // Unmapped optional fields stay in the shared schema, but need not clutter
+    // forms that already provide Full Name and six playing-assessment answers.
+    const visibleFields = MAPPING_FIELDS.filter(([key]) => {
+      if (['firstName', 'lastName'].includes(key) && byField.has('name') && !byField.has(key) && st.mapping[key] === undefined) return false;
+      if (key === 'selfLevel' && !byField.has(key) && st.mapping[key] === undefined) return false;
+      return true;
+    });
+    const rows = visibleFields.map(([key, label, group]) => {
       const detected = byField.get(key);
       const chosen = st.mapping[key];
       const sel = h('select', {id: 'map-' + key, 'aria-label': `Column for ${label}`, disabled: readOnly || !writable() || s.registrationSettings.busy !== null,
