@@ -103,7 +103,11 @@ const spacing = async (page, label) => { for (const b of await page.evaluate(SPA
 test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Staff, Players, settings, sign-in, recovery, dialogs) at desktop, tablet and phone', {timeout: 900000}, async () => {
   const w = await createBrowserWorld({google: google()});
   try {
-    await stageTournament(w);
+    const {snap: staged} = await stageTournament(w);
+    const expectedCandidateLevels = staged.consolation_candidates.map(c =>
+      String(staged.players.find(p => p.id === c.player_id)?.rating)).sort();
+    assert.ok(expectedCandidateLevels.length >= 2 && expectedCandidateLevels.every(x => x !== 'undefined'),
+      'fictional consolation candidates have assigned levels');
     for (const [vp, opts] of Object.entries(VIEWPORTS)) {
       // sign-in, with the recovery section open (its buttons used to sit against their inputs)
       const out = await w.device('signin-' + vp, opts);
@@ -271,7 +275,8 @@ test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Sta
             accessible: el.getAttribute('aria-label'),
             numericChip: !!el.querySelector('.rating-chip')
           })));
-          assert.equal(levels.length, 5, 'all five fictional consolation entrants have level shields');
+          assert.deepEqual(levels.map(x => x.level).sort(), expectedCandidateLevels,
+            'every actual fictional consolation candidate has the correct level shield');
           assert.ok(levels.every(x => x.level && x.accessible === 'Level ' + x.level && !x.numericChip),
             'Consolation uses level shields with accessible numeric labels instead of old rating chips');
           assert.equal(await org.page.locator('[aria-labelledby="consTitle"] th', {hasText: 'Level'}).count(), 1,
