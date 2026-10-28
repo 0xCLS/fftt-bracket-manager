@@ -48,3 +48,22 @@
 **Rollback reference:** Staff `3be2a824-70c0-4dd2-a894-b5c527a53a81` (from `efcdc00`; before it `944c112b-25ad-4ef2-9d81-c47acf1eb477`) — Cloudflare dashboard "Rollback to this deployment", or redeploy that bundle. Older Staff bundles still work against the upgraded database. Spectator is unchanged (`c41ef841-d5d3-4f75-9d23-cc1678b50cb8`).
 
 **Organizer review tasks:** sign in, open Players → Registration settings and confirm the simplified mapping on the real response sheet; Load registrations and eyeball the shields, compact list and suggested levels on a laptop and a phone; confirm duplicate groups and one-tap check-in behave as before (do not check anyone in until the event); table count and formats on Overview.
+
+# Addendum — Staff UI release, October 28, 2026 (unified Add players workspace, flat 32px shields)
+
+**Organizer-directed, Staff project only; Supabase, Spectator, Cloudflare variables/secrets, Google Sheets configuration, event visibility, staff access and event data untouched. Nobody was checked in. PR #19 remains a draft and unmerged.**
+
+| Item | Result |
+| --- | --- |
+| Release commit | `93609204bbfd1984e7d98eb20c25e2b479000e37`; CI run 40631915284 on that exact commit: both jobs green (Disposable synthetic PostgreSQL, test). Diff from the previous release (`8e78392`) touched only `app/app.css`, `app/view_players.mjs`, docs and e2e tests: **no** `functions/`, `server/` or `supabase/` change |
+| Bundle | `build_export.py` from a clean detached worktree at that commit (staff target, staging environment, both origins pinned); 36 files, manifest `commit` = the release commit; the existing `functions/api/registrations.js` Pages Function included |
+| Deployment | **Staff `f3a85bba-b1f7-4a91-9852-215d981e1b38`** to the existing `fftt3-staff-stg` project (Production, branch `main`), `https://fftt3-staff-stg.pages.dev` |
+| Live verification | `verify_deployment.py --kind staff` on the stable URL: **ALL LIVE CHECKS PASSED** — 34/34 served files hash-identical, live `MANIFEST.json` equals the local one, CSP self-only with only the pinned Supabase project, nosniff, no-referrer, no-store, noindex, HSTS, private paths not served, GET `/api/registrations` 405, token-less POST 401 |
+| Origin protection / secrets | POST from a foreign `Origin` → 403; same-origin POST without a token → 401; the project still lists all nine secrets by name (values untouched) |
+| Spectator | Not deployed; newest `fftt3-games-stg` deployment is still `c41ef841-d5d3-4f75-9d23-cc1678b50cb8` |
+| Live UI check (real Chrome, 390×844 touch 2× and 1440×900) | The **live deployed pages** driven with the Supabase host answered only by the fictional in-memory backend and `/api/registrations` stubbed (no request reached the hosted database): one combined Add players card, One player default, Paste a list switches panels, Add to roster / Add & check in are separate 44px actions that do not overlap, tab targets 40px, no horizontal scroll on Overview or Players in either viewport, a fictional walk-in added and checked in on the fictional backend, no request left the machine except the live origin; the only console messages were the deliberate 503 from the registration stub |
+| Not exercised live | A real signed-in Organizer session (no staff password available to the assistant), real registration rows, and a physical phone |
+
+**Rollback reference:** Staff `390e958a-79f3-4a2c-90bf-9a3056279050` (from `8e78392`), then `3be2a824-70c0-4dd2-a894-b5c527a53a81` (`efcdc00`) — Cloudflare dashboard "Rollback to this deployment", or redeploy that bundle. No database or Function change, so any of these is compatible with the hosted schema. Spectator unchanged (`c41ef841`).
+
+**Remaining Organizer visual checks (signed in, real session):** Players → confirm the One player / Paste a list switch, both buttons and the helper text read clearly on your phone and laptop; add one throwaway walk-in only if you are comfortable removing it afterward (Add & check in writes to the real event); Registration settings → Test connection / Load registrations on the real sheet and check the shields, compact list and column mapping; duplicate groups; table count and formats on Overview; confirm text sizes on a physical phone.
