@@ -27,7 +27,70 @@ on:
   workflow_dispatch:
 
 jobs:
+  classify:
+    name: Select safe CI lane
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      lane: ${{ steps.impact.outputs.lane }}
+    steps:
+      - name: Checkout PR head and history for reliable push-range comparison
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Classify the complete incremental push (fail closed)
+        id: impact
+        env:
+          EVENT_ACTION: ${{ github.event.action }}
+          SYNC_BEFORE: ${{ github.event.before }}
+          SYNC_AFTER: ${{ github.event.after }}
+        run: python3 tools/ci_impact.py
+
+  ui-targeted:
+    name: Fast UI checks (fictional Chrome)
+    needs: classify
+    if: needs.classify.outputs.lane == 'ui-visual' || needs.classify.outputs.lane == 'ui-interaction'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout precise PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated browser fixtures
+        working-directory: tests/e2e
+        run: |
+          npm ci
+          npx playwright-core install chromium
+      - name: Syntax and offline UI/privacy sanity
+        run: |
+          node --check app/view_players.mjs
+          node --check app/view_registration.mjs
+          python3 tests/ui_smoke.py
+          python3 tests/safety.py
+      - name: Focused phone/desktop UI regression (no hosted requests)
+        env:
+          FFTT_CHROME_CHANNEL: none
+        run: node --test tests/e2e/gameday_fast_ui_browser.test.mjs
+      - name: Registration and check-in workflow (when organizer UI code changes)
+        if: needs.classify.outputs.lane == 'ui-interaction'
+        env:
+          FFTT_CHROME_CHANNEL: none
+        run: node --test tests/e2e/gameday_registration_browser.test.mjs
+      - name: Google mapping and privacy workflow (when organizer UI code changes)
+        if: needs.classify.outputs.lane == 'ui-interaction'
+        env:
+          FFTT_CHROME_CHANNEL: none
+        run: node --test tests/e2e/gameday_launch_google_browser.test.mjs
+
   test:
+    needs: classify
+    if: needs.classify.outputs.lane == 'full'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -158,6 +221,8 @@ jobs:
 
   disposable-db:
     name: Disposable synthetic PostgreSQL
+    needs: classify
+    if: needs.classify.outputs.lane == 'full'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
