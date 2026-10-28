@@ -151,6 +151,43 @@ test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Sta
       await org.page.locator('#regLoad').click();
       await org.page.locator('.reg-body .reg-meta').waitFor({timeout: T});
       await org.page.locator('.reg-body .reg-row').first().waitFor({timeout: T});
+
+// Every level is independently recognizable by shape and color even without
+// looking at the label. Use isolated DOM specimens; no real registrants or writes.
+if (vp === 'desktop') {
+  const levelTiles = await org.page.evaluate(() => {
+    const host = document.createElement('div');
+    host.className = 'reg-level';
+    host.style.cssText = 'position:absolute;left:-9999px;top:-9999px';
+    document.body.append(host);
+    const items = [1, 2, 3, 4, 5].map(n => {
+      const tile = document.createElement('span');
+      tile.className = 'rating-chip';
+      tile.dataset.level = String(n);
+      tile.textContent = String(n);
+      host.append(tile);
+      const st = getComputedStyle(tile);
+      return {n, background:st.backgroundColor, foreground:st.color, clip:st.clipPath,
+        radius:st.borderRadius, width:tile.getBoundingClientRect().width, height:tile.getBoundingClientRect().height};
+    });
+    host.remove();
+    return items;
+  });
+  assert.equal(new Set(levelTiles.map(x => x.background)).size, 5, 'all five levels have distinct colors');
+  assert.ok(levelTiles.every(x => x.width === 38 && x.height === 38), 'level symbols align at identical dimensions');
+  assert.ok(levelTiles[0].radius.startsWith('9px'), 'Level 1 is a rounded square');
+  assert.equal(levelTiles[1].radius, '50%', 'Level 2 is circular');
+  for (const i of [2, 3, 4]) assert.match(levelTiles[i].clip, /polygon\(/, `Level ${i + 1} has a geometric shape`);
+  assert.equal(new Set(levelTiles.slice(2).map(x => x.clip)).size, 3, 'Levels 3–5 use different hexagon, diamond, shield silhouettes');
+  const visible = await org.page.locator('.reg-row .reg-level').first().evaluate(e => ({
+    level: e.querySelector('.rating-chip').dataset.level,
+    hidden: e.querySelector('.rating-chip').getAttribute('aria-hidden'),
+    text: e.querySelector('.reg-level-text').innerText
+  }));
+  assert.equal(visible.hidden, 'true', 'decorative numerals are hidden from assistive technology');
+  if (visible.level !== 'unset') assert.ok(visible.text.includes('Level ' + visible.level), 'accessible text retains the actual level number');
+}
+
       await org.page.locator('.reg-row .reg-pick input:enabled').first().check();   // opens the bulk-selection panel
       await org.page.locator('.bulk-bar').waitFor({state: 'visible', timeout: T});
       const regGaps = await org.page.evaluate(() => {
