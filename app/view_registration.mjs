@@ -40,10 +40,18 @@ export function createRegistrationSettings(ctx) {
   // UI-only state for the editing session (per event): what is typed/chosen but not yet saved
   const st = {eventId: null, open: false, kind: null, text: '', worksheet: '', mapping: {}, enabled: false, message: null, messageTone: 'bad', dirty: false, copied: false};
   function sync(src) {
-    if (st.eventId === s.eventId) return;
-    Object.assign(st, {eventId: s.eventId, open: false, kind: null, text: '', worksheet: '', mapping: {}, enabled: false, message: null, dirty: false});
-    if (src?.configured && src.kind === 'google-sheets') { st.kind = 'google-sheets'; st.text = src.spreadsheetId; st.worksheet = src.worksheet; st.mapping = {...src.columnMap}; st.enabled = src.enabled; }
-    else if (src?.configured) st.kind = 'fixture';
+    const changedEvent = st.eventId !== s.eventId;
+    if (changedEvent) {
+      Object.assign(st, {eventId: s.eventId, open: false, kind: null, text: '', worksheet: '', mapping: {}, enabled: false, message: null, dirty: false});
+    }
+    // Registration settings load asynchronously. Hydrate the saved selection once
+    // it arrives, but NEVER overwrite a local draft the Organizer has edited.
+    const needsSavedHydration = changedEvent || (!st.dirty && !st.text && !st.worksheet && st.kind === null);
+    if (!needsSavedHydration) return;
+    if (src?.configured && src.kind === 'google-sheets') {
+      st.kind = 'google-sheets'; st.text = src.spreadsheetId ?? ''; st.worksheet = src.worksheet ?? '';
+      st.mapping = {...(src.columnMap ?? {})}; st.enabled = !!src.enabled;
+    } else if (src?.configured) st.kind = 'fixture';
   }
   let loadedFor = null;
   const ensureLoaded = () => {
@@ -144,8 +152,14 @@ export function createRegistrationSettings(ctx) {
       h('div', {class: 'row'}, pill(st.dirty ? 'Current: ' + info.label : info.label, info.tone),
         h('button', {type: 'button', class: 'small', id: 'regSetToggle', 'aria-expanded': String(st.open), 'aria-controls': 'regSetBody', text: st.open ? 'Hide settings' : 'Registration settings',
           on: {click: () => { st.open = !st.open; rerender(); }}})));
-    const summary = h('p', {class: 'reg-source-line', id: 'regSourceLine'}, h('b', {text: info.label + '. '}), info.detail,
-      src?.configured && src.kind === 'google-sheets' ? h('span', {class: 'muted', text: ` “${src.spreadsheetTitle ?? 'Google Sheet'}” · tab “${src.worksheet}”.`}) : null);
+    const summary = h('div', {class: 'reg-source-line', id: 'regSourceLine'},
+      h('span', {class: 'reg-source-heading'}, h('b', {text: info.label}), h('span', {class: 'muted', text: info.detail})),
+      src?.configured && src.kind === 'google-sheets'
+        ? h('div', {class: 'reg-source-facts'},
+            h('span', {}, h('b', {text: 'Sheet'}), ' · ', src.spreadsheetTitle ?? 'Google Sheet'),
+            h('span', {}, h('b', {text: 'Tab'}), ' · ', src.worksheet || 'Not selected'),
+            src.lastResponseCount !== null ? h('span', {}, h('b', {text: 'Responses'}), ' · ', String(src.lastResponseCount)) : null)
+        : null);
     if (!st.open) return h('section', {class: 'card reg-settings', 'aria-labelledby': 'regSetTitle'}, head, summary);
 
     // ---- body
@@ -174,7 +188,10 @@ export function createRegistrationSettings(ctx) {
       const tabSel = h('select', {id: 'regTab', 'aria-describedby': 'regTabHelp', disabled: !editable || !writable() || busy || tabs.length === 0,
         on: {change: async ev => { st.worksheet = ev.target.value; st.mapping = {}; st.dirty = true; await runTest(); }}},
         tabs.length ? tabs.map(w => h('option', {value: w.title, text: w.title, selected: w.title === st.worksheet})) : h('option', {value: '', text: 'Check the sheet to list its tabs'}));
-      body.push(sharing(caps, !!diag?.ok && !!insp?.spreadsheetId && parseSpreadsheetRef(st.text) === insp.spreadsheetId));
+      const currentSheet = parseSpreadsheetRef(st.text);
+      const verifiedSheet = (!!diag?.ok && !!insp?.spreadsheetId && currentSheet === insp.spreadsheetId)
+        || (!!src?.configured && src.kind === 'google-sheets' && src.status === 'ready' && currentSheet === src.spreadsheetId);
+      body.push(sharing(caps, verifiedSheet));
       body.push(h('div', {class: 'field'}, h('label', {for: 'regSheet', text: 'Spreadsheet link or ID'}),
         h('div', {class: 'input-action'}, sheetInput,
           h('button', {type: 'button', class: 'primary', id: 'regCheck', disabled: !editable || !writable() || busy || !caps?.googleConfigured, text: rs.busy === 'inspect' ? 'Checking…' : 'Check sheet', 'aria-busy': String(rs.busy === 'inspect'), on: {click: runInspect}})),
@@ -185,7 +202,10 @@ export function createRegistrationSettings(ctx) {
       body.push(h('div', {class: 'row'}, h('button', {type: 'button', id: 'regTest', disabled: !editable || !writable() || busy || !st.worksheet || !caps?.googleConfigured, text: rs.busy === 'test' ? 'Testing…' : 'Test connection', 'aria-busy': String(rs.busy === 'test'), on: {click: runTest}}),
         h('span', {class: 'muted', text: 'Reads only the column headings and a response count. No answers are read.'})));
       body.push(diagnosticList(diag));
-      if (diag?.columns?.length) body.push(h('div', {class: 'sub-block'}, h('h3', {text: 'Column mapping (if needed)'}),
+      if (diag?.columns?.length) body.push(h('details', {class: 'sub-block reg-mapping-disclosure', open: !src?.configured || !diag.ok},
+        h('summary', {},
+          h('span', {}, h('strong', {text: 'Column mapping'}), h('span', {class: 'muted', text: ' · Advanced; review only if a heading needs correcting'})),
+          pill(diag.ok ? 'Automatically recognized' : 'Needs review', diag.ok ? 'good' : 'warn')),
         h('p', {class: 'help', text: 'We match familiar form headings automatically. Adjust only unmatched columns; levels without assessment answers require your review.'}),
         mappingTable(diag, !editable)));
       if (diag && !diag.ok && diag.checks.some(c => c.status === 'fail' && ['spreadsheet', 'worksheet'].includes(c.id)) && caps?.serviceAccountEmail)
