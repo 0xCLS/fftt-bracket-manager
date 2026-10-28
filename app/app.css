@@ -289,6 +289,7 @@ body.tv .champ{font-size:clamp(26px,3vw,50px);color:#f7e99b;font-weight:800}
 .reg-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
 .reg-edit{grid-column:2/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--space-3);padding:12px;margin-top:6px;background:#f7f9fb;border:1px solid var(--line);border-radius:var(--radius)}
 .reg-edit label{margin-top:0}
+.reg-edit-note{grid-column:1/-1;margin:0;color:#596774;font-size:12px;line-height:1.5}
 .reg-basis{grid-column:1/-1;font-size:12px;color:#46525f}.reg-basis ul{margin:4px 0 0;padding-left:18px}
 .bulk-bar{display:flex;flex-wrap:wrap;gap:var(--space-3);align-items:center;justify-content:space-between;padding:10px 14px;margin:0 0 var(--space-2);border-radius:var(--radius);background:#eaf3f5;border:1px solid #cfe3e8;position:sticky;top:8px;z-index:5}
 .bulk-count{font-weight:700;font-size:13px}
