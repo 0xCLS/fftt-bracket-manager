@@ -44,20 +44,20 @@ export function levelShield(level) {
     el.setAttribute('class', cls);
     svg.append(el);
   };
-  // Shield boundary covers a square 38 × 38 viewBox footprint.
+  // The emblem is deliberately inset from the shield's inner face at all levels.
   path('M20 1 L39 11.5 V29 L20 39 L1 29 V11.5 Z', 'rank-edge');
   path('M20 5 L35 13.5 V27 L20 35 L5 27 V13.5 Z', 'rank-face');
   // Flat, single-face badge: no metallic glint or gradients.
   if (level === 5) {
     // Classic five-point star: broad horizontal arms and pointed top as approved.
-    const star = 'M20 9 L23.2 17 L32 17 L25 22.5 L27.7 31 L20 25.9 L12.3 31 L15 22.5 L8 17 L16.8 17 Z';
+    const star = 'M20 12 L22.4 18 L29 18 L23.7 22.2 L25.7 28.6 L20 24.7 L14.3 28.6 L16.3 22.2 L11 18 L17.6 18 Z';
     // Keep the single white star, without a raised shadow.
     path(star, 'rank-star');
     svg.dataset.emblem = 'five-point-star';
   } else {
-    const positions = {1: [19], 2: [15.5, 22.5], 3: [12.5, 19, 25.5], 4: [10.5, 16.5, 22.5, 28.5]};
+    const positions = {1: [19], 2: [16.8, 22], 3: [14.2, 19.2, 24.2], 4: [11.8, 16.8, 21.8, 26.8]};
     for (const y of positions[level] ?? []) {
-      const chevron = 'M12 ' + y + ' L20 ' + (y + 3.5) + ' L28 ' + y;
+      const chevron = 'M14 ' + y + ' L20 ' + (y + 2.2) + ' L26 ' + y;
       path(chevron, 'rank-chevron');
     }
     svg.dataset.emblem = 'chevrons';
@@ -442,13 +442,17 @@ export function createPlayersView(ctx) {
     const kpi = (n, label, tone) => h('div', {class: 'mini-kpi ' + (tone ?? '')}, h('strong', {text: String(n)}), h('span', {text: label}));
     return h('div', {class: 'players-page'},
       built ? h('div', {class: 'notice warn players-bracket-notice', role: 'status', text: 'Championship bracket already built. New check-ins will not appear until you rebuild it.'}) : null,
-      h('div', {class: 'mini-kpis', role: 'group', 'aria-label': 'Check-in summary'},
-        kpi(checked, 'Checked in', 'ice'), kpi(sn.players.length, 'On the roster', 'lav'),
-        rg ? kpi(rg.registrants.filter(r => !onRoster.has(r.ref)).length, 'Registered, not here yet', 'lime') : null,
-        kpi(unconfirmed, 'Levels to confirm', unconfirmed ? 'butter' : '')),
-      h('div', {class: 'players-workspace'},
-        h('div', {class: 'players-main'}, settingsCard(sn)),
-        h('div', {class: 'players-side'}, addPlayersCard(sn))),
+      h('div', {class: 'players-overview'},
+        h('div', {class: 'players-add-column'}, addPlayersCard(sn)),
+        h('section', {class: 'players-snapshot', 'aria-labelledby': 'playersSnapshotTitle'},
+          h('div', {class: 'side-section-heading'},
+            h('span', {class: 'section-overline', text: 'LIVE SNAPSHOT'}),
+            h('h2', {id: 'playersSnapshotTitle', text: 'At a glance'})),
+          h('div', {class: 'mini-kpis', role: 'group', 'aria-label': 'Check-in summary'},
+            kpi(checked, 'Checked in', 'ice'), kpi(sn.players.length, 'On the roster', 'lav'),
+            kpi(rg ? rg.registrants.filter(r => !onRoster.has(r.ref)).length : 0, 'Registered, not here yet', 'lime'),
+            kpi(unconfirmed, 'Levels to confirm', 'butter')))),
+      h('div', {class: 'players-registration-config'}, settingsCard(sn)),
       registrationCard(sn), duplicatesCard(sn), rosterCard(sn));
   };
 }
