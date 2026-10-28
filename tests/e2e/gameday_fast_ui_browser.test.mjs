@@ -80,7 +80,7 @@ test('fast Players UI: safe fictional Google headings, responsive Overview layou
       assert.deepEqual(shields.map(s=>s.chevrons),[1,2,3,4,0]);
       assert.deepEqual(shields.map(s=>s.stars),[0,0,0,0,1]);
       assert.ok(shields.slice(0,4).every(s=>s.paths.every(p=>p.startsWith('M14 ')&&p.includes(' L26 '))));
-      assert.ok(shields[4].star.startsWith('M20 12 '),'star stays inset from shield border');
+      assert.ok(shields[4].star.startsWith('M20 10.5 '),'star moves up slightly but stays inset from shield border');
     }
     assert.deepEqual(w.pageErrors, [], 'no JavaScript exceptions');
   } finally { await w.close(); }
