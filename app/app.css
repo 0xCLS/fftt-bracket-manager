@@ -263,28 +263,26 @@ body.tv .champ{font-size:clamp(26px,3vw,50px);color:#f7e99b;font-weight:800}
 .reg-level-text{display:flex;flex-direction:column;font-size:12px;line-height:1.35}
 
 
-/* FFTT rank insignia: equal 40×40 badge boxes, one shield silhouette,
-   1–4 chevrons followed by a conventional five-point star at Level 5.
-   The adjacent text always names the level for clarity and accessibility. */
-.rank-badge{--rank-edge:#374151;--rank-face:#6b7280;--rank-ink:#fff;
+
+/* FFTT ranks: small, flat, square-footprint shields.
+   One geometric family, muted colors matching the Staff theme. Level text
+   remains adjacent, so colors and insignia are never the only indicators. */
+.rank-badge{--rank-edge:#4d5965;--rank-face:#717b87;
   display:inline-flex;align-items:center;justify-content:center;
-  box-sizing:border-box;width:40px;height:40px;min-width:40px;min-height:40px;
-  max-width:40px;max-height:40px;flex:0 0 40px;
-  color:var(--rank-ink);font-size:16px;font-weight:800;line-height:1}
-.rank-badge svg{display:block;width:40px;height:40px;overflow:visible}
-.rank-badge[data-level="1"]{--rank-edge:#374151;--rank-face:#6b7280}
-.rank-badge[data-level="2"]{--rank-edge:#166534;--rank-face:#23945b}
-.rank-badge[data-level="3"]{--rank-edge:#174c8d;--rank-face:#2679ce}
-.rank-badge[data-level="4"]{--rank-edge:#99500f;--rank-face:#e88320}
-.rank-badge[data-level="5"]{--rank-edge:#5b2587;--rank-face:#9544bc}
-.rank-edge{fill:var(--rank-edge);stroke:#28313c;stroke-width:.4px;stroke-linejoin:round}
-.rank-face{fill:var(--rank-face);stroke:rgba(255,255,255,.65);stroke-width:.8px;stroke-linejoin:round}
-.rank-glint{stroke:rgba(255,255,255,.8);fill:none;stroke-width:1.5px;stroke-linecap:round}
-.rank-chevron-shadow{fill:none;stroke:rgba(0,0,0,.45);stroke-width:4px;stroke-linejoin:miter;transform:translateY(1px)}
-.rank-chevron{fill:none;stroke:#fff;stroke-width:3px;stroke-linejoin:miter;stroke-linecap:square}
-.rank-star-shadow{fill:rgba(0,0,0,.35);transform:translateY(1.4px)}
-.rank-star{fill:#fff;stroke:rgba(255,255,255,.75);stroke-width:.5px;stroke-linejoin:miter}
-.rank-badge.is-unset{border:1px dashed #64748b;border-radius:8px;background:#f1f2f4;color:#475569}
+  box-sizing:border-box;width:32px;height:32px;min-width:32px;min-height:32px;
+  max-width:32px;max-height:32px;flex:0 0 32px;
+  font-size:15px;font-weight:750;line-height:1}
+.rank-badge svg{display:block;width:32px;height:32px;overflow:hidden}
+.rank-badge[data-level="1"]{--rank-edge:#4d5965;--rank-face:#717b87}
+.rank-badge[data-level="2"]{--rank-edge:#3d685c;--rank-face:#548979}
+.rank-badge[data-level="3"]{--rank-edge:#4a6688;--rank-face:#6b87a9}
+.rank-badge[data-level="4"]{--rank-edge:#806345;--rank-face:#b18a62}
+.rank-badge[data-level="5"]{--rank-edge:#675578;--rank-face:#8a759e}
+.rank-edge{fill:var(--rank-edge)}
+.rank-face{fill:var(--rank-face);stroke:rgba(255,255,255,.65);stroke-width:.65px;stroke-linejoin:round}
+.rank-chevron{fill:none;stroke:#fff;stroke-width:3px;stroke-linejoin:round;stroke-linecap:square}
+.rank-star{fill:#fff;stroke-linejoin:round}
+.rank-badge.is-unset{border:1px dashed #64748b;border-radius:7px;background:#f1f2f4;color:#475569}
 
 .reg-state{min-width:0}
 .reg-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
@@ -798,4 +796,29 @@ td.scores-cell{min-width:150px}
   }
   #app .players-page>.reg-card .reg-row>.reg-actions{justify-content:flex-start}
   #app .players-page>.reg-card .reg-row>.reg-state{grid-column:2/-1}
+}
+
+/* One Add players workspace replaces the duplicate quick-walk-in/manual
+   cards. Tabs only change view; each submit remains a distinct operation. */
+#app .add-players-card .card-head{margin-bottom:var(--gap-inline)}
+#app .add-mode-switch{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;
+  padding:4px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface-soft);
+  margin-bottom:var(--gap-field)}
+#app .add-mode-switch button{min-height:40px;border:0;background:transparent;color:var(--muted);
+  border-radius:calc(var(--radius) - 3px);padding:8px 10px;font-weight:700;cursor:pointer}
+#app .add-mode-switch button[aria-selected="true"]{background:#fff;color:var(--ink);
+  box-shadow:0 0 0 1px var(--line-strong)}
+#app .add-mode-switch button:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
+#app .add-panel[hidden]{display:none!important}
+#app .add-players-card .walk-form{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--gap-field);align-items:start}
+#app .add-players-card .walk-level{min-width:0}
+#app .add-players-card .add-one-actions{display:flex;gap:8px;flex-wrap:wrap}
+#app .add-players-card .add-one-actions button{flex:1 1 145px;min-height:44px}
+#app .add-players-card .walk-form .status{grid-column:1;margin:0}
+#app .add-players-card .manual-form textarea{min-height:112px;resize:vertical}
+#app .add-players-card .manual-form .row{margin-top:var(--gap-field)}
+#app .add-players-card .add-privacy{margin-top:var(--gap-field)}
+@container (max-width:520px){
+  #app .add-players-card .add-one-actions{flex-direction:column}
+  #app .add-players-card .add-one-actions button{flex:auto;width:100%}
 }
