@@ -134,7 +134,7 @@ test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Sta
         const roster = document.getElementById('rosterTitle').closest('.card').getBoundingClientRect();
         return {width:page.width,settings:{top:settings.top,bottom:settings.bottom,left:settings.left,right:settings.right},
           reg:{top:reg.top,bottom:reg.bottom,left:reg.left,right:reg.right},
-          add:{top:add.top,left:add.left,bottom:add.bottom,right:add.right},snapshot:{top:snapshot.top,left:snapshot.left,right:snapshot.right},
+          add:{top:add.top,left:add.left,bottom:add.bottom,right:add.right},snapshot:{top:snapshot.top,bottom:snapshot.bottom,left:snapshot.left,right:snapshot.right},
           tiles:tiles.map(t=>({width:t.width,height:t.height})),rosterTop:roster.top,
           score:getComputedStyle(document.documentElement).getPropertyValue('--tile').trim()};
       });
@@ -144,7 +144,7 @@ test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Sta
       assert.ok(layout.tiles.every(t => t.width > 100 && t.height >= 100), 'snapshot tiles remain comfortably readable');
       if (layout.width > 980) assert.ok(layout.snapshot.left >= layout.add.right - 2, `overview snapshot sits beside Add players @ ${vp}`);
       else assert.ok(layout.snapshot.top >= layout.add.bottom - 2, `overview snapshot stacks after Add players @ ${vp}`);
-      assert.ok(layout.settings.top >= Math.max(layout.add.bottom, layout.snapshot.top) - 2, 'settings follow the top overview');
+      assert.ok(layout.settings.top >= Math.max(layout.add.bottom, layout.snapshot.bottom) - 2, 'settings follow the top overview');
       assert.ok(Math.abs(layout.settings.left - layout.reg.left) <= 2 &&
         Math.abs(layout.settings.right - layout.reg.right) <= 2, 'registration settings and list are both full width');
       assert.ok(layout.reg.top >= layout.settings.bottom - 2, 'registrations follow full-width settings');
