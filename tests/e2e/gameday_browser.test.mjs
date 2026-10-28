@@ -45,8 +45,9 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
     await shot(org, '01-organizer-overview');
     await goTab(org.page, 'Players');
     const list = roster(12).map(p => `${p.name}, ${p.rating}, ${p.rating_status}`).join('\n');
+    await org.page.locator('#addModeBulk').click();  // unified Add players: select Paste a list
     await org.page.fill('#pBulk', list);
-    await org.page.locator('button', {hasText: 'Add players from list'}).click();
+    await org.page.locator('button', {hasText: 'Add players to roster'}).click();
     await waitToast(org.page, /12 player/);
     await org.page.locator('button', {hasText: 'Check in all'}).click();
     await org.page.locator('h2', {hasText: '12 of 12 checked in'}).waitFor({timeout: T});
