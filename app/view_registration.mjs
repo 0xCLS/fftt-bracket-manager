@@ -158,7 +158,7 @@ export function createRegistrationSettings(ctx) {
         ? h('div', {class: 'reg-source-facts'},
             h('span', {}, h('b', {text: 'Sheet'}), ' · ', src.spreadsheetTitle ?? 'Google Sheet'),
             h('span', {}, h('b', {text: 'Tab'}), ' · ', src.worksheet || 'Not selected'),
-            src.lastResponseCount !== null ? h('span', {}, h('b', {text: 'Responses'}), ' · ', String(src.lastResponseCount)) : null)
+            src.lastResponseCount != null ? h('span', {}, h('b', {text: 'Responses'}), ' · ', String(src.lastResponseCount)) : null)
         : null);
     if (!st.open) return h('section', {class: 'card reg-settings', 'aria-labelledby': 'regSetTitle'}, head, summary);
 
