@@ -23,6 +23,21 @@ test('registration workflow: load, search, one-click and bulk check-in, merge du
     // the Players screen asks what the deployment can do once (capabilities), and loading is the second, deliberate request
     assert.equal(w.requests.filter(r => r.path === '/api/registrations' && r.auth).length, 2);
 
+    // Selection controls keep the sticky toolbar and long list mounted:
+    // no scroll jump, no lost focus, and no attendance side effects.
+    const selectAll = org.page.getByRole('button', {name: /^Select all \d+ shown$/});
+    await selectAll.scrollIntoViewIfNeeded();
+    const firstRowNode = await org.page.locator('.reg-row').first().elementHandle();
+    const beforeSelectionScroll = await org.page.evaluate(() => window.scrollY);
+    await selectAll.click();
+    assert.equal(await firstRowNode.evaluate(el => el.isConnected), true, 'select all preserves registration rows');
+    assert.ok(Math.abs((await org.page.evaluate(() => window.scrollY)) - beforeSelectionScroll) <= 2, 'select all keeps scroll position');
+    await org.page.getByRole('button', {name: 'Clear selection', exact: true}).click();
+    assert.equal(await firstRowNode.evaluate(el => el.isConnected), true, 'clear selection also preserves registration rows');
+    assert.ok(Math.abs((await org.page.evaluate(() => window.scrollY)) - beforeSelectionScroll) <= 2, 'clear selection keeps scroll position');
+    assert.match(await org.page.evaluate(() => document.activeElement?.textContent || ''), /^Select all/, 'focus stays in the sticky toolbar');
+    assert.equal((await w.fake.local.admin('select count(*)::int as n from fftt_private.players where event_id = $1', [w.eventId]))[0].n, 0, 'selection never creates roster players');
+
     // search
     await org.page.fill('#regSearch', 'ben');
     await org.page.locator('.reg-count', {hasText: 'Showing 1 of 20'}).waitFor();
@@ -48,6 +63,7 @@ test('registration workflow: load, search, one-click and bulk check-in, merge du
     await org.page.locator('.chip', {hasText: /^Not checked in/}).click();
     let players = await w.fake.local.admin('select display_name, rating, rating_confirmed, source, checked_in from fftt_private.players where event_id = $1', [w.eventId]);
     assert.deepEqual(players, [{display_name: 'Ben Marlowe', rating: 2, rating_confirmed: false, source: 'registration', checked_in: true}]);
+    assert.equal(await org.page.locator('.player-row .roster-level .rank-badge[data-level="2"]').count(), 1, 'roster uses same level shield as registration rows');
     assert.equal(await row(org.page, 'Ben Marlowe').count(), 0, 'checked-in people leave the default "Not checked in" view');
 
     // an edited name and level are what get checked in (and count as confirmed)
@@ -118,6 +134,8 @@ test('registration workflow: load, search, one-click and bulk check-in, merge du
     const page = await org.page.locator('body').innerText();
     assert.ok(!/example\.invalid/i.test(page) && !/\b734[-. ]?555/.test(page), 'no full e-mail or phone on screen');
     assert.match(page, /[a-z]•••@[a-z]•••\.invalid/);
+    assert.match(page, /Email: [a-z]•••@/, 'masked email hint is labelled');
+    assert.match(page, /Tel: ••••/, 'masked phone hint is labelled');
     await w.fake.local.rpc(w.ids.org, 'fftt_set_visibility_v3', {p_event_id: w.eventId, p_visible: true});
     assert.ok(!/@|REGREF|registration/i.test(JSON.stringify(await w.fake.local.publicTournaments())));
     const audit = JSON.stringify(await w.fake.local.rpc(w.ids.org, 'fftt_audit_log_v3', {p_event_id: w.eventId, p_limit: 200}));

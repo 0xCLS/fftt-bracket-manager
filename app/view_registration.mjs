@@ -156,10 +156,10 @@ export function createRegistrationSettings(ctx) {
     const googleAllowedHere = !src?.eventSynthetic;
     const kind = st.kind ?? (src?.configured ? src.kind : (src?.eventSynthetic === false ? 'google-sheets' : (caps?.fixtureAvailable ? 'fixture' : null)));
     const head = h('div', {class: 'card-head'},
-      h('div', {}, h('h2', {id: 'regSetTitle', text: 'Registration settings'}),
-        h('p', {class: 'card-sub', text: 'Choose where this event’s sign-ups come from. Google Sheets is read-only.'})),
+      h('div', {}, h('h2', {id: 'regSetTitle', text: 'Advanced registration settings'}),
+        h('p', {class: 'card-sub', text: 'Connection and column mapping. Routine registration lookup and check-in are above; Google Sheets is read-only.'})), 
       h('div', {class: 'row'}, pill(st.dirty ? 'Current: ' + info.label : info.label, info.tone),
-        h('button', {type: 'button', class: 'small', id: 'regSetToggle', 'aria-expanded': String(st.open), 'aria-controls': 'regSetBody', text: st.open ? 'Hide settings' : 'Registration settings',
+        h('button', {type: 'button', class: 'small', id: 'regSetToggle', 'aria-expanded': String(st.open), 'aria-controls': 'regSetBody', text: st.open ? 'Hide advanced settings' : 'Manage connection',
           on: {click: () => { st.open = !st.open; rerender(); }}})));
     const summary = h('div', {class: 'reg-source-line', id: 'regSourceLine'},
       h('span', {class: 'reg-source-heading'}, h('b', {text: info.label}), h('span', {class: 'muted', text: info.detail})),

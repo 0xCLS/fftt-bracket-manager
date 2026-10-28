@@ -144,11 +144,12 @@ test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Sta
       assert.ok(layout.tiles.every(t => t.width > 100 && t.height >= 100), 'snapshot tiles remain comfortably readable');
       if (layout.width > 980) assert.ok(layout.snapshot.left >= layout.add.right - 2, `overview snapshot sits beside Add players @ ${vp}`);
       else assert.ok(layout.snapshot.top >= layout.add.bottom - 2, `overview snapshot stacks after Add players @ ${vp}`);
-      assert.ok(layout.settings.top >= Math.max(layout.add.bottom, layout.snapshot.bottom) - 2, 'settings follow the top overview');
+      assert.ok(layout.reg.top >= Math.max(layout.add.bottom, layout.snapshot.bottom) - 2, 'registrations follow the top overview');
       assert.ok(Math.abs(layout.settings.left - layout.reg.left) <= 2 &&
         Math.abs(layout.settings.right - layout.reg.right) <= 2, 'registration settings and list are both full width');
-      assert.ok(layout.reg.top >= layout.settings.bottom - 2, 'registrations follow full-width settings');
-      assert.ok(layout.rosterTop >= layout.reg.bottom - 2, 'roster follows registrations');
+      assert.ok(layout.settings.top >= layout.reg.bottom - 2, 'advanced connection settings follow registrations');
+      assert.ok(layout.rosterTop >= layout.settings.bottom - 2, 'roster follows advanced settings');
+      assert.equal(await org.page.locator('#regSetToggle').getAttribute('aria-expanded'), 'false', 'advanced settings start collapsed');
       assert.equal(await org.page.locator('.add-players-card').count(), 1, 'exactly one combined add-player workspace');
       assert.equal(await org.page.locator('#addModeOne').getAttribute('aria-selected'), 'true', 'single-player entry is the default');
       assert.equal(await org.page.locator('.add-one-actions button').count(), 2, 'Add to roster and Add & check in remain separate actions');
@@ -390,6 +391,8 @@ test('SCORE TILES: equal squares, tabular numerals, green winner / red loser per
       await spec.page.locator('.match-foot .score-tile').first().waitFor({timeout: T});
       const cdims = await spec.page.evaluate(() => [...document.querySelectorAll('.match-foot .score-tile')].map(t => { const r = t.getBoundingClientRect(); return [r.width, r.height]; }));
       assert.ok(cdims.every(([a, b]) => Math.abs(a - b) < 0.5 && Math.abs(a - cdims[0][0]) < 0.5), 'bracket cards use equal compact squares');
+      const rules = await spec.page.evaluate(() => [...document.querySelectorAll('.bracket .match-foot .score-game+.score-game')].map(g => getComputedStyle(g).borderLeftStyle));
+      assert.ok(rules.length > 0 && rules.every(x => x === 'solid'), 'bracket game pairs are separated by a subtle rule');
       const ov = await spec.page.evaluate(() => [...document.querySelectorAll('.match')].filter(m => m.scrollWidth > m.clientWidth + 1).length);
       assert.equal(ov, 0, 'tiles never overflow a bracket card');
     }

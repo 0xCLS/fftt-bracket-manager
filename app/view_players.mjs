@@ -149,7 +149,7 @@ export function createPlayersView(ctx) {
         h('strong', {class: 'reg-name', text: row.name}),
         h('span', {class: 'reg-sub'},
           r.name !== row.name && r.name !== 'Unnamed registrant' ? `Registered as ${r.name}` : null,
-          r.hint.email || r.hint.phone ? h('span', {class: 'reg-hint', text: [r.hint.email, r.hint.phone].filter(Boolean).join(' · '), title: 'Masked: full contact details are never shown here.'}) : null),
+          r.hint.email || r.hint.phone ? h('span', {class: 'reg-hint', text: [r.hint.email ? `Email: ${r.hint.email}` : null, r.hint.phone ? `Tel: ${r.hint.phone}` : null].filter(Boolean).join(' · '), title: 'Masked contact hints only; full details are never shown here.'}) : null),
         r.nameIssue ? h('span', {class: 'reg-note warn', text: r.nameIssue}) : null,
         r.suggestedRating === null && row.edit.rating === undefined ? h('span', {class: 'reg-note warn', text: 'No playing-assessment answers: choose this player\'s level before checking in.'}) : null,
         r.ratingReview && r.suggestedRating !== null && row.edit.rating === undefined ? h('span', {class: 'reg-note warn', text: 'Organizer review: the answers disagree with the chosen profile. Check the suggested level.'}) : null,
@@ -180,6 +180,10 @@ export function createPlayersView(ctx) {
     const rg = s.registrations;
     const listEl = h('ul', {class: 'reg-list', role: 'list', 'aria-label': 'Registrants'});
     const bulkEl = h('div', {class: 'bulk-bar', role: 'region', 'aria-label': 'Bulk check-in', hidden: true});
+    const bulkCount = h('span', {class: 'bulk-count'});
+    const bulkPrimary = h('button', {type: 'button', class: 'small'});
+    const bulkClear = h('button', {type: 'button', class: 'small', text: 'Clear selection'});
+    bulkEl.append(bulkCount, h('span', {class: 'row'}, bulkPrimary, bulkClear));
     const countEl = h('p', {class: 'muted reg-count', role: 'status', 'aria-live': 'polite'});
     const chipsEl = h('div', {class: 'chips', role: 'group', 'aria-label': 'Filter registrants'});
     let view = null;
@@ -229,21 +233,42 @@ export function createPlayersView(ctx) {
       const q = nameKey(reg.query);
       return !q || nameKey(row.name).includes(q) || nameKey(row.r.name).includes(q);
     }
+    // Keep the long list and sticky controls mounted during selection changes.
+    // Replacing either used to jump the page and lose keyboard focus.
+    function syncVisibleSelections() {
+      for (const li of listEl.querySelectorAll('li[data-ref]')) {
+        const checkbox = li.querySelector('.reg-pick input[type=checkbox]');
+        if (checkbox) checkbox.checked = reg.selected.has(li.dataset.ref);
+      }
+    }
+    const eligible = x => x.state !== 'in' && !x.dupOpen && x.rating !== null;
+    const pickedRows = () => view?.rows.filter(x => reg.selected.has(x.r.ref) && eligible(x)) ?? [];
+    const readyRows = () => view?.rows.filter(x => eligible(x) && matches(x)) ?? [];
+    bulkPrimary.addEventListener('click', async () => {
+      const selected = pickedRows();
+      if (selected.length) {
+        await checkInRows(selected.map(x => x.r.ref), `${selected.length} player${selected.length === 1 ? '' : 's'} checked in.`);
+      } else {
+        for (const x of readyRows()) reg.selected.add(x.r.ref);
+        syncVisibleSelections();
+        paintBulk();
+      }
+    });
+    bulkClear.addEventListener('click', () => {
+      reg.selected.clear();
+      syncVisibleSelections();
+      paintBulk();
+      bulkPrimary.focus({preventScroll: true});
+    });
     function paintBulk() {
       if (!view) return;
-      const picked = view.rows.filter(x => reg.selected.has(x.r.ref) && x.state !== 'in' && !x.dupOpen && x.rating !== null);
-      const ready = view.rows.filter(x => x.state !== 'in' && !x.dupOpen && x.rating !== null && matches(x));
-      clear(bulkEl); bulkEl.hidden = picked.length === 0 && ready.length === 0;
-      bulkEl.append(
-        h('span', {class: 'bulk-count', text: picked.length ? `${picked.length} selected` : `${ready.length} ready to check in`}),
-        picked.length
-          ? h('span', {class: 'row'},
-            h('button', {type: 'button', class: 'primary small', disabled: !writable(), text: `Check in ${picked.length} selected`,
-              on: {click: async () => { await checkInRows(picked.map(x => x.r.ref), `${picked.length} player${picked.length === 1 ? '' : 's'} checked in.`); }}}),
-            h('button', {type: 'button', class: 'small', text: 'Clear selection', on: {click: () => { reg.selected.clear(); paintList(); }}}))
-          : h('span', {class: 'row'},
-            h('button', {type: 'button', class: 'small', disabled: ready.length === 0 || !writable(), text: `Select all ${ready.length} shown`,
-              on: {click: () => { for (const x of ready) reg.selected.add(x.r.ref); paintList(); }}})));
+      const picked = pickedRows(), ready = readyRows();
+      bulkEl.hidden = picked.length === 0 && ready.length === 0;
+      bulkCount.textContent = picked.length ? `${picked.length} selected` : `${ready.length} ready to check in`;
+      bulkPrimary.textContent = picked.length ? `Check in ${picked.length} selected` : `Select all ${ready.length} shown`;
+      bulkPrimary.className = picked.length ? 'primary small' : 'small';
+      bulkPrimary.disabled = !writable() || (!picked.length && !ready.length);
+      bulkClear.hidden = picked.length === 0;
     }
     function paintChips() {
       clear(chipsEl);
@@ -304,7 +329,7 @@ export function createPlayersView(ctx) {
         // ONE persistent, plain explanation (never also a toast): what happened, and what to do
         body = h('div', {class: 'notice ' + (st.tone || 'warn'), role: 'alert', id: 'regError'}, h('b', {text: st.label + '. '}), rg.error,
           rg.code === 'not-configured' ? ' A private CSV file is read in this browser only; it is not uploaded or saved.' : null);
-      } else body = h('div', {class: 'empty-state', text: loading ? 'Reading the registrations…' : 'Load sign-ups to search and check in players. To change the source, use Registration settings above.'});
+      } else body = h('div', {class: 'empty-state', text: loading ? 'Reading the registrations…' : 'Load sign-ups to search and check in players. To change the source, open Advanced registration settings below.'});
     } else {
       body = h('div', {class: 'reg-body'},
         h('div', {class: 'reg-meta'},
@@ -456,9 +481,9 @@ export function createPlayersView(ctx) {
     const checked = sn.players.filter(p => p.checkedIn).length;
     const rows = sn.players.map(p => h('tr', {class: 'player-row'},
       h('td', {'data-label': 'Player'}, h('strong', {text: p.name}), h('span', {class: 'src', text: srcText[p.source]})),
-      h('td', {'data-label': 'Level'}, h('select', {'aria-label': `Level for ${p.name}`, disabled: !writable(),
+      h('td', {'data-label': 'Level'}, h('div', {class: 'roster-level'}, levelShield(p.rating), h('select', {'aria-label': `Level for ${p.name}`, disabled: !writable(),
         on: {change: async ev => result(await core.actions.confirmRatings([{id: p.id, rating: Number(ev.target.value)}]), `${p.name}: level confirmed.`)}},
-        [1, 2, 3, 4, 5].map(n => h('option', {value: n, text: levelLabel(n), selected: n === p.rating})))),
+        [1, 2, 3, 4, 5].map(n => h('option', {value: n, text: levelLabel(n), selected: n === p.rating}))))),
       h('td', {'data-label': 'Review'}, p.ratingConfirmed ? pill('Confirmed', 'good')
         : h('span', {class: 'row tight'}, pill('Suggested', 'warn'), h('button', {type: 'button', class: 'small', disabled: !writable(), text: 'Confirm', 'aria-label': `Confirm level ${p.rating} for ${p.name}`,
           on: {click: async () => result(await core.actions.confirmRatings([{id: p.id, rating: p.rating}]), `${p.name}: level ${p.rating} confirmed.`)}}))),
@@ -516,7 +541,8 @@ export function createPlayersView(ctx) {
             kpi(checked, 'Checked in', 'ice'), kpi(sn.players.length, 'On the roster', 'lav'),
             kpi(rg ? rg.registrants.filter(r => !onRoster.has(r.ref)).length : 0, 'Registered, not here yet', 'lime'),
             kpi(unconfirmed, 'Levels to confirm', 'butter')))),
+      registrationCard(sn),
       h('div', {class: 'players-registration-config'}, settingsCard(sn)),
-      registrationCard(sn), duplicatesCard(sn), rosterCard(sn));
+      duplicatesCard(sn), rosterCard(sn));
   };
 }
