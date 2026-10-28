@@ -261,6 +261,34 @@ body.tv .champ{font-size:clamp(26px,3vw,50px);color:#f7e99b;font-weight:800}
 .reg-note{font-size:11.5px;color:var(--muted)}.reg-note.warn{color:var(--warning);font-weight:650}
 .reg-level{display:flex;align-items:center;gap:10px;min-width:0}
 .reg-level-text{display:flex;flex-direction:column;font-size:12px;line-height:1.35}
+
+/* Level badges: redundant number + readable level label, plus distinct shapes and
+   AA-contrast colors. Scoped to organizer registration/check-in, not score tiles.
+   Progressive enhancement: clip-path shapes fall back to the rounded chip. */
+.reg-level .rating-chip{
+  box-sizing:border-box;display:inline-flex;flex:0 0 38px;
+  width:38px;height:38px;min-width:38px;padding:0;
+  align-items:center;justify-content:center;border-radius:9px;
+  background:#e5e7eb;color:#374151;
+  font-size:16px;font-weight:800;line-height:1;white-space:nowrap;
+}
+.reg-level .rating-chip[data-level="1"]{background:#e5e7eb;color:#374151;border-radius:9px}
+.reg-level .rating-chip[data-level="2"]{background:#d1fae5;color:#166534;border-radius:50%}
+.reg-level .rating-chip[data-level="3"]{
+  background:#dbeafe;color:#1d4ed8;
+  clip-path:polygon(22% 0,78% 0,100% 50%,78% 100%,22% 100%,0 50%);
+}
+.reg-level .rating-chip[data-level="4"]{
+  background:#fed7aa;color:#9a3412;
+  clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);
+}
+.reg-level .rating-chip[data-level="5"]{
+  background:#e9d5ff;color:#6b21a8;
+  clip-path:polygon(12% 0,88% 0,100% 15%,96% 66%,50% 100%,4% 66%,0 15%);
+  padding-bottom:3px;
+}
+.reg-level .rating-chip[data-level="unset"]{background:#f1f2f4;color:#475569;border:1px dashed #64748b}
+
 .reg-state{min-width:0}
 .reg-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
 .reg-edit{grid-column:2/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--space-3);padding:12px;margin-top:6px;background:#f7f9fb;border:1px solid var(--line);border-radius:var(--radius)}
