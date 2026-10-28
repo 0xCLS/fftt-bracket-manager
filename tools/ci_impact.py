@@ -51,6 +51,8 @@ def classify(event, action, before, after):
         changed = [x for x in git("diff", "--name-only", "--diff-filter=ACMRTD", before, after).splitlines() if x]
         if not changed:
             return "full", "empty or unverifiable delta"
+        if all(p.startswith("docs/") or p.endswith(".md") for p in changed):
+            return "docs", "documentation-only incremental push"
         if any(p not in VISUAL and p not in INTERACTIVE for p in changed):
             return "full", "core, database, security, tooling, or workflow change"
         for path in changed:
@@ -81,5 +83,5 @@ if __name__ == "__main__":
     if output:
         with open(output, "a", encoding="utf-8") as stream:
             stream.write("lane=" + lane + "\n")
-    if lane not in ("full", "ui-interaction", "ui-visual"):
+    if lane not in ("full", "ui-interaction", "ui-visual", "docs"):
         sys.exit("Unrecognized lane")
