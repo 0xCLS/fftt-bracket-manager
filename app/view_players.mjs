@@ -47,18 +47,17 @@ export function levelShield(level) {
   // Shield boundary covers a square 38 × 38 viewBox footprint.
   path('M20 1 L39 11.5 V29 L20 39 L1 29 V11.5 Z', 'rank-edge');
   path('M20 5 L35 13.5 V27 L20 35 L5 27 V13.5 Z', 'rank-face');
-  path('M20 2.5 L37 12 V15 M3 15 V12 L20 2.5', 'rank-glint');
+  // Flat, single-face badge: no metallic glint or gradients.
   if (level === 5) {
     // Classic five-point star: broad horizontal arms and pointed top as approved.
     const star = 'M20 9 L23.2 17 L32 17 L25 22.5 L27.7 31 L20 25.9 L12.3 31 L15 22.5 L8 17 L16.8 17 Z';
-    path(star, 'rank-star-shadow');
+    // Keep the single white star, without a raised shadow.
     path(star, 'rank-star');
     svg.dataset.emblem = 'five-point-star';
   } else {
     const positions = {1: [19], 2: [15.5, 22.5], 3: [12.5, 19, 25.5], 4: [10.5, 16.5, 22.5, 28.5]};
     for (const y of positions[level] ?? []) {
       const chevron = 'M12 ' + y + ' L20 ' + (y + 3.5) + ' L28 ' + y;
-      path(chevron, 'rank-chevron-shadow');
       path(chevron, 'rank-chevron');
     }
     svg.dataset.emblem = 'chevrons';
@@ -306,32 +305,82 @@ export function createPlayersView(ctx) {
       }));
   }
 
-  // ---------------------------------------------------------------- walk-ins
-  function walkInCard(sn) {
-    let rating = draft('walkRating', 3);
-    const name = h('input', {type: 'text', id: 'wName', maxlength: 80, autocomplete: 'off', placeholder: 'First and last name', 'data-draft': 'walkName', required: true, 'aria-describedby': 'wHelp'});
+  // ---------------------------------------------------------------- add players: one unified safe workspace
+  function addPlayersCard(sn) {
+    let rating = draft('walkRating', 3), mode = draft('addMode', 'one');
+    let warnedName = null;
+    const name = h('input', {type: 'text', id: 'wName', maxlength: 80, autocomplete: 'off',
+      placeholder: 'First and last name', 'data-draft': 'walkName', required: true, 'aria-describedby': 'wHelp'});
     const msg = h('p', {class: 'status bad', role: 'alert', id: 'wMsg'});
-    let warnedName = null;   // a one-word name is accepted on the SECOND press with the same text: a soft rule, never a dead end
     const hint = h('span', {class: 'muted', text: ratingName(rating)});
-    const seg = h('div', {class: 'seg', role: 'radiogroup', 'aria-label': 'FFTT level for the walk-in'},
+    const seg = h('div', {class: 'seg', role: 'radiogroup', 'aria-label': 'FFTT level for the new player'},
       [1, 2, 3, 4, 5].map(n => h('label', {}, h('input', {type: 'radio', name: 'wRating', value: n, checked: n === rating,
         on: {change: () => { rating = n; remember('walkRating', n); hint.textContent = ratingName(n); }}}), h('span', {text: String(n)}))));
-    const go = async () => {
+    const add = async (checkIn) => {
       msg.textContent = '';
       const v = name.value.trim().replace(/\s+/g, ' ');
-      if (!v) { msg.textContent = 'Enter the walk-in’s name.'; name.focus(); return; }
-      if (incompleteName(v) && warnedName !== v) { warnedName = v; msg.textContent = `Enter the full first and last name (for example “Ada Quill”). Press Add again to add “${v}” as written.`; name.focus(); return; }
-      if (sn.players.some(p => nameKey(p.name) === nameKey(v))) { msg.textContent = `${v} is already on the roster. Check the full name before adding another player.`; name.focus(); return; }
-      if (result(await core.actions.checkinRegistrants([{name: v, rating, source: 'walk_in'}], true), `${v} checked in.`)) { name.value = ''; forget('walk'); rerender(); document.getElementById('wName')?.focus(); }
+      if (!v) { msg.textContent = 'Enter a player’s name.'; name.focus(); return; }
+      if (incompleteName(v) && warnedName !== v) {
+        warnedName = v;
+        msg.textContent = 'Enter a full first and last name. Select the same action again to use the name as written.';
+        name.focus(); return;
+      }
+      if (sn.players.some(p => nameKey(p.name) === nameKey(v))) {
+        msg.textContent = v + ' is already on the roster. Check the full name before adding another player.';
+        name.focus(); return;
+      }
+      const done = checkIn
+        ? result(await core.actions.checkinRegistrants([{name: v, rating, source: 'walk_in'}], true), v + ' checked in.')
+        : result(await core.actions.addPlayers([{name: v, rating, rating_status: 'provisional'}]), v + ' added to the roster (not checked in).');
+      if (done) { name.value = ''; forget('walkName'); rerender(); document.getElementById('wName')?.focus(); }
     };
-    return h('section', {class: 'card', 'aria-labelledby': 'walkTitle'},
-      h('div', {class: 'card-head'}, h('div', {}, h('h2', {id: 'walkTitle', text: 'Quick walk-in check-in'}),
-        h('p', {class: 'card-sub', id: 'wHelp', text: 'Add someone who did not register online. Name only, no contact details.'}))),
-      h('form', {class: 'walk-form', novalidate: true, on: {submit: ev => { ev.preventDefault(); go(); }}},
-        h('div', {class: 'walk-name'}, h('label', {for: 'wName', text: 'Name'}), name),
-        h('fieldset', {class: 'walk-level'}, h('legend', {}, 'FFTT level ', hint), seg),
-        h('div', {class: 'walk-go'}, h('button', {type: 'submit', class: 'primary', disabled: !writable(), text: 'Add and check in'})),
+    const bulk = h('textarea', {id: 'pBulk', 'data-draft': 'pBulk',
+      placeholder: 'One player per line: Name, rating (1–5), provisional|established\nAda Quill, 3, provisional'});
+    const oneTab = h('button', {type: 'button', id: 'addModeOne', role: 'tab',
+      'aria-controls': 'addOnePanel', 'aria-selected': String(mode !== 'bulk'), text: 'One player'});
+    const bulkTab = h('button', {type: 'button', id: 'addModeBulk', role: 'tab',
+      'aria-controls': 'addBulkPanel', 'aria-selected': String(mode === 'bulk'), text: 'Paste a list'});
+    const onePanel = h('div', {id: 'addOnePanel', class: 'add-panel', role: 'tabpanel',
+      'aria-labelledby': 'addModeOne', hidden: mode === 'bulk'},
+      h('form', {class: 'walk-form add-one-form', novalidate: true,
+        on: {submit: ev => { ev.preventDefault(); add(false); }}},
+        h('div', {class: 'walk-name'}, h('label', {for: 'wName', text: 'Player name'}), name),
+        h('fieldset', {class: 'walk-level'}, h('legend', {}, 'FFTT level · ', hint), seg),
+        h('div', {class: 'add-one-actions'},
+          h('button', {type: 'submit', disabled: !writable(), text: 'Add to roster'}),
+          h('button', {type: 'button', class: 'primary', disabled: !writable(), text: 'Add & check in',
+            on: {click: () => add(true)}})),
         msg));
+    const bulkPanel = h('div', {id: 'addBulkPanel', class: 'add-panel', role: 'tabpanel',
+      'aria-labelledby': 'addModeBulk', hidden: mode !== 'bulk'},
+      h('div', {class: 'manual-form'},
+        h('label', {for: 'pBulk', text: 'Players, one per line'}), bulk,
+        h('p', {class: 'help', text: 'Include the name and level (1–5); optionally add provisional or established. Bulk additions join the roster without checking anyone in.'}),
+        h('div', {class: 'row'},
+          h('button', {type: 'button', disabled: !writable(), text: 'Add players to roster',
+            on: {click: async () => {
+              const parsed = ctx.parseBulk(bulk.value);
+              if (parsed.errors.length) { toast(parsed.errors[0], 'bad'); return; }
+              if (!parsed.players.length) return;
+              if (result(await core.actions.addPlayers(parsed.players), parsed.players.length + ' players added to roster (not checked in).')) {
+                bulk.value = ''; forget('pBulk');
+              }
+            }}}))));
+    const changeMode = next => {
+      mode = next; remember('addMode', next);
+      onePanel.hidden = next !== 'one'; bulkPanel.hidden = next !== 'bulk';
+      oneTab.setAttribute('aria-selected', String(next === 'one'));
+      bulkTab.setAttribute('aria-selected', String(next === 'bulk'));
+    };
+    oneTab.addEventListener('click', () => changeMode('one'));
+    bulkTab.addEventListener('click', () => changeMode('bulk'));
+    return h('section', {class: 'card add-players-card', 'aria-labelledby': 'addTitle'},
+      h('div', {class: 'card-head'}, h('div', {},
+        h('h2', {id: 'addTitle', text: 'Add players'}),
+        h('p', {class: 'card-sub', id: 'wHelp', text: 'Add a walk-in, prepare a roster, or paste multiple names. Check-in is always a separate choice.'}))),
+      h('div', {class: 'add-mode-switch', role: 'tablist', 'aria-label': 'How to add players'}, oneTab, bulkTab),
+      onePanel, bulkPanel,
+      h('p', {class: 'help add-privacy', text: 'Levels are private to staff. Do not enter contact details.'}));
   }
 
   // ---------------------------------------------------------------- roster
@@ -367,36 +416,7 @@ export function createPlayersView(ctx) {
       sn.players.length ? h('div', {class: 'scroll-x'}, h('table', {class: 'responsive-table'},
         h('thead', {}, h('tr', {}, ['Player', 'Level', 'Review', 'Experience', 'Checked in', ''].map(t => h('th', {scope: 'col', text: t})))),
         h('tbody', {}, rows)))
-        : h('div', {class: 'empty-state', text: 'No players yet. Load the registrations, add a walk-in or enter names by hand.'}));
-  }
-
-  // ---------------------------------------------------------------- manual entry (names only)
-  function manualCard(sn) {
-    const name = h('input', {type: 'text', id: 'pName', maxlength: 80, autocomplete: 'off', placeholder: 'First and last name', 'data-draft': 'pName', required: true});
-    let rating = draft('pRating', 3);
-    let warnedManual = null;
-    const hint = h('span', {class: 'muted', text: '· ' + ratingName(rating)});
-    const ratingSeg = h('div', {class: 'seg', role: 'radiogroup', 'aria-label': 'FFTT rating'},
-      [1, 2, 3, 4, 5].map(n => h('label', {}, h('input', {type: 'radio', name: 'pRating', value: n, checked: n === rating, on: {change: () => { rating = n; remember('pRating', n); hint.textContent = '· ' + ratingName(n); }}}), h('span', {text: String(n)}))));
-    const bulk = h('textarea', {id: 'pBulk', 'data-draft': 'pBulk', placeholder: 'One player per line:  Name, rating (1-5), provisional|established\nAda Quill, 3, provisional'});
-    return h('details', {class: 'card details-card', 'data-draft': 'manualOpen', open: draft('manualOpen', sn.players.length === 0 && !s.registrations.payload)},
-      h('summary', {}, h('span', {class: 'summary-title', text: 'Enter names by hand'}), h('span', {class: 'muted', text: 'Add several names at once; use walk-in check-in for individual arrivals.'})),
-      h('div', {class: 'grid two manual-grid'},
-        h('form', {class: 'manual-form', on: {submit: async ev => { ev.preventDefault();
-          const typed = name.value.trim().replace(/\s+/g, ' ');
-          if (incompleteName(typed) && typed && warnedManual !== typed) { warnedManual = typed; toast(`Enter the full first and last name. Press Add player again to add “${typed}” as written.`, 'warn'); name.focus(); return; }
-          if (result(await core.actions.addPlayers([{name: name.value, rating, rating_status: 'provisional'}]), 'Player added.')) { name.value = ''; forget('pName'); document.getElementById('pName')?.focus(); } }}},
-          h('h3', {text: 'Add a player'}), h('label', {for: 'pName', text: 'Name'}), name,
-          h('fieldset', {}, h('legend', {}, 'FFTT rating ', hint), ratingSeg),
-          h('div', {class: 'row'}, h('button', {class: 'primary', type: 'submit', disabled: !writable(), text: 'Add player'})),
-          h('p', {class: 'help', text: 'Ratings are internal to FFTT staff and never shown to spectators. Do not enter phone numbers or e-mail addresses.'})),
-        h('div', {class: 'manual-form'}, h('h3', {text: 'Paste a list'}), h('label', {for: 'pBulk', text: 'Players'}), bulk,
-          h('div', {class: 'row'}, h('button', {type: 'button', disabled: !writable(), text: 'Add players from list', on: {click: async () => {
-            const parsed = ctx.parseBulk(bulk.value);
-            if (parsed.errors.length) { toast(parsed.errors[0], 'bad'); return; }
-            if (!parsed.players.length) return;
-            if (result(await core.actions.addPlayers(parsed.players), `${parsed.players.length} player(s) added.`)) { bulk.value = ''; forget('pBulk'); }
-          }}})))));
+        : h('div', {class: 'empty-state', text: 'No players yet. Load registrations or use Add players above.'}));
   }
 
   return function viewPlayers() {
@@ -416,7 +436,7 @@ export function createPlayersView(ctx) {
         kpi(unconfirmed, 'Levels to confirm', unconfirmed ? 'butter' : '')),
       h('div', {class: 'players-workspace'},
         h('div', {class: 'players-main'}, settingsCard(sn)),
-        h('div', {class: 'players-side'}, walkInCard(sn))),
-      registrationCard(sn), duplicatesCard(sn), rosterCard(sn), manualCard(sn));
+        h('div', {class: 'players-side'}, addPlayersCard(sn))),
+      registrationCard(sn), duplicatesCard(sn), rosterCard(sn));
   };
 }
