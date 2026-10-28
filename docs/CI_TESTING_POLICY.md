@@ -40,7 +40,7 @@ The current targeted test is
 `cd tests/e2e && npm ci && npx playwright-core install chromium`).
 To run the full workflow on demand, use GitHub Actions → Browser regression
 tests → Run workflow on the intended branch, verify the exact tested SHA,
-and require both `test` and `Disposable synthetic PostgreSQL` jobs to pass.
+and require all three `foundation`, `test` and `Disposable synthetic PostgreSQL` jobs to pass.
 
 ## Maintenance rules
 
@@ -62,3 +62,7 @@ and require both `test` and `Disposable synthetic PostgreSQL` jobs to pass.
 - Docs-only commit run 40640909104 completed successfully with both heavy jobs skipped; protected routing logic is exercised by `tests/test_ci_impact.py` in every classifier run.
 - The interaction-focused lane is covered by routing unit tests but has **not yet been separately exercised end-to-end** in GitHub Actions. It must still pass before relying on it for a JS UI iteration. A green targeted run does not satisfy the **mandatory full pre-deployment regression**.
 
+
+## Full-regression runtime improvement — 2026-10-28 (proposed CI branch)
+
+The broad application test job is partitioned into two independent jobs, `foundation` (Python browser/security and legacy checks) and `test` (game-day and launch-mode JavaScript/Chromium suites). Both retain their original test commands and execute concurrently with the disposable PostgreSQL job. Node npm downloads use lockfile-keyed setup-node caching. The full release gate now requires **all three** jobs green on the exact release SHA, not merely the previous two. No security or launch test is removed. The first CI run of this workflow change must itself use the full lane and must pass before adoption; runtime improvement remains unverified until then.
