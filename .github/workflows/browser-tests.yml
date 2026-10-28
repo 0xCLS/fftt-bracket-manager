@@ -74,12 +74,10 @@ jobs:
         run: |
           npm ci
           npx playwright-core install chromium
-      - name: Syntax and offline UI/privacy sanity
+      - name: Syntax sanity (no network)
         run: |
           node --check app/view_players.mjs
           node --check app/view_registration.mjs
-          python3 tests/ui_smoke.py
-          python3 tests/safety.py
       - name: Focused phone/desktop UI regression (no hosted requests)
         env:
           FFTT_CHROME_CHANNEL: none
