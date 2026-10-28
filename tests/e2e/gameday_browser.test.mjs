@@ -49,17 +49,17 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
     await org.page.fill('#pBulk', list);
     await org.page.locator('button', {hasText: 'Add players to roster'}).click();
     await waitToast(org.page, /12 player/);
-    await org.page.locator('button', {hasText: 'Check in all'}).click();
+    await org.page.getByRole('button', {name: 'Check in all', exact: true}).click();
     const checkInConfirm = org.page.locator('dialog[open]');
     assert.match(await checkInConfirm.innerText(), /12 roster players.*physically here/s,
       'bulk attendance must explicitly warn that every roster player is marked present');
     await checkInConfirm.locator('button', {hasText: 'Cancel'}).click();
     assert.equal((await local.admin('select count(*)::int as n from fftt_private.players where event_id = $1 and checked_in', [E]))[0].n, 0,
       'cancelling a bulk check-in must not change any player');
-    await org.page.locator('button', {hasText: 'Check in all'}).click();
+    await org.page.getByRole('button', {name: 'Check in all', exact: true}).click();
     await org.page.locator('dialog[open] button', {hasText: 'Check in all players'}).click();
     await org.page.locator('h2', {hasText: '12 of 12 checked in'}).waitFor({timeout: T});
-    assert.equal(await org.page.locator('button', {hasText: 'Check in all'}).isDisabled(), true, 'no redundant bulk attendance write');
+    assert.equal(await org.page.getByRole('button', {name: 'Check in all', exact: true}).isDisabled(), true, 'no redundant bulk attendance write');
     await org.page.locator('button', {hasText: 'Clear check-ins'}).click();
     const clearConfirm = org.page.locator('dialog[open]');
     assert.match(await clearConfirm.innerText(), /12 checked-in roster players.*check each attending player in again/s,
