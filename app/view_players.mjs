@@ -337,9 +337,9 @@ export function createPlayersView(ctx) {
     const bulk = h('textarea', {id: 'pBulk', 'data-draft': 'pBulk',
       placeholder: 'One player per line: Name, rating (1–5), provisional|established\nAda Quill, 3, provisional'});
     const oneTab = h('button', {type: 'button', id: 'addModeOne', role: 'tab',
-      'aria-controls': 'addOnePanel', 'aria-selected': String(mode !== 'bulk'), text: 'One player'});
+      'aria-controls': 'addOnePanel', 'aria-selected': String(mode !== 'bulk'), tabindex: mode !== 'bulk' ? '0' : '-1', text: 'One player'});
     const bulkTab = h('button', {type: 'button', id: 'addModeBulk', role: 'tab',
-      'aria-controls': 'addBulkPanel', 'aria-selected': String(mode === 'bulk'), text: 'Paste a list'});
+      'aria-controls': 'addBulkPanel', 'aria-selected': String(mode === 'bulk'), tabindex: mode === 'bulk' ? '0' : '-1', text: 'Paste a list'});
     const onePanel = h('div', {id: 'addOnePanel', class: 'add-panel', role: 'tabpanel',
       'aria-labelledby': 'addModeOne', hidden: mode === 'bulk'},
       h('form', {class: 'walk-form add-one-form', novalidate: true,
@@ -371,9 +371,21 @@ export function createPlayersView(ctx) {
       onePanel.hidden = next !== 'one'; bulkPanel.hidden = next !== 'bulk';
       oneTab.setAttribute('aria-selected', String(next === 'one'));
       bulkTab.setAttribute('aria-selected', String(next === 'bulk'));
+      oneTab.tabIndex = next === 'one' ? 0 : -1;
+      bulkTab.tabIndex = next === 'bulk' ? 0 : -1;
     };
     oneTab.addEventListener('click', () => changeMode('one'));
     bulkTab.addEventListener('click', () => changeMode('bulk'));
+    const moveTab = (ev) => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(ev.key)) return;
+      ev.preventDefault();
+      const next = ev.key === 'Home' ? 'one' : ev.key === 'End' ? 'bulk'
+        : mode === 'one' ? 'bulk' : 'one';
+      changeMode(next);
+      (next === 'one' ? oneTab : bulkTab).focus();
+    };
+    oneTab.addEventListener('keydown', moveTab);
+    bulkTab.addEventListener('keydown', moveTab);
     return h('section', {class: 'card add-players-card', 'aria-labelledby': 'addTitle'},
       h('div', {class: 'card-head'}, h('div', {},
         h('h2', {id: 'addTitle', text: 'Add players'}),
