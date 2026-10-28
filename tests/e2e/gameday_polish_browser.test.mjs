@@ -126,19 +126,28 @@ test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Sta
       // two-column registration + walk-in station on roomy desktop.
       const layout = await org.page.evaluate(() => {
         const page = document.querySelector('.players-page').getBoundingClientRect();
-        const settings = document.querySelector('.players-main .reg-settings').getBoundingClientRect();
+        const settings = document.querySelector('.players-registration-config .reg-settings').getBoundingClientRect();
         const reg = document.querySelector('.players-page > .reg-card').getBoundingClientRect();
-        const walk = document.querySelector('.players-side #addTitle').closest('.card').getBoundingClientRect();
+        const add = document.querySelector('.players-add-column #addTitle').closest('.card').getBoundingClientRect();
+        const snapshot = document.querySelector('.players-snapshot').getBoundingClientRect();
+        const tiles = [...document.querySelectorAll('.players-snapshot .mini-kpi')].map(e => e.getBoundingClientRect());
         const roster = document.getElementById('rosterTitle').closest('.card').getBoundingClientRect();
-        return {width:page.width,settings:{top:settings.top,left:settings.left},reg:{top:reg.top,bottom:reg.bottom,left:reg.left,right:reg.right},walk:{top:walk.top,left:walk.left,bottom:walk.bottom},rosterTop:roster.top,score:getComputedStyle(document.documentElement).getPropertyValue('--tile').trim()};
+        return {width:page.width,settings:{top:settings.top,bottom:settings.bottom,left:settings.left,right:settings.right},
+          reg:{top:reg.top,bottom:reg.bottom,left:reg.left,right:reg.right},
+          add:{top:add.top,left:add.left,bottom:add.bottom,right:add.right},snapshot:{top:snapshot.top,left:snapshot.left,right:snapshot.right},
+          tiles:tiles.map(t=>({width:t.width,height:t.height})),rosterTop:roster.top,
+          score:getComputedStyle(document.documentElement).getPropertyValue('--tile').trim()};
       });
       assert.equal(layout.score, '26px', 'scores use the reduced size');
-      assert.ok(layout.settings.top < layout.reg.top, 'registration configuration comes before loading');
-      if (layout.width >= 980) assert.ok(layout.walk.left > layout.settings.left, `walk-in sits beside settings on roomy screens @ ${vp}`);
-      else assert.ok(layout.walk.top > layout.settings.top, `walk-in stacks after settings on smaller screens @ ${vp}`);
-      assert.ok(layout.reg.top >= layout.walk.bottom - 2, 'full-width registration list follows the settings and walk-in workspace');
-      assert.ok(Math.abs(layout.reg.left - layout.settings.left) <= 2, 'registration list aligns with left edge of the workspace');
-      assert.ok(layout.reg.right >= layout.walk.left, 'registration list spans the right side of the check-in workspace');
+      assert.ok(layout.add.top < layout.settings.top, 'Add players and snapshot precede registration configuration');
+      assert.equal(layout.tiles.length, 4, 'four status tiles share the Overview-style snapshot');
+      assert.ok(layout.tiles.every(t => t.width > 100 && t.height >= 100), 'snapshot tiles remain comfortably readable');
+      if (layout.width > 980) assert.ok(layout.snapshot.left >= layout.add.right - 2, `overview snapshot sits beside Add players @ ${vp}`);
+      else assert.ok(layout.snapshot.top >= layout.add.bottom - 2, `overview snapshot stacks after Add players @ ${vp}`);
+      assert.ok(layout.settings.top >= Math.max(layout.add.bottom, layout.snapshot.top) - 2, 'settings follow the top overview');
+      assert.ok(Math.abs(layout.settings.left - layout.reg.left) <= 2 &&
+        Math.abs(layout.settings.right - layout.reg.right) <= 2, 'registration settings and list are both full width');
+      assert.ok(layout.reg.top >= layout.settings.bottom - 2, 'registrations follow full-width settings');
       assert.ok(layout.rosterTop >= layout.reg.bottom - 2, 'roster follows registrations');
       assert.equal(await org.page.locator('.add-players-card').count(), 1, 'exactly one combined add-player workspace');
       assert.equal(await org.page.locator('#addModeOne').getAttribute('aria-selected'), 'true', 'single-player entry is the default');
@@ -178,6 +187,7 @@ test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Sta
               chevrons:svg.querySelectorAll('.rank-chevron').length,
               stars:svg.querySelectorAll('.rank-star').length,
               starPath:svg.querySelector('.rank-star')?.getAttribute('d') || '',
+              chevronPaths:[...svg.querySelectorAll('.rank-chevron')].map(x => x.getAttribute('d')),
               hidden:tile.getAttribute('aria-hidden')};
           });
           host.remove();
@@ -187,8 +197,11 @@ test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Sta
         assert.equal(new Set(shields.map(x => x.face)).size, 5, 'five distinct level colors');
         assert.deepEqual(shields.map(x => x.chevrons), [1, 2, 3, 4, 0], 'ranks 1–4 contain corresponding chevrons');
         assert.deepEqual(shields.map(x => x.stars), [0, 0, 0, 0, 1], 'only Level 5 contains a star');
-        assert.ok(shields[4].starPath.includes('L32 17 L25 22.5'), 'Level 5 star uses the approved classic silhouette');
+        assert.ok(shields[4].starPath.includes('L29 18 L23.7 22.2'), 'Level 5 star uses the smaller inset five-point silhouette');
         assert.ok(shields.every(x => x.hidden === 'true'), 'icon meaning is duplicated as text for assistive technology');
+        assert.ok(shields.slice(0, 4).every(x => x.chevronPaths.every(d => d.startsWith('M14 ') && d.includes(' L26 '))),
+          'every chevron stays well inside the inner shield boundary');
+        assert.ok(shields[4].starPath.startsWith('M20 12 '), 'the star tip is inset from the top shield border');
         const seen = await org.page.locator('.reg-row .reg-level').first().evaluate(e => ({
           level:e.querySelector('.rank-badge')?.dataset.level,
           label:e.querySelector('.reg-level-text')?.innerText || ''
@@ -506,7 +519,9 @@ test('REGISTRATION SETTINGS (event-specific Google Sheet, fake Google): recogniz
     await page.locator('.diag', {hasText: 'Ready to read'}).waitFor({timeout: T});
     assert.deepEqual(await page.locator('#regTab option').allInnerTexts(), [TAB, 'Notes']);
     assert.equal(await page.locator('.reg-share-help').count(), 0, 'sharing instructions disappear after verified access');
-    assert.match(await page.locator('.sub-block').first().innerText(), /Column mapping \(if needed\)/);
+    assert.match(await page.locator('.sub-block').first().innerText(), /Column mapping/);
+    if (!(await page.locator('.reg-mapping-disclosure').evaluate(e => e.open)))
+      await page.locator('.reg-mapping-disclosure summary').click();
     assert.deepEqual(await page.locator('.diag-list li').evaluateAll(els => els.map(e => e.className)), Array(6).fill('diag-pass'));
     assert.match(await page.locator('.diag').innerText(), /21 responses \(a count only; no answers were read\)/);
     assert.match(await page.locator('#map-rallies option:checked').innerText(), /^Detected: /);
@@ -544,6 +559,8 @@ test('REGISTRATION SETTINGS (event-specific Google Sheet, fake Google): recogniz
     await page.fill('#regSheet', url(SHEET_NEW));
     await page.locator('#regCheck').click();
     await page.locator('.diag', {hasText: 'Found “Future form”'}).waitFor({timeout: T});
+    if (!(await page.locator('.reg-mapping-disclosure').evaluate(e => e.open)))
+      await page.locator('.reg-mapping-disclosure summary').click();
     assert.notEqual(await page.locator('#map-description option:checked').innerText(), 'Not in my form', 'another sheet starts with its own (automatic) mapping');
     assert.match(await page.locator('.diag').innerText(), /No playing-assessment columns were recognized, so levels will need your review/);
     assert.match(await page.locator('.map-row', {has: page.locator('#map-name')}).innerText(), /Recognized/);
