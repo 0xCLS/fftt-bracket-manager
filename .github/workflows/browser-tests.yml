@@ -69,6 +69,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
       - name: Install isolated browser fixtures
         working-directory: tests/e2e
         run: |
@@ -93,7 +95,8 @@ jobs:
           FFTT_CHROME_CHANNEL: none
         run: node --test tests/e2e/gameday_launch_google_browser.test.mjs
 
-  test:
+  foundation:
+    name: Full regression — browser and security foundation
     needs: classify
     if: needs.classify.outputs.lane == 'full'
     runs-on: ubuntu-latest
@@ -109,6 +112,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
       - name: Install Chromium and Playwright
         run: |
           python -m pip install playwright
@@ -147,6 +152,37 @@ jobs:
         run: python tests/milestone1_staff_login_browser.py
       - name: Verify sanitized staging export builder, headers and origin refusals (offline, publishes nothing)
         run: python -m unittest discover -s tests -p 'test_staging_export.py' -v
+      - name: Check UI, labels and dropdowns
+        run: python tests/ui_smoke.py
+      - name: Check tournament safety
+        run: python tests/safety.py
+      - name: Rehearse tournament brackets
+        run: python tests/rehearsal.py
+
+
+  test:
+    name: Full regression — game-day and launch workflows
+    needs: classify
+    if: needs.classify.outputs.lane == 'full'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
+      - name: Install Chromium and Playwright
+        run: |
+          python -m pip install playwright
+          python -m playwright install chromium --with-deps
       - name: Game-day client, session, exports, formats, sign-in discovery and public-model unit tests (zero network)
         run: node --test tests/gameday_*.test.mjs
       - name: Registration model and server-side adapter (mocked Google and Supabase, zero network)
@@ -217,12 +253,6 @@ jobs:
         run: node --test tests/e2e/gameday_fullnames_layout.test.mjs
       - name: Backup export, disposable restore, in-place upgrade and rollback rehearsal (fictional data; tampering must fail)
         run: node --test tests/e2e/ops_restore_rehearsal.test.mjs
-      - name: Check UI, labels and dropdowns
-        run: python tests/ui_smoke.py
-      - name: Check tournament safety
-        run: python tests/safety.py
-      - name: Rehearse tournament brackets
-        run: python tests/rehearsal.py
 
   disposable-db:
     name: Disposable synthetic PostgreSQL
