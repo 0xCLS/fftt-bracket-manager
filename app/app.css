@@ -262,32 +262,29 @@ body.tv .champ{font-size:clamp(26px,3vw,50px);color:#f7e99b;font-weight:800}
 .reg-level{display:flex;align-items:center;gap:10px;min-width:0}
 .reg-level-text{display:flex;flex-direction:column;font-size:12px;line-height:1.35}
 
-/* Level badges: redundant number + readable level label, plus distinct shapes and
-   AA-contrast colors. Scoped to organizer registration/check-in, not score tiles.
-   Progressive enhancement: clip-path shapes fall back to the rounded chip. */
-.reg-level .rating-chip{
-  box-sizing:border-box;display:inline-flex;flex:0 0 38px;
-  width:38px;height:38px;min-width:38px;padding:0;
-  align-items:center;justify-content:center;border-radius:9px;
-  background:#e5e7eb;color:#374151;
-  font-size:16px;font-weight:800;line-height:1;white-space:nowrap;
-}
-.reg-level .rating-chip[data-level="1"]{background:#e5e7eb;color:#374151;border-radius:9px}
-.reg-level .rating-chip[data-level="2"]{background:#d1fae5;color:#166534;border-radius:50%}
-.reg-level .rating-chip[data-level="3"]{
-  background:#dbeafe;color:#1d4ed8;
-  clip-path:polygon(22% 0,78% 0,100% 50%,78% 100%,22% 100%,0 50%);
-}
-.reg-level .rating-chip[data-level="4"]{
-  background:#fed7aa;color:#9a3412;
-  clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);
-}
-.reg-level .rating-chip[data-level="5"]{
-  background:#e9d5ff;color:#6b21a8;
-  clip-path:polygon(12% 0,88% 0,100% 15%,96% 66%,50% 100%,4% 66%,0 15%);
-  padding-bottom:3px;
-}
-.reg-level .rating-chip[data-level="unset"]{background:#f1f2f4;color:#475569;border:1px dashed #64748b}
+
+/* FFTT rank insignia: equal 40×40 badge boxes, one shield silhouette,
+   1–4 chevrons followed by a conventional five-point star at Level 5.
+   The adjacent text always names the level for clarity and accessibility. */
+.rank-badge{--rank-edge:#374151;--rank-face:#6b7280;--rank-ink:#fff;
+  display:inline-flex;align-items:center;justify-content:center;
+  box-sizing:border-box;width:40px;height:40px;min-width:40px;min-height:40px;
+  max-width:40px;max-height:40px;flex:0 0 40px;
+  color:var(--rank-ink);font-size:16px;font-weight:800;line-height:1}
+.rank-badge svg{display:block;width:40px;height:40px;overflow:visible}
+.rank-badge[data-level="1"]{--rank-edge:#374151;--rank-face:#6b7280}
+.rank-badge[data-level="2"]{--rank-edge:#166534;--rank-face:#23945b}
+.rank-badge[data-level="3"]{--rank-edge:#174c8d;--rank-face:#2679ce}
+.rank-badge[data-level="4"]{--rank-edge:#99500f;--rank-face:#e88320}
+.rank-badge[data-level="5"]{--rank-edge:#5b2587;--rank-face:#9544bc}
+.rank-edge{fill:var(--rank-edge);stroke:#28313c;stroke-width:.4px;stroke-linejoin:round}
+.rank-face{fill:var(--rank-face);stroke:rgba(255,255,255,.65);stroke-width:.8px;stroke-linejoin:round}
+.rank-glint{stroke:rgba(255,255,255,.8);fill:none;stroke-width:1.5px;stroke-linecap:round}
+.rank-chevron-shadow{fill:none;stroke:rgba(0,0,0,.45);stroke-width:4px;stroke-linejoin:miter;transform:translateY(1px)}
+.rank-chevron{fill:none;stroke:#fff;stroke-width:3px;stroke-linejoin:miter;stroke-linecap:square}
+.rank-star-shadow{fill:rgba(0,0,0,.35);transform:translateY(1.4px)}
+.rank-star{fill:#fff;stroke:rgba(255,255,255,.75);stroke-width:.5px;stroke-linejoin:miter}
+.rank-badge.is-unset{border:1px dashed #64748b;border-radius:8px;background:#f1f2f4;color:#475569}
 
 .reg-state{min-width:0}
 .reg-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
@@ -750,26 +747,55 @@ td.scores-cell{min-width:150px}
 .status-list dt{color:var(--muted);font-weight:650}.status-list dd{margin:0}
 
 
-/* Players: action-first responsive workspace. Container width (not viewport)
-   controls the two-column layout so the staff sidebar cannot squeeze controls. */
+
+/* Settings and quick walk-in share a workspace; the high-volume registrant
+   list occupies full width below so staff can scan more rows at once. */
 .players-page{container-type:inline-size}
 #app .players-workspace{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--gap-section);align-items:start;margin-bottom:var(--gap-section)}
 #app .players-main,#app .players-side{min-width:0}
-#app .players-workspace .card{margin-bottom:var(--gap-section)}
-#app .players-workspace .card:last-child{margin-bottom:0}
-#app .players-workspace .reg-card>.card-head>div:first-child{flex-basis:250px}
+#app .players-workspace .card{margin-bottom:0}
 #app .players-workspace .reg-settings .card-sub{max-width:46ch}
 #app .players-workspace .walk-form .walk-name input{width:100%;min-width:0}
-#app .players-workspace .reg-card .empty-state{padding-block:16px}
+#app .players-page>.reg-card{margin-bottom:var(--gap-section)}
+#app .players-page>.reg-card .empty-state{padding-block:16px}
 @container (min-width:980px){
   #app .players-workspace{grid-template-columns:minmax(0,1.65fr) minmax(310px,.95fr)}
   #app .players-side .walk-form{grid-template-columns:minmax(0,1fr);align-items:start;gap:var(--gap-field)}
   #app .players-side .walk-go button{width:100%}
-  #app .players-main .reg-row{grid-template-columns:32px minmax(0,1fr) minmax(145px,.82fr);grid-template-areas:"pick main level" "pick state act";gap:8px 12px}
-  #app .players-main .reg-row>.reg-pick{grid-area:pick}
-  #app .players-main .reg-row>.reg-main{grid-area:main}
-  #app .players-main .reg-row>.reg-level{grid-area:level}
-  #app .players-main .reg-row>.reg-state{grid-area:state}
-  #app .players-main .reg-row>.reg-actions{grid-area:act;justify-content:flex-end}
-  #app .players-main .reg-edit{grid-column:1/-1}
+}
+/* Compact check-in list: the "Not checked in" state is implicit in the
+   Check in action; exceptional statuses remain visible on their own line. */
+#app .players-page>.reg-card .reg-row{
+  grid-template-columns:36px minmax(180px,1.4fr) minmax(205px,1fr) auto;
+  grid-template-areas:"pick main level act";
+  column-gap:16px;row-gap:6px;align-items:center;
+  padding:9px 8px;min-height:66px;
+}
+#app .players-page>.reg-card .reg-row>.reg-pick{grid-area:pick}
+#app .players-page>.reg-card .reg-row>.reg-main{grid-area:main}
+#app .players-page>.reg-card .reg-row>.reg-level{grid-area:level}
+#app .players-page>.reg-card .reg-row>.reg-actions{grid-area:act;justify-content:flex-end}
+#app .players-page>.reg-card .reg-row>.reg-state{grid-column:2/-1;grid-row:auto}
+#app .players-page>.reg-card .reg-row>.reg-state:empty{display:none}
+#app .players-page>.reg-card .reg-name{font-size:15px}
+#app .players-page>.reg-card .reg-sub{font-size:12px}
+#app .players-page>.reg-card .reg-edit{grid-column:2/-1}
+#app .players-page>.reg-card .reg-level-text{font-size:12px;line-height:1.4}
+@container (max-width:780px){
+  #app .players-page>.reg-card .reg-row{
+    grid-template-columns:32px minmax(0,1fr) auto;
+    grid-template-areas:"pick main act" ". level level";
+    gap:8px 10px;
+  }
+  #app .players-page>.reg-card .reg-row>.reg-state{grid-column:2/-1}
+  #app .players-page>.reg-card .reg-row>.reg-edit{grid-column:2/-1}
+}
+@container (max-width:520px){
+  #app .players-page>.reg-card .reg-row{
+    grid-template-columns:32px minmax(0,1fr);
+    grid-template-areas:"pick main" ". level" ". act";
+    padding:12px 4px;gap:8px 10px;
+  }
+  #app .players-page>.reg-card .reg-row>.reg-actions{justify-content:flex-start}
+  #app .players-page>.reg-card .reg-row>.reg-state{grid-column:2/-1}
 }
