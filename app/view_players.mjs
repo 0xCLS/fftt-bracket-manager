@@ -475,8 +475,20 @@ export function createPlayersView(ctx) {
         h('div', {class: 'row'},
           unconfirmed.length ? h('button', {type: 'button', class: 'small primary', disabled: !writable(), text: `Confirm ${unconfirmed.length} suggested level${unconfirmed.length === 1 ? '' : 's'}`,
             on: {click: async () => { if (await confirmDialog('Confirm all suggested levels?', `This marks the ${unconfirmed.length} suggested level${unconfirmed.length === 1 ? '' : 's'} as reviewed. Change any you disagree with first.`, 'Confirm levels')) result(await core.actions.confirmRatings(unconfirmed.map(p => ({id: p.id, rating: p.rating}))), 'Levels confirmed.'); }}}) : null,
-          h('button', {class: 'small', type: 'button', disabled: !writable(), text: 'Check in all', on: {click: async () => result(await core.actions.setCheckinAll(true))}}),
-          h('button', {class: 'small', type: 'button', disabled: !writable() || built, text: 'Clear check-ins', title: built ? 'Not possible once a bracket is built' : null, on: {click: async () => result(await core.actions.setCheckinAll(false))}}))),
+          h('button', {class: 'small', type: 'button', disabled: !writable() || sn.players.length === 0 || checked === sn.players.length,
+            text: 'Check in all', title: 'Mark every roster player as physically present (confirmation required)',
+            on: {click: async () => {
+              const remaining = sn.players.length - checked;
+              if (!remaining) return;
+              if (await confirmDialog('Check in every roster player?', `This will mark all ${sn.players.length} roster players as present, including ${remaining} not yet checked in. Only do this if you have verified that everyone is physically here. This does not load or check in people who are only in the registration sheet.`, 'Check in all players'))
+                result(await core.actions.setCheckinAll(true), 'All roster players checked in.');
+            }}}),
+          h('button', {class: 'small', type: 'button', disabled: !writable() || built || checked === 0, text: 'Clear check-ins',
+            title: built ? 'Not possible once a bracket is built' : 'Uncheck every roster player (confirmation required)',
+            on: {click: async () => {
+              if (await confirmDialog('Clear every check-in?', `This will mark all ${checked} checked-in roster players as not present. You will need to check each attending player in again before building the bracket.`, 'Clear all check-ins', {danger: true}))
+                result(await core.actions.setCheckinAll(false), 'All roster check-ins cleared.');
+            }}}))),
       sn.players.length ? h('div', {class: 'scroll-x'}, h('table', {class: 'responsive-table'},
         h('thead', {}, h('tr', {}, ['Player', 'Level', 'Review', 'Experience', 'Checked in', ''].map(t => h('th', {scope: 'col', text: t})))),
         h('tbody', {}, rows)))
