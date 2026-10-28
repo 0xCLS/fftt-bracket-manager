@@ -27,12 +27,32 @@ in-progress workflow runs.
 All UI checks use real Chromium with fictional, intercepted, local PGlite
 data; none connect to hosted Supabase, a real Google Sheet or Cloudflare.
 
-## Release gate — do not substitute a green fast lane
+## Release gate — visual-only staging exception with verified baseline
 
-**Before any controlled Staff/Spectator deployment, explicitly run and
-confirm a green full regression on the exact release source commit.**
-The faster checks are for feedback *during iteration*, not for skipping
-release-quality verification. Never deploy just because the fast lane passed.
+Before a staging deployment, the gate compares the **entire change from the
+currently deployed Staff AND Spectator manifests** to the exact release SHA.
+It permits the already-green focused Chrome UI check only when **all** of
+the following hold:
+
+1. Both staging sites identify the **same** verified baseline commit.
+2. That live baseline has successfully completed all three full regression jobs.
+3. Every path changed since that baseline is in the conservative
+   `ui-visual` file allowlist (CSS and visual-only browser regression tests);
+   the Git ancestor and file comparison must be provable.
+4. Both the PR's exact-commit **Select safe CI lane** and
+   **Fast UI checks (fictional Chrome)** jobs passed. Failed/pending full
+   checks for the same commit are not ignored.
+5. The normal immutable bundle, preview, security, manifest-hash, promotion
+   and live-verification gates still pass.
+
+This is **not** a blanket waiver for app code. UI interaction/JS edits,
+unknown/mixed changes, staging baselines that differ, incomplete history,
+Auth, database, server, scoring and any uncertain condition still require the
+full regression on the exact commit. For protected changes the staging gate
+reuses a full run or starts it once as before. For an eligible visual-only
+change, it does **not** dispatch a second expensive full run; if the focused
+check is missing or fails, deployment stops instead.
+
 Keep PR #19 draft and unmerged unless separately approved.
 
 The current targeted test is
@@ -69,4 +89,4 @@ The broad application test job is partitioned into two independent jobs, `founda
 
 ## Automatic staging deployment — October 28, 2026
 
-`.github/workflows/deploy-staging.yml` now deploys the Staff and Spectator **staging** Pages projects automatically after the full regression (above) is green on the exact commit. It reuses the PR's full run or starts it once; it never deploys on a fast lane. See [FFTT3_STAGING_PIPELINE.md](launch/FFTT3_STAGING_PIPELINE.md).
+`.github/workflows/deploy-staging.yml` automatically deploys the two **staging** Pages projects after either the proven visual-only exception above or a complete full regression. It never skips the security/integrity checks on the deployed bundles. See [FFTT3_STAGING_PIPELINE.md](launch/FFTT3_STAGING_PIPELINE.md).

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """The automatic staging pipeline's decisions: what to deploy, when the regression gate is satisfied, bundle integrity,
 and the hard-wired staging-only boundaries. Zero network; publishes nothing."""
-import hashlib, json, re, shutil, sys, tempfile, unittest
+import hashlib, json, re, shutil, subprocess, sys, tempfile, unittest
+from unittest.mock import patch
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'tools' / 'ops'))
@@ -42,10 +43,55 @@ class Decisions(unittest.TestCase):
         self.assertEqual(R.evaluate(ok)[0], 'ready')
         self.assertEqual(R.evaluate(ok[:2])[0], 'dispatch')   # one required job never ran
 
-    def test_gate_never_accepts_a_fast_lane_or_skipped_jobs(self):
-        fast = [run(R.CLASSIFY_CHECK), run('Fast UI checks (fictional Chrome)')] + [run(n, conclusion='skipped') for n in R.REQUIRED_CHECKS]
-        self.assertEqual(R.evaluate(fast)[0], 'dispatch')
+    def test_fast_lane_never_passes_unverified_or_protected_release(self):
+        fast = [run(R.CLASSIFY_CHECK), run(R.FAST_CHECK)] + [run(n, conclusion='skipped') for n in R.REQUIRED_CHECKS]
+        self.assertEqual(R.evaluate(fast)[0], 'dispatch')  # mandatory full route remains intact
         self.assertEqual(R.evaluate([])[0], 'dispatch')
+        self.assertEqual(R.evaluate_fast_visual(fast)[0], 'ready')
+        self.assertEqual(R.evaluate_fast_visual([run(R.CLASSIFY_CHECK)])[0], 'wait')
+        self.assertEqual(R.evaluate_fast_visual([run(R.FAST_CHECK, conclusion='failure'), run(R.CLASSIFY_CHECK)])[0], 'fail')
+        self.assertEqual(R.evaluate_fast_visual([run(R.FAST_CHECK, status='queued', conclusion=None), run(R.CLASSIFY_CHECK)])[0], 'wait')
+
+    def test_visual_release_delta_uses_shared_allowlist_since_live_baseline(self):
+        def fake_git(*args, **kwargs):
+            if args[:2] == ('merge-base', '--is-ancestor'):
+                return subprocess.CompletedProcess(args, 0, '')
+            if args[:2] == ('diff', '--name-only'):
+                return subprocess.CompletedProcess(args, 0, 'app/app.css\ntests/e2e/gameday_polish_browser.test.mjs\n')
+            raise AssertionError(args)
+        with patch.object(R, 'git', side_effect=fake_git):
+            self.assertTrue(R.visual_delta_only('b'*40, SHA))
+        with patch.object(R, 'git', side_effect=lambda *a, **kw: subprocess.CompletedProcess(a, 0, 'app/app.css\napp/view_players.mjs\n')):
+            self.assertFalse(R.visual_delta_only('b'*40, SHA), 'interactive player changes require full before release')
+        with patch.object(R, 'git', side_effect=lambda *a, **kw: subprocess.CompletedProcess(a, 1, '')):
+            self.assertFalse(R.visual_delta_only('b'*40, SHA), 'unverified history must fail closed')
+        self.assertFalse(R.visual_delta_only(None, SHA), 'no live baseline means full')
+        self.assertFalse(R.visual_delta_only(SHA, SHA), 'no diff is not a fast release')
+
+    def test_focused_release_requires_matching_live_baselines_with_full_CI_proof(self):
+        older = 'b' * 40
+        def manifest_for(commit):
+            return {'commit': commit, 'files': {'app/app.css': 'hash'}}
+        with patch.object(R, 'live_manifest', side_effect=[manifest_for(older), manifest_for(older)]), \
+             patch.object(R, 'visual_delta_only', return_value=True), \
+             patch.object(R, 'check_runs', return_value=[run(n) for n in R.REQUIRED_CHECKS]):
+            base, why = R.visual_release_baseline(SHA)
+            self.assertEqual(base, older)
+            self.assertIn('visual-only', why)
+        with patch.object(R, 'live_manifest', side_effect=[manifest_for(older), manifest_for('c'*40)]):
+            self.assertIsNone(R.visual_release_baseline(SHA)[0], 'different live revisions require full')
+        with patch.object(R, 'live_manifest', side_effect=[manifest_for(older), manifest_for(older)]), \
+             patch.object(R, 'visual_delta_only', return_value=True), \
+             patch.object(R, 'check_runs', return_value=[run(n, conclusion='skipped') for n in R.REQUIRED_CHECKS]):
+            self.assertIsNone(R.visual_release_baseline(SHA)[0], 'baseline not proven by full CI')
+        with patch.object(R, 'live_manifest', side_effect=[manifest_for(older), manifest_for(older)]), \
+             patch.object(R, 'visual_delta_only', return_value=False):
+            self.assertIsNone(R.visual_release_baseline(SHA)[0], 'nonvisual changes require full')
+
+    def test_fast_release_blocks_failed_full_checks_if_someone_ran_them(self):
+        fast = [run(R.CLASSIFY_CHECK), run(R.FAST_CHECK)]
+        self.assertEqual(R.evaluate_fast_visual(fast + [run(R.REQUIRED_CHECKS[0], conclusion='failure')])[0], 'fail')
+        self.assertEqual(R.evaluate_fast_visual(fast + [run(R.REQUIRED_CHECKS[0], status='in_progress', conclusion=None)])[0], 'wait')
 
     def test_gate_waits_for_running_jobs_and_fails_on_any_failure(self):
         running = [run(R.REQUIRED_CHECKS[0], 'in_progress', None)] + [run(n) for n in R.REQUIRED_CHECKS[1:]]

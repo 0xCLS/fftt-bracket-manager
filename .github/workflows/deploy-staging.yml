@@ -53,7 +53,7 @@ jobs:
           if-no-files-found: error
 
   gate:
-    name: Require the full regression on this commit
+    name: Require approved exact-commit CI gate
     needs: plan
     if: needs.plan.outputs.any == 'true'
     runs-on: ubuntu-latest
@@ -61,14 +61,15 @@ jobs:
     permissions:
       contents: read
       checks: read
-      actions: write   # start the full regression if only a fast UI lane ran for this commit
+      actions: write   # start full regression only for core/unknown changes; verified visual-only releases use focused CI
     outputs:
       superseded: ${{ steps.gate.outputs.superseded }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
-      - name: Wait for (or start) the full regression on this exact commit
+          fetch-depth: 0   # compare ALL changes against the last full-tested live staging commit
+      - name: Wait for the approved exact-commit checks (dispatch full only when needed)
         id: gate
         env:
           GH_TOKEN: ${{ github.token }}

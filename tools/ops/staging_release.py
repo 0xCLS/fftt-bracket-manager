@@ -5,7 +5,8 @@ Used only by .github/workflows/deploy-staging.yml; every command also runs local
 
   build    build both sanitized bundles from an exact commit (tools/staging/build_export.py)
   plan     compare each bundle with what is live; write GitHub outputs staff=true|false spectator=true|false
-  gate     wait for (or start) the full regression on the exact commit; exit 0 only when every required job passed
+  gate     accept focused UI checks only for a verified visual-only delta on a full-tested live baseline;
+           otherwise require full regression on the exact commit
   release  verify bundle integrity -> PREVIEW upload + static checks -> production upload -> live checks -> auto-rollback on failure
 
 Safety properties (all enforced here, covered by tests/test_staging_release.py):
@@ -22,6 +23,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT / 'tools' / 'staging'))
+sys.path.insert(0, str(ROOT / 'tools'))
+import ci_impact  # share the conservative visual file allowlist with the PR classifier
 
 REPO = '0xCLS/fftt-bracket-manager'
 BRANCH = 'integration/milestone1-secure-foundation'
@@ -32,8 +35,10 @@ APPS = {
     'staff': {'project': 'fftt3-staff-stg', 'origin': 'https://fftt3-staff-stg.pages.dev'},
     'spectator': {'project': 'fftt3-games-stg', 'origin': 'https://fftt3-games-stg.pages.dev'},
 }
-# Job names in browser-tests.yml that make up the FULL regression (a fast UI lane is never enough to release).
+# Job names in browser-tests.yml. Full tests are mandatory except for verified
+# visual-only changes since an already full-tested live staging baseline.
 CLASSIFY_CHECK = 'Select safe CI lane'
+FAST_CHECK = 'Fast UI checks (fictional Chrome)'
 REQUIRED_CHECKS = (
     'Full regression — browser and security foundation',
     'Full regression — game-day and launch workflows',
@@ -107,6 +112,62 @@ def evaluate(runs):
     if 'pending' in vals:
         return 'wait', states
     return 'dispatch', states
+
+
+def evaluate_fast_visual(runs):
+    """Only a complete successful classifier + focused browser job can clear a visual-only release."""
+    by = {}
+    for r in runs:
+        by.setdefault(r['name'], []).append(r)
+    states = {}
+    for name in (CLASSIFY_CHECK, FAST_CHECK):
+        rs = by.get(name, [])
+        if any(r['status'] == 'completed' and r['conclusion'] == 'success' for r in rs):
+            states[name] = 'success'
+        elif any(r['status'] != 'completed' for r in rs):
+            states[name] = 'pending'
+        elif any(r['conclusion'] in ('failure', 'timed_out', 'action_required', 'startup_failure') for r in rs):
+            states[name] = 'failure'
+        else:
+            states[name] = 'absent'
+    if 'failure' in states.values():
+        return 'fail', states
+    # Never override a failed or ongoing full regression on the same source,
+    # even when the focused visual check has passed.
+    full, _ = evaluate(runs)
+    if full == 'fail':
+        return 'fail', states
+    if full == 'wait':
+        return 'wait', states
+    if set(states.values()) == {'success'}:
+        return 'ready', states
+    return 'wait', states
+
+
+def visual_delta_only(base, commit):
+    """Fail closed unless every path changed SINCE THE LIVE BASELINE is a visual-only allowlist path."""
+    if not (SHA.fullmatch(base or '') and SHA.fullmatch(commit or '') and base != commit):
+        return False
+    if git('merge-base', '--is-ancestor', base, commit, check=False).returncode != 0:
+        return False
+    result = git('diff', '--name-only', '--diff-filter=ACMRTD', base, commit, check=False)
+    if result.returncode != 0:
+        return False
+    paths = [p for p in result.stdout.splitlines() if p]
+    return bool(paths) and all(p in ci_impact.VISUAL for p in paths)
+
+
+def visual_release_baseline(commit):
+    """Require two matching live staging manifests AND a successful full CI on that baseline."""
+    manifests = [live_manifest(app['origin']) for app in APPS.values()]
+    base = (manifests[0] or {}).get('commit')
+    if not base or any((m or {}).get('commit') != base for m in manifests):
+        return None, 'live Staff/Spectator baseline differs or is unavailable'
+    if not visual_delta_only(base, commit):
+        return None, 'cumulative live-to-target diff contains a nonvisual or unverifiable change'
+    if evaluate(check_runs(base))[0] != 'ready':
+        return None, 'live staging baseline lacks full regression evidence'
+    return base, 'visual-only delta from a full-tested live staging baseline'
 
 
 def classify_finished(runs):
@@ -246,28 +307,40 @@ def cmd_gate(a):
     deadline = time.time() + a.timeout_min * 60
     started = time.time()
     dispatched = False
+    # A full-tested, currently deployed baseline permits *visual-only* changes
+    # to use the targeted fictional Chrome checks. Interactive JS, unknown files,
+    # unverified history and missing live manifests retain the full suite.
+    base, reason = visual_release_baseline(a.commit)
+    visual = base is not None
+    log(f'release CI policy: {"focused visual" if visual else "full"} — {reason}')
     while True:
         if not a.allow_old and branch_tip() != a.commit:
             log('a newer commit exists on the branch; this release is superseded and will not be deployed')
             set_output('superseded', 'true')
             return
         runs = check_runs(a.commit)
-        verdict, states = evaluate(runs)
+        verdict, states = evaluate_fast_visual(runs) if visual else evaluate(runs)
         log(f'{int(time.time() - started):>4}s  {verdict:8} ' + '; '.join(f'{k.split(" — ")[-1]}={v}' for k, v in states.items()))
         if verdict == 'ready':
             set_output('superseded', 'false')
             return
         if verdict == 'fail':
-            die('the full regression FAILED on this commit; nothing is deployed')
-        if verdict == 'dispatch' and not dispatched:
+            die('required exact-commit regression FAILED; nothing is deployed')
+        if visual:
+            # A missing/failed fast lane cannot silently become a production
+            # deployment. Never start the expensive full workflow for a
+            # verified CSS-only change; an organizer must fix the focused check.
+            if time.time() - started > 600 and any(v == 'absent' for v in states.values()):
+                die('focused UI regression did not run on this commit; nothing is deployed')
+        elif verdict == 'dispatch' and not dispatched:
             if classify_finished(runs) or time.time() - started > 180:
                 if branch_tip() != a.commit:
                     die('the full regression has not run on this commit and it is no longer the branch tip')
-                log('only a fast lane (or nothing) ran for this commit; starting the full regression once')
+                log('core or unverified change: starting the mandatory full regression once')
                 subprocess.run(['gh', 'workflow', 'run', TEST_WORKFLOW, '--repo', REPO, '--ref', BRANCH], check=True)
                 dispatched = True
         if time.time() > deadline:
-            die('timed out waiting for the full regression')
+            die('timed out waiting for required exact-commit regression')
         time.sleep(a.poll_sec)
 
 
