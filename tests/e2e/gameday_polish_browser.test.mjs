@@ -170,7 +170,12 @@ test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Sta
       await org.page.locator('#regLoad').click();
       await org.page.locator('.reg-body .reg-meta').waitFor({timeout: T});
       await org.page.locator('.reg-body .reg-row').first().waitFor({timeout: T});
-
+      const rankType = await org.page.locator('.reg-row .reg-level-text').first().evaluate(el => {
+        const primary = el.querySelector('span:first-child'), secondary = el.querySelector('span.muted');
+        return {primary: parseFloat(getComputedStyle(primary).fontSize), secondary: parseFloat(getComputedStyle(secondary).fontSize)};
+      });
+      assert.ok(rankType.primary >= 14 && rankType.secondary <= 12 && rankType.primary > rankType.secondary,
+        'playing level is visually more prominent than suggestion confidence');
 
       // Same shield geometry for every rank, in a 40×40 square.
       if (vp === 'desktop') {
@@ -391,8 +396,12 @@ test('SCORE TILES: equal squares, tabular numerals, green winner / red loser per
       await spec.page.locator('.match-foot .score-tile').first().waitFor({timeout: T});
       const cdims = await spec.page.evaluate(() => [...document.querySelectorAll('.match-foot .score-tile')].map(t => { const r = t.getBoundingClientRect(); return [r.width, r.height]; }));
       assert.ok(cdims.every(([a, b]) => Math.abs(a - b) < 0.5 && Math.abs(a - cdims[0][0]) < 0.5), 'bracket cards use equal compact squares');
-      const rules = await spec.page.evaluate(() => [...document.querySelectorAll('.bracket .match-foot .score-game+.score-game')].map(g => getComputedStyle(g).borderLeftStyle));
-      assert.ok(rules.length > 0 && rules.every(x => x === 'solid'), 'bracket game pairs are separated by a subtle rule');
+      const rules = await spec.page.evaluate(() => [...document.querySelectorAll('.bracket .match-foot .score-game+.score-game')].map(g => {
+        const line = getComputedStyle(g, '::before');
+        return {height: parseFloat(line.height), width: parseFloat(line.width), content: line.content};
+      }));
+      assert.ok(rules.length > 0 && rules.every(x => x.height === 14 && x.width === 1 && x.content !== 'none'),
+        'championship and consolation game separators are shorter than their score squares');
       const ov = await spec.page.evaluate(() => [...document.querySelectorAll('.match')].filter(m => m.scrollWidth > m.clientWidth + 1).length);
       assert.equal(ov, 0, 'tiles never overflow a bracket card');
     }
@@ -523,8 +532,18 @@ test('REGISTRATION SETTINGS (event-specific Google Sheet, fake Google): recogniz
     assert.deepEqual(await page.locator('#regTab option').allInnerTexts(), [TAB, 'Notes']);
     assert.equal(await page.locator('.reg-share-help').count(), 0, 'sharing instructions disappear after verified access');
     assert.match(await page.locator('.sub-block').first().innerText(), /Column mapping/);
-    if (!(await page.locator('.reg-mapping-disclosure').evaluate(e => e.open)))
-      await page.locator('.reg-mapping-disclosure summary').click();
+    const mappingSummary = page.locator('.reg-mapping-disclosure summary');
+    const beforeMappingToggle = await mappingSummary.evaluate(e => ({
+      open: e.parentElement.open, mark: getComputedStyle(e, '::after').content
+    }));
+    assert.match(beforeMappingToggle.mark, beforeMappingToggle.open ? /−/ : /\+/, 'disclosure marks its current state');
+    await mappingSummary.click();
+    const afterMappingToggle = await mappingSummary.evaluate(e => ({
+      open: e.parentElement.open, mark: getComputedStyle(e, '::after').content
+    }));
+    assert.notEqual(afterMappingToggle.open, beforeMappingToggle.open, 'summary toggles the native disclosure');
+    assert.match(afterMappingToggle.mark, afterMappingToggle.open ? /−/ : /\+/, 'plus changes to minus on expansion');
+    if (!afterMappingToggle.open) await mappingSummary.click();
     assert.deepEqual(await page.locator('.diag-list li').evaluateAll(els => els.map(e => e.className)), Array(6).fill('diag-pass'));
     assert.match(await page.locator('.diag').innerText(), /21 responses \(a count only; no answers were read\)/);
     assert.match(await page.locator('#map-rallies option:checked').innerText(), /^Detected: /);

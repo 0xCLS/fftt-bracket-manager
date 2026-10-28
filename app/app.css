@@ -664,7 +664,9 @@ dialog .dlg>.dlg-actions{margin-top:var(--gap-actions)}
 .score-tiles.compact .score-games{gap:4px 7px}
 .score-text{font-size:.9rem}
 /* Distinct games in Championship and Consolation brackets, without splitting score pairs. */
-.bracket .match-foot .score-game+.score-game{border-left:1px solid #c5cdd6;padding-left:8px;margin-left:3px}
+/* Short, centered separators between games; keep each pair of score squares together. */
+.bracket .match-foot .score-game+.score-game{position:relative;padding-left:8px;margin-left:3px}
+.bracket .match-foot .score-game+.score-game::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);height:14px;width:1px;background:#c5cdd6;pointer-events:none}
 .match-foot .score-tiles{display:flex}
 td.scores-cell{min-width:150px}
 /* Separate complete game-score pairs in organizer Recent results only.
@@ -831,6 +833,13 @@ td.scores-cell{min-width:150px}
   flex-wrap:wrap;cursor:pointer;padding:13px 18px;color:#29313c}
 #app .players-registration-config .reg-mapping-disclosure>summary span{font-size:12px}
 #app .players-registration-config .reg-mapping-disclosure>summary .muted{font-weight:500;color:#56626d}
+/* Native details/summary retains keyboard and screen-reader disclosure behavior. */
+#app .players-registration-config .reg-mapping-disclosure>summary{list-style:none}
+#app .players-registration-config .reg-mapping-disclosure>summary::-webkit-details-marker{display:none}
+#app .players-registration-config .reg-mapping-disclosure>summary::after{content:"+";display:inline-flex;align-items:center;justify-content:center;
+  flex:0 0 27px;width:27px;height:27px;margin-left:8px;border:1px solid #cbd5df;border-radius:6px;
+  font-size:20px;font-weight:500;line-height:1;color:#46525f;background:#f8fafb}
+#app .players-registration-config .reg-mapping-disclosure[open]>summary::after{content:"−"}
 #app .players-registration-config .reg-mapping-disclosure[open]>summary{border-bottom:1px solid #e4e7ec;margin-bottom:12px}
 #app .players-registration-config .reg-mapping-disclosure>p,
 #app .players-registration-config .reg-mapping-disclosure>.map-grid{margin:0 18px 18px}
@@ -865,6 +874,9 @@ td.scores-cell{min-width:150px}
 #app .players-page>.reg-card .reg-sub{font-size:12px}
 #app .players-page>.reg-card .reg-edit{grid-column:2/-1}
 #app .players-page>.reg-card .reg-level-text{font-size:12px;line-height:1.4}
+/* Level is the decision; suggestion confidence is secondary supporting information. */
+#app .players-page>.reg-card .reg-level-text>span:first-child{font-size:14px;font-weight:700;line-height:1.3;color:#29313c}
+#app .players-page>.reg-card .reg-level-text>.muted{font-size:11.5px;line-height:1.4}
 @container (max-width:780px){
   #app .players-page>.reg-card .reg-row{
     grid-template-columns:32px minmax(0,1fr) auto;
