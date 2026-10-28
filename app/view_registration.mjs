@@ -110,7 +110,16 @@ export function createRegistrationSettings(ctx) {
     rerender();                                            // …so this one repaint shows the busy state
     const r = await pending;
     if (r.kind === 'superseded') return;
-    if (r.ok) { const first = r.result.worksheets.find(w => !w.hidden) ?? r.result.worksheets[0]; if (!r.result.worksheets.some(w => w.title === st.worksheet)) st.worksheet = first?.title ?? ''; st.dirty = true; await runTest(); }
+    if (r.ok) {
+      const first = r.result.worksheets.find(w => !w.hidden) ?? r.result.worksheets[0];
+      if (!r.result.worksheets.some(w => w.title === st.worksheet)) st.worksheet = first?.title ?? '';
+      // Checking an already-saved sheet is read-only: it does not create unsaved changes.
+      const saved = s.registrationSettings.source;
+      const changed = !saved?.configured || saved.kind !== 'google-sheets' ||
+        saved.spreadsheetId !== parseSpreadsheetRef(st.text) || saved.worksheet !== st.worksheet;
+      st.dirty = st.dirty || changed;
+      await runTest();
+    }
     else say(r.message);
   }
   async function runTest() {
