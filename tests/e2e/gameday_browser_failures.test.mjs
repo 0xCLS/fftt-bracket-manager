@@ -156,6 +156,20 @@ test('heartbeat preserves the organizer opening-round preview and occupied table
     assert.equal(await org.page.locator('dialog[open] #scTable option[value="1"]').isDisabled(), true,
       'the score dialog also prevents selecting an occupied table');
     await org.page.locator('dialog[open] button', {hasText: 'Cancel'}).click();
+
+    // With all three tables in use, the fourth ready match must not reach Review/Send.
+    await cards.nth(1).locator('select[aria-label^="Table for"]').selectOption('2');
+    await org.page.locator('#toasts .toast', {hasText: 'Assigned to table 2'}).waitFor({timeout: T});
+    await cards.nth(2).locator('select[aria-label^="Table for"]').selectOption('3');
+    await org.page.locator('#toasts .toast', {hasText: 'Assigned to table 3'}).waitFor({timeout: T});
+    assert.equal(await cards.count(), 4, 'four ready matches with three occupied tables');
+    await cards.nth(3).locator('button', {hasText: 'Record result'}).click();
+    const full = org.page.locator('dialog[open]');
+    assert.match(await full.locator('#scNoFreeTable').innerText(), /All tables are occupied/);
+    assert.equal(await full.locator('#scTable').isDisabled(), true, 'the table picker is unavailable');
+    assert.equal(await full.locator('button', {hasText: 'Review result'}).isDisabled(), true, 'no invalid score review is possible');
+    assert.equal(await full.locator('button', {hasText: 'Confirm and send'}).count(), 0, 'no send action is available');
+    await full.locator('button', {hasText: 'Cancel'}).click();
   } finally { await w.close(); }
 });
 

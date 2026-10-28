@@ -415,7 +415,8 @@ export function createStaffUi({core, els, config, signOut}) {
       const gameInputs = [];
       const available = Array.from({length: tables}, (_, i) => i + 1).filter(n => !occupiedByOtherMatch(row, n));
       const initial = row.table ?? available[0] ?? null;
-      const tableSel = h('select', {id: 'scTable'},
+      const noFreeTable = initial === null;
+      const tableSel = h('select', {id: 'scTable', 'aria-describedby': noFreeTable ? 'scNoFreeTable' : undefined, disabled: noFreeTable},
         initial === null ? h('option', {value: '', text: 'No free table', disabled: true, selected: true}) : null,
         Array.from({length: tables}, (_, i) => {
           const n = i + 1, occupied = occupiedByOtherMatch(row, n);
@@ -435,12 +436,15 @@ export function createStaffUi({core, els, config, signOut}) {
           h('div', {class: 'winner-pick', role: 'radiogroup', 'aria-label': 'Winner'},
             row.players.map(p => h('label', {}, h('input', {type: 'radio', name: 'winner', value: p.id, checked: winnerId === p.id, on: {change: () => { winnerId = p.id; }}}), h('span', {text: `${p.name} won`})))),
           h('p', {class: 'help', text: `${formatText(fmt)}: enter ${best === 1 ? 'the game' : 'each game'} played (first to ${fmt.points}, win by 2).`}), grid,
-          h('label', {for: 'scTable', text: 'Table'}), tableSel, msg,
+          h('label', {for: 'scTable', text: 'Table'}), tableSel,
+          noFreeTable ? h('p', {class: 'notice warn', id: 'scNoFreeTable', role: 'status', text: 'All tables are occupied. Close this dialog and try again once a table is free. No result has been sent.'}) : null,
+          msg,
           h('div', {class: 'dlg-actions'}, h('button', {type: 'button', text: 'Cancel', on: {click: close}}),
-            h('button', {type: 'button', class: 'primary', text: 'Review result', on: {click: review}})));
+            h('button', {type: 'button', class: 'primary', text: 'Review result', disabled: noFreeTable, on: {click: review}})));
       }
       function review() {
         msg.textContent = '';
+        if (!tableSel.value) { msg.textContent = 'Choose a free table before reviewing this result.'; return; }
         gameInputs.forEach(([a, b], i) => { draftGames[i] = [a.value, b.value]; });
         if (!winnerId) { msg.textContent = 'Choose who won.'; return; }
         const games = gameInputs.filter(([a, b]) => a.value.trim() !== '' || b.value.trim() !== '').map(([a, b]) => `${a.value.trim()}-${b.value.trim()}`).join(', ');
