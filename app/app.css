@@ -801,7 +801,7 @@ td.scores-cell{min-width:150px}
 /* One Add players workspace replaces the duplicate quick-walk-in/manual
    cards. Tabs only change view; each submit remains a distinct operation. */
 #app .add-players-card .card-head{margin-bottom:var(--gap-inline)}
-#app .add-mode-switch{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;
+#app .add-mode-switch{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
   padding:4px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface-soft);
   margin-bottom:var(--gap-field)}
 #app .add-mode-switch button{min-height:40px;border:0;background:transparent;color:var(--muted);
@@ -812,7 +812,7 @@ td.scores-cell{min-width:150px}
 #app .add-panel[hidden]{display:none!important}
 #app .add-players-card .walk-form{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--gap-field);align-items:start}
 #app .add-players-card .walk-level{min-width:0}
-#app .add-players-card .add-one-actions{display:flex;gap:8px;flex-wrap:wrap}
+#app .add-players-card .add-one-actions{display:flex;gap:12px;flex-wrap:wrap}
 #app .add-players-card .add-one-actions button{flex:1 1 145px;min-height:44px}
 #app .add-players-card .walk-form .status{grid-column:1;margin:0}
 #app .add-players-card .manual-form textarea{min-height:112px;resize:vertical}
