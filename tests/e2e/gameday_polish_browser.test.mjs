@@ -197,11 +197,11 @@ test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Sta
         assert.equal(new Set(shields.map(x => x.face)).size, 5, 'five distinct level colors');
         assert.deepEqual(shields.map(x => x.chevrons), [1, 2, 3, 4, 0], 'ranks 1–4 contain corresponding chevrons');
         assert.deepEqual(shields.map(x => x.stars), [0, 0, 0, 0, 1], 'only Level 5 contains a star');
-        assert.ok(shields[4].starPath.includes('L29 18 L23.7 22.2'), 'Level 5 star uses the smaller inset five-point silhouette');
+        assert.ok(shields[4].starPath.includes('L29 16.5 L23.7 20.7'), 'Level 5 star uses the smaller, slightly raised five-point silhouette');
         assert.ok(shields.every(x => x.hidden === 'true'), 'icon meaning is duplicated as text for assistive technology');
         assert.ok(shields.slice(0, 4).every(x => x.chevronPaths.every(d => d.startsWith('M14 ') && d.includes(' L26 '))),
           'every chevron stays well inside the inner shield boundary');
-        assert.ok(shields[4].starPath.startsWith('M20 12 '), 'the star tip is inset from the top shield border');
+        assert.ok(shields[4].starPath.startsWith('M20 10.5 '), 'the raised star tip remains inset from the shield border');
         const seen = await org.page.locator('.reg-row .reg-level').first().evaluate(e => ({
           level:e.querySelector('.rank-badge')?.dataset.level,
           label:e.querySelector('.reg-level-text')?.innerText || ''
@@ -548,6 +548,9 @@ test('REGISTRATION SETTINGS (event-specific Google Sheet, fake Google): recogniz
     const saved = await w.fake.local.admin('select kind, spreadsheet_id, worksheet, column_map, enabled, status from fftt_private.registration_sources where event_id = $1', [w.eventId]);
     assert.deepEqual(saved.map(r => [r.kind, r.spreadsheet_id, r.worksheet, r.column_map, r.enabled]), [['google-sheets', SHEET_OK, TAB, {description: '(none)'}, false]]);
     assert.ok(['ready', 'needs-attention', 'untested'].includes(saved[0].status));
+    await page.locator('#regCheck').click();
+    await page.locator('.diag', {hasText: 'Ready to read'}).waitFor({timeout: T});
+    assert.equal(await page.locator('.reg-unsaved').count(), 0, 'checking an unchanged saved sheet is not an unsaved edit');
     // 8. loading from a saved-but-off live source: ONE plain inline explanation in the shared vocabulary
     await page.evaluate(() => document.querySelectorAll('#toasts .toast').forEach(t => t.remove()));
     await page.locator('#regLoad').click();
