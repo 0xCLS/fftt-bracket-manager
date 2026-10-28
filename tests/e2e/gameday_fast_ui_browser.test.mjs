@@ -52,6 +52,12 @@ test('fast Players UI: safe fictional Google headings, responsive Overview layou
       await org.page.locator('#regSheet').fill('https://docs.google.com/spreadsheets/d/'+SHEET+'/edit');
       await org.page.locator('#regCheck').click();
       await org.page.locator('.diag-list li').first().waitFor({timeout:20000});
+      // A read-only recheck of the same saved spreadsheet must not invent unsaved edits.
+      await org.page.locator('#regSave').click();
+      await org.page.locator('.reg-unsaved').waitFor({state:'detached',timeout:20000});
+      await org.page.locator('#regCheck').click();
+      await org.page.locator('#regSetBody[aria-busy="false"]').waitFor({timeout:20000});
+      assert.equal(await org.page.locator('.reg-unsaved').count(),0,'same-sheet diagnostic remains clean after save');
       const gaps = await org.page.evaluate(() => ['regSheet','regTab'].map(id => {
         const input=document.getElementById(id);
         const label=document.querySelector('label[for="'+id+'"]');
