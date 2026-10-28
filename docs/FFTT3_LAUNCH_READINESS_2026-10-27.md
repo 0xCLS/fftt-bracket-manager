@@ -34,6 +34,16 @@ Result display-only score squares are reduced **30 → 26 CSS px** (compact brac
 
 The existing Chromium regression now checks workspace layout at desktop/tablet/phone widths and 26px score tiles. **Deployed to the existing synthetic Cloudflare staging sites from `00068134` as recorded above; PR #19 remains draft/unmerged.**
 
+## October 28 — Overview-style Players layout, full-width source settings, inset rank insignia
+
+The Organizer reviewed the authenticated Staff check-in screenshot, the connected-sheet settings view and a screen recording. Requested an Overview-inspired hierarchy, with **Add players beside four colored snapshot tiles** on wide screens, stacked on phones, followed by **full-width Registration settings**, then the full-width registration list, duplicate reconciliation and roster. The snapshot uses the existing UI's ice blue, lavender, lime and pale yellow; the registration list remains scannable and preserves check-in permissions and actions.
+
+The five **32 × 32 CSS px** shield badges keep an equal footprint but now have shorter, thinner **inset chevrons** (1–4) and a smaller, more centered five-point Level 5 star. Muted badge colors align with established Staff tokens (positive green, teal blue, lavender purple, neutral gray, warm amber). No feathers, extra stars, bevel or shadow. Plain level text remains adjacent for accessibility.
+
+Registration settings is promoted to full width with a more legible saved-source summary (sheet, worksheet and response count), clean connection/test controls, a two-column diagnostic checklist on wide screens, and **Column mapping** as a disclosure (collapsed for healthy, saved Google sources; expanded for new/synthetic/misconfigured sources). Existing security, read-only behavior, saved mappings and event scoping are unchanged. A small initialization fix restores the saved sheet URL once asynchronous settings arrive without overriding an unsaved edit.
+
+**Implementation status:** draft PR #19 on the existing application integration branch, with updated responsive/icon/mapping browser assertions. **Not deployed**; the last Staff deployment remains `f3a85bba-b1f7-4a91-9852-215d981e1b38` from code commit `93609204`. New CI must pass before any release. No hosted database, participant roster, Google answers, registration settings, check-ins, Spectator or public visibility were changed.
+
 ## October 27 follow-on UI revision — combined player entry and smaller muted badges
 
 The Organizer reviewed the live Staff screen and a recording, and requested that the three separate entry workflows (Quick walk-in check-in, Add a player, Paste a list) become a single Add players workspace. Two modes: One player (two explicit actions: Add to roster versus Add & check in) and Paste a list (roster additions only, never auto-check-in). Name checks, private ratings, duplicates and input persistence stay intact.
