@@ -1,5 +1,17 @@
 # FFTT Bracket Manager — Product Roadmap
 
+
+## Current release disposition — October 29, 2026 (supersedes dated planning checkpoints)
+
+- **Delivered and verified:** the October 27 approved in-place migration; preserved fictional fixtures and separate unpublished real-mode FFTT3 event; Staff and Spectator Cloudflare Pages deployments; Google registration service integration prepared; full CI security, game-day, browser, real-mode and disposable PostgreSQL suites successful. The **21-player, two-table, two-played-singles** invariant passed exact-commit [run 40922823847](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/40922823847).
+- **Organizer accepted current visual polish for now** on October 29. The separate [PR #20](https://github.com/0xCLS/fftt-bracket-manager/pull/20) adds only Recent-results divider CSS and remains an **optional unmerged** visual follow-up. Do not quietly merge it or reopen the approved design.
+- **Production integration is deliberately unmerged:** [PR #19](https://github.com/0xCLS/fftt-bracket-manager/pull/19) is a large, currently mergeable but **draft** integration PR relative to the older single-file `main`. A successful staging release does not authorize merging or replacing the public GitHub Pages baseline. Review and request a distinct release/merge decision.
+- **Physical readiness still open:** November 8 church **building/room entry** arrangements (table access is permanent), two confirmed and individually authenticated Scorekeepers, actual mobile/Wi-Fi/TV tests, private backup and paper fallback drill, format confirmation, and the real registration review/check-in workflow under the Organizer's authorized private session. The **November 22 venue and two physical tables are confirmed**. No real names are public.
+- **No pending feature launch blockers established by CI alone.** Retest any defect found onsite; postpone third-match guarantees and more UI polish until there is evidence they improve November 22 safety or flow.
+
+The **October 12/27 historical roadmap entries below are preserved** for decision history, even where phrases such as “not yet deployed” were accurate at that time but are now superseded. For current operations use the [November 8 rehearsal](docs/launch/FFTT3_REHEARSAL_CHECKLIST_NOV8.md), [November 22 event day](docs/launch/FFTT3_EVENT_DAY_GUIDE_NOV22.md), and [scorekeeper onboarding](docs/launch/FFTT3_SCOREKEEPER_ONBOARDING.md) documents.
+
+
 _Last organized: October 12, 2026. This roadmap is a planning record, **not** a claim that proposed features are implemented or approved for delivery. Christopher's latest explicit instructions supersede this document._
 
 ## Current directive — simplify and ship FFTT3 (October 27, 2026)

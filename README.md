@@ -1,5 +1,18 @@
 # FFTT Bracket Manager
 
+
+## Current hosted status — October 29, 2026 (read before historical milestones)
+
+The **`main` branch / GitHub Pages** is the original single-file browser-local implementation. The **active hosted FFTT3 implementation** is on the still-**draft, unmerged** [integration PR #19](https://github.com/0xCLS/fftt-bracket-manager/pull/19) and the two separately managed Cloudflare Pages staging sites:
+
+- **Staff:** https://fftt3-staff-stg.pages.dev (Organizer and separately authenticated event Scorekeepers)
+- **Spectator/TV:** https://fftt3-games-stg.pages.dev (read-only projection controlled by the Organizer)
+
+An explicitly approved **single-project Supabase in-place upgrade was executed October 27**, preserving the existing fictional history; a separate **real-mode FFTT3 event was created privately, draft and unpublished**, with two provisional software tables that now match the Organizer's **two permanently accessible physical tables**. The October 29 Organizer confirms the **November 22 venue is secured**. This does **not** mean real registrations have been loaded, actual participants checked in, two volunteers granted Staff roles, or any public names published. Those are distinct launch operations.
+
+The most recent **code-changing** integration update added a **21-fictional-player, two-table, at-least-two-played-singles regression**; [full CI 40922823847 passed](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/40922823847). Subsequent doc-only commits leave application behavior unchanged. Staff and Spectator staging were verified on the preceding approved visual release. Refer to [FFTT3 cutover evidence](docs/launch/FFTT3_CUTOVER_RECORD_2026-10-27.md), [rehearsal checklist](docs/launch/FFTT3_REHEARSAL_CHECKLIST_NOV8.md), and [scorekeeper onboarding](docs/launch/FFTT3_SCOREKEEPER_ONBOARDING.md). Historical prototype notes below are retained as provenance; their older pending statements are **not the current launch status**.
+
+
 A lightweight, single-file tournament desk for **Forging Fellowship Table Tennis Games** at Ypsilanti SDA Church.
 
 ## What it does
