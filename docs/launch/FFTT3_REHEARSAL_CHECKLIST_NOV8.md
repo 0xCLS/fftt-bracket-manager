@@ -1,6 +1,6 @@
 # FFTT3 — onsite rehearsal checklist · Sunday, November 8, 2026, 10:00 AM
 
-**Purpose:** prove the real venue, real devices, real Wi-Fi and the real people work end to end **using fictional players only**. The rehearsal is **not** a dress rehearsal with real registrants.
+**Purpose:** prove the real venue, real devices, real Wi-Fi and the real people work end to end **using fictional players only**. The rehearsal is **not** a dress rehearsal with real registrants. **The Organizer has permanent access to both physical tables; use two tables for the new fictional rehearsal event.** The November 22 venue is secured. November 8 building/room entry arrangements still need confirmation.
 
 ## Ground rules
 * Use a **separate rehearsal event** created in the Staff app (name it `REHEARSAL — fictional — Nov 8`). Add only fictional names (e.g., Ada Quill, Ben Marlow) as walk-ins. **Do not** enable the Google source on it and **do not** put fictional people into the real FFTT3 event.
@@ -24,7 +24,7 @@ Organizer laptop + charger; two scorekeeper phones (different people, different 
 - [ ] Walk the Wi-Fi dead spots: with a score half-typed, step out of coverage and back. The phone must pause writes; reconnecting alone must not resend an unconfirmed score. Check the server record and paper score before any deliberate submission.
 
 ## 10:20 — run a full fictional tournament (60–90 min)
-- [ ] Organizer: create rehearsal event (tables = the real table count), add 10–16 fictional walk-ins with full first and last names, confirm levels, build the championship (byes appear correctly).
+- [ ] Organizer: create a **separate fictional rehearsal event configured for 2 tables**, add 10–16 fictional walk-ins with full first and last names, confirm test levels, build the championship (byes appear correctly). Never reuse the actual FFTT3 event or the completed October 25 fictional fixture.
 - [ ] Scorekeepers A and B: claim tables for different matches, record results from two phones **simultaneously**; deliberately both submit the same match; confirm one is rejected cleanly.
 - [ ] Table conflict: try to give the same table to two matches. Wrong-score correction by the Organizer with a reason.
 - [ ] Complete round 1 → consolation review → consolation bracket → mixed-skill doubles finale → complete.
@@ -33,13 +33,13 @@ Organizer laptop + charger; two scorekeeper phones (different people, different 
 
 ## 11:45 — failure drills (15 min)
 - [ ] Turn the venue Wi-Fi off on the Organizer laptop mid-match: banner shows paused; scorekeeper phones on cellular keep scoring; laptop catches up.
-- [ ] Switch **Registration Google mode** to `diagnostic` (Cloudflare variable; ask the owner) and back — check-in by walk-in still works while it is off.
+- [ ] Verify that the **fictional rehearsal event has no Google registration source configured**, and that fictional walk-in entry works without any Google Sheet access. **Do not toggle the shared Cloudflare `REGISTRATION_GOOGLE_MODE` variable** during this rehearsal: it could interrupt registration availability for the real FFTT3 event. Any separate incident drill of that production-level switch requires an explicitly scheduled, owner-approved window.
 - [ ] **Paper fallback drill:** declare "system down". Fill 3 paper score sheets, then enter them into the system afterwards by the Organizer and confirm results match (see the event-day guide, §6).
 - [ ] Download the **private backup** from Results & Export and the results text/CSV; open both.
 
 ## 12:00 — close out
 - [ ] Hide the rehearsal event from the public, archive it. Take a private backup. Write down: Wi-Fi sign-in times, any message that confused a volunteer, what to print/bring differently.
-- [ ] Decide go/no-go items for Nov 22: staff list final, table count final, publication policy for real names (spectator notice) decided by the organizer.
+- [ ] Decide go/no-go items for Nov 22: staff list and devices ready, the confirmed **2-table configuration** visible on the real event Overview, match formats agreed, and publication policy for real names (spectator notice) decided by the Organizer.
 
 ## Evidence to keep (no participant data)
 Times, device models, screenshots of any error text, the backup file's SHA-256 (not the file), the rehearsal event's name. Do not attach screenshots that show real registrants.
