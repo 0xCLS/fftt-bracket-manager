@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">
+  <title>FFTT C4 — Isolated Browser Rehearsal</title>
+  <link rel="stylesheet" href="rehearsal.css">
+  <script type="module" src="rehearsal.mjs"></script>
+</head>
+<body>
+  <div class="simulation-band" role="note">SYNTHETIC REHEARSAL ONLY · NO SUPABASE CONNECTION · NO SCORING</div>
+  <main class="shell">
+    <header class="intro">
+      <div>
+        <p class="eyebrow">Forging Fellowship · Table Tennis</p>
+        <h1>Shared matchdesk rehearsal</h1>
+        <p>Preview volunteer and spectator reads, connectivity loss and safe recovery. No real event or scores.</p>
+      </div>
+      <div class="revision">Mock event revision <strong id="revision">4</strong></div>
+    </header>
+    <section class="status" aria-live="polite" aria-atomic="true">
+      <div>
+        <p class="eyebrow">Simulated connection state</p>
+        <h2 id="phase">Cloud ready (mock)</h2>
+        <p id="stateExplanation">Synthetic match information is available in this isolated test.</p>
+      </div>
+      <span id="stateTag" class="state-tag ready">MOCK READY</span>
+    </section>
+    <section class="controls" aria-label="Rehearsal controls">
+      <label for="role">Preview role</label>
+      <select id="role">
+        <option value="organizer">Organizer (fake signed identity)</option>
+        <option value="scorekeeper">Scorekeeper (fake signed identity)</option>
+        <option value="spectator">Spectator (public results only)</option>
+        <option value="outsider">Unassigned outsider (access denied)</option>
+      </select>
+      <button id="refresh" type="button">Read mock data</button>
+      <button id="disconnect" type="button">Simulate disconnect</button>
+      <button id="reconnect" type="button" disabled>Simulate reconnect</button>
+    </section>
+    <div class="warning" id="recoveryWarning" hidden role="alert">
+      <strong>Cloud scoring remains blocked.</strong>
+      <span id="recoveryText">No verified event revision and receipt endpoint exists. Reconnect cannot authorize writes.</span>
+    </div>
+    <section class="desk" aria-label="Read-only matchdesk results">
+      <div class="panel">
+        <p class="eyebrow">Staff-only / mock role-gated read</p>
+        <h2>Eligible matches</h2>
+        <p id="deskMessage" class="muted">Loading synthetic data…</p>
+        <div id="matchdesk" class="match-list"></div>
+      </div>
+      <div class="panel">
+        <p class="eyebrow">Public / separate allowlisted projection</p>
+        <h2>Published results preview</h2>
+        <p id="publicMessage" class="muted">Loading mock projection…</p>
+        <div id="publicResults" class="match-list"></div>
+      </div>
+    </section>
+    <section class="policy" aria-label="Safety boundaries">
+      <h2>What this rehearsal cannot do</h2>
+      <p>No score entry, staff grants, real sign-in, private backups, production publishing or automatic offline synchronization. Reconnect must not imply cloud writes are safe.</p>
+      <output id="requestCount">Mock reads: 0 · Score writes: 0</output>
+    </section>
+  </main>
+</body>
+</html>

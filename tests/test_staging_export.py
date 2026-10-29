@@ -1,0 +1,179 @@
+#!/usr/bin/env python3
+"""The staging export builder: exact file set, generated profile and headers, hashes, refusals, and
+agreement with the runtime origin policy. Builds from a throw-away git repository; publishes nothing."""
+import hashlib, json, os, shutil, subprocess, sys, tempfile, unittest
+from pathlib import Path
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / 'tools' / 'staging'))
+import build_export as B
+
+ENV = {**os.environ, 'GIT_AUTHOR_NAME': 't', 'GIT_AUTHOR_EMAIL': 't@example.invalid',
+       'GIT_COMMITTER_NAME': 't', 'GIT_COMMITTER_EMAIL': 't@example.invalid'}
+ORIGIN = 'https://fftt-staging-example.pages.dev'
+
+def make_repo(tmp):
+    repo = Path(tmp) / 'repo'; repo.mkdir()
+    for d in ('contracts', 'rehearsals', 'docs', 'tests', 'tools', 'supabase'):
+        src = ROOT / d
+        if src.exists(): shutil.copytree(src, repo / d, ignore=shutil.ignore_patterns('__pycache__', '*.local.json'))
+    (repo / 'docs' / 'private-note.md').write_text('internal')
+    run = lambda *a: subprocess.check_call(['git', '-C', str(repo), *a], env=ENV, stdout=subprocess.DEVNULL)
+    run('init', '-q'); run('add', '-A'); run('commit', '-q', '-m', 'fixture')
+    sha = subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD'], text=True).strip()
+    return repo, sha
+
+class StagingExport(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.mkdtemp(); cls.repo, cls.sha = make_repo(cls.tmp)
+        cls.out = Path(cls.tmp) / 'out'
+        cls.files = B.build(str(cls.repo), cls.sha, 'staging', ORIGIN, str(cls.out))
+    @classmethod
+    def tearDownClass(cls): shutil.rmtree(cls.tmp, ignore_errors=True)
+    def test_only_the_sign_in_closure_is_exported(self):
+        f = set(self.files)
+        for need in ('rehearsals/m1/staff-login.html', 'rehearsals/m1/staff-login.mjs', 'rehearsals/m1/staff-login.css',
+                     'contracts/milestone1_password_session.mjs', 'contracts/milestone1_password_transport.mjs',
+                     'contracts/milestone1_staff_session_vault.mjs', 'contracts/milestone1_email_code_recovery.mjs',
+                     'contracts/milestone1_device_origin_policy.mjs', 'contracts/milestone1_read_supervisor.mjs',
+                     'rehearsals/m1/origin-profile.json', '_headers', 'MANIFEST.json'):
+            self.assertIn(need, f)
+        for p in f:
+            self.assertFalse(p.startswith(('tests/', 'docs/', 'tools/', 'supabase/', '.git')), p)
+            self.assertFalse(p.endswith(('.py', '.sql', '.sh', '.log', '.local.json')), p)
+        # no scoring, fallback, PKCE-link or public-display code ships with the staff app
+        for p in f: self.assertNotRegex(p, r'score|fallback|pkce|public_display|tv-display|spectator')
+        self.assertLess(len(f), 25)
+        on_disk = {str(p.relative_to(self.out)) for p in self.out.rglob('*') if p.is_file()}
+        self.assertEqual(on_disk, f)
+    def test_generated_profile_matches_the_environment(self):
+        prof = json.loads((self.out / 'rehearsals/m1/origin-profile.json').read_text())
+        self.assertEqual(prof, {'environment': 'staging', 'approvedPublicStaticOrigins':
+            [{'origin': ORIGIN, 'environment': 'staging', 'dedicatedOrigin': True}], 'approvedHttpsOrigins': []})
+    def test_headers_are_strict(self):
+        h = (self.out / '_headers').read_text()
+        for need in ("default-src 'self'", "script-src 'self'", "frame-ancestors 'none'", "object-src 'none'",
+                     'Strict-Transport-Security', 'nosniff', 'Referrer-Policy: no-referrer', 'noindex'):
+            self.assertIn(need, h)
+        self.assertNotIn('unsafe-inline', h); self.assertNotIn('unsafe-eval', h); self.assertNotIn('*.', h)
+        self.assertEqual(h.count('https://'), 1, 'the only remote origin allowed is the Supabase project')
+    def test_manifest_hashes_match_every_file(self):
+        m = json.loads((self.out / 'MANIFEST.json').read_text())
+        self.assertEqual(m['commit'], self.sha)
+        for p, digest in m['files'].items():
+            self.assertEqual(hashlib.sha256((self.out / p).read_bytes()).hexdigest(), digest, p)
+    def test_nothing_secret_or_private_is_exported(self):
+        import re
+        text = '\n'.join((self.out / p).read_text(errors='replace') for p in self.files)
+        # shapes of real leaks (a comment saying a key is ABSENT is fine)
+        for pattern in (r'eyJ[A-Za-z0-9_-]{10,}', r'sb_secret_', r'service_role[\'"]?\s*[:=]', r'PGPASSWORD',
+                        r'(?i)password\s*[:=]\s*[\'"][^\'"]{6,}', r'private-note', r'[\w.+-]+@(?!example\.(invalid|test|com))[\w-]+\.[a-z]{2,}'):
+            self.assertIsNone(re.search(pattern, text), pattern)
+        self.assertEqual(sorted(set(re.findall(r'sb_publishable_[A-Za-z0-9_-]+', text))), ['sb_publishable_lupD9JDsWFQ_65LuwVL1Fg_O-V5Era0'])
+    def test_refusals(self):
+        bad_origins = ['https://0xcls.github.io', 'http://x.pages.dev', 'https://x.pages.dev:8443', 'https://x.pages.dev/p',
+                       'https://a.b.pages.dev', 'https://x.netlify.app', 'https://x.vercel.app', 'https://*.pages.dev',
+                       'https://x.example.com', 'https://x.pages.dev ', '', None]
+        for o in bad_origins:
+            with self.subTest(origin=o), self.assertRaises(SystemExit):
+                B.build(str(self.repo), self.sha, 'staging', o, str(Path(self.tmp) / 'x'))
+        with self.assertRaises(SystemExit): B.build(str(self.repo), self.sha, 'preview', ORIGIN, str(Path(self.tmp) / 'x'))
+        with self.assertRaises(SystemExit): B.build(str(self.repo), 'a' * 40, 'staging', ORIGIN, str(Path(self.tmp) / 'x'))
+        (self.repo / 'dirty.txt').write_text('x')
+        try:
+            with self.assertRaises(SystemExit): B.build(str(self.repo), self.sha, 'staging', ORIGIN, str(Path(self.tmp) / 'x'))
+        finally: (self.repo / 'dirty.txt').unlink()
+    def test_builder_and_runtime_policy_agree_on_origins(self):
+        cases = [ORIGIN, 'https://fftt-staff-example.github.io', 'https://0xcls.github.io', 'http://x.pages.dev',
+                 'https://x.pages.dev:8443', 'https://x.pages.dev/p', 'https://a.b.pages.dev', 'https://x.netlify.app',
+                 'https://github.io', 'https://pages.dev', 'https://x.example.com', 'https://*.pages.dev', 'https://X.Pages.Dev']
+        js = ("import {normalizeApprovedPublicStaticOrigins as n} from %s;"
+              "const out=JSON.parse(process.argv[1]).map(o=>{try{n([{origin:o,environment:'staging',dedicatedOrigin:true}]);return true}catch{return false}});"
+              "console.log(JSON.stringify(out))") % json.dumps((ROOT / 'contracts/milestone1_device_origin_policy.mjs').as_uri())
+        node = json.loads(subprocess.check_output(['node', '--input-type=module', '-e', js, json.dumps(cases)], text=True))
+        self.assertEqual([B.valid_origin(o) for o in cases], node)
+
+if __name__ == '__main__': unittest.main()
+
+
+class GamedayBundles(unittest.TestCase):
+    """The integrated staff app and the anonymous spectator/TV app: two different origins, two different bundles."""
+    STAFF = 'https://fftt-staff-example.pages.dev'
+    SPECT = 'https://fftt-spectator-example.pages.dev'
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.mkdtemp()
+        repo = Path(cls.tmp) / 'repo'; repo.mkdir()
+        for d in ('contracts', 'rehearsals', 'docs', 'tests', 'tools', 'supabase', 'app', 'server', 'functions'):
+            src = ROOT / d
+            if src.exists(): shutil.copytree(src, repo / d, ignore=shutil.ignore_patterns('__pycache__', '*.local.json', 'node_modules'))
+        run = lambda *a: subprocess.check_call(['git', '-C', str(repo), *a], env=ENV, stdout=subprocess.DEVNULL)
+        run('init', '-q'); run('add', '-A'); run('commit', '-q', '-m', 'fixture')
+        cls.repo = repo; cls.sha = subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD'], text=True).strip()
+        cls.staff = Path(cls.tmp) / 'staff'; cls.spect = Path(cls.tmp) / 'spect'
+        cls.staff_files = set(B.build(str(repo), cls.sha, 'staging', cls.STAFF, str(cls.staff), 'staff', cls.SPECT))
+        cls.spect_files = set(B.build(str(repo), cls.sha, 'staging', cls.SPECT, str(cls.spect), 'spectator'))
+    @classmethod
+    def tearDownClass(cls): shutil.rmtree(cls.tmp, ignore_errors=True)
+    def test_staff_bundle_has_the_app_and_only_the_app(self):
+        for need in ('app/staff.html', 'app/staff.mjs', 'app/staff_core.mjs', 'app/staff_ui.mjs', 'app/app.css', 'app/assets/emblem.webp',
+                     'app/origin-profile.json', 'contracts/gameday_api.mjs', 'contracts/gameday_score_transport.mjs',
+                     'contracts/milestone1_password_session.mjs', 'contracts/milestone1_score_session.mjs', '_headers', '_redirects', 'MANIFEST.json'):
+            self.assertIn(need, self.staff_files)
+        for p in self.staff_files:
+            self.assertFalse(p.startswith(('tests/', 'docs/', 'tools/', 'supabase/', '.git')), p)
+            self.assertFalse(p.endswith(('.py', '.sql', '.sh', '.log', '.local.json')), p)
+        self.assertNotIn('app/spectator.html', self.staff_files)
+        self.assertNotIn('app/tv.html', self.staff_files)
+    def test_staff_bundle_ships_registration_screens_but_never_the_server_adapter(self):
+        for need in ('app/view_players.mjs', 'app/view_events.mjs', 'contracts/registration_client.mjs', 'contracts/registration_model.mjs'):
+            self.assertIn(need, self.staff_files)
+        for p in self.staff_files | self.spect_files:
+            self.assertFalse(p.startswith(('server/', 'functions/')), p)
+        import re
+        for d in (self.staff, self.spect):
+            blob = '\n'.join((d / p).read_text(errors='replace') for p in json.loads((d / 'MANIFEST.json').read_text())['files'] if p.endswith(('.mjs', '.html', '.json', '.css')))
+            for pattern in (r'PRIVATE KEY', r'GOOGLE_SA_', r'REGISTRATION_REF_SECRET', r'sheets\.googleapis\.com', r'oauth2\.googleapis\.com', r'private_key', r'client_secret'):
+                self.assertIsNone(re.search(pattern, blob), pattern)
+    def test_spectator_bundle_has_no_registration_code(self):
+        for p in self.spect_files: self.assertNotRegex(p, r'registration|view_players|view_events')
+    def test_builder_refuses_server_code_in_a_browser_bundle(self):
+        self.assertTrue(B.SENSITIVE.search('server/registration/handler.mjs'))
+        self.assertTrue(B.SENSITIVE.search('functions/api/registrations.js'))
+    def test_spectator_bundle_has_no_staff_capability(self):
+        for need in ('app/spectator.html', 'app/tv.html', 'app/spectator.mjs', 'app/tv.mjs', 'contracts/gameday_public.mjs', 'app/app.css', '_headers', '_redirects'):
+            self.assertIn(need, self.spect_files)
+        for p in self.spect_files:
+            self.assertNotRegex(p, r'staff|password|session|vault|score|recovery|origin-profile|gameday_api|pkce|fallback|exports')
+        text = '\n'.join((self.spect / p).read_text(errors='replace') for p in self.spect_files if p.endswith(('.mjs', '.html')))
+        for pattern in (r'Authorization', r'signInWithPassword', r'fftt_submit', r'fftt_organizer', r'sessionStorage', r'localStorage', r'service_role', r'sb_secret_'):
+            self.assertIsNone(__import__('re').search(pattern, text), pattern)
+    def test_origin_profiles_and_links(self):
+        prof = json.loads((self.staff / 'app/origin-profile.json').read_text())
+        self.assertEqual(prof, {'environment': 'staging', 'approvedPublicStaticOrigins': [{'origin': self.STAFF, 'environment': 'staging', 'dedicatedOrigin': True}],
+                                'approvedHttpsOrigins': [], 'spectatorOrigin': self.SPECT})
+        self.assertEqual((self.staff / '_redirects').read_text(), '/ /app/staff.html 302\n')
+        self.assertIn('/ /app/spectator.html 200', (self.spect / '_redirects').read_text())
+    def test_headers_allow_only_self_and_the_project(self):
+        for d in (self.staff, self.spect):
+            h = (d / '_headers').read_text()
+            for need in ("default-src 'self'", "script-src 'self'", "style-src 'self'", "img-src 'self'", "frame-ancestors 'none'", "object-src 'none'", 'nosniff', 'no-referrer'):
+                self.assertIn(need, h)
+            self.assertNotIn('unsafe-inline', h); self.assertNotIn('unsafe-eval', h)
+            self.assertEqual(h.count('https://'), 1)
+    def test_hashes_and_no_secrets(self):
+        import re
+        for d in (self.staff, self.spect):
+            m = json.loads((d / 'MANIFEST.json').read_text())
+            self.assertEqual(m['commit'], self.sha)
+            for p, digest in m['files'].items(): self.assertEqual(hashlib.sha256((d / p).read_bytes()).hexdigest(), digest, p)
+            blob = '\n'.join((d / p).read_text(errors='replace') for p in m['files'] if p.endswith(('.mjs', '.html', '.json', '.css', '_headers', '_redirects')))
+            for pattern in (r'eyJ[A-Za-z0-9_-]{10,}', r'sb_secret_[A-Za-z0-9_-]{8,}', r'service_role[\'"]?\s*[:=]', r'PGPASSWORD', r'[\w.+-]+@(?!example\.(invalid|test|com|org))[\w-]+\.[a-z]{2,}'):
+                self.assertIsNone(re.search(pattern, blob), pattern)
+    def test_refusals(self):
+        for o in ('https://0xcls.github.io', 'http://x.pages.dev', 'https://a.b.pages.dev', 'https://x.example.com'):
+            with self.subTest(origin=o), self.assertRaises(SystemExit):
+                B.build(str(self.repo), self.sha, 'staging', o, str(Path(self.tmp) / 'x'), 'staff', None)
+        with self.assertRaises(SystemExit): B.build(str(self.repo), self.sha, 'staging', self.STAFF, str(Path(self.tmp) / 'x'), 'staff', self.STAFF)
+        with self.assertRaises(SystemExit): B.build(str(self.repo), self.sha, 'staging', self.SPECT, str(Path(self.tmp) / 'x'), 'spectator', self.STAFF)
+        with self.assertRaises(SystemExit): B.build(str(self.repo), self.sha, 'staging', self.STAFF, str(Path(self.tmp) / 'x'), 'nope', None)

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self';script-src 'self';style-src 'self';connect-src 'none';img-src 'none';object-src 'none';frame-src 'none';form-action 'none';base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<title>FFTT · Milestone 1 Score Recovery Lab</title>
+<link rel="stylesheet" href="./lab.css">
+<script src="./app.mjs" type="module"></script></head>
+<body>
+<div class="sandbox">LOCAL SYNTHETIC SCORE &amp; RECOVERY LAB · ZERO EXTERNAL NETWORK · NO REAL PLAYERS</div>
+<div class="wrap">
+<header><div><p class="kicker">Forging Fellowship · Table Tennis</p>
+<h1>Scorekeeper safety rehearsal</h1>
+<p>Two simulated devices, a shared fictional event, one result. This page makes <strong>zero</strong> network requests and never scores a hosted match.</p></div>
+<div class="actions"><span class="tag">Milestone 1 · Test only</span><button id="reset" type="button" class="secondary">Restart local simulation</button></div></header>
+<section class="notice"><strong>Not the live Bracket Manager.</strong> Each scorekeeper must prepare a unique submission ID and record it before sending. A successful score POST isn't final until the caller reads its own server decision. An interrupted result must never be retried automatically. This local exercise cannot authorize a real-event score, confirm physical device isolation, or publish results.</section>
+<section class="overview" aria-label="Event status">
+<div><small>Fictional event revision</small><b id="rev">0</b></div>
+<div><small>Match</small><b id="matchState">Pending</b></div>
+<div><small>Terminal decisions</small><b id="decisions">0</b></div>
+<div><small>Remote API requests</small><b id="network">0</b></div>
+</section>
+<main>
+<section class="devices" aria-label="Independent fictional scorekeepers">
+<article class="device" id="deviceA" data-device="A">
+<div class="device-header"><div><span class="label">Independent synthetic device</span><h2>Scorekeeper A</h2></div><strong class="status" id="stateA">Not loaded</strong></div>
+<p class="fine">A prepared score belongs only to this simulated account. Another scorekeeper cannot read this account's receipt.</p>
+<div class="input-grid">
+<label>Fictional winner
+<select id="winnerA"><option value="alpha">Synthetic Alpha</option><option value="beta">Synthetic Beta</option></select></label>
+<label>Game scores
+<input id="scoresA" value="11-7, 11-8, 11-9" maxlength="128" spellcheck="false"></label>
+</div>
+<div class="btn-row"><button id="loadA" type="button">1. Read signed desk</button><button id="prepareA" type="button" disabled>2. Prepare score</button></div>
+<div class="incident" id="incidentWrapA" hidden><span class="label">Private incident log ID — record BEFORE sending</span><code id="incidentA"></code>
+<label class="check"><input id="recordedA" type="checkbox">I recorded the ID and fictional score for manual recovery.</label>
+<label class="check"><input id="lostA" type="checkbox">Simulate losing the HTTP response after commit</label></div>
+<div class="btn-row"><button id="sendA" type="button" disabled>3. Send once (local)</button><button id="inspectA" type="button" disabled>4. Read own receipt</button></div>
+<div class="btn-row"><button id="pauseA" type="button" class="secondary">Simulate offline</button><button id="ackA" type="button" disabled class="secondary">Acknowledge decision</button></div>
+<p class="result" id="messageA" role="status">No score operation has run.</p>
+</article>
+<article class="device" id="deviceB" data-device="B">
+<div class="device-header"><div><span class="label">Independent synthetic device</span><h2>Scorekeeper B</h2></div><strong class="status" id="stateB">Not loaded</strong></div>
+<p class="fine">Load both desks and prepare both scores before either one is sent to rehearse a stale-result conflict.</p>
+<div class="input-grid">
+<label>Fictional winner
+<select id="winnerB"><option value="beta">Synthetic Beta</option><option value="alpha">Synthetic Alpha</option></select></label>
+<label>Game scores
+<input id="scoresB" value="7-11, 8-11, 9-11" maxlength="128" spellcheck="false"></label>
+</div>
+<div class="btn-row"><button id="loadB" type="button">1. Read signed desk</button><button id="prepareB" type="button" disabled>2. Prepare score</button></div>
+<div class="incident" id="incidentWrapB" hidden><span class="label">Private incident log ID — record BEFORE sending</span><code id="incidentB"></code>
+<label class="check"><input id="recordedB" type="checkbox">I recorded the ID and fictional score for manual recovery.</label>
+<label class="check"><input id="lostB" type="checkbox">Simulate losing the HTTP response after commit</label></div>
+<div class="btn-row"><button id="sendB" type="button" disabled>3. Send once (local)</button><button id="inspectB" type="button" disabled>4. Read own receipt</button></div>
+<div class="btn-row"><button id="pauseB" type="button" class="secondary">Simulate offline</button><button id="ackB" type="button" disabled class="secondary">Acknowledge decision</button></div>
+<p class="result" id="messageB" role="status">No score operation has run.</p>
+</article></section>
+<div class="low-grid">
+<section class="section" aria-label="Organizer fallback">
+<h2>Organizer-only offline fallback preview</h2>
+<p>The organizer must direct everyone to stop using the cloud, preserve a private backup, and keep a dated manual record. These controls <strong>cannot verify</strong> that another physical device was stopped. No scores are queued or synchronized.</p>
+<div class="checks">
+<label><input id="checkOrganizer" type="checkbox"> Organizer explicitly approves single-device fallback</label>
+<label><input id="checkDevices" type="checkbox"> Other devices confirmed stopped (external confirmation)</label>
+<label><input id="checkBackup" type="checkbox"> Protected private backup checked</label>
+<label><input id="checkLog" type="checkbox"> Manual dated score log prepared</label>
+<label><input id="checkUnknown" type="checkbox"> Any uncertain prior result documented separately</label>
+</div>
+<div class="btn-row"><button id="fallbackA" type="button" class="secondary">Preview fallback checklist for A</button></div>
+<p id="fallbackStatus" class="result" role="status">Preview only. Manual reconciliation always required.</p></section>
+<section class="section" aria-label="Spectator privacy">
+<h2>Public spectator projection</h2>
+<p>This local test never publishes player names, private scores, match IDs or ratings. Spectators do not receive the organizer Match Desk.</p>
+<div class="pub"><span>Published events</span><strong id="publicCount">0</strong></div>
+<p class="fine">Separate organizer and spectator displays are a later connected integration; these fixtures remain private.</p></section></div>
+</main><footer>Forging Fellowship · Building community through fellowship · Synthetic test evidence only</footer>
+</div></body></html>

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<title>FFTT · Device Readiness Check</title>
+<link rel="stylesheet" href="./continuity.css">
+<script type="module" src="./device-check.mjs"></script></head>
+<body><main>
+<header><p class="eyebrow">FORGING FELLOWSHIP · MILESTONE 1 · DEVICE CHECK</p>
+<h1>Is this phone ready for staff sign-in?</h1>
+<p class="intro">Runs entirely on this device with no network access. It does not sign in, request email, read events or store anything. It reports only pass/fail labels, never your address.</p>
+<p class="warning">NO NETWORK · NO SIGN-IN · NO EMAIL · NOTHING STORED</p></header>
+<section><h2>Approved HTTPS origin</h2>
+<p class="hint">Type the exact origin the organizer approved for this rehearsal (for example <code>https://host.example</code>). Leave empty on localhost.</p>
+<input id="approved" autocomplete="off" spellcheck="false" placeholder="https://… (exact, no path)">
+<button id="check" type="button">Check this device</button></section>
+<section><h2>Result</h2><p id="summary" role="status">Not checked yet.</p><ul id="checks"></ul>
+<h3>Observe by hand on this device</h3><ul id="manual"></ul></section>
+<footer>Training aid only · a pass here does not prove the email link will return to this tab; follow the manual checks.</footer>
+</main></body></html>

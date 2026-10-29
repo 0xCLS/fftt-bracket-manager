@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://copmkalfkkrkzheohwuc.supabase.co; img-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<title>FFTT · Staff Device Sign-in (Synthetic)</title>
+<link rel="stylesheet" href="./continuity.css">
+<script type="module" src="./device-staff.mjs"></script></head><body>
+<main><header>
+<p class="eyebrow">FORGING FELLOWSHIP · MILESTONE 1 · PHYSICAL-DEVICE REHEARSAL</p>
+<h1>Staff device sign-in</h1>
+<p class="intro">One-email, existing-account PKCE sign-in for an organizer or scorekeeper device, then a read-only Match Desk that follows the authoritative event revision. It cannot submit scores, create accounts, edit staff or publish results.</p>
+<p class="warning">SYNTHETIC EVENTS ONLY · READ ONLY · NO SCORES · OPENS ONLY ON AN APPROVED ORIGIN</p></header>
+<section><h2>0. Is this device allowed?</h2>
+<p id="originStatus" role="status">Checking this device…</p><ul id="readiness"></ul></section>
+<section><h2>1. Request one sign-in link</h2>
+<p class="hint">Open the email link in THIS SAME TAB: copy the link address from your mail app and paste it into this tab's address bar. A mail app's built-in browser cannot finish the sign-in.</p>
+<label for="email">Existing fictional account email</label>
+<input id="email" type="email" autocomplete="off" value="" placeholder="Existing fictional account">
+<label for="consent"><input id="consent" type="checkbox"> I authorize ONE real email to this existing development-only synthetic account.</label>
+<button id="requestLink" type="button" disabled>Request one sign-in link</button>
+<p id="requestStatus" role="status">No email requested.</p></section>
+<section><h2>2. Verify the returned link and event role</h2>
+<label for="eventId">Event UUID (keep private)</label>
+<input id="eventId" autocomplete="off" spellcheck="false">
+<button id="complete" type="button" disabled>Finish sign-in</button>
+<p id="authStatus" role="status">Awaiting callback.</p></section>
+<section><h2>3. Read-only Match Desk</h2>
+<button id="follow" type="button" disabled>Follow every 6 seconds</button>
+<button id="stopFollow" type="button" class="secondary">Stop following</button>
+<button id="signOut" type="button" class="secondary">Sign out</button>
+<p id="deskStatus" role="status">No authorized data.</p>
+<div id="matches"></div>
+<p class="hint">Tokens live in this tab's memory only and are never written to storage. Leaving this tab for a short time suspends the session; coming back re-checks identity and role. Going offline or staying away longer signs you out.</p></section>
+<footer>Development only · existing synthetic users · consumed fixtures untouched.</footer>
+</main></body></html>

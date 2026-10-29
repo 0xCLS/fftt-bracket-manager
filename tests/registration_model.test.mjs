@@ -1,0 +1,403 @@
+/** Registration model: header mapping, CSV, duplicate detection, rating suggestion, privacy. Fictional fixtures only.
+ * Zero network. Run: node --test tests/registration_model.test.mjs */
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {parseCsv, mapHeaders, buildRegistrants, suggestRating, parseRegistrationPayload, importCsv, safeName, shortName, nameKey,
+  similarNames, incompleteName, normEmail, normPhone, maskEmail, maskPhone, looksLikeContact, REF_PATTERN,
+  profileLevel, rallyLevel, spinLevel, attackLevel, frequencyLevel, experienceLevel} from '../contracts/registration_model.mjs';
+
+import {SYNTHETIC_FORM_CSV as FIXTURE} from '../server/registration/synthetic_fixture.mjs';
+const refFor = async id => 'T' + Buffer.from(id).toString('base64url').replace(/[^A-Za-z0-9_-]/g, '').padEnd(20, 'x').slice(0, 30);
+const build = async (text = FIXTURE) => buildRegistrants(parseCsv(text), {refFor});
+const by = (r, name) => r.registrants.find(x => x.name === name);
+
+test('CSV: quotes, embedded commas and newlines, CRLF, BOM and blank lines', () => {
+  const rows = parseCsv('﻿a,b,c\r\n"x, y","line1\nline2","he said ""hi"""\r\n\r\n1,2,3');
+  assert.deepEqual(rows, [['a', 'b', 'c'], ['x, y', 'line1\nline2', 'he said "hi"'], ['1', '2', '3']]);
+  assert.deepEqual(parseCsv(''), []);
+  assert.equal(parseCsv('a\n'.repeat(5000)).length <= 201, true, 'a huge file is bounded');
+});
+
+/** The APPROVED FFTT3 Google Form, word for word: 12 columns and the exact answer choices (fictional answers only). */
+const FORM = {
+  headers: ['Timestamp', 'Full Name', 'Email Address', 'Phone Number', 'Age Group', 'Have you participated in a previous Forging Fellowship Table Tennis event?',
+    'How often do you currently play table tennis?', 'Do you have any league, club, or school-team tennis experience?', 'Which best describes your rally consistency?',
+    'Can you intentionally use spin on serves or returns?', 'Can you consistently attack easier balls?', 'Which playing profile best matches your current game?'],
+  frequency: ['Several times a week', 'About once a week', 'A few times a month', 'Occasionally', 'Rarely', 'Never'],
+  experience: ['No', 'Yes, a little', 'Yes, quite a bit'],
+  rally: ["Haven't played, so I don't know how consistently I can sustain a rally", 'I am still learning and have difficulty sustaining rallies',
+    'I can sustain short rallies sometimes', 'I can usually sustain rallies with reasonable consistency', 'I can sustain rallies consistently and control placement',
+    'I can sustain strong rallies consistently, including under pressure'],
+  spin: ['No', 'A little', 'Sometimes', 'Yes, fairly consistently', 'Yes, confidently'],
+  attack: ['No', 'Rarely', 'Sometimes', 'Usually', 'Yes, confidently'],
+  profile: ['Beginner — New or fairly new to table tennis; still developing reliable serves, returns, and control',
+    'Recreational — Comfortable playing casually; can rally and serve, but with limited consistency or shot variety',
+    'Intermediate — Can rally consistently, serve reliably, and use some placement, spin, or attacking play',
+    'Strong Intermediate — Stronger than the average casual player; uses varied serves/spin, controlled attacks, and match strategy',
+    'Advanced / Competitive — Club, league, or tournament-level ability, or comparable demonstrated play'],
+};
+const answers = ({f = 1, e = 0, r = 3, s = 2, a = 2, p = 2} = {}) => ({frequency: FORM.frequency[f], experience: FORM.experience[e], rallies: FORM.rally[r],
+  spin: FORM.spin[s], attack: FORM.attack[a], description: FORM.profile[p]});
+const level = (o) => suggestRating(answers(o)).level;
+
+test('headers: the approved form\'s 12 columns map to the right fields, and the unused ones stay unmapped', () => {
+  const {index, missing} = mapHeaders(FORM.headers);
+  assert.deepEqual(missing, []);
+  assert.deepEqual(index, {timestamp: 0, name: 1, email: 2, phone: 3, frequency: 6, experience: 7, rallies: 8, spin: 9, attack: 10, description: 11});
+  assert.ok(!Object.values(index).includes(4) && !Object.values(index).includes(5), 'Age Group and previous participation are not rating inputs');
+  assert.equal(new Set(Object.values(index)).size, Object.keys(index).length, 'a column feeds at most one field');
+  // the rally question must not be mistaken for the playing profile (both start "Which ... best ...")
+  assert.equal(FORM.headers[index.rallies], 'Which best describes your rally consistency?');
+  assert.equal(FORM.headers[index.description], 'Which playing profile best matches your current game?');
+  // the fixture uses exactly this layout
+  assert.deepEqual(parseCsv(FIXTURE)[0], FORM.headers);
+  // wording changes in OTHER forms still map; a missing name column is reported
+  const alt = mapHeaders(['Submitted', 'First Name', 'Last Name', 'Mobile', 'E-mail', 'How frequently do you play?']);
+  assert.deepEqual([alt.index.firstName, alt.index.lastName, alt.index.phone, alt.index.email, alt.index.frequency], [1, 2, 3, 4, 5]);
+  assert.deepEqual(mapHeaders(['Timestamp', 'Email']).missing, ['name']);
+});
+
+test('first and last name columns are joined', async () => {
+  const r = await build('Timestamp,First name,Last name,Email\n2026/11/01,Ada,Quillfeather,ada@example.invalid\n');
+  assert.equal(r.registrants[0].name, 'Ada Quillfeather');
+  assert.equal(r.registrants[0].shortName, 'Ada Q.');
+});
+
+test('PRIVACY: no e-mail address, phone number or free-text answer survives into the output', async () => {
+  const r = await build();
+  const json = JSON.stringify(r);
+  assert.ok(!/example\.invalid/i.test(json), 'no full e-mail address');
+  assert.ok(!/555[-.\s)]*01\d\d|\b7345550/.test(json), 'no phone number');
+  assert.ok(!/Bringing my kids|Typed my|Resubmitted|Possibly the same|household/i.test(json), 'free-text answers are never forwarded');
+  for (const x of r.registrants) {
+    assert.deepEqual(Object.keys(x).sort(), ['duplicate', 'hint', 'name', 'nameIssue', 'ratingBasis', 'ratingConfidence', 'ratingReview', 'ref', 'registeredAt', 'shortName', 'suggestedRating']);
+    assert.ok(x.hint.email === null || /^.•••@.•••\.[a-z]+$/u.test(x.hint.email));
+    assert.ok(x.hint.phone === null || /^•••• \d\d$/u.test(x.hint.phone));
+    assert.ok(Object.isFrozen(x));
+  }
+  // every name the roster would receive is acceptable to the database rules
+  for (const x of r.registrants) {
+    assert.ok(!looksLikeContact(x.name) && !looksLikeContact(x.shortName), x.name);
+    assert.ok(x.name.length >= 1 && x.name.length <= 80);
+    assert.ok(!/[=<>"`{}]/.test(x.name[0]) , x.name);
+    assert.match(x.ref, REF_PATTERN);
+  }
+  parseRegistrationPayload({source: 'synthetic-fixture', fetchedAt: '2026-11-08T00:00:00Z', ...r});
+});
+
+test('names that carry contact details or formulas are cleaned and flagged, never passed through', async () => {
+  const r = await build();
+  const lia = r.registrants.find(x => x.name === 'Lia');
+  assert.match(lia.nameIssue, /removed/);
+  assert.ok(r.registrants.some(x => x.name === 'Unnamed registrant' && /only contact details|No name/.test(x.nameIssue)));
+  const formula = r.registrants.find(x => /HYPERLINK/.test(x.name));
+  assert.ok(!formula, 'a formula is never kept as a name');
+  assert.ok(r.registrants.filter(x => x.name === 'Unnamed registrant').length >= 2, 'formula and e-mail-as-name rows are replaced and flagged');
+  assert.equal(safeName('=SUM(A1)').text, 'Unnamed registrant');
+  assert.equal(safeName('-Ada Quill').text, 'Ada Quill');
+  assert.equal(safeName('see https://x.invalid Ada').text, 'see Ada');
+  assert.deepEqual([safeName('Bob 734-555-0100').text, safeName('x@y.org').text, safeName('  ').text], ['Bob', 'Unnamed registrant', 'Unnamed registrant']);
+  assert.equal(safeName("Mary-Jane O'Neil").issue, null, 'hyphens and apostrophes inside a name are fine');
+  // full first and last names are the default: an incomplete name is flagged (never blocked, never rewritten)
+  for (const ok of ['Ada Quill', 'Li Wei', 'Ana María de la Cruz', 'José Núñez', 'Dr. Ben Marlow Jr.']) assert.equal(incompleteName(ok), false, ok);
+  for (const bad of ['Ada', 'Tia M.', 'Tia M', 'Madonna', '  ']) assert.equal(incompleteName(bad), true, bad);
+  assert.equal(safeName('Madonna').text, 'Madonna', 'the text is kept as typed');
+  assert.match(safeName('Madonna').issue, /full first and last name/);
+  assert.equal(r.summary.needsNameFix, r.registrants.filter(x => x.nameIssue).length);
+  assert.equal(r.summary.needsNameFix, 4, 'Lia (cleaned), two unnamed rows, and the abbreviated "Ada Q" fixture row');
+  assert.match(r.registrants.find(x => x.name === 'Ada Q').nameIssue, /full first and last name/);
+  assert.equal(r.warnings.length, 1);
+  assert.match(r.warnings[0], /without a name/);
+});
+
+test('duplicates: same e-mail, same phone, same name and similar names are grouped with a strength', async () => {
+  const r = await build();
+  const adas = r.registrants.filter(x => /^Ada Q/.test(x.name));
+  assert.equal(adas.length, 3);
+  assert.equal(new Set(adas.map(a => a.duplicate.group)).size, 1, 'both resubmission and short form join one group');
+  const g = r.duplicates.find(d => d.id === adas[0].duplicate.group);
+  assert.equal(g.strength, 'definite');
+  assert.ok(['same-email', 'same-phone', 'same-name'].every(x => g.reasons.includes(x)));
+  assert.equal(g.refs.length, 3);
+  const jo = r.registrants.filter(x => /^Jo[e]? Marchettis$/.test(x.name));
+  assert.equal(jo[0].duplicate.group, jo[1].duplicate.group);
+  assert.deepEqual(jo[0].duplicate.reasons, ['same-phone', 'similar-name']);
+  assert.equal(r.summary.duplicateGroups, 2);
+  assert.equal(by(r, 'Ben Marlowe').duplicate, null, 'unrelated people are never grouped');
+  // helper behavior
+  assert.ok(similarNames(nameKey('Ada Q'), nameKey('Ada Quillfeather')));
+  assert.ok(similarNames('jon smith', 'john smith'));
+  assert.ok(!similarNames('ben marlowe', 'dee larkspur'));
+  assert.ok(!similarNames('ada quill', 'ada quill'), 'identical names are the same-name case, not similar');
+  assert.equal(nameKey('  Ádá   QUILL. '), 'ada quill');
+});
+
+test('identical resubmissions get distinct refs; the same input always yields the same refs', async () => {
+  const a = await build(), b = await build();
+  assert.deepEqual(a.registrants.map(x => x.ref), b.registrants.map(x => x.ref));
+  assert.equal(new Set(a.registrants.map(x => x.ref)).size, a.registrants.length);
+  const twice = await build('Timestamp,Full name\n2026/11/01,Ada Q\n2026/11/01,Ada Q\n');
+  assert.notEqual(twice.registrants[0].ref, twice.registrants[1].ref);
+});
+
+test('rating suggestion on the fixture: levels follow the approved answers, with honest confidence and plain-language reasons', async () => {
+  const r = await build();
+  const lv = n => by(r, n).suggestedRating;
+  assert.equal(lv('Eli Brandtley'), 1, 'Beginner, never plays, has not played');
+  assert.equal(lv('Pia Dunmoor'), 1);
+  assert.equal(lv('Joe Marchettis'), 1);
+  assert.equal(lv('Ben Marlowe'), 2); assert.equal(lv('Dee Larkspur'), 2); assert.equal(lv('Gus Pemberly'), 2); assert.equal(lv('Ivy Castelan'), 2);
+  assert.equal(lv('Ada Quillfeather'), 3); assert.equal(lv('Hal Wintersby'), 3); assert.equal(lv('Oli Sparkman'), 3);
+  assert.equal(lv('Jo Marchettis'), 4, 'Strong Intermediate without organized-play experience');
+  assert.equal(lv('Cy Fennelwick'), 5); assert.equal(lv('Nia Rowland'), 5); assert.equal(lv('Fay Hollowell'), 5);
+  // a registrant who answered NOTHING gets no invented level and no invented confidence: the organizer must choose
+  assert.equal(by(r, 'Kit Alderman').ratingConfidence, 'none');
+  assert.equal(by(r, 'Kit Alderman').suggestedRating, null);
+  assert.equal(by(r, 'Kit Alderman').ratingReview, true);
+  assert.match(by(r, 'Kit Alderman').ratingBasis[0], /No playing-assessment answers were available/);
+  assert.ok(by(r, 'Cy Fennelwick').ratingBasis.includes('Quite a bit of league, club or school-team experience'));
+  assert.ok(by(r, 'Eli Brandtley').ratingBasis.includes('Has not played yet, so rally consistency is unknown'));
+  assert.ok(r.registrants.every(x => x.suggestedRating === null ? x.ratingConfidence === 'none' && x.ratingReview : x.suggestedRating >= 1 && x.suggestedRating <= 5));
+  // provisional: the model never marks anything confirmed (the organizer's confirmation is a separate, server-side step)
+  assert.ok(r.registrants.every(x => !('confirmed' in x) && !('ratingConfirmed' in x)));
+  // junk never throws
+  for (const bad of [undefined, null, {}, {frequency: 5}, {spin: {}}, {description: '💥'.repeat(500)}]) { const x = suggestRating(bad); assert.ok(x.level === null ? x.confidence === 'none' && x.review === true : x.level >= 1); }
+});
+
+test('REGRESSION: every approved answer choice is recognized, in order, from the exact wording', () => {
+  assert.deepEqual(FORM.rally.map(rallyLevel), [0, 1, 2, 3, 4, 5], 'the six descriptive rally sentences were being ignored');
+  assert.deepEqual(FORM.profile.map(profileLevel), [0, 1, 2, 3, 4]);
+  assert.deepEqual(FORM.frequency.map(frequencyLevel), [5, 4, 3, 2, 1, 0]);
+  assert.deepEqual(FORM.experience.map(experienceLevel), [0, 1, 2], '"a little" is not "quite a bit"');
+  assert.deepEqual(FORM.spin.map(spinLevel), [0, 1, 2, 3, 4]);
+  assert.deepEqual(FORM.attack.map(attackLevel), [0, 1, 2, 3, 4]);
+  // nothing the form offers is dropped as "unanswered"
+  for (const [fn, list] of [[rallyLevel, FORM.rally], [profileLevel, FORM.profile], [frequencyLevel, FORM.frequency], [experienceLevel, FORM.experience], [spinLevel, FORM.spin], [attackLevel, FORM.attack]]) {
+    for (const o of list) assert.notEqual(fn(o), null, o);
+  }
+  // case, spacing and a plain hyphen for the em dash do not matter
+  assert.equal(profileLevel('  strong intermediate - stronger than the average casual player '), 3);
+  assert.equal(rallyLevel('  I CAN SUSTAIN SHORT RALLIES SOMETIMES '), 2);
+});
+
+test('REGRESSION: the explicit profile label wins over incidental words inside the descriptions', () => {
+  // "...reliable serves, returns, and CONTROL" must not make a Beginner an Intermediate
+  assert.equal(profileLevel(FORM.profile[0]), 0);
+  // "Comfortable playing casually" must not make a Recreational an Intermediate
+  assert.equal(profileLevel(FORM.profile[1]), 1);
+  // "some placement, spin, or attacking play" must not make an Intermediate Strong
+  assert.equal(profileLevel(FORM.profile[2]), 2);
+  // "varied serves/spin, controlled attacks" is Strong Intermediate, not Advanced
+  assert.equal(profileLevel(FORM.profile[3]), 3);
+  // "Club, league, or tournament-level ability" belongs to the Advanced label, and appears only there
+  assert.equal(profileLevel(FORM.profile[4]), 4);
+  // each Level 1-4 profile on its own (nothing else answered) suggests its own level, never one higher
+  for (const p of [0, 1, 2, 3]) assert.equal(suggestRating({description: FORM.profile[p]}).level, p + 1, `profile ${p}`);
+  assert.equal(suggestRating({description: FORM.profile[4]}).level, 4, 'Advanced on its own is Level 4 until organized-play experience is shown');
+  // text with no leading label still falls back to keywords
+  assert.equal(profileLevel('I play on a league team'), 4);
+  assert.equal(profileLevel('just starting to learn'), 0);
+});
+
+test('REGRESSION: rally answers separate "difficulty", "short", "usually consistent", "consistent with placement" and "strong under pressure"', () => {
+  // Intermediate profile, otherwise identical answers: only the rally answer changes
+  const byRally = FORM.rally.map((_, r) => level({r, p: 2}));
+  assert.deepEqual(byRally, [2, 2, 2, 3, 3, 3]);
+  assert.ok(byRally[1] < byRally[4], 'difficulty sustaining rallies scores lower than consistent rallies with placement');
+  // Recreational profile: placement-level consistency lifts the suggestion, a struggling rally does not
+  assert.deepEqual(FORM.rally.map((_, r) => level({r, p: 1})), [2, 2, 2, 2, 3, 3]);
+  // Strong Intermediate: strong rallies under pressure reach Level 5 only together with the rest of a strong profile
+  assert.equal(level({r: 5, p: 3, f: 0, e: 2, s: 4, a: 4}), 5);
+  assert.equal(level({r: 1, p: 3, f: 0, e: 2, s: 4, a: 4}), 4);
+  // the reasons quote the actual answer
+  assert.ok(suggestRating(answers({r: 1})).basis.includes('Is still learning and has difficulty sustaining rallies'));
+  assert.ok(suggestRating(answers({r: 2})).basis.includes('Can sustain short rallies sometimes'));
+  assert.ok(suggestRating(answers({r: 5})).basis.includes('Sustains strong rallies consistently, including under pressure'));
+});
+
+test('CALIBRATION: the profile is one weighty input, not a ceiling or floor; strong contradictions move the suggestion and are flagged for review', () => {
+  // A highly capable self-described BEGINNER (fictional): strong rallies under pressure, plays several times a week,
+  // confident spin and attack. FFTT2 showed such players exist; the suggestion rises well past Level 2 and is flagged.
+  const capable = suggestRating(answers({p: 0, r: 5, f: 0, e: 0, s: 4, a: 4}));
+  assert.equal(capable.level, 3, 'two levels above the Beginner profile');
+  assert.equal(capable.review, true);
+  assert.equal(capable.confidence, 'medium');
+  assert.ok(capable.basis.some(b => /Organizer review: other answers point 2 levels higher than the chosen profile/.test(b)));
+  // add organized experience and the same person is suggested Level 4, three levels above their own profile, low confidence
+  const capableExp = suggestRating(answers({p: 0, r: 5, f: 0, e: 2, s: 4, a: 4}));
+  assert.deepEqual([capableExp.level, capableExp.confidence, capableExp.review], [4, 'low', true]);
+  assert.ok(capableExp.basis.some(b => /3 levels higher/.test(b)));
+  // a weakly performing self-described ADVANCED player (fictional): never plays, struggles to rally, no spin, no attack
+  const weakAdvanced = suggestRating(answers({p: 4, r: 1, f: 5, e: 0, s: 0, a: 0}));
+  assert.deepEqual([weakAdvanced.level, weakAdvanced.confidence, weakAdvanced.review], [2, 'low', true]);
+  assert.ok(weakAdvanced.basis.some(b => /Organizer review: other answers point 3 levels lower than the chosen profile/.test(b)));
+  // a milder contradiction moves it less, and still asks for a look
+  const mid = suggestRating(answers({p: 4, r: 2, f: 3, e: 0, s: 1, a: 1}));
+  assert.deepEqual([mid.level, mid.confidence, mid.review], [3, 'medium', true]);
+  // small disagreement (one level) is normal: no warning, confidence kept
+  const mild = suggestRating(answers({p: 0, r: 4, f: 1, e: 0, s: 2, a: 2}));
+  assert.equal(mild.review, false); assert.equal(mild.confidence, 'high');
+  // coherent answers: the suggestion follows the profile and nothing is flagged
+  for (const p of [1, 2, 3]) {
+    const x = suggestRating(answers({p, r: p + 1, f: 1 + (p > 1 ? 0 : 1), e: 0, s: p, a: p}));
+    assert.equal(x.review, false, `profile ${p}`); assert.equal(x.confidence, 'high');
+  }
+  // the profile still matters: the same strong answers with an Advanced profile (and organized play) reach 5, without the warning
+  const agree = suggestRating(answers({p: 4, r: 5, f: 0, e: 2, s: 4, a: 4}));
+  assert.deepEqual([agree.level, agree.review, agree.confidence], [5, false, 'high']);
+});
+
+test('CALIBRATION: a suggestion above Level 4 is automatic only with competitive evidence; the organizer can still confirm 5', () => {
+  // everything maxed except experience: Level 4 with an explanation (no automatic 5)
+  const noEvidence = suggestRating(answers({p: 4, r: 5, f: 0, e: 0, s: 4, a: 4}));
+  assert.equal(noEvidence.level, 4);
+  assert.ok(noEvidence.basis.some(b => /Level 5 needs competitive evidence/.test(b) && /organizer can confirm 5/.test(b)));
+  assert.ok(noEvidence.basis.every(b => b.length <= 120), 'every reason fits the contract');
+  // the same answers with quite a bit of organized play reach Level 5 automatically
+  assert.equal(suggestRating(answers({p: 4, r: 5, f: 0, e: 2, s: 4, a: 4})).level, 5);
+  assert.equal(suggestRating(answers({p: 3, r: 5, f: 0, e: 2, s: 4, a: 4})).level, 5);
+  // a self-described Beginner can never be AUTOMATICALLY pushed to 5, even with maxed answers and experience
+  assert.ok(suggestRating(answers({p: 0, r: 5, f: 0, e: 2, s: 4, a: 4})).level <= 4);
+  // suggestions carry no confirmation: the rating stays provisional until the organizer confirms it (server-side step)
+  const r = suggestRating(answers({}));
+  assert.deepEqual(Object.keys(r).sort(), ['basis', 'confidence', 'level', 'review']);
+});
+
+test('REGRESSION: league/club/school-team experience: "a little" and "quite a bit" differ; Level 5 needs organized play', () => {
+  const top = {f: 0, r: 5, s: 4, a: 4, p: 4};
+  assert.equal(level({...top, e: 0}), 4, 'Advanced profile and strong answers but no experience: Level 4 with a note');
+  assert.ok(suggestRating(answers({...top, e: 0})).basis.some(b => /Level 5 needs competitive evidence/.test(b)));
+  assert.equal(level({...top, e: 1}), 5, 'Advanced profile with a little organized-play experience');
+  assert.equal(level({...top, e: 2}), 5);
+  // an experienced player who chose a lower profile is not pushed to 5 unless the rest agrees
+  assert.equal(level({e: 2, p: 2, r: 3, s: 2, a: 2, f: 1}), 3);
+  assert.ok(suggestRating(answers({e: 1})).basis.includes('A little league, club or school-team experience'));
+  assert.ok(suggestRating(answers({e: 2})).basis.includes('Quite a bit of league, club or school-team experience'));
+  assert.ok(!suggestRating(answers({e: 0})).basis.some(b => /experience/i.test(b)), 'no experience is not listed as a reason');
+});
+
+test('REGRESSION: spin, attack and frequency are ordered scales; missing answers are not penalised', () => {
+  const spins = FORM.spin.map((_, s) => level({p: 2, r: 3, f: 2, s, a: 2}));
+  const attacks = FORM.attack.map((_, a) => level({p: 2, r: 3, f: 2, s: 2, a}));
+  for (const list of [spins, attacks]) assert.ok(list.every((x, i) => i === 0 || x >= list[i - 1]), JSON.stringify(list));
+  assert.ok(spins[4] >= spins[0] && attacks[4] >= attacks[0]);
+  // only some answers given: judged on those, with lower confidence, not dragged down by silence
+  const sparse = suggestRating({description: FORM.profile[2], rallies: FORM.rally[3], frequency: FORM.frequency[1]});
+  assert.equal(sparse.level, 3);
+  assert.equal(sparse.confidence, 'medium');
+  assert.equal(suggestRating({description: FORM.profile[2], rallies: FORM.rally[3]}).confidence, 'low');
+  // the old Yes/Sometimes/No wording of other forms still works
+  assert.equal(suggestRating({rallies: 'Yes', spin: 'Sometimes', attack: 'Usually', frequency: 'weekly', description: 'Intermediate'}).level, 3);
+  assert.deepEqual(suggestRating({selfLevel: 'Beginner'}), {level: 1, confidence: 'low', basis: ['Self-described: Beginner'], review: false});
+});
+
+test('the whole approved-choice grid: inside 1-5, deterministic, monotone in the profile, honest flags, no leaked answer text', () => {
+  const known = new Set();
+  for (let r = 0; r < 6; r++) for (let f = 0; f < 6; f += 2) for (let e = 0; e < 3; e++) for (let s = 0; s < 5; s += 2) for (let a = 0; a < 5; a += 2) {
+    let prev = 0;
+    for (let p = 0; p < 5; p++) {
+      const x = suggestRating(answers({p, r, f, e, s, a}));
+      assert.deepEqual(x, suggestRating(answers({p, r, f, e, s, a})));
+      assert.ok(x.level >= 1 && x.level <= 5 && ['low', 'medium', 'high'].includes(x.confidence) && x.basis.length <= 8);
+      assert.ok(x.level >= prev, 'a higher self-chosen profile never lowers the suggestion (all else equal)'); prev = x.level;
+      assert.equal(x.review, x.basis.some(b => b.startsWith('Organizer review:')), 'the flag and the warning agree');
+      if (x.review) assert.notEqual(x.confidence, 'high', 'significant disagreement is never high-confidence');
+      if (x.level === 5) assert.ok(e === 2 || (e === 1 && p === 4), 'an automatic Level 5 always has competitive evidence');
+      for (const b of x.basis) known.add(b);
+    }
+  }
+  for (const b of known) assert.ok(b.length <= 120 && !/@|\d{4}/.test(b), b);
+});
+
+test('payload contract: strict shape; a contact detail anywhere is refused', async () => {
+  const r = await build();
+  const ok = {source: 'google-sheets', fetchedAt: '2026-11-08T00:00:00Z', ...r};
+  const parsed = parseRegistrationPayload(ok);
+  assert.equal(parsed.registrants.length, 20);
+  assert.ok(Object.isFrozen(parsed) && Object.isFrozen(parsed.registrants));
+  const bad = fn => assert.throws(() => parseRegistrationPayload(fn(structuredClone(ok))), /invalid registration payload/);
+  bad(p => { p.registrants[0].email = 'ada@example.invalid'; return p; });
+  bad(p => { p.registrants[0].hint.email = 'ada@example.invalid'; return p; });
+  bad(p => { p.registrants[0].hint.phone = '7345550101'; return p; });
+  bad(p => { p.registrants[0].name = 'ada@example.invalid'; return p; });
+  bad(p => { p.registrants[0].name = 'Ada 734-555-0101'; return p; });
+  bad(p => { p.registrants[0].ratingBasis = ['call 734 555 0101']; return p; });
+  bad(p => { p.registrants[0].ref = 'short'; return p; });
+  bad(p => { p.registrants[1].ref = p.registrants[0].ref; return p; });
+  bad(p => { p.registrants[0].suggestedRating = 6; return p; });
+  bad(p => { p.registrants[0].ratingConfidence = 'certain'; return p; });
+  bad(p => { p.source = 'somewhere-else'; return p; });
+  bad(p => { p.extra = 1; return p; });
+  bad(p => { p.duplicates[0].refs = ['ghost-ref-00000000000000']; return p; });
+  bad(p => { p.registrants = Array.from({length: 201}, () => p.registrants[0]); return p; });
+  assert.throws(() => parseRegistrationPayload(null));
+});
+
+test('private CSV import: deterministic per event, never uploads, returns a validated payload', async () => {
+  const a = await importCsv(FIXTURE, {refSalt: 'event-one-0001'});
+  const b = await importCsv(FIXTURE, {refSalt: 'event-one-0001'});
+  const c = await importCsv(FIXTURE, {refSalt: 'event-two-0002'});
+  assert.equal(a.source, 'csv-import');
+  assert.deepEqual(a.registrants.map(x => x.ref), b.registrants.map(x => x.ref), 're-importing the same file reproduces the refs');
+  assert.notEqual(a.registrants[0].ref, c.registrants[0].ref, 'refs are per event');
+  assert.equal(a.registrants.length, 20);
+  await assert.rejects(importCsv(FIXTURE, {refSalt: ''}));
+  const empty = await importCsv('Timestamp,Full name\n', {refSalt: 'event-one-0001'});
+  assert.equal(empty.registrants.length, 0);
+  const noName = await importCsv('Timestamp,Email\n2026/11/01,ada@example.invalid\n', {refSalt: 'event-one-0001'});
+  assert.equal(noName.registrants.length, 0);
+  assert.match(noName.warnings[0], /No name column/);
+});
+
+test('helpers: contact normalization and masking', () => {
+  assert.equal(normEmail(' Ada@Example.INVALID '), 'ada@example.invalid');
+  assert.equal(normEmail('not an email'), null);
+  assert.equal(normPhone('+1 (734) 555-0101'), '7345550101');
+  assert.equal(normPhone('555'), null);
+  assert.equal(maskEmail('ada@example.org'), 'a•••@e•••.org');
+  assert.equal(maskEmail(null), null);
+  assert.equal(maskPhone('7345550142'), '•••• 42');
+  assert.equal(shortName('Ada'), 'Ada');
+  assert.equal(shortName('Ada van der Quill'), 'Ada Q.');
+});
+
+
+test('column mapping: familiar headings are recognized, explicit choices win, a renamed column is reported (never guessed), none-of-these is honoured', async () => {
+  const {mapHeaders, NO_COLUMN, buildRegistrants} = await import('../contracts/registration_model.mjs');
+  const auto = mapHeaders(['Timestamp', 'Your name', 'Email address', 'Phone number', 'How often do you play table tennis?']);
+  assert.deepEqual([auto.index.timestamp, auto.index.name, auto.index.email, auto.index.phone, auto.index.frequency], [0, 1, 2, 3, 4]);
+  assert.ok(auto.columns.every(c => c.how === 'auto'));
+  assert.deepEqual(auto.assessment.found, ['frequency']);
+  // explicit mapping for unfamiliar wording
+  const manual = mapHeaders(['When', 'Competitor', 'Mail'], {name: 'Competitor', timestamp: 'When', email: 'Mail'});
+  assert.deepEqual([manual.index.name, manual.index.timestamp, manual.index.email, manual.columns[1].how], [1, 0, 2, 'manual']);
+  // the chosen header vanished: reported, and the field is NOT silently re-guessed from a different column
+  const gone = mapHeaders(['Timestamp', 'Full name', 'Spin question v2'], {spin: 'Spin question'});
+  assert.deepEqual(gone.unmatched, ['spin']); assert.equal(gone.index.spin, undefined);
+  // "this field is not in my form" also skips auto-detection
+  const none = mapHeaders(['Timestamp', 'Name', 'Do you use spin?'], {spin: NO_COLUMN});
+  assert.equal(none.index.spin, undefined); assert.deepEqual(none.unmatched, []);
+  // a column feeds one field only
+  const dup = mapHeaders(['Name', 'Name'], {name: 'Name', description: 'Name'});
+  assert.equal(Object.values(dup.index).filter(i => i === 0).length, 1);
+  // unknown field names in an override are ignored, not trusted
+  assert.deepEqual(mapHeaders(['Name'], {__proto__x: 'Name', constructor: 'Name'}).unmatched, []);
+  // end to end: contact columns are used for duplicate detection only, and never leave
+  const rows = [['When', 'Competitor', 'Mail'], ['2026/11/01 10:00:00', 'Pat Ngo', 'pat@example.invalid'], ['2026/11/01 10:30:00', 'Pat Ngo', 'pat@example.invalid']];
+  const built = await buildRegistrants(rows, {refFor: async i => 'r'.repeat(10) + Buffer.from(i).toString('base64url').slice(0, 20), mapping: {name: 'Competitor', timestamp: 'When', email: 'Mail'}});
+  assert.equal(built.duplicates.length, 1); assert.deepEqual(built.duplicates[0].reasons.slice(0, 1), ['same-email']);
+  assert.ok(!JSON.stringify(built).includes('pat@example.invalid'));
+});
+
+test('payload contract: a missing level must come with confidence "none" and a review flag; sourceName cannot carry contact data', async () => {
+  const {parseRegistrationPayload, buildRegistrants} = await import('../contracts/registration_model.mjs');
+  const built = await buildRegistrants([['Name'], ['Pat Ngo']], {refFor: async i => 'abcdefghij0123456789' + i.length});
+  const ok = parseRegistrationPayload({source: 'google-sheets', sourceName: 'Spring sign-ups', fetchedAt: '2026-11-01T00:00:00Z', ...built});
+  assert.equal(ok.registrants[0].suggestedRating, null); assert.equal(ok.sourceName, 'Spring sign-ups'); assert.equal(ok.summary.needsRating, 1);
+  const raw = JSON.parse(JSON.stringify({source: 'google-sheets', fetchedAt: 'x', ...built}));
+  for (const mutate of [r => { r.registrants[0].ratingConfidence = 'high'; }, r => { r.registrants[0].ratingReview = false; }, r => { r.registrants[0].suggestedRating = 6; }, r => { r.registrants[0].suggestedRating = 3; }]) {
+    const copy = JSON.parse(JSON.stringify(raw)); mutate(copy);
+    assert.throws(() => parseRegistrationPayload(copy), TypeError);
+  }
+  assert.throws(() => parseRegistrationPayload({source: 'google-sheets', sourceName: 'mail me at a@b.co', fetchedAt: 'x', ...built}), TypeError);
+});
