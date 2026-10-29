@@ -43,6 +43,47 @@ test('server-built brackets match the approved single-file engine for every fiel
   }
 });
 
+
+/** Rehearse the expected FFTT3 field size without any hosted data or actual registrant records.
+ * Two tables affect scheduling, not the promise of two PLAYED singles per participant.
+ * Byes must never be counted as games, and consolation must include those whose first
+ * competitive championship match ended in a loss (even when that match follows a bye).
+ */
+test('November rehearsal capacity: 21 fictional players, two tables, byes and two played singles each', async () => {
+  const ctx = await setupEvent({players: 21, tables: 2});
+  try {
+    const before = await ctx.snap();
+    assert.equal(before.players.length, 21, 'all 21 distinct fictional players are checked in');
+    await buildChampionship(ctx);
+    await playAllPlayable(ctx, {only: 'championship'});
+    const championship = await ctx.snap();
+    assert.equal(championship.brackets.find(b => b.kind === 'championship')?.status, 'complete');
+    assert.ok(championship.matches.some(m => m.bracket === 'championship' && m.status === 'bye'),
+      'a 21-person bracket exercises automatic byes');
+    const eligible = championship.consolation_candidates.map(c => c.player_id);
+    assert.ok(eligible.length >= 2 && new Set(eligible).size === eligible.length,
+      'first competitive-match losers are listed once each for consolation review');
+    await buildConsolation(ctx);
+    await playAllPlayable(ctx, {only: 'consolation'});
+    const final = await ctx.snap();
+    assert.ok(final.brackets.every(b => b.status === 'complete'),
+      'championship and consolation completed with two configured tables');
+    const played = new Map(final.players.map(p => [p.id, 0]));
+    for (const m of final.matches) {
+      if (m.status !== 'complete' || !['championship', 'consolation'].includes(m.bracket)) continue;
+      assert.ok(m.player_1_id && m.player_2_id && m.winner_id, 'completed singles match has two players and a winner');
+      played.set(m.player_1_id, played.get(m.player_1_id) + 1);
+      played.set(m.player_2_id, played.get(m.player_2_id) + 1);
+    }
+    for (const p of final.players) assert.ok(played.get(p.id) >= 2,
+      `${p.name} played ${played.get(p.id)} singles; byes do not count`);
+    assert.deepEqual(await ctx.db.publicTournaments(), [],
+      'the fictional test event stays hidden; no player data is published');
+  } finally {
+    await ctx.db.db.close();
+  }
+});
+
 test('full fictional tournament: scoring, progression, consolation, doubles, standings, privacy', async () => {
   const ctx = await setupEvent({players: 13, tables: 3});
   const {db, E, org, skA, skB, outsider} = ctx;
