@@ -1,17 +1,20 @@
 # FFTT Bracket Manager
 
 
-## Current hosted status — October 29, 2026 (read before historical milestones)
+## Current hosted and source status — October 29, 2026 (supersedes historical checkpoints)
 
-The **`main` branch / GitHub Pages** is the original single-file browser-local implementation. The **active hosted FFTT3 implementation** is on the still-**draft, unmerged** [integration PR #19](https://github.com/0xCLS/fftt-bracket-manager/pull/19) and the two separately managed Cloudflare Pages staging sites:
+[PR #19](https://github.com/0xCLS/fftt-bracket-manager/pull/19) was **approved and merged into public `main`** on October 29, 2026, at merge commit `1dfb269205f9d1b5d31e013dff56d86276fa2fa6`. The original GitHub Pages browser-local application's root `index.html` remains byte-identical to the pre-merge version and its Pages rebuild passed. The source integration did **not** trigger a new Cloudflare deployment or activate real event data. [PR #20](https://github.com/0xCLS/fftt-bracket-manager/pull/20) was closed without merging because its CSS was already present in PR #19.
 
-- **Staff:** https://fftt3-staff-stg.pages.dev (Organizer and separately authenticated event Scorekeepers)
-- **Spectator/TV:** https://fftt3-games-stg.pages.dev (read-only projection controlled by the Organizer)
+The active hosted tournament system continues to use the separately managed Cloudflare Pages origins:
 
-An explicitly approved **single-project Supabase in-place upgrade was executed October 27**, preserving the existing fictional history; a separate **real-mode FFTT3 event was created privately, draft and unpublished**, with two provisional software tables that now match the Organizer's **two permanently accessible physical tables**. The October 29 Organizer confirms the **November 22 venue is secured**. This does **not** mean real registrations have been loaded, actual participants checked in, two volunteers granted Staff roles, or any public names published. Those are distinct launch operations.
+- **Staff:** https://fftt3-staff-stg.pages.dev (Organizer and event-authorized Scorekeepers)
+- **Spectator/TV:** https://fftt3-games-stg.pages.dev (public read-only projection only when the Organizer approves publication)
 
-The most recent **code-changing** integration update added a **21-fictional-player, two-table, at-least-two-played-singles regression**; [full CI 40922823847 passed](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/40922823847). Subsequent doc-only commits leave application behavior unchanged. Staff and Spectator staging were verified on the preceding approved visual release. Refer to [FFTT3 cutover evidence](docs/launch/FFTT3_CUTOVER_RECORD_2026-10-27.md), [rehearsal checklist](docs/launch/FFTT3_REHEARSAL_CHECKLIST_NOV8.md), and [scorekeeper onboarding](docs/launch/FFTT3_SCOREKEEPER_ONBOARDING.md). Historical prototype notes below are retained as provenance; their older pending statements are **not the current launch status**.
+The Organizer-approved October 27 **in-place Supabase upgrade** preserved the fictional test events and created a separate **real-mode FFTT3 event** in draft, unpublished state with **two configured software tables**. The Organizer has confirmed permanent access to two physical tables and the November 22 venue. No automatic registration import or check-in, real Scorekeeper grant, or public player-name publication is implied by the source merge.
 
+**Post-merge validation:** [full main regression 40939047908](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/40939047908) **passed**: disposable synthetic PostgreSQL, browser/security and full game-day/launch workflow jobs green; the separate fast UI-only lane was correctly skipped. An earlier two-table, 21-fictional-player/two-played-singles test also passed [run 40922823847](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/40922823847). These are automated results, **not** proof of physical devices, Wi-Fi, registration reconciliation or November 8 onsite acceptance.
+
+For current operations consult [November 8 rehearsal](docs/launch/FFTT3_REHEARSAL_CHECKLIST_NOV8.md), [November 22 event guide](docs/launch/FFTT3_EVENT_DAY_GUIDE_NOV22.md), [scorekeeper onboarding](docs/launch/FFTT3_SCOREKEEPER_ONBOARDING.md) and [acceptance checklist](docs/launch/FFTT3_ACCEPTANCE_CHECKLIST.md). Older historical statements about unmerged PRs or unperformed upgrades below remain as dated provenance, not current instructions.
 
 A lightweight, single-file tournament desk for **Forging Fellowship Table Tennis Games** at Ypsilanti SDA Church.
 
