@@ -33,4 +33,4 @@
 Do not use volunteer live scoring until: two independent authorized accounts are known, separate phone sign-ins pass, real event is not accidentally public, the paper fallback is available, and the Organizer validates actual scorekeeper roster/permissions. Failures must have an owner and a successful retest.
 
 ## Scope and history
-This guide prepares the steps only. It **does not** authorize creating accounts, granting live FFTT3 roles, reading registration answers, checking players in, changing event visibility, or changing the real event's visibility. PR #19 is already merged into `main`; that source integration is not volunteer authorization. Refer to `FFTT3_ACCEPTANCE_CHECKLIST.md`, `FFTT3_REHEARSAL_CHECKLIST_NOV8.md` and `FFTT3_EVENT_DAY_GUIDE_NOV22.md`.
+This guide prepares the steps only. It **does not** authorize creating accounts, granting live FFTT3 roles, reading registration answers, checking players in, changing the real event's visibility. PR #19 is already merged into `main`; that source integration is not volunteer authorization. Refer to `FFTT3_ACCEPTANCE_CHECKLIST.md`, `FFTT3_REHEARSAL_CHECKLIST_NOV8.md` and `FFTT3_EVENT_DAY_GUIDE_NOV22.md`.
