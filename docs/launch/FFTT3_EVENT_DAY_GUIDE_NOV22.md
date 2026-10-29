@@ -1,6 +1,6 @@
 # FFTT3 — event-day operating guide · Sunday, November 22, 2026, 1:00 PM
 
-One page per role. Keep it short; follow it literally. **The paper sheet is always the source of truth if the screen and paper disagree.**
+One page per role. Keep it short; follow it literally. **During normal online play, the accepted server match record is authoritative. During a declared paper fallback, preserve signed paper scores as incident evidence and reconcile them against accepted server receipts before any retry or correction. Do not overwrite a server-accepted score solely because paper disagrees.**
 
 ## Roles
 * **Organizer (1, laptop):** registration/check-in, bracket building, corrections, publication, the backup. The only person who changes anything structural.
@@ -9,7 +9,7 @@ One page per role. Keep it short; follow it literally. **The paper sheet is alwa
 * **Owner (on call):** Cloudflare/Supabase/Google access for emergencies only.
 
 ## T-60 min (noon) — Organizer
-1. Sign in; open **FFTT3** (the real event, not the rehearsal). Check date, table count and formats on Overview. Public view must read **off**.
+1. Sign in; open **FFTT3** (the real event, not the rehearsal). Check date, **2 tables** (Organizer confirms permanent access to both), and match formats on Overview. Public view must read **off**. The church venue is secured for November 22; November 8 room/building entry is a separate rehearsal checkpoint.
 2. Players → **Load registrations**. Resolve duplicate groups ("Same person" / "Different people"). Confirm every suggested level that you agree with; edit the rest. Names are full first + last.
 3. **Take a private backup** (hosted export query → private file → `restore_verify.mjs`) and keep it open on the laptop.
 4. Scorekeepers sign in and open Match Desk; confirm each sees only Match Desk.
@@ -59,7 +59,7 @@ Results & Export → **Private backup** (the app's own download; it contains lev
 1. Confirm every match is complete (Match Desk "Ready to play (0)"), the doubles finale is recorded, then Results & Export → Event status → **Mark event complete** (scoring and tables stop; only audited organizer corrections remain).
 2. Results & Export → results text (public-safe), CSV, **private backup**. Save the private backup to the private folder and a second private place; **never post the private backup**.
 3. Hide from the public when the organizer decides, archive later; do not delete.
-4. Switch `REGISTRATION_GOOGLE_MODE` back to `diagnostic` (owner) once check-in is closed.
+4. After final reconciliation and with Organizer approval, the owner may return `REGISTRATION_GOOGLE_MODE` to `diagnostic` if no further registration reads are required. Treat this as a shared Cloudflare service change: record the decision, verify the Staff Function, and do **not** toggle it during a fictional rehearsal.
 
 ## Numbers to remember
 Event: Sunday Nov 22, 1:00 PM. Rehearsal: Nov 8, 10:00 AM. Formats: regular Bo3 to 11; championship final defaults to Bo3 to 11 (confirm approved format; only Bo1/Bo3 selectable); consolation single game to 21; doubles Bo3 to 11. Levels 1–5 are private (never shown publicly).
