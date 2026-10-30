@@ -7,19 +7,32 @@ select set_config('request.jwt.claims','{"sub":"a0000000-0000-4000-8000-00000000
 select (public.fftt_create_event_v3('FICTIONAL BRACKET MANAGER ROLE CI','2026-11-08',2)->>'event_id') as role_event \gset
 select (x->>'event_id') as other_event from pg_catalog.jsonb_array_elements(public.fftt_my_events_v4()) x
   where x->>'name'='FFTT PRE-EXISTING FICTIONAL EVENT' \gset
+select public.fftt_upsert_players_v3(:'role_event'::uuid, '[{"name":"Fictional Role Test A","rating":3,"rating_status":"provisional"},{"name":"Fictional Role Test B","rating":2,"rating_status":"provisional"}]'::jsonb);
+select public.fftt_set_checkin_bulk_v3(:'role_event'::uuid,null,true);
 select set_config('fftt.manager_test_event', :'role_event',true);
 select set_config('fftt.manager_other_event', :'other_event',true);
 select public.fftt_set_staff_v3(:'role_event'::uuid,'outsider@fftt-ci.invalid','grant','bracket_manager');
 select set_config('request.jwt.claim.sub','a0000000-0000-4000-8000-000000000003',true);
 select set_config('request.jwt.claims','{"sub":"a0000000-0000-4000-8000-000000000003","role":"authenticated"}',true);
 do $boundary$
-declare snap jsonb; e uuid := current_setting('fftt.manager_test_event')::uuid;
+declare snap jsonb; ids jsonb; match_id uuid; e uuid := current_setting('fftt.manager_test_event')::uuid;
 begin
  if pg_catalog.jsonb_array_length(public.fftt_my_events_v4()) <> 1 then raise exception 'manager event scope wrong'; end if;
  if (public.fftt_my_events_v4() -> 0 ->> 'role') <> 'bracket_manager' then raise exception 'manager role not discoverable'; end if;
  snap := public.fftt_bracket_manager_snapshot_v1(e);
  if snap -> 'staff' <> '[]'::jsonb then raise exception 'manager leaked staff'; end if;
- if snap -> 'players' is null then raise exception 'manager snapshot missing player model'; end if;
+ if pg_catalog.jsonb_array_length(snap -> 'players') <> 2 then raise exception 'manager snapshot missing fictional players'; end if;
+ if snap -> 'players' -> 0 -> 'registration_refs' <> '[]'::jsonb then raise exception 'manager leaked registration links'; end if;
+ select pg_catalog.jsonb_agg(p->'id' order by p->>'name') into ids from pg_catalog.jsonb_array_elements(snap->'players') p;
+ perform public.fftt_build_championship_v3(e,ids,0,false);
+ snap := public.fftt_bracket_manager_snapshot_v1(e);
+ match_id := (snap->'matches'->0->>'id')::uuid;
+ if match_id is null then raise exception 'manager failed to build championship'; end if;
+ perform public.fftt_assign_table_v3(e,match_id,1);
+ begin
+   perform public.fftt_build_championship_v3(e,ids,1,true);
+   raise exception 'manager rebuilt existing championship';
+ exception when others then if sqlerrm='manager rebuilt existing championship' then raise; end if; end;
  begin
    perform public.fftt_organizer_snapshot_v3(e);
    raise exception 'manager read organizer snapshot';
