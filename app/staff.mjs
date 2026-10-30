@@ -45,7 +45,9 @@ try {
   });
 } catch { readiness = {ready: false, checks: [], blockers: ['origin-profile-invalid']}; }
 const networkAllowed = readiness.ready === true && HOSTED_PASSWORD_AUTH_ENABLED;
-$('envBanner').textContent = (readiness.environment ? readiness.environment.toUpperCase() + ' · ' : '') + 'REHEARSE WITH FICTIONAL PLAYERS · REAL REGISTRATION NAMES MAY BE VISIBLE';
+$('envBanner').textContent = profile.environment === 'production'
+  ? 'FFTT TOURNAMENT STAFF · SIGN IN TO YOUR ASSIGNED EVENT'
+  : (readiness.environment ? readiness.environment.toUpperCase() + ' · ' : '') + 'REHEARSE WITH FICTIONAL PLAYERS · REAL REGISTRATION NAMES MAY BE VISIBLE';
 for (const c of readiness.checks) $('readiness').append(Object.assign(document.createElement('li'), {textContent: (c.pass ? '✔ ' : '✘ ') + c.id.replaceAll('-', ' ')}));
 for (const b of readiness.blockers.filter(x => !readiness.checks.some(c => c.id === x))) {
   $('readiness').append(Object.assign(document.createElement('li'), {textContent: '✘ ' + b.replaceAll('-', ' ')}));
