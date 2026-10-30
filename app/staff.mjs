@@ -104,7 +104,7 @@ if (networkAllowed) {
     ui?.render();
   }});
   ui = createStaffUi({core, config, els: {main: $('main'), tabs: $('tabs'), status: $('statusline'), banner: $('banner'), eventSelect: $('eventSelect'), eventSwitch: $('eventSwitch')}});
-  $('eventSelect').addEventListener('change', async ev => { const r = await core.selectEvent(ev.target.value); if (!r.ok) toast(r.message, 'bad'); ui.openTab(core.state.role === 'organizer' ? 'overview' : 'desk'); });
+  $('eventSelect').addEventListener('change', async ev => { const r = await core.selectEvent(ev.target.value); if (!r.ok) toast(r.message, 'bad'); ui.openTab(core.state.role === 'organizer' ? 'overview' : core.state.role === 'bracket_manager' ? 'championship' : 'desk'); });
 }
 $('signIn').disabled = !networkAllowed; $('requestCode').disabled = !networkAllowed; $('verifyCode').disabled = !networkAllowed;
 
@@ -116,7 +116,7 @@ async function enter(r, eventIdHint) {
   // start() records the role synchronously; choose the landing tab BEFORE the slow first load so a tab the
   // person taps while it loads is never overwritten afterwards
   const loaded = core.started({role: r.role, eventId});
-  ui.openTab(r.role === 'organizer' ? 'overview' : 'desk');
+  ui.openTab(r.role === 'organizer' ? 'overview' : r.role === 'bracket_manager' ? 'championship' : 'desk');
   await loaded;
 }
 for (const ev of ['pointerdown', 'keydown', 'touchstart']) document.addEventListener(ev, () => session?.touch(), {passive: true});
@@ -136,7 +136,7 @@ function showChooser(c) {
         h('strong', {text: e.name}),
         h('span', {class: 'chooser-meta'}, h('span', {text: e.date}),
           h('span', {class: 'pill ' + (e.lifecycle === 'archived' ? 'warn' : e.lifecycle === 'active' ? 'good' : 'blue'), text: e.lifecycle === 'complete' ? 'Completed' : e.lifecycle[0].toUpperCase() + e.lifecycle.slice(1)}),
-          h('span', {class: 'pill', text: e.role === 'organizer' ? 'Organizer' : 'Scorekeeper'})))));
+          h('span', {class: 'pill', text: e.role === 'organizer' ? 'Organizer' : e.role === 'bracket_manager' ? 'Bracket Manager' : 'Scorekeeper'})))));
   }
   say('signInStatus', ''); $('chooserList').querySelector('input:checked')?.focus();
 }
