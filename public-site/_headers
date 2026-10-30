@@ -19,3 +19,6 @@
 # Versioned stylesheet: this path is tied to the exact approved CSS blob.
 /styles-634f563b.css
   Cache-Control: public, max-age=31536000, immutable
+
+/styles-489c7378.css
+  Cache-Control: public, max-age=31536000, immutable
