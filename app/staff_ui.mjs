@@ -11,6 +11,7 @@ import {scoreTiles} from './game_tiles.mjs';
 
 const ORGANIZER_TABS = [['overview', 'Overview'], ['players', 'Players'], ['championship', 'Championship'],
   ['consolation', 'Consolation'], ['desk', 'Match Desk'], ['finale', 'Doubles Finale'], ['results', 'Results & Export'], ['staff', 'Staff']];
+const BRACKET_MANAGER_TABS = [['championship', 'Championship'], ['consolation', 'Consolation'], ['desk', 'Match Desk'], ['finale', 'Doubles Finale']];
 const SCOREKEEPER_TABS = [['desk', 'Match Desk']];
 /** Fixed outline icon geometry from the approved single-file FFTT navigation. */
 const STAFF_NAV_GEOMETRY = Object.freeze({
@@ -51,6 +52,7 @@ export function createStaffUi({core, els, config, signOut}) {
   const draftInputs = new Set(['evName', 'evDate', 'evTables', 'dbA', 'dbB', 'dbScores']);
   const draftKeyOf = el => el.dataset?.draft ?? (draftInputs.has(el.id) ? el.id : null);
   const isOrganizer = () => s.role === 'organizer';
+  const isBracketManager = () => s.role === 'bracket_manager';
   const nameOf = id => s.snapshot?.players.find(p => p.id === id)?.name ?? '—';
 
   // ------------------------------------------------------------ dialogs
@@ -99,11 +101,11 @@ export function createStaffUi({core, els, config, signOut}) {
       : conn === 'offline' ? ['Offline · changes paused', 'bad'] : conn === 'paused' ? ['Paused in background', 'warn'] : ['Signed out', 'warn'];
     // Only organizers receive player/match totals. The scorekeeper's brief intentionally contains
     // no roster or results; never turn its absent fields into misleading "0" statistics.
-    const snapshot = s.role === 'organizer' ? s.snapshot : null;
+    const snapshot = isOrganizer() || isBracketManager() ? s.snapshot : null;
     const checked = snapshot?.players?.filter(p => p.checkedIn).length;
     const completed = snapshot?.matches?.filter(m => m.status === 'complete').length;
     fill(els.status,
-      pill(text, kind), pill(s.role === 'organizer' ? 'Organizer' : s.role === 'scorekeeper' ? 'Scorekeeper' : '—', 'blue'),
+      pill(text, kind), pill(s.role === 'organizer' ? 'Organizer' : s.role === 'bracket_manager' ? 'Bracket Manager' : s.role === 'scorekeeper' ? 'Scorekeeper' : '—', 'blue'),
       snapshot ? pill(checked + ' checked in') : null,
       snapshot ? pill(completed + ' matches completed', 'blue') : null,
       snapshot ? (snapshot.candidates?.length ? pill(snapshot.candidates.length + ' consolation candidates', 'warn') : pill('Consolation not ready', 'warn')) : null,
@@ -118,7 +120,7 @@ export function createStaffUi({core, els, config, signOut}) {
       els.eventSelect.dataset.optionsKey = eventOptionsKey;
     }
     (els.eventSwitch ?? els.eventSelect).hidden = evs.length < 2;
-    const tabs = isOrganizer() ? ORGANIZER_TABS : SCOREKEEPER_TABS;
+    const tabs = isOrganizer() ? ORGANIZER_TABS : isBracketManager() ? BRACKET_MANAGER_TABS : SCOREKEEPER_TABS;
     if (!tabs.some(([id]) => id === tab)) tab = tabs[0][0];
     // keep the same buttons (and focus) when nothing changed; rebuild only when the tab set or selection changed
     const tabsKey = tabs.map(t => t[0]).join() + '|' + tab;
@@ -264,16 +266,16 @@ export function createStaffUi({core, els, config, signOut}) {
           h('p', {class: 'card-sub', text: `${field.length} player${field.length === 1 ? '' : 's'} checked in. Seeding uses the internal ratings: strongest players are kept apart and receive the byes.`}))),
         !champ ? h('div', {class: 'chips static', 'aria-label': 'Formats this bracket will use'}, pill(`Rounds: ${formatText(f.champ)}`, 'blue'), pill(`Final: ${formatText(f.champ_final)}`, 'blue')) : h('div', {class: 'chips static', 'aria-label': 'Formats in this bracket'}, formatSummary(sn, 'championship').map(t => pill(t, 'blue'))),
         unconfirmed ? h('div', {class: 'notice warn', role: 'status'}, `${unconfirmed} checked-in player${unconfirmed === 1 ? ' has' : 's have'} a suggested level that has not been confirmed. `,
-          h('button', {type: 'button', class: 'small', text: 'Review on Players', on: {click: () => goTab('players')}})) : null,
+          isOrganizer() ? h('button', {type: 'button', class: 'small', text: 'Review on Players', on: {click: () => goTab('players')}}) : ' Ask the Organizer to confirm levels before seeding.') : null,
         !champ && preview.length ? h('details', {'data-draft': 'seedPreviewOpen', open: draft('seedPreviewOpen', false)},
           h('summary', {text: 'Preview opening round'}),
           h('ol', {}, pairs(preview).map(([a, b]) => h('li', {text: `${nameOf(a)} vs ${b ? nameOf(b) : 'BYE'}`})))) : null,
         h('div', {class: 'row'},
           !champ ? h('button', {class: 'primary', type: 'button', disabled: !core.canWrite() || field.length < 2, text: 'Build championship bracket',
             on: {click: async () => { if (result(await core.actions.buildChampionship(), 'Championship bracket built.')) goTab('desk'); }}})
-            : h('button', {class: 'danger', type: 'button', disabled: !core.canWrite(), text: 'Rebuild (replaces the bracket)', on: {click: async () => {
+            : isOrganizer() ? h('button', {class: 'danger', type: 'button', disabled: !core.canWrite(), text: 'Rebuild (replaces the bracket)', on: {click: async () => {
               const text = played ? `This replaces the bracket and discards ${played} completed result(s) from the current bracket, the consolation bracket and the doubles teams. Scorekeepers will need to refresh. Export a backup first.` : 'This replaces the current bracket.';
-              if (await confirmDialog('Rebuild the championship bracket?', text, 'Rebuild', {danger: true})) result(await core.actions.buildChampionship({confirm: true}), 'Bracket rebuilt.'); }}}))),
+              if (await confirmDialog('Rebuild the championship bracket?', text, 'Rebuild', {danger: true})) result(await core.actions.buildChampionship({confirm: true}), 'Bracket rebuilt.'); }}}) : null)),
       champ ? h('section', {class: 'card', 'aria-label': 'Championship bracket'}, bracketView(normalized('championship'), 'championship')) : null);
   }
   const pairs = a => a.reduce((out, x, i) => i % 2 ? out : [...out, [x, a[i + 1] ?? null]], []);
@@ -306,9 +308,9 @@ export function createStaffUi({core, els, config, signOut}) {
           !cons ? h('button', {class: 'primary', type: 'button', disabled: !core.canWrite() || pending.length > 0 || cands.length < 2, text: 'Build consolation bracket',
             on: {click: async () => { const ids = cands.filter(c => checks.get(c.playerId).checked).map(c => c.playerId);
               if (result(await core.actions.buildConsolation({entrantIds: ids}), 'Consolation bracket built.')) goTab('desk'); }}})
-            : h('button', {type: 'button', disabled: !core.canWrite() || normalized('consolation').some(m => m.status === 'complete'), text: 'Rebuild (no results yet)', on: {click: async () => {
+            : isOrganizer() ? h('button', {type: 'button', disabled: !core.canWrite() || normalized('consolation').some(m => m.status === 'complete'), text: 'Rebuild (no results yet)', on: {click: async () => {
               const ids = cands.map(c => c.playerId);
-              if (await confirmDialog('Rebuild consolation?', 'This replaces the consolation bracket. It has no results yet.', 'Rebuild')) result(await core.actions.buildConsolation({entrantIds: ids, confirm: true}), 'Rebuilt.'); }}}))),
+              if (await confirmDialog('Rebuild consolation?', 'This replaces the consolation bracket. It has no results yet.', 'Rebuild')) result(await core.actions.buildConsolation({entrantIds: ids, confirm: true}), 'Rebuilt.'); }}}) : null)),
       cons ? h('section', {class: 'card', 'aria-label': 'Consolation bracket'}, bracketView(normalized('consolation'), 'consolation')) : null);
   }
 
@@ -619,7 +621,7 @@ export function createStaffUi({core, els, config, signOut}) {
     const sn = s.snapshot;
     if (!sn) return loading();
     const email = h('input', {type: 'email', id: 'stEmail', autocapitalize: 'none', autocomplete: 'off', placeholder: 'volunteer@example.org', 'data-draft': 'stEmail'});
-    const role = h('select', {id: 'stRole', 'data-draft': 'stRole'}, h('option', {value: 'scorekeeper', text: 'Scorekeeper'}), h('option', {value: 'organizer', text: 'Organizer'}));
+    const role = h('select', {id: 'stRole', 'data-draft': 'stRole'}, h('option', {value: 'scorekeeper', text: 'Scorekeeper'}), h('option', {value: 'bracket_manager', text: 'Bracket Manager'}), h('option', {value: 'organizer', text: 'Organizer'}));
     return h('div', {},
       h('section', {class: 'card', 'aria-labelledby': 'staffTitle'}, h('h2', {id: 'staffTitle', class: 'card-title', text: 'Event staff'}),
         h('div', {class: 'scroll-x'}, h('table', {class: 'responsive-table'}, h('thead', {}, h('tr', {}, ['Account', 'Role', 'Status', ''].map(t => h('th', {scope: 'col', text: t})))),
