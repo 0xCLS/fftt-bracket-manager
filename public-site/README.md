@@ -54,3 +54,15 @@ This is the latest explicit organizer correction and supersedes the earlier visi
 At tablet/zoomed viewports up to 980 CSS pixels the header brand gets its own row with a compact, left-aligned, flex-wrapped navigation row below. At small widths the navigation wraps naturally with a compact header registration pill rather than the previous oversized two-column grid and full-width button. The hero and final-section registration buttons retain their intended mobile sizing.
 
 The new stylesheet is content-addressed as `public-site/styles-489c7378.css` using Git blob `489c73784adcaa3aa19cc0e7af2752a2b1b11ed7`; previously published versioned CSS files remain unchanged so cached HTML continues to work. Rendered layout/hover verification is required on fresh and previously cached desktop/tablet/mobile browsers before calling the deployment complete.
+
+
+## Approved hero photo + navigation simplification — October 30, 2026
+
+The organizer approved the enhanced near-white-floor scene (edited from the original FFTT table tennis photo) as the new **public homepage hero image**. Preserve the generated approved master asset; do not independently re-generate player or audience faces. The photo shows sharp players and table, a pale neutral floor, straight table undercarriage, a heavily blurred audience, and no adjacent support column. A web-optimized 1600×900 WebP (about 105 KiB) is prepared as `public-site/assets/fftt-fellowship-hero.webp`, SHA-256 `87ebf4bee89d6d44ac37eb51032ba68a0fbe394dc0753ec9bb25771933f922e6`. **IMPORTANT: This image is distributed separately as a downloadable FFTT asset package; it is not yet in this GitHub commit. Codex must add and verify its SHA-256 before deploying this HTML. Do not deploy without the binary image.**
+
+Latest user-approved HTML/CSS changes:
+- Header now contains Event details, Join us, and a smaller **STAFF SIGN-IN** pill (32px height, 11px uppercase font, cyan hover). No Register button in the top menu. Staff continues to link to the existing authenticated staging origin; this does not imply production staff access.
+- Event details and Join us use text-color hover/focus instead of underline.
+- Hero retains the existing copy and primary Register to play CTA; a full-width, responsive media block displays the approved image below the hero copy, preserving both players and table. There is still one secondary CTA at the bottom of the page. The existing form, November 22 **1:00 PM EST** event information, spectator invitation, and Bracket Manager design tokens are unchanged.
+- All public registration links open the approved Google Form in a new tab with `noopener noreferrer`.
+- The new content-addressed CSS file must be included in the deployed directory. Do not edit older fingerprinted CSS assets. Test at desktop and phone widths, warm-cache navigation, image loading, hover states, links, and absence of horizontal overflow.
