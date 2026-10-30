@@ -35,20 +35,22 @@ h1,h2,h3{letter-spacing:-.026em;line-height:1.2}
 .workspace{display:flex;flex-direction:column;min-width:0;flex:1}
 .content{max-width:1360px;width:100%;margin:0 auto;padding:clamp(18px,2.4vw,34px) clamp(14px,2.7vw,38px) 64px;flex:1}
 .hero{min-width:0}
-/* Keep the full approved photograph unobstructed. The audience may be blurred
-   within the approved image, but NEVER mask or fade either real player. */
-.hero-scene{display:flex;flex-direction:column;overflow:hidden;min-height:0;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow)}
-.hero-copy{order:0;width:100%;max-width:none;padding:clamp(28px,4vw,48px);background:linear-gradient(115deg,#fff 0%,#f8fafb 100%)}
-.hero-photo{order:1;position:static;inset:auto;z-index:auto;display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:contain;object-position:center;max-width:100%;-webkit-mask-image:none;mask-image:none}
+.hero-scene{position:relative;isolation:isolate;border-radius:13px;overflow:hidden;background:#f3f5f6}
+.hero-photo{display:block;position:relative;width:100%;height:auto;aspect-ratio:16/9;object-fit:contain;object-position:center;opacity:1;-webkit-mask-image:none;mask-image:none}
+/* A broad feathered center light, never a visible box or an edge-to-edge fade.
+   Players at the left/right edge remain unaltered and in front of no copy. */
+.hero-scene::after{content:"";position:absolute;z-index:1;inset:0;pointer-events:none;background:radial-gradient(ellipse 30% 37% at 50% 18%,rgba(250,251,252,.92) 0%,rgba(250,251,252,.75) 38%,rgba(250,251,252,.28) 70%,rgba(250,251,252,0) 100%)}
+.hero-copy{position:absolute;z-index:2;top:clamp(20px,2.7vw,38px);left:50%;transform:translateX(-50%);width:min(53%,650px);max-width:650px;padding:0;text-align:center;background:transparent}
 .section-label,.card-eyebrow{font-size:11px;letter-spacing:.11em;color:#5e6974;font-weight:800;margin-bottom:13px}
-.hero-copy h1{font-size:clamp(34px,3.8vw,52px);font-weight:800;letter-spacing:-.047em;max-width:15.5ch;text-wrap:balance;margin-bottom:18px}
-.intro{max-width:46ch;color:#586672;font-size:clamp(14px,1.35vw,17px);line-height:1.62}
-.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:27px}
-.button{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:46px;padding:10px 20px;border-radius:999px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);text-decoration:none;font-size:13px;font-weight:750;line-height:1.35;transition:background .12s ease,border-color .12s ease,color .12s ease}
+.hero-copy h1{font-size:clamp(35px,3.7vw,52px);font-weight:800;letter-spacing:-.048em;max-width:none;text-wrap:balance;margin-bottom:12px;line-height:1.07}
+.title-break{display:block}
+.intro{max-width:48ch;margin:0 auto;color:#475563;font-size:clamp(13px,1.1vw,16px);line-height:1.5}
+.actions{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin-top:18px}
+.button{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:45px;padding:10px 20px;border-radius:999px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);text-decoration:none;font-size:13px;font-weight:750;line-height:1.35;transition:background .12s ease,border-color .12s ease,color .12s ease}
 .button-primary{background:var(--ink);border-color:var(--ink);color:#fff}
 .button-primary:hover{background:#475461;border-color:#475461}
 .button-secondary:hover{border-color:#9daab6;background:#f8fafb}
-.hero-facts{position:relative;z-index:3;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:-68px 18px 0;scroll-margin-top:110px}
+.hero-facts{position:relative;z-index:3;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:-56px 18px 0;scroll-margin-top:110px}
 .fact-card{min-width:0;min-height:122px;display:flex;align-items:center;gap:13px;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow)}
 .fact-icon{flex:none;width:54px;height:54px;border-radius:14px;display:grid;place-items:center;color:#29313c}
 .fact-icon-sage{background:#e6f3e9;color:#24634b}
@@ -59,72 +61,81 @@ h1,h2,h3{letter-spacing:-.026em;line-height:1.2}
 .fact-label{font-size:10px;letter-spacing:.09em;font-weight:800;color:#65717e}
 .fact-copy strong{font-size:clamp(13px,1.2vw,17px);font-weight:800;letter-spacing:-.02em;line-height:1.25}
 .fact-detail{font-size:11px;color:#687584;line-height:1.4}
-.fellowship-band{scroll-margin-top:110px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin:16px 18px 0;padding:18px 8px;border:1px solid var(--line);border-radius:13px;background:#fff;box-shadow:var(--shadow)}
-.fellowship-item{display:flex;align-items:center;gap:14px;padding:10px 20px;min-width:0}
-.fellowship-item+.fellowship-item{border-left:1px solid var(--line)}
-.fellowship-icon{flex:none;display:grid;place-items:center;width:55px;height:55px;border-radius:50%;color:#29313c}
+/* Open editorial columns rather than a second row of cards. */
+.fellowship-section{scroll-margin-top:110px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin:38px 18px 0;padding:12px 0 16px}
+.fellowship-item{display:flex;align-items:flex-start;gap:17px;padding:10px 25px;min-width:0}
+.fellowship-item:first-of-type{padding-left:0}
+.fellowship-item+.fellowship-item{border-left:1px solid #dce2e8}
+.fellowship-icon{flex:none;display:grid;place-items:center;width:48px;height:48px;border-radius:50%;color:#29313c}
 .fellowship-icon-rose{background:#fbe0ea;color:#8a3c68}
 .fellowship-icon-butter{background:#fff0cf;color:#625034}
 .fellowship-icon-sage{background:#e6f3e9;color:#38674c}
-.fellowship-item h3{font-size:15px;font-weight:800;margin-bottom:5px}
-.fellowship-item p{font-size:12px;color:#63707a;line-height:1.55}
-.venue-section{margin-top:36px}
-.section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px}
-.section-heading h2{font-size:20px;font-weight:800}
-.pill{display:inline-flex;align-items:center;gap:7px;max-width:100%;padding:5px 11px;border-radius:999px;background:#eef0f3;border:1px solid #e0e4e9;color:var(--ink);font-size:12px;font-weight:650;line-height:1.3}
-.pill-blue{background:var(--teal-soft);color:#2f6674;border-color:#d5e8ec}
-.pill-neutral{background:#f0f3f5}
-.card{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:22px}
-.venue-card{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap}
-.venue-card h3{font-size:19px;font-weight:800;margin-bottom:6px}
-.venue-card .muted{font-size:13px;color:var(--muted)}
-.venue-card .card-eyebrow{margin-bottom:7px}
-.cta-card{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:22px;display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap;margin-top:16px}
-.cta-card h3{font-size:18px;margin-bottom:5px}
-.cta-card p{font-size:13px;color:var(--muted)}
+.fellowship-item h3{font-size:17px;font-weight:800;margin-bottom:7px}
+.fellowship-item p{font-size:13px;color:#63707a;line-height:1.6}
+/* Location and closing invitation are editorial content, never cards. */
+.venue-section{margin:38px 18px 12px;border-top:1px solid #dce2e8;padding:36px 0 0}
+.venue-layout{display:grid;grid-template-columns:1fr 1fr;gap:clamp(30px,5vw,88px)}
+.venue-details h2,.closing-invite h2{font-size:clamp(21px,2.2vw,29px);font-weight:800;margin-bottom:9px}
+.venue-address{font-size:15px;font-weight:600;color:#495765}
+.venue-note{font-size:13px;color:#63707a;margin-top:9px}
+.closing-invite{border-left:1px solid #dce2e8;padding-left:clamp(28px,4vw,56px)}
+.closing-invite p{font-size:14px;color:#63707a;margin-bottom:16px;max-width:39ch}
 .footer{padding:20px 25px 30px;text-align:center;font-size:12px;color:var(--muted)}
 .footer p{margin:0}
 .developer-credit{margin-top:6px!important}
 @media(max-width:1130px){
   .hero-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .fellowship-item{gap:10px;padding:10px 14px}
+  .fellowship-item{gap:12px;padding:10px 16px}
+}
+/* At tablet and zoomed sizes, put the headline above the unmodified, full photo.
+   This is preferable to risking a player/text collision. */
+@media(max-width:1150px){
+  .hero-scene{display:flex;flex-direction:column;overflow:visible;background:transparent;border-radius:0}
+  .hero-scene::after{display:none}
+  .hero-copy{position:static;top:auto;left:auto;transform:none;order:0;width:100%;max-width:740px;margin:0 auto;text-align:center;padding:20px 16px 26px}
+  .hero-photo{order:1;border-radius:12px}
+  .hero-copy h1{font-size:clamp(32px,4.2vw,48px);line-height:1.12}
+  .intro{font-size:15px}
+  .hero-facts{margin:-24px 12px 0}
 }
 @media(max-width:980px){
   .header-inner{flex-direction:column;align-items:stretch;gap:10px}
   .site-nav{width:100%;justify-content:flex-start;gap:8px 18px}
   html{scroll-padding-top:150px}
-  .hero-facts,.fellowship-band{scroll-margin-top:150px}
-  .fellowship-band{grid-template-columns:1fr;gap:0}
-  .fellowship-item+.fellowship-item{border-left:0;border-top:1px solid var(--line)}
+  .hero-facts,.fellowship-section{scroll-margin-top:150px}
+  .fellowship-section{grid-template-columns:1fr;gap:12px;margin:28px 18px 0}
+  .fellowship-item,.fellowship-item:first-of-type{padding:8px 0}
+  .fellowship-item+.fellowship-item{border-left:0;border-top:1px solid #dce2e8;padding-top:20px}
 }
 @media(max-width:840px){
   .header-inner{gap:10px}
   .brand-logo{width:44px;height:44px}
   .brand strong{font-size:17px}
   .brand-kicker{font-size:9px}
+  .venue-layout{grid-template-columns:1fr;gap:26px}
+  .closing-invite{border-left:0;border-top:1px solid #dce2e8;padding:26px 0 0}
 }
 @media(max-width:680px){
   .content{padding:16px 14px 40px}
-  .hero-scene{border-radius:11px}
-  .hero-copy{padding:24px 22px 26px}
-  .hero-copy h1{font-size:clamp(28px,7vw,38px);max-width:none;margin-bottom:12px}
-  .intro{max-width:none;font-size:14px}
-  .actions{margin-top:20px;display:flex}
+  .hero-copy{padding:18px 5px 24px}
+  .hero-copy h1{font-size:clamp(28px,7vw,38px)}
+  .intro{font-size:14px}
+  .actions{margin-top:18px;display:flex}
   .actions .button{flex:1 1 auto;min-width:0}
-  .hero-facts{margin:-16px 8px 0;gap:9px}
+  .hero-facts{margin:13px 0 0;gap:9px}
   .fact-card{min-height:110px;padding:12px;align-items:flex-start}
   .fact-icon{width:40px;height:40px;border-radius:10px}
   .fact-icon svg{width:22px;height:22px}
-  .fellowship-band{margin:12px 8px 0;padding:8px 4px}
+  .fellowship-section{margin:24px 0 0;padding:0}
   .fellowship-icon{width:47px;height:47px}
-  .venue-section{margin-top:28px}
-  .cta-card .button{width:100%}
+  .venue-section{margin:26px 0 0;padding-top:28px}
+  .closing-invite .button{width:100%}
   .header-inner{padding:11px 18px}
   .site-nav{display:flex;flex-wrap:wrap;justify-content:flex-start;align-items:center;width:100%;gap:6px 16px}
   .nav-link{min-height:38px;white-space:nowrap;font-size:12px}
   .staff-link{min-height:32px;padding:5px 11px;font-size:10.5px}
   html{scroll-padding-top:145px}
-  .hero-facts,.fellowship-band{scroll-margin-top:145px}
+  .hero-facts,.fellowship-section{scroll-margin-top:145px}
 }
 @media(max-width:440px){
   .hero-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
