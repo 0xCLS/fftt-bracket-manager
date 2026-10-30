@@ -50,4 +50,5 @@ done
 "${PSQL[@]}" -d "$db_name" -f tests/gameday_single_project_post.sql
 "${PSQL[@]}" -d "$db_name" -f supabase/proposals/FFTT3_BRACKET_MANAGER_ROLE_20261030_DO_NOT_APPLY.sql > /dev/null
 "${PSQL[@]}" -d "$db_name" -f tests/fftt3_bracket_manager_post.sql
+"${PSQL[@]}" -d "$db_name" -f tests/fftt3_bracket_manager_strict.sql
 echo "PASS: source-pinned in-place SQL candidate against populated disposable PostgreSQL"

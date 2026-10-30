@@ -35,7 +35,8 @@ import {SYNTHETIC_FORM_CSV} from './synthetic_fixture.mjs';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const JWT = /^[A-Za-z0-9_-]{2,}\.[A-Za-z0-9_-]{2,}\.[A-Za-z0-9_-]{2,}$/;
 const KEY = /^sb_publishable_[A-Za-z0-9_-]{8,}$/;
-const STAFF_ORIGIN = /^https:\/\/[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.pages\.dev$/;
+// A dedicated *.pages.dev project, or the one exact permanent production staff hostname (never a wildcard or sibling subdomain).
+const STAFF_ORIGIN = /^https:\/\/(?:[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.pages\.dev|fftt-staff\.clslifestyle\.com)$/;
 const CACHE_MS = 20_000, CACHE_MAX = 24, RATE_WINDOW_MS = 60_000, RATE_MAX = 30;
 const FIXTURE_SECRET = 'synthetic-fixture-reference-secret-0001';   // fictional data only: not a secret
 const ACTION_KEYS = Object.freeze({load: ['event_id'], capabilities: ['event_id'], inspect: ['event_id', 'spreadsheet'], test: ['event_id', 'spreadsheet', 'worksheet', 'mapping']});

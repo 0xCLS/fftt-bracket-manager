@@ -133,6 +133,25 @@ test('controlled egress: only https to the pinned hosts, nothing else can be req
   assert.equal(seen[0][1].redirect, 'manual', 'redirects are never followed');
 });
 
+test('the permanent production staff origin configures the Function; lookalike and sibling hosts stay fail-closed', async () => {
+  const PROD = 'https://fftt-staff.clslifestyle.com';
+  const ok = {...synthEnv, STAFF_ORIGIN: PROD};
+  const good = await call(ok, world(), req({event_id: EVENT}, {origin: PROD, url: PROD + '/api/registrations'}));
+  assert.notEqual(good.status, 503, 'the exact production hostname is a valid staff origin');
+  assert.equal((await call(ok, world(), req({event_id: EVENT}, {origin: PROD, url: PROD + '/api/registrations', token: ''}))).status, 401, 'still requires a signed-in token');
+  assert.equal((await call(ok, world(), req({event_id: EVENT}, {method: 'GET', origin: PROD, url: PROD + '/api/registrations'}))).status, 405);
+  // the production configuration answers only on its own origin: the spectator hostname and the pages.dev alias never serve it
+  for (const url of ['https://fftt-games.clslifestyle.com/api/registrations', 'https://fftt-staff.pages.dev/api/registrations']) {
+    assert.equal((await call(ok, world(), req({event_id: EVENT}, {origin: null, url}))).status, 404, url);
+  }
+  for (const origin of ['https://fftt-games.clslifestyle.com', 'https://evil.clslifestyle.com', 'https://clslifestyle.com', 'https://fftt-staff.clslifestyle.com.evil.example',
+    'https://xfftt-staff.clslifestyle.com', 'http://fftt-staff.clslifestyle.com', 'https://fftt-staff.clslifestyle.com:8443', 'https://fftt-staff.clslifestyle.com/', 'https://FFTT-STAFF.clslifestyle.com ']) {
+    const r = await call({...synthEnv, STAFF_ORIGIN: origin}, world(), req({event_id: EVENT}));
+    assert.equal(r.status, 503, origin);
+    assert.deepEqual(await r.json(), {error: 'registration-not-configured'});
+  }
+});
+
 test('fail closed: any missing or wrong setting answers the same generic 503 and reveals nothing', async () => {
   const w = world();
   const bad = [{}, {...synthEnv, REGISTRATION_ENABLED: 'yes'}, {...synthEnv, STAFF_ORIGIN: 'https://evil.example'}, {...synthEnv, STAFF_ORIGIN: 'http://x.pages.dev'},
