@@ -154,6 +154,28 @@ class GamedayBundles(unittest.TestCase):
                                 'approvedHttpsOrigins': [], 'spectatorOrigin': self.SPECT})
         self.assertEqual((self.staff / '_redirects').read_text(), '/ /app/staff.html 302\n')
         self.assertIn('/ /app/spectator.html 200', (self.spect / '_redirects').read_text())
+    def test_production_custom_domain_bundles_and_staging_refusal(self):
+        staff = 'https://fftt-staff.clslifestyle.com'
+        games = 'https://fftt-games.clslifestyle.com'
+        staff_out = Path(self.tmp) / 'production-staff'
+        games_out = Path(self.tmp) / 'production-games'
+        files = B.build(str(self.repo), self.sha, 'production', staff, str(staff_out), 'staff', games)
+        public_files = B.build(str(self.repo), self.sha, 'production', games, str(games_out), 'spectator')
+        self.assertIn('app/staff.html', files)
+        self.assertIn('app/spectator.html', public_files)
+        self.assertFalse(any(p.startswith(('server/', 'functions/')) for p in public_files))
+        self.assertFalse(any(p.startswith('app/staff') for p in public_files))
+        profile = json.loads((staff_out / 'app/origin-profile.json').read_text())
+        self.assertEqual(profile, {'environment':'production', 'approvedPublicStaticOrigins':[],
+                                   'approvedHttpsOrigins':[staff], 'spectatorOrigin':games})
+        self.assertEqual(json.loads((staff_out / 'MANIFEST.json').read_text())['commit'], self.sha)
+        with self.assertRaises(SystemExit):
+            B.build(str(self.repo), self.sha, 'staging', staff, str(Path(self.tmp) / 'bad'), 'staff', games)
+        with self.assertRaises(SystemExit):
+            B.build(str(self.repo), self.sha, 'production', games, str(Path(self.tmp) / 'bad'), 'staff', staff)
+        with self.assertRaises(SystemExit):
+            B.build(str(self.repo), self.sha, 'production', staff, str(Path(self.tmp) / 'bad'), 'staff', self.SPECT)
+
     def test_headers_allow_only_self_and_the_project(self):
         for d in (self.staff, self.spect):
             h = (d / '_headers').read_text()
