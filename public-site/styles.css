@@ -19,30 +19,26 @@ h1,h2,h3,p{margin-top:0}
 h1,h2,h3{letter-spacing:-.025em;line-height:1.22}
 .skip-link{position:absolute;top:-80px;left:12px;z-index:99;border-radius:999px;padding:10px 16px;color:#fff;background:var(--ink);font-weight:700;text-decoration:none}
 .skip-link:focus{top:12px}
-.shell{min-height:100vh;display:grid;grid-template-columns:228px minmax(0,1fr)}
-.sidebar{display:flex;flex-direction:column;gap:0;align-self:start;position:sticky;top:0;min-height:100vh;padding:26px 14px 22px;background:var(--sidebar);border-right:1px solid var(--line)}
-.brand{display:flex;gap:12px;align-items:center;text-decoration:none;margin:0 6px 12px}
-.brand-logo{flex:none;width:56px;height:56px;object-fit:contain;border-radius:50%}
-.brand-label{min-width:0;display:flex;flex-direction:column;line-height:1.15}
-.brand-kicker{font-size:10px;letter-spacing:.09em;color:var(--muted);font-weight:750;margin-bottom:6px;white-space:nowrap}
-.brand strong{font-size:21px;letter-spacing:-.045em;line-height:1.07;font-weight:800}
-.sidebar-caption{font-size:12px;line-height:1.5;color:var(--muted);margin:10px 10px 31px;max-width:22ch}
-.side-section{font-size:10px;letter-spacing:.12em;font-weight:800;color:#7a858f;margin:0 12px 10px}
-.site-nav{display:grid;gap:5px}
-.nav-link{min-height:44px;display:flex;gap:12px;align-items:center;padding:10px 13px;text-decoration:none;border-radius:5px;color:#53606b;font-size:13px;font-weight:600;transition:background .12s ease,color .12s ease}
-.nav-link:hover,.nav-link:focus-visible{background:#f0f3f5;color:var(--ink)}
-.nav-link.is-current{background:#eef1f3;color:var(--ink);font-weight:750}
-.nav-mark{display:inline-flex;justify-content:center;align-items:center;width:18px;font-size:14px;color:#647681;flex:none}
-.sidebar-bottom{margin-top:auto;padding:25px 10px 2px}
-.developer{margin:16px 0 0;font-size:11px;color:#75818c}
-.workspace{display:flex;flex-direction:column;min-width:0;min-height:100vh}
-.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;min-height:65px;padding:12px clamp(20px,3vw,38px);background:var(--surface);border-bottom:1px solid var(--line)}
-.topbar-place{color:var(--muted);font-size:12px;font-weight:600}
+/* Static public-site header; administrative sidebar stays in the Bracket Manager only. */
+.site{min-height:100vh;display:flex;flex-direction:column}
+.site-header{position:static;background:var(--sidebar);border-bottom:1px solid var(--line)}
+.header-inner{max-width:1280px;width:100%;margin:auto;padding:14px clamp(20px,3vw,38px);min-height:80px;display:flex;align-items:center;justify-content:space-between;gap:16px 28px;flex-wrap:wrap}
+.brand{display:inline-flex;gap:11px;align-items:center;text-decoration:none;min-width:0}
+.brand-logo{flex:none;width:52px;height:52px;object-fit:contain;border-radius:50%}
+.brand-label{min-width:0;display:flex;flex-direction:column;line-height:1.13}
+.brand-kicker{font-size:10px;letter-spacing:.08em;color:var(--muted);font-weight:750;margin-bottom:4px}
+.brand strong{font-size:20px;font-weight:800;letter-spacing:-.035em}
+.site-nav{display:flex;align-items:center;gap:8px 20px;flex-wrap:wrap}
+.nav-link{display:inline-flex;align-items:center;gap:7px;min-height:44px;text-decoration:none;color:#53606b;font-size:13px;font-weight:650;white-space:nowrap}
+.nav-link:hover{color:var(--ink);text-decoration:underline;text-underline-offset:4px}
+.staff-link{gap:7px}
+.staff-stage{padding:2px 6px;border-radius:999px;background:var(--teal-soft);border:1px solid #d5e8ec;color:#2f6674;font-size:9px;font-weight:800;letter-spacing:.04em}
+.header-register{min-height:42px}
+.workspace{display:flex;flex-direction:column;min-width:0;min-height:calc(100vh - 81px);flex:1}
 .pill{display:inline-flex;align-items:center;gap:7px;max-width:100%;padding:5px 11px;border-radius:999px;background:#eef0f3;border:1px solid #e0e4e9;color:var(--ink);font-size:12px;font-weight:650;line-height:1.3}
 .pill-good{background:var(--positive-soft);color:var(--positive);border-color:#cde5c9}
 .pill-blue{background:var(--teal-soft);color:#2f6674;border-color:#d5e8ec}
 .pill-neutral{background:#f0f3f5}
-.status-dot{width:7px;height:7px;border-radius:50%;background:#3c8a69;flex:none}
 .content{width:100%;max-width:1170px;margin:0 auto;padding:clamp(27px,3.8vw,48px) clamp(20px,3vw,38px) 64px;flex:1}
 .hero{padding:6px 0 30px;max-width:940px}
 .section-label,.card-eyebrow{font-size:11px;letter-spacing:.11em;color:var(--muted);font-weight:800;margin:0 0 12px}
@@ -81,20 +77,14 @@ h2{font-size:20px;letter-spacing:-.035em;margin:0;font-weight:800}
 .cta-card p{font-size:13px;color:var(--muted);margin:0}
 .footer{padding:20px 25px 30px;text-align:center;font-size:12px;color:var(--muted)}
 .footer p{margin:0}
-.mobile-developer{display:none}
+.developer-credit{margin-top:6px!important}
 @media(max-width:1050px){.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:840px){
-  .shell{display:block}
-  .sidebar{position:static;min-height:auto;padding:13px 16px 0;border-right:0;border-bottom:1px solid var(--line)}
-  .brand{margin:0 0 11px}
-  .brand-logo{width:42px;height:42px}
-  .brand strong{font-size:16px}
-  .brand-kicker{font-size:9px;margin-bottom:3px}
-  .sidebar-caption,.side-section,.sidebar-bottom{display:none}
-  .site-nav{display:flex;overflow-x:auto;gap:6px;scrollbar-width:thin}
-  .nav-link{white-space:nowrap;min-height:42px;padding:8px 13px}
-  .topbar{min-height:55px}
-  .mobile-developer{display:block;margin-top:6px!important}
+  .header-inner{gap:12px;align-items:center}
+  .brand-logo{width:44px;height:44px}
+  .brand strong{font-size:17px}
+  .brand-kicker{font-size:9px}
+  .site-nav{gap:7px 15px}
 }
 @media(max-width:600px){
   .stats-grid,.join-grid{grid-template-columns:1fr}
@@ -105,7 +95,11 @@ h2{font-size:20px;letter-spacing:-.035em;margin:0;font-weight:800}
   .venue-card,.cta-card{align-items:flex-start}
   .cta-card .button{width:100%}
   .content{padding-bottom:35px}
-  .topbar-place{font-size:11px}
+  .header-inner{padding:13px 20px;gap:12px}
+  .site-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px;width:100%}
+  .nav-link{min-width:0;white-space:normal;font-size:12px}
+  .staff-link{flex-wrap:wrap;gap:3px 6px}
+  .header-register{width:100%;font-size:12px;padding:10px 13px;min-height:44px}
 }
 @media(prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
