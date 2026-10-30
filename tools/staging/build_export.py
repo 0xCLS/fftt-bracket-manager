@@ -22,7 +22,7 @@ ENTRY = 'rehearsals/m1/staff-login.html'  # default target
 ENTRIES = {'login': [ENTRY], 'staff': ['app/staff.html'], 'spectator': ['app/spectator.html', 'app/tv.html']}
 SUPABASE = 'https://copmkalfkkrkzheohwuc.supabase.co'
 KNOWN_SHARED_ORIGINS = {'https://0xcls.github.io'}
-DEDICATED_HOST = re.compile(r'^(?:[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.(github\.io|pages\.dev)|fftt-(?:staff|games)\.clslifestyle\.com)
+DEDICATED_HOST = re.compile(r'^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.(?:github\.io|pages\.dev)|fftt-(?:staff|games)\.clslifestyle\.com)$')
 SENSITIVE = re.compile(r'(^|/)(\.git|\.github|\.env|node_modules|__pycache__|tests|docs|supabase|tools|server|functions)(/|$)|\.(log|bak|sql|py|sh|key|pem)$|\.local\.json$')
 HEADERS = (
     "/*\n"
