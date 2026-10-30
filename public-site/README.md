@@ -2,6 +2,13 @@
 
 This independent static website is the **live public home** at `https://fftt.clslifestyle.com/` for the recurring Forging Fellowship Table Tennis Games. It is **not** the organizer or scorer application, and it must **not** be deployed over the existing Cloudflare Pages Staff/Spectator staging projects or the legacy GitHub Pages root site.
 
+## Pending homepage CTA change (source only; not deployed)
+
+- [PR #23](https://github.com/0xCLS/fftt-bracket-manager/pull/23) updates the **Staff sign-in** header link to the approved permanent `https://fftt-staff.clslifestyle.com/app/staff` origin and adds a secondary **Spectator View** link to `https://fftt-games.clslifestyle.com/app/spectator` beside the existing lower registration button.
+- The existing November 22 Google Form links remain unchanged. Spectator data remains hidden until the Organizer explicitly publishes the event.
+- The stylesheet is newly versioned as `styles-20261030-cta.css`; previous versioned stylesheets and imagery stay untouched. Responsive behavior: paired desktop buttons, stacked buttons at narrow widths.
+- **Release not yet performed:** deploy only the isolated `public-site/` contents to the existing `fftt-public` project, capture rollback reference, and verify visual layout, both destinations, asset hashes and unchanged Staff/Spectator/staging sites before marking this change live.
+
 ## Current live release — October 30, 2026
 
 - **Cloudflare Pages project:** `fftt-public` (production `main`), linked to `https://fftt.clslifestyle.com/`.
