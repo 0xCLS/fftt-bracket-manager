@@ -62,7 +62,7 @@ let lastEvent = null;
 try { lastEvent = localStorage.getItem('fftt.staff.lastEvent'); if (!UUID.test(lastEvent ?? '')) lastEvent = null; } catch { /* storage unavailable */ }
 
 const spectatorOrigin = (() => {
-  try { const u = new URL(profile.spectatorOrigin); return u.protocol === 'https:' && /\.pages\.dev$/.test(u.hostname) ? u.origin : null; } catch { return null; }
+  try { const u = new URL(profile.spectatorOrigin); return u.protocol === 'https:' && !u.port && (u.hostname === 'fftt-games.clslifestyle.com' || /^[a-z0-9-]+\.pages\.dev$/i.test(u.hostname)) ? u.origin : null; } catch { return null; }
 })();
 const config = {spectatorUrl: spectatorOrigin && spectatorOrigin + '/', tvUrl: spectatorOrigin && spectatorOrigin + '/app/tv.html'};
 
