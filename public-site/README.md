@@ -2,12 +2,12 @@
 
 This independent static website is the **live public home** at `https://fftt.clslifestyle.com/` for the recurring Forging Fellowship Table Tennis Games. It is **not** the organizer or scorer application, and it must **not** be deployed over the existing Cloudflare Pages Staff/Spectator staging projects or the legacy GitHub Pages root site.
 
-## Pending homepage CTA change (source only; not deployed)
+## Homepage CTA release — October 30, 2026 (live)
 
-- [PR #23](https://github.com/0xCLS/fftt-bracket-manager/pull/23) updates the **Staff sign-in** header link to the approved permanent `https://fftt-staff.clslifestyle.com/app/staff` origin and adds a secondary **Spectator View** link to `https://fftt-games.clslifestyle.com/app/spectator` beside the existing lower registration button.
-- The existing November 22 Google Form links remain unchanged. Spectator data remains hidden until the Organizer explicitly publishes the event.
-- The stylesheet is newly versioned as `styles-20261030-cta.css`; previous versioned stylesheets and imagery stay untouched. Responsive behavior: paired desktop buttons, stacked buttons at narrow widths.
-- **Release not yet performed:** deploy only the isolated `public-site/` contents to the existing `fftt-public` project, capture rollback reference, and verify visual layout, both destinations, asset hashes and unchanged Staff/Spectator/staging sites before marking this change live.
+- **Source:** [PR #23](https://github.com/0xCLS/fftt-bracket-manager/pull/23), merged as `ea2fa0d639c2fc6d35d5606bb0bac08d8212d699`. The header **Staff sign-in** link opens `https://fftt-staff.clslifestyle.com/app/staff`; a secondary **Spectator View** link beside the lower registration button opens `https://fftt-games.clslifestyle.com/app/spectator`. Both **Register to play** buttons keep `https://forms.gle/tZ9dizzfecyhHUxw8`. New stylesheet `styles-20261030-cta.css`.
+- **Production deployment:** `56251812-aa7a-4b60-a8a2-c887acf84b22` (`https://56251812.fftt-public.pages.dev/`), `fftt-public`, branch `main`, commit `ea2fa0d`. **Rollback reference:** `07f0f384-4428-4c83-8962-b76eac0e14f6` (previous production, commit `a115638`; next older `df14304a-7bf2-4b73-b8ae-3110eef18c99`).
+- **Verified:** deployed from an isolated `git archive` of `public-site/` only (no `functions/`, `server/` or other application files; no Functions bundle); 13 content files returned byte-identical SHA-256 on the new deployment URL and on `fftt.clslifestyle.com` (hero `623b5698…214a` unchanged); security headers (CSP, nosniff, DENY, referrer, permissions) present; layout checked at 1440, 820, 390 and 320 px with no horizontal overflow, lower buttons side by side and centred on desktop and tablet and stacked full-width on mobile; live desktop page confirmed. The Staff and Spectator destinations return 200. Staff, Spectator, both staging deployments and all DNS records were unchanged.
+- Note: Pages serves the homepage for unknown paths (existing behaviour); `README.md` in `public-site/` is publicly fetchable.
 
 ## Current live release — October 30, 2026
 
