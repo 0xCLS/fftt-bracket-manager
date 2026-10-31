@@ -2,12 +2,20 @@
 
 This independent static website is the **live public home** at `https://fftt.clslifestyle.com/` for the recurring Forging Fellowship Table Tennis Games. It is **not** the organizer or scorer application, and it must **not** be deployed over the existing Cloudflare Pages Staff/Spectator staging projects or the legacy GitHub Pages root site.
 
-## Venue gap and invitation refinement candidate (not deployed)
+## Branded Maps links and closing-CTA correction (not yet deployed)
 
-- [Draft PR #27](https://github.com/0xCLS/fftt-bracket-manager/pull/27) tightens the venue grouping from 1020px to 880px and narrows the grid gap, keeping the two location/directions groups distinct but visually connected. Both map addresses and existing map icons remain unchanged.
+- Organizer requested removing the cartoon-like paddle-and-ball illustration above **Ready to join the Games?**, with no replacement graphic. The page retains the existing pale blue-gray background, venue layout, spacing and CTA buttons.
+- Replace generic circular location/compass badges with recognizable Google Maps and Apple Maps SVG icons, without surrounding circles. Both icons are self-hosted under `public-site/assets/`, rendered at consistent 28px dimensions and aligned with unchanged labels and external-link arrows. Map URLs and destination address are unchanged.
+- New versioned CSS: `styles-20261030-brand-maps.css`. Previous deployed stylesheets remain untouched; the editable `styles.css` mirrors the new asset.
+- Icons sourced unchanged from [Dashboard Icons](https://github.com/homarr-labs/dashboard-icons) (`svg/google-maps.svg`, `svg/apple-maps.svg`), project Apache-2.0. See `assets/MAP_ICON_THIRD_PARTY_NOTICE.txt` for license and attribution. Google Maps and Apple Maps trademarks remain the property of their respective owners. Icons identify the destinations and do not imply endorsement.
+- **Not yet live:** source candidate only pending focused visual and deployment checks. Deploy only from an isolated `public-site/` directory to existing `fftt-public`; do not modify the applications, registration data, Supabase, DNS, or staging.
+
+## Venue-gap and invitation release — October 30, 2026 (live)
+
+- [PR #27](https://github.com/0xCLS/fftt-bracket-manager/pull/27) merged as `bc02b287053a8033aa84a3c9bccd3819449298c3`, tightening the venue grouping from 1020px to 880px and narrowing the grid gap. Both map addresses and existing map icons remain unchanged.
 - The existing closing invitation gains a very subtle pale blue-gray full-section background and a small local inline-SVG two-paddle/ball accent, plus less excessive bottom/footer whitespace. No new photo, embed, API or heavy card styling.
 - `styles-20261030-polish.css` is the new proposed versioned asset; earlier versions are retained unchanged. The existing header, event facts, three fellowship columns, two public registration links, and Staff/Spectator destinations remain as approved.
-- **Source candidate only.** Confirm visually at desktop/tablet/phone before merge and isolated `public-site/` deployment to `fftt-public`. The production site continues to use PR #26 until a separately verified release.
+- **Deployed:** `fftt-public` deployment `4ada01df-a054-4bdb-9808-769510f3847f` (rollback `ad6cf396-c8e9-4890-a95a-8a01437e7760`). The local and live Chrome checks passed. A subsequent Organizer review explicitly rejected the decorative paddles as too playful; see the correction candidate above.
 
 ## Venue-before-fellowship release — October 30, 2026 (live)
 
