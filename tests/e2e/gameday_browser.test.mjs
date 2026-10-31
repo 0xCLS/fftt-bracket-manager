@@ -113,6 +113,48 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
     assert.ok(publicLayout.mainTop < 450 && publicLayout.visible, 'spectator content must be visible below the tabs');
     await spec.page.setViewportSize({width: 390, height: 844});
 
+    // A phone must have breathing room between brand, event title, status and
+    // optional event picker; the title must be quieter than on desktop.
+    const phoneHeader = await spec.page.evaluate(() => {
+      const brand = document.querySelector('.public-head .brand').getBoundingClientRect();
+      const title = document.querySelector('#evName');
+      const titleBox = title.getBoundingClientRect();
+      const status = document.querySelector('.public-head .row');
+      const picker = document.querySelector('#evPick');
+      return {
+        brandToTitle: titleBox.top - brand.bottom,
+        titleFont: parseFloat(getComputedStyle(title).fontSize),
+        statusToPicker: parseFloat(getComputedStyle(picker).marginTop),
+        titleToStatus: status.getBoundingClientRect().top - titleBox.bottom,
+        pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      };
+    });
+    assert.ok(phoneHeader.brandToTitle >= 18, 'phone title must be separated from the brand');
+    assert.ok(phoneHeader.titleFont <= 20, 'phone event title must use compact typography');
+    assert.ok(phoneHeader.titleToStatus >= 10, 'status must have space after title');
+    assert.ok(phoneHeader.statusToPicker >= 16, 'event picker must be separated from Live status');
+    assert.ok(phoneHeader.pageOverflow <= 1, 'phone header must not overflow');
+
+    // Spectator feed ticks every second, even when no event data changes. A bracket
+    // swipe must retain its DOM and scroll position, not jump back to round one.
+    await goTab(spec.page, 'Bracket');
+    await spec.page.locator('.bracket').first().waitFor({timeout: T});
+    const swipeStart = await spec.page.evaluate(() => {
+      const el = document.querySelector('#main .bracket');
+      el.scrollLeft = Math.min(110, el.scrollWidth - el.clientWidth);
+      el.dataset.swipeGuard = 'retained';
+      return {left: el.scrollLeft, inset: parseFloat(getComputedStyle(el).paddingLeft)};
+    });
+    assert.ok(swipeStart.left > 40, 'fictional bracket must have more than one scrollable round');
+    assert.ok(swipeStart.inset >= 8, 'round cards have breathing room at mobile edges');
+    await spec.page.waitForTimeout(1600);
+    const swipeAfter = await spec.page.evaluate(() => {
+      const el = document.querySelector('#main .bracket');
+      return {left: el.scrollLeft, retained: el.dataset.swipeGuard};
+    });
+    assert.equal(swipeAfter.retained, 'retained', 'freshness tick must not replace the bracket DOM');
+    assert.ok(Math.abs(swipeAfter.left - swipeStart.left) < 2, 'swiped bracket must not reset on feed tick');
+    await goTab(spec.page, 'Now & next');
 
     // table assignment by a scorekeeper shows up as Now playing for spectators and on the TV
     const tv = await w.device('tv', {viewport: {width: 1920, height: 1080}});
