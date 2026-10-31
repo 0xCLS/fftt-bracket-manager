@@ -22,7 +22,8 @@ ENTRY = 'rehearsals/m1/staff-login.html'  # default target
 ENTRIES = {'login': [ENTRY], 'staff': ['app/staff.html'], 'spectator': ['app/spectator.html', 'app/tv.html']}
 SUPABASE = 'https://copmkalfkkrkzheohwuc.supabase.co'
 KNOWN_SHARED_ORIGINS = {'https://0xcls.github.io'}
-DEDICATED_HOST = re.compile(r'^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.(github\.io|pages\.dev)$')
+DEDICATED_HOST = re.compile(r'^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.(?:github\.io|pages\.dev)|fftt-(?:staff|games)\.clslifestyle\.com)$')
+PRODUCTION_CUSTOM = {'staff': 'https://fftt-staff.clslifestyle.com', 'spectator': 'https://fftt-games.clslifestyle.com'}
 SENSITIVE = re.compile(r'(^|/)(\.git|\.github|\.env|node_modules|__pycache__|tests|docs|supabase|tools|server|functions)(/|$)|\.(log|bak|sql|py|sh|key|pem)$|\.local\.json$')
 HEADERS = (
     "/*\n"
@@ -69,6 +70,12 @@ def build(checkout, commit, environment, origin, out, target='login', spectator_
     if not valid_origin(origin): die('origin is not an acceptable dedicated public static origin')
     if spectator_origin is not None and (target != 'staff' or not valid_origin(spectator_origin) or spectator_origin == origin):
         die('spectator origin must be a different dedicated origin, and only the staff bundle takes one')
+    if origin in PRODUCTION_CUSTOM.values() and (environment != 'production' or PRODUCTION_CUSTOM.get(target) != origin):
+        die('custom hostname reserved for matching production application')
+    if spectator_origin in PRODUCTION_CUSTOM.values() and (environment != 'production' or spectator_origin != PRODUCTION_CUSTOM['spectator']):
+        die('custom spectator hostname reserved for production')
+    if environment == 'production' and origin == PRODUCTION_CUSTOM['staff'] and spectator_origin != PRODUCTION_CUSTOM['spectator']:
+        die('custom production staff must link to approved custom spectator')
     git = lambda *a: subprocess.check_output(['git', '-C', checkout, *a], text=True)
     if git('rev-parse', 'HEAD').strip() != commit: die('checkout HEAD is not the approved commit')
     if git('status', '--porcelain').strip(): die('working tree is not clean')
@@ -81,16 +88,18 @@ def build(checkout, commit, environment, origin, out, target='login', spectator_
     for p in seen:
         if SENSITIVE.search(p): die(f'refusing sensitive-looking path: {p}')
     files = dict(seen)
+    public_entries = [{'origin': origin, 'environment': environment, 'dedicatedOrigin': True}] if origin.endswith(('.pages.dev', '.github.io')) else []
+    https_entries = [] if public_entries else [origin]
     if target == 'login':
         files['rehearsals/m1/origin-profile.json'] = (json.dumps({
             'environment': environment,
-            'approvedPublicStaticOrigins': [{'origin': origin, 'environment': environment, 'dedicatedOrigin': True}],
-            'approvedHttpsOrigins': []}, indent=1) + '\n').encode()
+            'approvedPublicStaticOrigins': public_entries,
+            'approvedHttpsOrigins': https_entries}, indent=1) + '\n').encode()
     elif target == 'staff':
         files['app/origin-profile.json'] = (json.dumps({
             'environment': environment,
-            'approvedPublicStaticOrigins': [{'origin': origin, 'environment': environment, 'dedicatedOrigin': True}],
-            'approvedHttpsOrigins': [], 'spectatorOrigin': spectator_origin}, indent=1) + '\n').encode()
+            'approvedPublicStaticOrigins': public_entries,
+            'approvedHttpsOrigins': https_entries, 'spectatorOrigin': spectator_origin}, indent=1) + '\n').encode()
         files['_redirects'] = b'/ /app/staff.html 302\n'
     else:
         files['_redirects'] = b'/ /app/spectator.html 200\n/tv /app/tv.html 200\n'

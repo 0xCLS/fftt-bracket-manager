@@ -216,12 +216,13 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
         const pulse = await scoreTransport.readPulse(ctx.token, {eventId: ctx.eventId});
         const same = s.pulse && pulse.revision === s.pulse.revision && pulse.generation === s.pulse.generation
           && pulse.lifecycle === s.pulse.lifecycle;
-        const needSnapshot = ctx.role === 'organizer' && !s.snapshot;
+        const needSnapshot = (ctx.role === 'organizer' || ctx.role === 'bracket_manager') && !s.snapshot;
         const needDesk = pulse.lifecycle === 'active' && scoreSession && !UNRESOLVED.has(scoreSession.view.status)
           && scoreSession.view.status !== 'ready';
         if (!force && same && !needSnapshot && !needDesk && now() - lastFullAt < FULL_REFRESH_MS) return {pulse, unchanged: true, role: ctx.role};
         const res = {pulse, role: ctx.role};
         if (ctx.role === 'organizer') res.snapshot = await api.organizerSnapshot(ctx.token, {p_event_id: ctx.eventId});
+        else if (ctx.role === 'bracket_manager') res.snapshot = await api.bracketManagerSnapshot(ctx.token, {p_event_id: ctx.eventId});
         else res.brief = await api.eventBrief(ctx.token, {p_event_id: ctx.eventId});
         try { res.events = await api.myEvents(ctx.token, {}); } catch (e) { if (e instanceof GamedayApiError && e.kind === 'access-rejected') throw e; /* the list is a convenience */ }
         if (pulse.lifecycle === 'active') {

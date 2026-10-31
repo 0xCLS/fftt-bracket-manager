@@ -45,7 +45,9 @@ try {
   });
 } catch { readiness = {ready: false, checks: [], blockers: ['origin-profile-invalid']}; }
 const networkAllowed = readiness.ready === true && HOSTED_PASSWORD_AUTH_ENABLED;
-$('envBanner').textContent = (readiness.environment ? readiness.environment.toUpperCase() + ' · ' : '') + 'REHEARSE WITH FICTIONAL PLAYERS · REAL REGISTRATION NAMES MAY BE VISIBLE';
+$('envBanner').textContent = profile.environment === 'production'
+  ? 'FFTT TOURNAMENT STAFF · SIGN IN TO YOUR ASSIGNED EVENT'
+  : (readiness.environment ? readiness.environment.toUpperCase() + ' · ' : '') + 'REHEARSE WITH FICTIONAL PLAYERS · REAL REGISTRATION NAMES MAY BE VISIBLE';
 for (const c of readiness.checks) $('readiness').append(Object.assign(document.createElement('li'), {textContent: (c.pass ? '✔ ' : '✘ ') + c.id.replaceAll('-', ' ')}));
 for (const b of readiness.blockers.filter(x => !readiness.checks.some(c => c.id === x))) {
   $('readiness').append(Object.assign(document.createElement('li'), {textContent: '✘ ' + b.replaceAll('-', ' ')}));
@@ -62,7 +64,7 @@ let lastEvent = null;
 try { lastEvent = localStorage.getItem('fftt.staff.lastEvent'); if (!UUID.test(lastEvent ?? '')) lastEvent = null; } catch { /* storage unavailable */ }
 
 const spectatorOrigin = (() => {
-  try { const u = new URL(profile.spectatorOrigin); return u.protocol === 'https:' && /\.pages\.dev$/.test(u.hostname) ? u.origin : null; } catch { return null; }
+  try { const u = new URL(profile.spectatorOrigin); return u.protocol === 'https:' && !u.port && (u.hostname === 'fftt-games.clslifestyle.com' || /^[a-z0-9-]+\.pages\.dev$/i.test(u.hostname)) ? u.origin : null; } catch { return null; }
 })();
 const config = {spectatorUrl: spectatorOrigin && spectatorOrigin + '/', tvUrl: spectatorOrigin && spectatorOrigin + '/app/tv.html'};
 
@@ -104,7 +106,7 @@ if (networkAllowed) {
     ui?.render();
   }});
   ui = createStaffUi({core, config, els: {main: $('main'), tabs: $('tabs'), status: $('statusline'), banner: $('banner'), eventSelect: $('eventSelect'), eventSwitch: $('eventSwitch')}});
-  $('eventSelect').addEventListener('change', async ev => { const r = await core.selectEvent(ev.target.value); if (!r.ok) toast(r.message, 'bad'); ui.openTab(core.state.role === 'organizer' ? 'overview' : 'desk'); });
+  $('eventSelect').addEventListener('change', async ev => { const r = await core.selectEvent(ev.target.value); if (!r.ok) toast(r.message, 'bad'); ui.openTab(core.state.role === 'organizer' ? 'overview' : core.state.role === 'bracket_manager' ? 'championship' : 'desk'); });
 }
 $('signIn').disabled = !networkAllowed; $('requestCode').disabled = !networkAllowed; $('verifyCode').disabled = !networkAllowed;
 
@@ -116,7 +118,7 @@ async function enter(r, eventIdHint) {
   // start() records the role synchronously; choose the landing tab BEFORE the slow first load so a tab the
   // person taps while it loads is never overwritten afterwards
   const loaded = core.started({role: r.role, eventId});
-  ui.openTab(r.role === 'organizer' ? 'overview' : 'desk');
+  ui.openTab(r.role === 'organizer' ? 'overview' : r.role === 'bracket_manager' ? 'championship' : 'desk');
   await loaded;
 }
 for (const ev of ['pointerdown', 'keydown', 'touchstart']) document.addEventListener(ev, () => session?.touch(), {passive: true});
@@ -136,7 +138,7 @@ function showChooser(c) {
         h('strong', {text: e.name}),
         h('span', {class: 'chooser-meta'}, h('span', {text: e.date}),
           h('span', {class: 'pill ' + (e.lifecycle === 'archived' ? 'warn' : e.lifecycle === 'active' ? 'good' : 'blue'), text: e.lifecycle === 'complete' ? 'Completed' : e.lifecycle[0].toUpperCase() + e.lifecycle.slice(1)}),
-          h('span', {class: 'pill', text: e.role === 'organizer' ? 'Organizer' : 'Scorekeeper'})))));
+          h('span', {class: 'pill', text: e.role === 'organizer' ? 'Organizer' : e.role === 'bracket_manager' ? 'Bracket Manager' : 'Scorekeeper'})))));
   }
   say('signInStatus', ''); $('chooserList').querySelector('input:checked')?.focus();
 }

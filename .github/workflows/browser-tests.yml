@@ -187,6 +187,8 @@ jobs:
           python -m playwright install chromium --with-deps
       - name: Game-day client, session, exports, formats, sign-in discovery and public-model unit tests (zero network)
         run: node --test tests/gameday_*.test.mjs
+      - name: FFTT3 Bracket Manager role and production origin checks (zero network)
+        run: node --test tests/fftt3_bracket_manager_role.test.mjs
       - name: Registration model and server-side adapter (mocked Google and Supabase, zero network)
         run: node --test tests/registration_*.test.mjs
       - name: Install test-only local PostgreSQL (WebAssembly) and browser driver

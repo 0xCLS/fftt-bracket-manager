@@ -133,7 +133,7 @@ export function createMilestone1PasswordSupabaseTransport({
   async readRole({eventId,token}={}){
    if(!UUID.test(eventId||''))fail('invalid-input');
    const role=await readOne('/rest/v1/rpc/fftt_staff_role_v1',{token,body:{p_event_id:eventId}});
-   if(role!=='organizer'&&role!=='scorekeeper')fail('denied');
+   if(role!=='organizer'&&role!=='bracket_manager'&&role!=='scorekeeper')fail('denied');
    return role;
   },
   async readMatchdesk({eventId,token}={}){

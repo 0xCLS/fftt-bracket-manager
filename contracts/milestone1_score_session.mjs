@@ -17,7 +17,7 @@ import {PHASE} from './phase1c_disconnect_reference.mjs';
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const nonnegative=x=>Number.isSafeInteger(x)&&x>=0;
 const fail=s=>{throw new AuthorityGateError(s);};
-const roles=['organizer','scorekeeper'];
+const roles=['organizer','bracket_manager','scorekeeper'];
 const blank=(status='signed-out')=>Object.freeze({
   status,role:null,revision:null,generation:null,matches:Object.freeze([]),
   pendingSubmissionId:null,decision:null,scoreReady:false,

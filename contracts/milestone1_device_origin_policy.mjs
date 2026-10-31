@@ -76,8 +76,9 @@ export function evaluateMilestone1DeviceOrigin({href,approvedHttpsOrigins=[],app
  // Permit exactly this reviewed alias on a dedicated Pages HTTPS hostname; all
  // other page paths and all origin/environment checks remain fail-closed.
  const canonicalStaffPagesPath=pagePath==='/app/staff.html'&&u.pathname==='/app/staff'
-   &&u.protocol==='https:'&&DEDICATED_PLATFORM_HOST.test(u.hostname)
-   &&u.hostname.endsWith('.pages.dev');
+   &&u.protocol==='https:'
+   &&(u.hostname.endsWith('.pages.dev') && DEDICATED_PLATFORM_HOST.test(u.hostname)
+      || (u.origin==='https://fftt-staff.clslifestyle.com' && approved.includes(u.origin)));
  if(u.pathname!==pagePath&&!canonicalStaffPagesPath)reasons.push('unexpected-page-path');
  let profile=null;
  if(u.origin===LOOPBACK_ORIGIN)profile=DEVICE_PROFILE.LOOPBACK;

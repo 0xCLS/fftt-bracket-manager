@@ -121,3 +121,25 @@ test('readiness carries the environment and blocks a mismatched build',()=>{
  assert.equal(wrong.ready,false);assert.ok(wrong.blockers.includes('wrong-environment'));
  assert.equal(assessMilestone1DeviceReadiness({...env,isTopLevel:false}).ready,false,'a framed page never signs anyone in');
 });
+
+test('approved production custom staff hostname permits only its exact Pages canonical route',()=>{
+ const origin='https://fftt-staff.clslifestyle.com', pagePath='/app/staff.html';
+ const check=(href,origins=[origin])=>evaluateMilestone1DeviceOrigin({
+   href,pagePath,approvedHttpsOrigins:origins,expectedEnvironment:'production'
+ });
+ for(const suffix of ['/app/staff.html','/app/staff']) {
+   const a=check(origin+suffix);
+   assert.equal(a.allowed,true,JSON.stringify(a.reasons));
+   assert.equal(a.profile,DEVICE_PROFILE.HTTPS);
+ }
+ for(const suffix of ['/app/','/app/staff/','/app/staff2','/app/spectator']) {
+   const a=check(origin+suffix);
+   assert.equal(a.allowed,false,suffix);
+   assert.ok(a.reasons.includes('unexpected-page-path'),suffix);
+ }
+ assert.equal(check(origin+'/app/staff',[]).allowed,false,'requires explicit approval');
+ assert.equal(check('https://fftt-games.clslifestyle.com/app/staff').allowed,false,'spectator hostname never signs in');
+ assert.equal(check('https://fftt-staff.attacker.invalid/app/staff').allowed,false,'no lookalike allowed');
+ assert.equal(check('http://fftt-staff.clslifestyle.com/app/staff').allowed,false,'https required');
+ assert.equal(check('https://fftt-staff.clslifestyle.com:8443/app/staff').allowed,false,'no alternate port');
+});
