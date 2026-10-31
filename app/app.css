@@ -925,3 +925,18 @@ td.scores-cell{min-width:150px}
   #app .add-players-card .add-one-actions{flex-direction:column}
   #app .add-players-card .add-one-actions button{flex:auto;width:100%}
 }
+
+/* iPhone/iPad: keep the Staff heading together and prevent Safari's native
+   date-input intrinsic width from pushing its card past the viewport. */
+@media(max-width:800px){
+ #app .sidebar-brand strong br{display:none}
+ #app .sidebar-brand strong{white-space:nowrap}
+}
+@media(max-width:760px){
+ #app .form-grid>*,
+ #app .create-grid>*{min-width:0}
+ #app .form-grid input,
+ #app .create-grid input{min-width:0;max-width:100%}
+ #app .topbar .event-switch{min-width:0;max-width:100%}
+ #app .topbar select#eventSelect{width:100%;text-overflow:ellipsis}
+}

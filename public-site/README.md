@@ -1,5 +1,12 @@
 # FFTT public landing page (live)
 
+## Mobile Staff controls and homepage navigation — October 31, 2026 (source candidate)
+
+- On narrow screens only (up to 800px), the Staff sidebar title reads **Bracket Manager** on one line; desktop retains the existing two-line title. On phone widths (up to 760px), organizer event/date inputs, new-event inputs and the top event switcher stay within their container, including Safari's native date control.
+- On the public homepage at phone widths (up to 680px), hide only **Event details** and **Join us** from the header; the **STAFF SIGN-IN** link, in-page event information, registration buttons and accessibility/skip navigation remain intact. The desktop/tablet header is unchanged.
+- Staff presentation change is limited to `app/app.css` and a single whitespace insertion before the existing `<br>` in `app/staff.html` so the mobile title reads `Bracket Manager`, not `BracketManager`; public edit is a single stylesheet-reference update plus a new versioned `styles-20261031-mobile-nav.css`, with `styles.css` mirrored and older assets preserved for cache compatibility. No tournament operations, player data, registration settings, Auth, database, functions or deployment configuration changes.
+- **Not deployed:** requires rendered mobile/desktop acceptance and separate production release gate; Staff production and public Pages deployment have not been changed by this PR.
+
 This independent static website is the **live public home** at `https://fftt.clslifestyle.com/` for the recurring Forging Fellowship Table Tennis Games. It is **not** the organizer or scorer application, and it must **not** be deployed over the existing Cloudflare Pages Staff/Spectator staging projects or the legacy GitHub Pages root site.
 
 ## Branded Maps links and closing-CTA correction (not yet deployed)
