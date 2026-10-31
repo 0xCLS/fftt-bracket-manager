@@ -162,6 +162,8 @@ h1,h2,h3{letter-spacing:-.026em;line-height:1.2}
   .closing-invite .cta-actions{flex-direction:column;max-width:330px}
   .header-inner{padding:11px 18px}
   .site-nav{display:flex;flex-wrap:wrap;justify-content:flex-start;align-items:center;width:100%;gap:6px 16px}
+  /* On phones the event facts and invitation remain in-page; keep Staff sign-in. */
+  .site-nav .nav-link:not(.staff-link){display:none}
   .nav-link{min-height:38px;white-space:nowrap;font-size:12px}
   .staff-link{min-height:32px;padding:5px 11px;font-size:10.5px}
   html{scroll-padding-top:145px}
