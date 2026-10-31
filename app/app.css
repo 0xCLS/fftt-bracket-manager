@@ -940,3 +940,28 @@ td.scores-cell{min-width:150px}
  #app .topbar .event-switch{min-width:0;max-width:100%}
  #app .topbar select#eventSelect{width:100%;text-overflow:ellipsis}
 }
+
+
+/* Spectator-only phone layout. Keep the semantic results table and recorded scores,
+   but give each match the full card width instead of squeezing four desktop columns. */
+@media(max-width:700px){
+  #main.public-wrap .card table{display:block;width:100%;min-width:0}
+  #main.public-wrap .card table tbody{display:block;width:100%}
+  #main.public-wrap .card table tr{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;
+    padding:14px 0;border-bottom:1px solid var(--line)}
+  #main.public-wrap .card table tr:last-child{border-bottom:0;padding-bottom:0}
+  #main.public-wrap .card table td{display:block;min-width:0;width:100%;padding:0;border:0;
+    overflow-wrap:anywhere;vertical-align:top}
+  #main.public-wrap .card table td:first-child{font-size:.74rem;font-weight:800;letter-spacing:.045em;
+    text-transform:uppercase;color:var(--muted)}
+  #main.public-wrap .card table td:nth-child(2){font-size:1rem;font-weight:700;line-height:1.4}
+  #main.public-wrap .card table td:nth-child(3){font-size:.88rem;color:var(--positive);font-weight:650}
+  #main.public-wrap .card table td.scores-cell{min-width:0;max-width:100%;margin-top:2px}
+  #main.public-wrap .card table td.scores-cell .score-tiles{display:block;max-width:100%}
+  #main.public-wrap .card table td.scores-cell .score-games{display:flex;flex-wrap:wrap;gap:6px 10px}
+  /* Sideways rounds: a comfortably readable first column with a hint of the next,
+     and gentle snap points for touch browsing. No change to shared Staff brackets. */
+  #main.public-wrap .bracket{gap:12px;scroll-snap-type:x proximity;scroll-padding-inline:2px;
+    -webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+  #main.public-wrap .bracket .round{width:min(260px,calc(100vw - 80px));scroll-snap-align:start}
+}
