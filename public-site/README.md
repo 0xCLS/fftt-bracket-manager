@@ -1,5 +1,12 @@
 # FFTT public landing page (live)
 
+## Compact right-aligned mobile header — October 31, 2026 (source candidate)
+
+- The prior @980px responsive breakpoint forced the brand and menu into a column even when the available width could accommodate both; mobile menu width:100% added a redundant second row. Corrected both so navigation remains top-right beside the brand at ordinary phone and tablet widths.
+- Phone view up to 680px continues hiding only Event details and Join us; STAFF SIGN-IN remains visible, linked to the existing permanent staff origin. At 370px and below, preserve legibility by wrapping Staff sign-in to a separate **right-aligned** row instead of squeezing text or introducing horizontal overflow.
+- Source changes are limited to public homepage CSS, a new immutable versioned CSS asset, and the stylesheet reference. No event data, links, hero photograph, registration settings, Staff app, Functions, hosting, DNS, or Spectator changes.
+- **Not deployed by this source PR**; release independently to existing fftt-public from a sanitized public-site-only bundle after visual acceptance and the production release gate.
+
 ## Mobile Staff controls and homepage navigation — October 31, 2026 (live)
 
 - **Source:** [PR #31](https://github.com/0xCLS/fftt-bracket-manager/pull/31), merged to `main` as `d165a8eed1cfd3bc43ea56a3eb4fc6d4af062335`. On phone widths (up to 680px) the homepage header hides only **Event details** and **Join us**; the **STAFF SIGN-IN** link, in-page event information, registration buttons and skip navigation remain, and desktop/tablet are unchanged. New stylesheet `styles-20261031-mobile-nav.css`.
