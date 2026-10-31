@@ -2,12 +2,13 @@
 
 This independent static website is the **live public home** at `https://fftt.clslifestyle.com/` for the recurring Forging Fellowship Table Tennis Games. It is **not** the organizer or scorer application, and it must **not** be deployed over the existing Cloudflare Pages Staff/Spectator staging projects or the legacy GitHub Pages root site.
 
-## Venue directions and layout candidate (not deployed)
+## Venue directions release — October 30, 2026 (live)
 
-- [Draft PR #25](https://github.com/0xCLS/fftt-bracket-manager/pull/25) proposes a wider, unboxed two-column location section (church details on one side, directional links on the other) to address the narrow central treatment on desktop. Below 900px, it stacks; on narrow phones, the two directional links stack as full touch-friendly rows.
-- Both **Google Maps** and **Apple Maps** links lead to `402 S. Adams St., Ypsilanti, MI 48197` and open separately. They have distinctive local inline SVG icons and accessible labels. Neither an embedded map nor an API key is required.
-- New versioned CSS asset `styles-20261030-directions.css`, preserving all historical CSS assets. Existing hero image, registration URLs, venue facts, CTA and Staff/Spectator destinations are untouched.
-- **Not live:** candidate source passed static structural checks; full real-browser and live-deployment checks are still required. Deploy only isolated `public-site/` files to `fftt-public` and record the resulting rollback reference after visual approval.
+- **Source:** [PR #25](https://github.com/0xCLS/fftt-bracket-manager/pull/25), squash-merged as `b89f829e65839b25ba26998d2a0b24e4aab1009d` (verified candidate `3de433a`; the `public-site/` tree is identical). The church-location section is a wider, unboxed two-column row (church details beside directions) that stacks below 900px, and the two directions links stack as full-width touch rows at 440px and below. Neither an embedded map nor an API key is used.
+- **Directions:** **Google Maps** (`https://www.google.com/maps/dir/?api=1&destination=402+S+Adams+St%2C+Ypsilanti%2C+MI+48197`) and **Apple Maps** (`https://maps.apple.com/?daddr=402+S+Adams+St%2C+Ypsilanti%2C+MI+48197`) open in a new tab with distinct local inline SVG icons (pin and compass) and accessible labels. Both resolve to `402 S. Adams St., Ypsilanti, MI 48197`. New stylesheet `styles-20261030-directions.css` (byte-identical to `styles.css`); all earlier CSS assets are preserved.
+- **Production deployment:** `492e495e-4cb0-4c48-995f-012dc118d2e9` (`https://492e495e.fftt-public.pages.dev/`), `fftt-public`, branch `main`, commit `b89f829`, no Functions bundle. **Rollback reference:** `56251812-aa7a-4b60-a8a2-c887acf84b22` (previous production, commit `ea2fa0d`; next older `07f0f384-4428-4c83-8962-b76eac0e14f6`).
+- **Verified:** rendered locally in Chrome at exactly 1440, 820, 390 and 320 CSS px (no horizontal overflow; 53px-tall link rows; 3px keyboard focus outline; teal hover); only the venue rules and the stylesheet link changed, so the hero, event tiles, fellowship section, typography, image and both lower registration/Spectator buttons are unchanged. Deployed from an isolated `git archive` of `public-site/` only. SHA-256 of `index.html`, `styles.css`, both newest stylesheets and both images matched on the deployment URL and `fftt.clslifestyle.com` (hero `623b5698…214a` unchanged); security headers present; Staff sign-in, Spectator View and both Register to play links unchanged and returning HTTP 200.
+- Staff, Spectator, staging, DNS, Supabase and all tournament records were not touched.
 
 ## Homepage CTA release — October 30, 2026 (live)
 
