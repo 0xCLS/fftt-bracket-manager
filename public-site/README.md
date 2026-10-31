@@ -2,11 +2,18 @@
 
 This independent static website is the **live public home** at `https://fftt.clslifestyle.com/` for the recurring Forging Fellowship Table Tennis Games. It is **not** the organizer or scorer application, and it must **not** be deployed over the existing Cloudflare Pages Staff/Spectator staging projects or the legacy GitHub Pages root site.
 
-## Venue-before-fellowship layout candidate — October 30, 2026 (not deployed)
+## Venue gap and invitation refinement candidate (not deployed)
 
-- [Draft PR #26](https://github.com/0xCLS/fftt-bracket-manager/pull/26) proposes moving the whole church location + map links row immediately after the event facts and before the three fellowship statements, while keeping **Ready to join the Games?** last.
+- [Draft PR #27](https://github.com/0xCLS/fftt-bracket-manager/pull/27) tightens the venue grouping from 1020px to 880px and narrows the grid gap, keeping the two location/directions groups distinct but visually connected. Both map addresses and existing map icons remain unchanged.
+- The existing closing invitation gains a very subtle pale blue-gray full-section background and a small local inline-SVG two-paddle/ball accent, plus less excessive bottom/footer whitespace. No new photo, embed, API or heavy card styling.
+- `styles-20261030-polish.css` is the new proposed versioned asset; earlier versions are retained unchanged. The existing header, event facts, three fellowship columns, two public registration links, and Staff/Spectator destinations remain as approved.
+- **Source candidate only.** Confirm visually at desktop/tablet/phone before merge and isolated `public-site/` deployment to `fftt-public`. The production site continues to use PR #26 until a separately verified release.
+
+## Venue-before-fellowship release — October 30, 2026 (live)
+
+- [PR #26](https://github.com/0xCLS/fftt-bracket-manager/pull/26) merged as `5cb519063c3d2fa3242534ad74c37cb2331ca624`, moving the whole church location + map links row immediately after event facts and before the three fellowship statements, while keeping **Ready to join the Games?** last.
 - The Google/Apple links, destination address, icon glyphs and horizontal location/map spacing are **unchanged**. Minimal section separator and margin adjustments support the new order at desktop/tablet/mobile widths; `styles-20261030-reorder.css` is versioned separately.
-- The live site remains on the previously verified venue-directions release. Real-browser layout review is required before any merge or deployment; evaluate the amount of whitespace between the church details and map links **after** seeing the reordered layout. No game-day, registration, or backend changes are involved.
+- Deployment `ad6cf396-c8e9-4890-a95a-8a01437e7760` on the existing `fftt-public` Pages project (rollback `492e495e-4cb0-4c48-995f-012dc118d2e9`). Local Chrome at 1440, 820, 390 and 320px and live HTML/link checks passed, but the organizer's subsequent visual review found the space between the church text and map links still too broad. No game-day, registration, or backend changes were involved.
 
 ## Venue directions release — October 30, 2026 (live)
 
