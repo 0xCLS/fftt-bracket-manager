@@ -2,11 +2,13 @@
 
 This independent static website is the **live public home** at `https://fftt.clslifestyle.com/` for the recurring Forging Fellowship Table Tennis Games. It is **not** the organizer or scorer application, and it must **not** be deployed over the existing Cloudflare Pages Staff/Spectator staging projects or the legacy GitHub Pages root site.
 
-## Remove decorative paddles from closing invitation (source correction, not yet deployed)
+## Branded Maps links and closing-CTA correction (not yet deployed)
 
-- The Organizer found the colored paddle-and-ball illustration above **Ready to join the Games?** too playful for the public page. Remove the graphic entirely; do not replace it with another icon.
-- This is a **markup-only correction**: the pale blue-gray closing treatment, narrower venue/map grouping, buttons, vertical spacing, typography, hero, and outbound links remain byte-for-byte unchanged. The previous stylesheet is reused without edits, so the historical versioned CSS and cached release assets remain intact.
-- **Not yet live:** deploy only the isolated `public-site/` directory to the existing `fftt-public` Cloudflare Pages project after focused visual/source checks. Keep a rollback reference and do not modify application databases, Staff, Spectator, staging, or DNS.
+- Organizer requested removing the cartoon-like paddle-and-ball illustration above **Ready to join the Games?**, with no replacement graphic. The page retains the existing pale blue-gray background, venue layout, spacing and CTA buttons.
+- Replace generic circular location/compass badges with recognizable Google Maps and Apple Maps SVG icons, without surrounding circles. Both icons are self-hosted under `public-site/assets/`, rendered at consistent 28px dimensions and aligned with unchanged labels and external-link arrows. Map URLs and destination address are unchanged.
+- New versioned CSS: `styles-20261030-brand-maps.css`. Previous deployed stylesheets remain untouched; the editable `styles.css` mirrors the new asset.
+- Icons sourced unchanged from [Dashboard Icons](https://github.com/homarr-labs/dashboard-icons) (`svg/google-maps.svg`, `svg/apple-maps.svg`), project Apache-2.0. See `assets/MAP_ICON_THIRD_PARTY_NOTICE.txt` for license and attribution. Google Maps and Apple Maps trademarks remain the property of their respective owners. Icons identify the destinations and do not imply endorsement.
+- **Not yet live:** source candidate only pending focused visual and deployment checks. Deploy only from an isolated `public-site/` directory to existing `fftt-public`; do not modify the applications, registration data, Supabase, DNS, or staging.
 
 ## Venue-gap and invitation release — October 30, 2026 (live)
 
