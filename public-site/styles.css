@@ -122,8 +122,9 @@ h1,h2,h3{letter-spacing:-.026em;line-height:1.2}
   .hero-facts{margin:-24px 12px 0}
 }
 @media(max-width:980px){
-  .header-inner{flex-direction:column;align-items:stretch;gap:10px}
-  .site-nav{width:100%;justify-content:flex-start;gap:8px 18px}
+  /* Keep brand and navigation side-by-side while both fit. */
+  .header-inner{flex-direction:row;align-items:center;gap:10px;flex-wrap:wrap}
+  .site-nav{width:auto;justify-content:flex-end;gap:8px 18px}
   html{scroll-padding-top:150px}
   .hero-facts,.fellowship-section{scroll-margin-top:150px}
   .fellowship-section{grid-template-columns:1fr;gap:0;margin:0 18px;padding:18px 0}
@@ -160,8 +161,9 @@ h1,h2,h3{letter-spacing:-.026em;line-height:1.2}
   .closing-invite{padding:30px 8px 34px}
   .closing-invite .button{width:100%;max-width:330px}
   .closing-invite .cta-actions{flex-direction:column;max-width:330px}
-  .header-inner{padding:11px 18px}
-  .site-nav{display:flex;flex-wrap:wrap;justify-content:flex-start;align-items:center;width:100%;gap:6px 16px}
+  .header-inner{padding:11px 18px;flex-wrap:nowrap;gap:8px}
+  .brand{flex:1 1 auto;min-width:0}
+  .site-nav{display:flex;flex:0 0 auto;flex-wrap:nowrap;justify-content:flex-end;align-items:center;width:auto;gap:0}
   /* On phones the event facts and invitation remain in-page; keep Staff sign-in. */
   .site-nav .nav-link:not(.staff-link){display:none}
   .nav-link{min-height:38px;white-space:nowrap;font-size:12px}
@@ -180,6 +182,12 @@ h1,h2,h3{letter-spacing:-.026em;line-height:1.2}
   .fact-detail{font-size:11px}
   .actions{display:grid}
   .actions .button{width:100%}
+}
+/* Keep the Staff link right-aligned even if a 320px phone cannot fit both items. */
+@media(max-width:370px){
+  .header-inner{flex-wrap:wrap;gap:4px}
+  .brand{flex:1 1 100%}
+  .site-nav{width:100%;justify-content:flex-end}
 }
 @media(prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
