@@ -2,12 +2,18 @@
 
 This independent static website is the **live public home** at `https://fftt.clslifestyle.com/` for the recurring Forging Fellowship Table Tennis Games. It is **not** the organizer or scorer application, and it must **not** be deployed over the existing Cloudflare Pages Staff/Spectator staging projects or the legacy GitHub Pages root site.
 
-## Venue gap and invitation refinement candidate (not deployed)
+## Remove decorative paddles from closing invitation (source correction, not yet deployed)
 
-- [Draft PR #27](https://github.com/0xCLS/fftt-bracket-manager/pull/27) tightens the venue grouping from 1020px to 880px and narrows the grid gap, keeping the two location/directions groups distinct but visually connected. Both map addresses and existing map icons remain unchanged.
+- The Organizer found the colored paddle-and-ball illustration above **Ready to join the Games?** too playful for the public page. Remove the graphic entirely; do not replace it with another icon.
+- This is a **markup-only correction**: the pale blue-gray closing treatment, narrower venue/map grouping, buttons, vertical spacing, typography, hero, and outbound links remain byte-for-byte unchanged. The previous stylesheet is reused without edits, so the historical versioned CSS and cached release assets remain intact.
+- **Not yet live:** deploy only the isolated `public-site/` directory to the existing `fftt-public` Cloudflare Pages project after focused visual/source checks. Keep a rollback reference and do not modify application databases, Staff, Spectator, staging, or DNS.
+
+## Venue-gap and invitation release — October 30, 2026 (live)
+
+- [PR #27](https://github.com/0xCLS/fftt-bracket-manager/pull/27) merged as `bc02b287053a8033aa84a3c9bccd3819449298c3`, tightening the venue grouping from 1020px to 880px and narrowing the grid gap. Both map addresses and existing map icons remain unchanged.
 - The existing closing invitation gains a very subtle pale blue-gray full-section background and a small local inline-SVG two-paddle/ball accent, plus less excessive bottom/footer whitespace. No new photo, embed, API or heavy card styling.
 - `styles-20261030-polish.css` is the new proposed versioned asset; earlier versions are retained unchanged. The existing header, event facts, three fellowship columns, two public registration links, and Staff/Spectator destinations remain as approved.
-- **Source candidate only.** Confirm visually at desktop/tablet/phone before merge and isolated `public-site/` deployment to `fftt-public`. The production site continues to use PR #26 until a separately verified release.
+- **Deployed:** `fftt-public` deployment `4ada01df-a054-4bdb-9808-769510f3847f` (rollback `ad6cf396-c8e9-4890-a95a-8a01437e7760`). The local and live Chrome checks passed. A subsequent Organizer review explicitly rejected the decorative paddles as too playful; see the correction candidate above.
 
 ## Venue-before-fellowship release — October 30, 2026 (live)
 
