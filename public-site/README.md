@@ -2,6 +2,13 @@
 
 This independent static website is the **live public home** at `https://fftt.clslifestyle.com/` for the recurring Forging Fellowship Table Tennis Games. It is **not** the organizer or scorer application, and it must **not** be deployed over the existing Cloudflare Pages Staff/Spectator staging projects or the legacy GitHub Pages root site.
 
+## Venue directions and layout candidate (not deployed)
+
+- [Draft PR #25](https://github.com/0xCLS/fftt-bracket-manager/pull/25) proposes a wider, unboxed two-column location section (church details on one side, directional links on the other) to address the narrow central treatment on desktop. Below 900px, it stacks; on narrow phones, the two directional links stack as full touch-friendly rows.
+- Both **Google Maps** and **Apple Maps** links lead to `402 S. Adams St., Ypsilanti, MI 48197` and open separately. They have distinctive local inline SVG icons and accessible labels. Neither an embedded map nor an API key is required.
+- New versioned CSS asset `styles-20261030-directions.css`, preserving all historical CSS assets. Existing hero image, registration URLs, venue facts, CTA and Staff/Spectator destinations are untouched.
+- **Not live:** candidate source passed static structural checks; full real-browser and live-deployment checks are still required. Deploy only isolated `public-site/` files to `fftt-public` and record the resulting rollback reference after visual approval.
+
 ## Homepage CTA release — October 30, 2026 (live)
 
 - **Source:** [PR #23](https://github.com/0xCLS/fftt-bracket-manager/pull/23), merged as `ea2fa0d639c2fc6d35d5606bb0bac08d8212d699`. The header **Staff sign-in** link opens `https://fftt-staff.clslifestyle.com/app/staff`; a secondary **Spectator View** link beside the lower registration button opens `https://fftt-games.clslifestyle.com/app/spectator`. Both **Register to play** buttons keep `https://forms.gle/tZ9dizzfecyhHUxw8`. New stylesheet `styles-20261030-cta.css`.
