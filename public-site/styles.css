@@ -64,7 +64,7 @@ h1,h2,h3{letter-spacing:-.026em;line-height:1.2}
 .fact-detail{font-size:11px;color:#687584;line-height:1.4}
 /* Open editorial columns rather than a second row of cards. */
 /* One balanced, open editorial row; only the four event facts use cards. */
-.fellowship-section{scroll-margin-top:110px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin:40px 18px 0;padding:10px 0 32px}
+.fellowship-section{scroll-margin-top:110px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin:0 18px;padding:26px 0 28px;border-top:1px solid #dce2e8}
 .fellowship-item{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:0;min-width:0;padding:8px clamp(18px,3vw,40px);text-align:center}
 .fellowship-item:first-of-type{padding-left:clamp(18px,3vw,40px)}
 .fellowship-item+.fellowship-item{border-left:1px solid #dce2e8}
@@ -75,7 +75,7 @@ h1,h2,h3{letter-spacing:-.026em;line-height:1.2}
 .fellowship-item h3{font-size:18px;font-weight:800;margin-bottom:9px}
 .fellowship-item p{font-size:13px;color:#63707a;line-height:1.65;max-width:31ch;margin:0 auto}
 /* Open editorial venue row: wider location copy + direction links, no embedded map or cards. */
-.venue-section{margin:0 18px 12px;border-top:1px solid #dce2e8}
+.venue-section{margin:40px 18px 0;border-top:1px solid #dce2e8}
 .venue-layout{display:flex;flex-direction:column;align-items:stretch;gap:0;text-align:center}
 .venue-details{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(0,1fr);align-items:center;gap:clamp(28px,4.5vw,72px);width:min(100%,1020px);margin:0 auto;padding:42px 24px 43px;text-align:left}
 .venue-copy{min-width:0}
@@ -92,7 +92,8 @@ h1,h2,h3{letter-spacing:-.026em;line-height:1.2}
 .map-icon-apple{background:#e5f0f8;color:#356887}
 .map-link-name{min-width:0}
 .map-out{flex:none;margin-left:auto;opacity:.65}
-.closing-invite{display:flex;flex-direction:column;align-items:center;gap:0;border-top:1px solid #dce2e8;padding:39px 16px 13px}
+.closing-section{margin:0 18px 12px;border-top:1px solid #dce2e8}
+.closing-invite{display:flex;flex-direction:column;align-items:center;gap:0;padding:39px 16px 13px}
 .closing-invite p{font-size:14px;color:#63707a;margin:0 auto 20px;max-width:43ch}
 .closing-invite .button{min-width:175px}
 .closing-invite .cta-actions{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;width:100%;max-width:460px}
@@ -125,7 +126,7 @@ h1,h2,h3{letter-spacing:-.026em;line-height:1.2}
   .site-nav{width:100%;justify-content:flex-start;gap:8px 18px}
   html{scroll-padding-top:150px}
   .hero-facts,.fellowship-section{scroll-margin-top:150px}
-  .fellowship-section{grid-template-columns:1fr;gap:0;margin:28px 18px 0;padding:0 0 18px}
+  .fellowship-section{grid-template-columns:1fr;gap:0;margin:0 18px;padding:18px 0}
   .fellowship-item,.fellowship-item:first-of-type{padding:18px 8px 22px}
   .fellowship-item+.fellowship-item{border-left:0;border-top:1px solid #dce2e8}
 }
@@ -151,9 +152,10 @@ h1,h2,h3{letter-spacing:-.026em;line-height:1.2}
   .fact-card{min-height:110px;padding:12px;align-items:flex-start}
   .fact-icon{width:40px;height:40px;border-radius:10px}
   .fact-icon svg{width:22px;height:22px}
-  .fellowship-section{margin:24px 0 0;padding:0 0 14px}
+  .fellowship-section{margin:0;padding:0 0 14px}
   .fellowship-icon{width:47px;height:47px;margin-bottom:12px}
-  .venue-section{margin:0}
+  .venue-section{margin:24px 0 0}
+  .closing-section{margin:0}
   .venue-details{padding:30px 8px 31px}
   .closing-invite{padding:30px 8px 8px}
   .closing-invite .button{width:100%;max-width:330px}
