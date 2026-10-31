@@ -1,21 +1,21 @@
 # FFTT public landing page (live)
 
-## Mobile Staff controls and homepage navigation — October 31, 2026 (source candidate)
+## Mobile Staff controls and homepage navigation — October 31, 2026 (live)
 
-- On narrow screens only (up to 800px), the Staff sidebar title reads **Bracket Manager** on one line; desktop retains the existing two-line title. On phone widths (up to 760px), organizer event/date inputs, new-event inputs and the top event switcher stay within their container, including Safari's native date control.
-- On the public homepage at phone widths (up to 680px), hide only **Event details** and **Join us** from the header; the **STAFF SIGN-IN** link, in-page event information, registration buttons and accessibility/skip navigation remain intact. The desktop/tablet header is unchanged.
-- Staff presentation change is limited to `app/app.css` and a single whitespace insertion before the existing `<br>` in `app/staff.html` so the mobile title reads `Bracket Manager`, not `BracketManager`; public edit is a single stylesheet-reference update plus a new versioned `styles-20261031-mobile-nav.css`, with `styles.css` mirrored and older assets preserved for cache compatibility. No tournament operations, player data, registration settings, Auth, database, functions or deployment configuration changes.
-- **Not deployed:** requires rendered mobile/desktop acceptance and separate production release gate; Staff production and public Pages deployment have not been changed by this PR.
+- **Source:** [PR #31](https://github.com/0xCLS/fftt-bracket-manager/pull/31), merged to `main` as `d165a8eed1cfd3bc43ea56a3eb4fc6d4af062335`. On phone widths (up to 680px) the homepage header hides only **Event details** and **Join us**; the **STAFF SIGN-IN** link, in-page event information, registration buttons and skip navigation remain, and desktop/tablet are unchanged. New stylesheet `styles-20261031-mobile-nav.css`.
+- **Public production deployment:** `f41b4f35-e919-4d66-bfdf-cf289590a57b` (`https://f41b4f35.fftt-public.pages.dev/`), `fftt-public`, branch `main`, commit `d165a8e`, no Functions bundle. **Rollback reference:** `1ea83711-fd7a-4d21-bcf2-021b1ec187b7` (previous production, commit `10a4b70`; next older `119a72bf-3304-4f79-821d-e6ebc050fb0d`).
+- **Verified:** isolated `git archive` of `public-site/` only; every served file matched SHA-256 on the deployment URL and `fftt.clslifestyle.com` (hero `623b5698…214a` unchanged); security headers present; local Chrome at 1440, 820, 390 and 320 CSS px with no horizontal overflow, the header compact on phones with only the Staff pill; Staff, Spectator and Register to play links return HTTP 200.
+- **Staff counterpart:** the Staff mobile fixes (one-line **Bracket Manager** heading at 800px and below; contained date and event inputs at 760px and below) were ported onto the production Staff code in [PR #32](https://github.com/0xCLS/fftt-bracket-manager/pull/32), merged into the PR #22 feature branch (not `main`) as `c22cfee`, and released to `fftt-staff` (deployment `de20f066-6a43-44b3-981b-c745c6dfc405`; rollback `dd9661f4-d094-47ab-863a-765d0abe3ef4`). See the canonical maintenance changelog.
 
 This independent static website is the **live public home** at `https://fftt.clslifestyle.com/` for the recurring Forging Fellowship Table Tennis Games. It is **not** the organizer or scorer application, and it must **not** be deployed over the existing Cloudflare Pages Staff/Spectator staging projects or the legacy GitHub Pages root site.
 
-## Branded Maps links and closing-CTA correction (not yet deployed)
+## Branded Maps links and closing-CTA correction (deployed)
 
 - Organizer requested removing the cartoon-like paddle-and-ball illustration above **Ready to join the Games?**, with no replacement graphic. The page retains the existing pale blue-gray background, venue layout, spacing and CTA buttons.
 - Replace generic circular location/compass badges with recognizable Google Maps and Apple Maps SVG icons, without surrounding circles. Both icons are self-hosted under `public-site/assets/`, rendered at consistent 28px dimensions and aligned with unchanged labels and external-link arrows. Map URLs and destination address are unchanged.
 - New versioned CSS: `styles-20261030-brand-maps.css`. Previous deployed stylesheets remain untouched; the editable `styles.css` mirrors the new asset.
 - Icons sourced unchanged from [Dashboard Icons](https://github.com/homarr-labs/dashboard-icons) (`svg/google-maps.svg`, `svg/apple-maps.svg`), project Apache-2.0. See `assets/MAP_ICON_THIRD_PARTY_NOTICE.txt` for license and attribution. Google Maps and Apple Maps trademarks remain the property of their respective owners. Icons identify the destinations and do not imply endorsement.
-- **Not yet live:** source candidate only pending focused visual and deployment checks. Deploy only from an isolated `public-site/` directory to existing `fftt-public`; do not modify the applications, registration data, Supabase, DNS, or staging.
+- **Deployment record:** Cloudflare lists this change as `fftt-public` production deployment `119a72bf-3304-4f79-821d-e6ebc050fb0d` (commit `796cef7`), followed by the subtle line-icon revision ([PR #30](https://github.com/0xCLS/fftt-bracket-manager/pull/30)) as `1ea83711-fd7a-4d21-bcf2-021b1ec187b7` (commit `10a4b70`). Status recorded from the Cloudflare deployment list during the October 31 mobile release; not re-verified visually there.
 
 ## Venue-gap and invitation release — October 30, 2026 (live)
 
