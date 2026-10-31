@@ -7,6 +7,10 @@ import {scoreTiles} from './game_tiles.mjs';
 import {computeStandings} from '../contracts/gameday_engine.mjs';
 
 let tab = 'now', last = null, wanted = new URLSearchParams(location.search).get('e');
+// The feed reports freshness every second. Do not replace a spectator's bracket DOM
+// unless the selected event, its data, the view, or stale state actually changes.
+let renderedKey = null, renderedEventId = null, renderedTab = null;
+let tabsKey = null, pickerKey = null;
 const TABS = [['now', 'Now & next'], ['bracket', 'Bracket'], ['results', 'Results']];
 
 function standings(ev) {
@@ -67,10 +71,27 @@ function render(view) {
   else { live.className = 'pill good'; live.textContent = 'Live'; }
   const pick = $('evPick');
   pick.hidden = events.length < 2;
-  if (!pick.hidden) { clear(pick); for (const e of events) pick.append(h('option', {value: e.id, text: e.name, selected: e.id === ev?.id})); }
-  clear($('tabs'));
-  for (const [id, text] of TABS) $('tabs').append(h('button', {type: 'button', text, 'aria-current': id === tab ? 'page' : null, on: {click: () => { tab = id; render(last); }}}));
+  const nextPickerKey = JSON.stringify([ev?.id ?? null, events.map(e => [e.id, e.name])]);
+  if (nextPickerKey !== pickerKey) {
+    pickerKey = nextPickerKey;
+    clear(pick);
+    if (!pick.hidden) for (const e of events) pick.append(h('option', {value: e.id, text: e.name, selected: e.id === ev?.id}));
+  }
+  if (tabsKey !== tab) {
+    tabsKey = tab;
+    clear($('tabs'));
+    for (const [id, text] of TABS) $('tabs').append(h('button', {type: 'button', text, 'aria-current': id === tab ? 'page' : null, on: {click: () => { tab = id; render(last); }}}));
+  }
   const main = $('main');
+  // Keep the live/stale badge current without discarding the user's horizontal
+  // swipe position once per second. Data changes still redraw the visible view.
+  const nextKey = JSON.stringify([tab, view.state, ev]);
+  if (nextKey === renderedKey) return;
+  const positions = tab === 'bracket' && renderedTab === 'bracket' && renderedEventId === ev?.id
+    ? [...main.querySelectorAll('.bracket')].map(node => node.scrollLeft) : [];
+  renderedKey = nextKey;
+  renderedEventId = ev?.id ?? null;
+  renderedTab = tab;
   if (!ev) {
     clear(main);
     $('evName').textContent = 'Forging Fellowship Table Tennis Games';
@@ -83,6 +104,9 @@ function render(view) {
   const board = deriveBoard(ev);
   fill(main, view.state === 'stale' ? h('div', {class: 'notice warn', text: 'The connection dropped. This is the last information received — it may be out of date.'}) : null,
     tab === 'now' ? viewNow(ev, board) : tab === 'bracket' ? viewBracket(ev) : viewResults(ev, board));
+  if (positions.length) [...main.querySelectorAll('.bracket')].forEach((node, i) => {
+    if (positions[i] !== undefined) node.scrollLeft = positions[i];
+  });
 }
 $('evPick').addEventListener('change', e => { wanted = e.target.value; render(last); });
 startPublicFeed({onUpdate: v => { last = v; render(v); }});
