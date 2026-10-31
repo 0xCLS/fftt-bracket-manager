@@ -961,7 +961,10 @@ td.scores-cell{min-width:150px}
   #main.public-wrap .card table td.scores-cell .score-games{display:flex;flex-wrap:wrap;gap:6px 10px}
   /* Sideways rounds: a comfortably readable first column with a hint of the next,
      and gentle snap points for touch browsing. No change to shared Staff brackets. */
-  #main.public-wrap .bracket{gap:12px;scroll-snap-type:x proximity;scroll-padding-inline:2px;
+  /* Comfortable inset around the bracket; native momentum scroll without snap-back. */
+  #main.public-wrap{padding-inline:16px}
+  #main.public-wrap .card{padding:18px}
+  #main.public-wrap .bracket{gap:12px;overflow-x:auto;padding:8px 10px 16px;
     -webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
-  #main.public-wrap .bracket .round{width:min(260px,calc(100vw - 80px));scroll-snap-align:start}
+  #main.public-wrap .bracket .round{width:min(260px,calc(100vw - 80px))}
 }
