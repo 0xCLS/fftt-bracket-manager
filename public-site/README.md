@@ -2,6 +2,12 @@
 
 This independent static website is the **live public home** at `https://fftt.clslifestyle.com/` for the recurring Forging Fellowship Table Tennis Games. It is **not** the organizer or scorer application, and it must **not** be deployed over the existing Cloudflare Pages Staff/Spectator staging projects or the legacy GitHub Pages root site.
 
+## Venue-before-fellowship layout candidate — October 30, 2026 (not deployed)
+
+- [Draft PR #26](https://github.com/0xCLS/fftt-bracket-manager/pull/26) proposes moving the whole church location + map links row immediately after the event facts and before the three fellowship statements, while keeping **Ready to join the Games?** last.
+- The Google/Apple links, destination address, icon glyphs and horizontal location/map spacing are **unchanged**. Minimal section separator and margin adjustments support the new order at desktop/tablet/mobile widths; `styles-20261030-reorder.css` is versioned separately.
+- The live site remains on the previously verified venue-directions release. Real-browser layout review is required before any merge or deployment; evaluate the amount of whitespace between the church details and map links **after** seeing the reordered layout. No game-day, registration, or backend changes are involved.
+
 ## Venue directions release — October 30, 2026 (live)
 
 - **Source:** [PR #25](https://github.com/0xCLS/fftt-bracket-manager/pull/25), squash-merged as `b89f829e65839b25ba26998d2a0b24e4aab1009d` (verified candidate `3de433a`; the `public-site/` tree is identical). The church-location section is a wider, unboxed two-column row (church details beside directions) that stacks below 900px, and the two directions links stack as full-width touch rows at 440px and below. Neither an embedded map nor an API key is used.
