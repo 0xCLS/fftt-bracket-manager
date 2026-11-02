@@ -27,16 +27,33 @@ test('sign-in needs no event id; several events are chosen by NAME; no technical
       const m = await org.page.evaluate(() => {
         const card = document.querySelector('.overview-settings').getBoundingClientRect();
         const dateField = document.querySelector('.overview-settings .date-field').getBoundingClientRect();
+        const frameEl = document.querySelector('.overview-settings .native-date-frame');
+        const dateFrame = frameEl.getBoundingClientRect();
         const dateInput = document.querySelector('.overview-settings input[type="date"]').getBoundingClientRect();
+        const createFrameEl = document.querySelector('.create-event .native-date-frame');
+        const createFrame = createFrameEl?.getBoundingClientRect();
         const select = document.querySelector('#eventSelect').getBoundingClientRect();
+        const style = getComputedStyle(frameEl);
         return {viewport: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth,
+          scale: window.visualViewport?.scale ?? 1,
           cardLeft: card.left, cardRight: card.right, fieldLeft: dateField.left, fieldRight: dateField.right,
-          dateLeft: dateInput.left, dateRight: dateInput.right, selectRight: select.right};
+          frameLeft: dateFrame.left, frameRight: dateFrame.right, frameBorder: style.borderRightWidth,
+          inputPosition: getComputedStyle(frameEl.querySelector('input')).position,
+          dateLeft: dateInput.left, dateRight: dateInput.right,
+          createFrameRight: createFrame?.right, createFrameBorder: createFrameEl ? getComputedStyle(createFrameEl).borderRightWidth : null,
+          selectRight: select.right};
       });
       assert.ok(m.scroll <= m.viewport + 1, label + ': no viewport width expansion');
       assert.ok(m.fieldLeft >= m.cardLeft - 1 && m.fieldRight <= m.cardRight - 2, label + ': date field fits card');
-      assert.ok(m.dateLeft >= m.fieldLeft - 1 && m.dateRight <= m.fieldRight + 1,
-        label + ': native date input stays inside field');
+      assert.ok(m.frameLeft >= m.fieldLeft - 1 && m.frameRight <= m.fieldRight + 1,
+        label + ': visible native-date frame fits the grid field');
+      assert.equal(m.frameBorder, '1px', label + ': visible right border belongs to frame, not clipped input');
+      assert.equal(m.inputPosition, 'absolute', label + ': intrinsic native date control cannot determine grid width');
+      assert.ok(m.dateLeft >= m.frameLeft - 1 && m.dateRight <= m.frameRight + 1,
+        label + ': native date control fits its visible frame');
+      assert.ok(m.createFrameRight === undefined || m.createFrameRight <= m.viewport + 1,
+        label + ': new-event date frame cannot widen the page');
+      assert.ok(m.scale >= .99 && m.scale <= 1.01, label + ': no browser page-scale change');
       assert.ok(m.selectRight <= m.viewport + 1, label + ': event dropdown stays on-screen');
       return m;
     }
