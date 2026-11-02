@@ -137,7 +137,7 @@ export function createEventsView(ctx) {
         h('h3', {text: 'Create a new event'}),
         h('div', {class: 'create-grid'},
           h('div', {class: 'create-name'}, h('label', {for: 'newName', text: 'Name'}), name),
-          h('div', {}, h('label', {for: 'newDate', text: 'Date'}), date),
+          h('div', {}, h('label', {for: 'newDate', text: 'Date'}), h('span', {class: 'native-date-frame'}, date)),
           h('div', {}, h('label', {for: 'newTables', text: 'Tables'}), tables)),
         h('div', {class: 'row'}, h('button', {class: 'primary', type: 'submit', disabled: !writable(), text: 'Create event'}))) : null);
   }
