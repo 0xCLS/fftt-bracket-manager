@@ -118,11 +118,15 @@ export function createStaffUi({core, els, config, signOut}) {
       snapshot?.event?.publicVisible ? pill('Public view ON', 'blue') : null);
     const evs = s.events;
     const eventOptionsKey = JSON.stringify(evs.map(e => [e.eventId, e.name, e.date, e.lifecycle]));
-    if (els.eventSelect.dataset.optionsKey !== eventOptionsKey || els.eventSelect.value !== s.eventId) {
+    // The iPhone's native option picker may still be dismissing when a new
+    // event becomes active. Do not destroy its options for a selection-only
+    // change: synchronize the value without replacing the focused control.
+    if (els.eventSelect.dataset.optionsKey !== eventOptionsKey) {
       clear(els.eventSelect);
       for (const e of evs) els.eventSelect.append(h('option', {value: e.eventId, text: `${e.name} · ${e.date}${e.lifecycle === 'archived' ? ' (archived)' : ''}`, selected: e.eventId === s.eventId}));
       els.eventSelect.dataset.optionsKey = eventOptionsKey;
     }
+    if (els.eventSelect.value !== s.eventId) els.eventSelect.value = s.eventId ?? '';
     (els.eventSwitch ?? els.eventSelect).hidden = evs.length < 2;
     const tabs = isOrganizer() ? ORGANIZER_TABS : isBracketManager() ? BRACKET_MANAGER_TABS : SCOREKEEPER_TABS;
     if (!tabs.some(([id]) => id === tab)) tab = tabs[0][0];
