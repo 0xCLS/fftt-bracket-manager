@@ -990,9 +990,10 @@ td.scores-cell{min-width:150px}
 }
 
 
-/* Outside narrow phone widths, make the new wrapper layout-transparent.
-   This preserves the pre-existing name/date input alignment on desktop/tablet. */
-#app .native-date-frame{display:contents}
+/* The form's original label + input spacing applies to direct siblings.
+   The new date frame is an intervening element, so explicitly restore that
+   same 6px gap without changing the native input or its accessible label. */
+#app .native-date-frame{display:block;padding-block-start:var(--gap-label)}
 
 /* November 2 mobile Staff: changing to a longer event must not change viewport
    width. iOS Safari gives native date inputs an intrinsic inline size, so
@@ -1009,6 +1010,7 @@ td.scores-cell{min-width:150px}
      clipping the input itself previously erased its right-hand border. */
   #app .native-date-frame{
     display:block;position:relative;inline-size:100%;min-inline-size:0;
+    padding-block-start:0;
     max-inline-size:100%;block-size:46px;box-sizing:border-box;
     border:1px solid #dbe0e6;border-radius:5px;background:#fff;
     overflow:hidden
