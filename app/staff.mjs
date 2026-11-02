@@ -106,7 +106,14 @@ if (networkAllowed) {
     ui?.render();
   }});
   ui = createStaffUi({core, config, els: {main: $('main'), tabs: $('tabs'), status: $('statusline'), banner: $('banner'), eventSelect: $('eventSelect'), eventSwitch: $('eventSwitch')}});
-  $('eventSelect').addEventListener('change', async ev => { const r = await core.selectEvent(ev.target.value); if (!r.ok) toast(r.message, 'bad'); ui.openTab(core.state.role === 'organizer' ? 'overview' : core.state.role === 'bracket_manager' ? 'championship' : 'desk'); });
+  $('eventSelect').addEventListener('change', async ev => {
+    const r = await core.selectEvent(ev.target.value);
+    if (!r.ok) { toast(r.message, 'bad'); return; }
+    ui.openTab(core.state.role === 'organizer' ? 'overview' : core.state.role === 'bracket_manager' ? 'championship' : 'desk');
+    // An older mobile tab-strip offset can leave the first label half hidden.
+    // Event changes return to the chosen event's starting workspace.
+    $('tabs').scrollLeft = 0;
+  });
 }
 $('signIn').disabled = !networkAllowed; $('requestCode').disabled = !networkAllowed; $('verifyCode').disabled = !networkAllowed;
 
