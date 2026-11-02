@@ -13,20 +13,46 @@ const chip = (page, text) => page.locator('.events-card .chip', {hasText: text})
 test('sign-in needs no event id; several events are chosen by NAME; no technical id is ever shown', {timeout: 240000}, async () => {
   const w = await createBrowserWorld();
   try {
-    await w.fake.local.rpc(w.ids.org, 'fftt_create_event_v3', {p_name: 'Spring Fellowship Open', p_date: '2027-03-06', p_table_count: 4});
-    const org = await w.device('org');
+    const longEvent = 'Spring Fellowship Open — Hosted Browser Recovery and Rehearsal Validation 2099';
+    await w.fake.local.rpc(w.ids.org, 'fftt_create_event_v3', {p_name: longEvent, p_date: '2027-03-06', p_table_count: 4});
+    const org = await w.device('org', {viewport: {width: 390, height: 844}, mobile: true});
     await org.signIn('org', {choose: 'Synthetic Rehearsal Games'});
     await org.page.locator('#evName').waitFor({timeout: T});
     assert.equal(await org.page.locator('#evName').inputValue(), 'Synthetic Rehearsal Games');
     assert.ok(!UUID.test(await org.page.locator('body').innerText()), 'no technical id on the page');
     assert.ok(!UUID.test(await org.page.locator('#eventSelect').evaluate(el => [...el.options].map(o => o.textContent).join())), 'the event switcher shows names');
-    // switch by name
+    // iPhone-sized viewport: neither a long event title nor Safari-style date
+    // form controls may widen the document or extend beyond their form card.
+    async function assertMobileWidth(label) {
+      const m = await org.page.evaluate(() => {
+        const card = document.querySelector('.overview-settings').getBoundingClientRect();
+        const dateField = document.querySelector('.overview-settings .date-field').getBoundingClientRect();
+        const dateInput = document.querySelector('.overview-settings input[type="date"]').getBoundingClientRect();
+        const select = document.querySelector('#eventSelect').getBoundingClientRect();
+        return {viewport: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth,
+          cardLeft: card.left, cardRight: card.right, fieldLeft: dateField.left, fieldRight: dateField.right,
+          dateLeft: dateInput.left, dateRight: dateInput.right, selectRight: select.right};
+      });
+      assert.ok(m.scroll <= m.viewport + 1, label + ': no viewport width expansion');
+      assert.ok(m.fieldLeft >= m.cardLeft - 1 && m.fieldRight <= m.cardRight - 2, label + ': date field fits card');
+      assert.ok(m.dateLeft >= m.fieldLeft - 1 && m.dateRight <= m.fieldRight + 1,
+        label + ': native date input stays inside field');
+      assert.ok(m.selectRight <= m.viewport + 1, label + ': event dropdown stays on-screen');
+      return m;
+    }
+    const initialWidth = await assertMobileWidth('initial event');
     const options = await org.page.locator('#eventSelect option').allInnerTexts();
     assert.equal(options.length, 2);
-    const spring = options.findIndex(o => /Spring Fellowship Open/.test(o));
+    const spring = options.findIndex(o => o.includes(longEvent));
     await org.page.selectOption('#eventSelect', {index: spring});
-    for (let i = 0; i < 40 && (await org.page.inputValue('#evName').catch(() => '')) !== 'Spring Fellowship Open'; i++) await org.page.waitForTimeout(500);
-    assert.equal(await org.page.inputValue('#evName'), 'Spring Fellowship Open');
+    for (let i = 0; i < 40 && (await org.page.inputValue('#evName').catch(() => '')) !== longEvent; i++) await org.page.waitForTimeout(500);
+    assert.equal(await org.page.inputValue('#evName'), longEvent);
+    const longWidth = await assertMobileWidth('long event');
+    await org.page.selectOption('#eventSelect', {index: options.findIndex(o => o.includes('Synthetic Rehearsal Games'))});
+    for (let i = 0; i < 40 && (await org.page.inputValue('#evName').catch(() => '')) !== 'Synthetic Rehearsal Games'; i++) await org.page.waitForTimeout(500);
+    const returnWidth = await assertMobileWidth('return to initial event');
+    assert.equal(initialWidth.viewport, longWidth.viewport, 'iPhone viewport stable after choosing long event');
+    assert.equal(initialWidth.viewport, returnWidth.viewport, 'iPhone viewport stable after switching back');
     // one event only: entered directly, after a reload with the vault the person is not asked again
     const a = await w.device('a', {viewport: {width: 390, height: 844}, mobile: true});
     await a.signIn('a');
