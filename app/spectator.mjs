@@ -11,6 +11,17 @@ let tab = 'now', last = null, wanted = new URLSearchParams(location.search).get(
 // unless the selected event, its data, the view, or stale state actually changes.
 let renderedKey = null, renderedEventId = null, renderedTab = null;
 let tabsKey = null, pickerKey = null;
+let bracketTouching = false, lastBracketMotionAt = 0;
+const BRACKET_SCROLL_IDLE_MS = 1800;
+function trackBracketMotion(container) {
+  for (const el of container.querySelectorAll('.bracket')) {
+    const mark = () => { lastBracketMotionAt = Date.now(); };
+    el.addEventListener('touchstart', () => { bracketTouching = true; mark(); }, {passive: true});
+    el.addEventListener('touchend', () => { bracketTouching = false; mark(); }, {passive: true});
+    el.addEventListener('touchcancel', () => { bracketTouching = false; mark(); }, {passive: true});
+    el.addEventListener('scroll', mark, {passive: true});
+  }
+}
 const TABS = [['now', 'Now & next'], ['bracket', 'Bracket'], ['results', 'Results']];
 
 function standings(ev) {
@@ -87,6 +98,10 @@ function render(view) {
   // swipe position once per second. Data changes still redraw the visible view.
   const nextKey = JSON.stringify([tab, view.state, ev]);
   if (nextKey === renderedKey) return;
+  // Live scores can change while a spectator is swiping. Defer the DOM
+  // replacement until momentum has stopped; the status badge still updates.
+  if (tab === 'bracket' && renderedTab === 'bracket' && renderedEventId === ev?.id
+      && (bracketTouching || Date.now() - lastBracketMotionAt < BRACKET_SCROLL_IDLE_MS)) return;
   const positions = tab === 'bracket' && renderedTab === 'bracket' && renderedEventId === ev?.id
     ? [...main.querySelectorAll('.bracket')].map(node => node.scrollLeft) : [];
   renderedKey = nextKey;
@@ -107,6 +122,7 @@ function render(view) {
   if (positions.length) [...main.querySelectorAll('.bracket')].forEach((node, i) => {
     if (positions[i] !== undefined) node.scrollLeft = positions[i];
   });
+  if (tab === 'bracket') trackBracketMotion(main);
 }
 $('evPick').addEventListener('change', e => { wanted = e.target.value; render(last); });
 startPublicFeed({onUpdate: v => { last = v; render(v); }});
