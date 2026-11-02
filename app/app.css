@@ -975,3 +975,16 @@ td.scores-cell{min-width:150px}
     -webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
   #main.public-wrap .bracket .round{width:min(260px,calc(100vw - 80px))}
 }
+
+
+/* 2026-11-02: mobile Staff nav and event context; scoped away from Spectator/TV. */
+@media(max-width:800px){
+  #app nav.tabs{scroll-padding-inline:16px;padding-inline:16px;max-width:100%;min-width:0}
+}
+@media(max-width:520px){
+  #app .sidebar-bottom{margin-top:10px;padding-top:10px;row-gap:10px}
+  #app .topbar{display:grid;grid-template-columns:minmax(0,1fr);row-gap:13px;padding:13px 17px 16px}
+  #app .statusline{gap:8px}
+  #app .topbar .event-switch{width:100%;max-width:100%;min-width:0}
+  #app .overview-feature h1{font-size:clamp(24px,6.2vw,30px);overflow-wrap:anywhere}
+}

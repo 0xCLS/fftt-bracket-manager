@@ -40,6 +40,10 @@ const OFFLINE_TOOL = 'https://0xcls.github.io/fftt-bracket-manager/';
 export function createStaffUi({core, els, config, signOut}) {
   const s = core.state;
   let tab = 'overview', lastInputAt = 0, dirtyDialog = 0, lastPaneKey = '';
+  // On iPhone, scroll/pan momentum can outlive the touchend event. Do not
+  // replace a bracket mid-gesture or immediately after its scroll settles.
+  let bracketTouching = false, lastBracketMotionAt = 0, renderedEventId = null;
+  const BRACKET_SCROLL_IDLE_MS = 1800;
   // Drafts belong to one organizer event and tab; never persist these private values in storage.
   // Anything marked data-draft (or listed in draftInputs) keeps what the person typed or opened across the
   // background refresh that rebuilds a pane; a successful save forgets it.
@@ -203,7 +207,7 @@ export function createStaffUi({core, els, config, signOut}) {
     return h('div', {class: 'overview-page'},
       h('section', {class: 'overview-feature'},
         h('span', {class: 'feature-overline'}, h('span', {class: 'feature-spark', 'aria-hidden': 'true'}), 'FORGING FELLOWSHIP · TOURNAMENT DESK'),
-        h('h1', {text: 'Forging Fellowship Table Tennis Games'}),
+        h('h1', {text: e.name}),
         h('p', {text: 'Everything you need to prepare the Games, organize players, and keep the competition moving.'}),
         h('div', {class: 'feature-actions'},
           h('button', {type: 'button', class: 'feature-primary', on: {click: () => goTab('players')}}, 'Manage players  ↗'),
@@ -676,7 +680,9 @@ export function createStaffUi({core, els, config, signOut}) {
     const active = document.activeElement;
     // typing: text being entered (15 s); a drop-down only protects its own just-made choice for a moment (2 s)
     const typing = active && els.main.contains(active) && Date.now() - lastInputAt < (active.tagName === 'SELECT' ? 2000 : 15000) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName);
-    if (!force && (typing || dirtyDialog > 0)) { syncConnectionGuard(); return; } // never rebuild under a person's fingers
+    const bracketInUse = ['championship', 'consolation'].includes(tab) && renderedEventId === s.eventId
+      && (bracketTouching || Date.now() - lastBracketMotionAt < BRACKET_SCROLL_IDLE_MS);
+    if (!force && (typing || dirtyDialog > 0 || bracketInUse)) { syncConnectionGuard(); return; } // never rebuild under a person's fingers
     const ui = captureUi();
     const view = views[tab] ?? views.desk;
     const pane = s.signedIn ? view() : loading();
@@ -694,6 +700,7 @@ export function createStaffUi({core, els, config, signOut}) {
         h('div', {class: 'feature-overline'}, h('span', {class: 'feature-spark', 'aria-hidden': 'true'}), 'FORGING FELLOWSHIP · TOURNAMENT DESK'),
         h('h1', {text: title}), h('p', {text: description})), pane) : pane);
     lastPaneKey = paneKey;
+    renderedEventId = s.eventId;
     for (const el of els.main.querySelectorAll('[id],[data-draft]')) {
       const k = draftKeyOf(el);
       if (!k || !drafts.has(draftKey(k))) continue;
@@ -714,6 +721,16 @@ export function createStaffUi({core, els, config, signOut}) {
   };
   document.addEventListener('input', ev => { if (els.main.contains(ev.target)) lastInputAt = Date.now(); capture(ev); }, true);
   document.addEventListener('change', capture, true);
+  const bracketEvent = ev => els.main.contains(ev.target) && ev.target instanceof Element
+    && Boolean(ev.target.closest('.bracket'));
+  const bracketMotion = ev => { if (bracketEvent(ev)) lastBracketMotionAt = Date.now(); };
+  document.addEventListener('touchstart', ev => {
+    if (bracketEvent(ev)) { bracketTouching = true; lastBracketMotionAt = Date.now(); }
+  }, {capture: true, passive: true});
+  for (const type of ['touchend', 'touchcancel']) document.addEventListener(type, ev => {
+    if (bracketEvent(ev)) { bracketTouching = false; lastBracketMotionAt = Date.now(); }
+  }, {capture: true, passive: true});
+  document.addEventListener('scroll', bracketMotion, {capture: true, passive: true});
   // A section's open/closed state is remembered only when the PERSON toggled it. The browser also fires one `toggle`
   // when a rebuilt <details> appears already open; render() marks those so that event is never mistaken for a choice.
   document.addEventListener('toggle', ev => {

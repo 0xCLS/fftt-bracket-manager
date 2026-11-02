@@ -53,6 +53,11 @@ for (const b of readiness.blockers.filter(x => !readiness.checks.some(c => c.id 
   $('readiness').append(Object.assign(document.createElement('li'), {textContent: '✘ ' + b.replaceAll('-', ' ')}));
 }
 $('originStatus').textContent = !readiness.ready ? 'BLOCKED · this address is not approved for staff sign-in.' : 'This address is approved.';
+$('connectionLabel').textContent = profile.environment === 'production' ? 'Cloud-connected'
+  : profile.environment === 'staging' ? 'Cloud-connected staging' : 'Cloud status unavailable';
+$('sidebarCaution').textContent = profile.environment === 'staging'
+  ? 'Use fictional players for rehearsal · real sign-ups may be visible'
+  : 'Confirm the selected event before recording results.';
 $('signin').hidden = false;
 
 // ---- non-secret convenience: the last event, and an event link (?event=…)
@@ -106,7 +111,14 @@ if (networkAllowed) {
     ui?.render();
   }});
   ui = createStaffUi({core, config, els: {main: $('main'), tabs: $('tabs'), status: $('statusline'), banner: $('banner'), eventSelect: $('eventSelect'), eventSwitch: $('eventSwitch')}});
-  $('eventSelect').addEventListener('change', async ev => { const r = await core.selectEvent(ev.target.value); if (!r.ok) toast(r.message, 'bad'); ui.openTab(core.state.role === 'organizer' ? 'overview' : core.state.role === 'bracket_manager' ? 'championship' : 'desk'); });
+  $('eventSelect').addEventListener('change', async ev => {
+    const r = await core.selectEvent(ev.target.value);
+    if (!r.ok) { toast(r.message, 'bad'); return; }
+    ui.openTab(core.state.role === 'organizer' ? 'overview' : core.state.role === 'bracket_manager' ? 'championship' : 'desk');
+    // An older mobile tab-strip offset can leave the first label half hidden.
+    // Event changes return to the chosen event's starting workspace.
+    $('tabs').scrollLeft = 0;
+  });
 }
 $('signIn').disabled = !networkAllowed; $('requestCode').disabled = !networkAllowed; $('verifyCode').disabled = !networkAllowed;
 

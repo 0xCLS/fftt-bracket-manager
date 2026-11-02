@@ -42,6 +42,10 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
     await org.signIn('org');
     await org.page.locator('#evName').waitFor({timeout: T});
     assert.equal(await org.page.locator('#evName').inputValue(), 'Synthetic Rehearsal Games', 'selected organizer event remains correct');
+    assert.equal(await org.page.locator('.overview-feature h1').innerText(), 'Synthetic Rehearsal Games',
+      'Overview identifies the currently selected event rather than showing a fixed brand headline');
+    assert.match(await org.page.locator('#connectionLabel').innerText(), /Cloud-connected staging/,
+      'fictional staging test remains explicitly labelled staging');
     await shot(org, '01-organizer-overview');
     await goTab(org.page, 'Players');
     const list = roster(12).map(p => `${p.name}, ${p.rating}, ${p.rating_status}`).join('\n');
@@ -72,6 +76,26 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
     await org.page.locator('button', {hasText: 'Build championship bracket'}).click();
     await org.page.locator('h2', {hasText: /Ready to play/}).waitFor({timeout: T});   // moved to the Match Desk
     await shot(org, '03-organizer-desk');
+    // Staff brackets also rebuild after hosted state changes, unlike the
+    // Spectator renderer. Preserve horizontal panning through normal ticks.
+    await org.page.setViewportSize({width: 390, height: 844});
+    await goTab(org.page, 'Championship');
+    const staffBracket = org.page.locator('#main .bracket').first();
+    await staffBracket.waitFor({timeout: T});
+    const staffSwipeStart = await staffBracket.evaluate(el => {
+      el.scrollLeft = Math.min(100, el.scrollWidth - el.clientWidth);
+      el.dataset.swipeGuard = 'retained';
+      el.dispatchEvent(new Event('touchstart', {bubbles: true}));
+      return el.scrollLeft;
+    });
+    assert.ok(staffSwipeStart > 30, 'Staff bracket contains later rounds on a phone');
+    await org.page.waitForTimeout(1200);
+    await staffBracket.evaluate(el => el.dispatchEvent(new Event('touchend', {bubbles: true})));
+    const staffSwipeAfter = await staffBracket.evaluate(el => ({left: el.scrollLeft, mark: el.dataset.swipeGuard}));
+    assert.equal(staffSwipeAfter.mark, 'retained', 'a Staff swipe must not replace bracket DOM');
+    assert.ok(Math.abs(staffSwipeAfter.left - staffSwipeStart) < 2, 'Staff bracket must not jump back mid-swipe');
+    await goTab(org.page, 'Match Desk');
+    await org.page.setViewportSize({width: 1280, height: 900});
 
     // ---------------------------------------------------------------- two scorekeepers on phones
     const a = await w.device('a', PHONE), b = await w.device('b', PHONE);
