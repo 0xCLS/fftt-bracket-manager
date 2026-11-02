@@ -222,7 +222,7 @@ export function createStaffUi({core, els, config, signOut}) {
             h('p', {class: 'section-description', text: 'Choose the event details before building the bracket.'}),
             h('form', {class: 'form-grid', on: {submit: async ev => { ev.preventDefault(); if (result(await core.actions.updateEvent(form.name.value, form.date.value, Number(form.tables.value)), 'Event saved.')) forget('ev'); }}},
               field('Event name', 'evName', form.name, 'wide'),
-              field('Event date', 'evDate', form.date, 'date-field'),
+              field('Event date', 'evDate', h('span', {class: 'native-date-frame'}, form.date), 'date-field'),
               field('Tables in use', 'evTables', form.tables, 'third'),
               h('div', {class: 'setup-save'},
                 h('button', {class: 'primary', type: 'submit', disabled: !core.canWrite(), text: 'Save event setup  →'})))),
