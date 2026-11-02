@@ -53,6 +53,11 @@ for (const b of readiness.blockers.filter(x => !readiness.checks.some(c => c.id 
   $('readiness').append(Object.assign(document.createElement('li'), {textContent: '✘ ' + b.replaceAll('-', ' ')}));
 }
 $('originStatus').textContent = !readiness.ready ? 'BLOCKED · this address is not approved for staff sign-in.' : 'This address is approved.';
+$('connectionLabel').textContent = profile.environment === 'production' ? 'Cloud-connected'
+  : profile.environment === 'staging' ? 'Cloud-connected staging' : 'Cloud status unavailable';
+$('sidebarCaution').textContent = profile.environment === 'staging'
+  ? 'Use fictional players for rehearsal · real sign-ups may be visible'
+  : 'Confirm the selected event before recording results.';
 $('signin').hidden = false;
 
 // ---- non-secret convenience: the last event, and an event link (?event=…)
