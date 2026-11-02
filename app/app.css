@@ -999,15 +999,28 @@ td.scores-cell{min-width:150px}
   #app .overview-settings,#app .overview-history,#app .events-card,
   #app .form-grid,#app .create-grid{min-width:0;max-width:100%}
   #app .form-grid>*,#app .create-grid>*{min-width:0;max-width:100%}
-  #app .form-grid .date-field{width:100%;min-width:0;max-width:100%;overflow:hidden}
-  #app .form-grid input[type="date"],#app .create-grid input[type="date"]{
-    display:block;width:100%;min-width:0;min-inline-size:0;max-width:100%;
-    box-sizing:border-box
+  #app .form-grid .date-field{width:100%;min-width:0;max-width:100%}
+  /* A native Safari date widget may retain an intrinsic width wider than its
+     grid cell. Remove it from flow, and draw the visible border on the frame:
+     clipping the input itself previously erased its right-hand border. */
+  #app .native-date-frame{
+    display:block;position:relative;inline-size:100%;min-inline-size:0;
+    max-inline-size:100%;block-size:46px;box-sizing:border-box;
+    border:1px solid #dbe0e6;border-radius:5px;background:#fff;
+    overflow:hidden
   }
-  #app .form-grid input[type="date"]::-webkit-date-and-time-value{
-    min-width:0;max-width:100%;text-align:left
+  #app .native-date-frame input[type="date"]{
+    position:absolute;inset:0;display:block;inline-size:100%;
+    block-size:100%;min-inline-size:0;min-block-size:0;max-inline-size:100%;
+    margin:0;border:0;border-radius:0;box-shadow:none;
+    padding:9px 11px;box-sizing:border-box;background:transparent;
+    font-size:16px;line-height:1.4
   }
-  #app .form-grid input[type="date"]::-webkit-datetime-edit{min-width:0;max-width:100%}
+  #app .native-date-frame:focus-within{outline:3px solid var(--focus);outline-offset:2px}
+  #app .native-date-frame input[type="date"]::-webkit-date-and-time-value{
+    min-inline-size:0;max-inline-size:100%;text-align:left
+  }
+  #app .native-date-frame input[type="date"]::-webkit-datetime-edit{min-inline-size:0;max-inline-size:100%}
   #app .events-card .scroll-x,#app .events-card .responsive-table,
   #app .events-card .responsive-table tbody,
   #app .events-card .responsive-table tr,
