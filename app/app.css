@@ -998,6 +998,12 @@ td.scores-cell{min-width:150px}
 /* November 2 mobile Staff: changing to a longer event must not change viewport
    width. iOS Safari gives native date inputs an intrinsic inline size, so
    constrain the actual grid child as well as the input, never the whole page. */
+/* Safari zooms focused form controls with type below 16px. The native event
+   picker used 12px, and its focus/selection could leave the entire Staff page
+   zoomed out after switching. Preserve pinch zoom; never lock viewport scaling. */
+@media(max-width:800px){
+  #app .topbar select#eventSelect{font-size:16px;line-height:1.35}
+}
 @media(max-width:760px){
   #app .staff-workspace,#app main.content,
   #app .overview-page,#app .overview-content,#app .overview-main,
@@ -1014,6 +1020,12 @@ td.scores-cell{min-width:150px}
     max-inline-size:100%;block-size:46px;box-sizing:border-box;
     border:1px solid #dbe0e6;border-radius:5px;background:#fff;
     overflow:hidden
+  }
+  /* Overlay the right edge above the native Safari control; keep this
+     decorative outline non-interactive so the native picker still opens. */
+  #app .native-date-frame::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    border:1px solid #dbe0e6;border-radius:5px;z-index:1
   }
   #app .native-date-frame input[type="date"]{
     position:absolute;inset:0;display:block;inline-size:100%;
