@@ -44,6 +44,8 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
     assert.equal(await org.page.locator('#evName').inputValue(), 'Synthetic Rehearsal Games', 'selected organizer event remains correct');
     assert.equal(await org.page.locator('.overview-feature h1').innerText(), 'Synthetic Rehearsal Games',
       'Overview identifies the currently selected event rather than showing a fixed brand headline');
+    assert.match(await org.page.locator('#connectionLabel').innerText(), /Cloud-connected staging/,
+      'fictional staging test remains explicitly labelled staging');
     await shot(org, '01-organizer-overview');
     await goTab(org.page, 'Players');
     const list = roster(12).map(p => `${p.name}, ${p.rating}, ${p.rating_status}`).join('\n');
