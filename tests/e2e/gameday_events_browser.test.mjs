@@ -1,7 +1,7 @@
 /** Event management and sign-in without a technical id, in real Chrome over the real SQL (fictional data only). */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createBrowserWorld} from './browser_world.mjs';
+import {createBrowserWorld, STAFF} from './browser_world.mjs';
 import {roster} from './helpers.mjs';
 
 const T = 20000;
@@ -162,5 +162,35 @@ test('events: filter by status, archive, restore (never public), delete only emp
     assert.equal(forged.code, 'P0001');
     assert.deepEqual(w.pageErrors, []);
     assert.deepEqual(w.consoleErrors.filter(e => !/net::ERR|Failed to load resource/.test(e)), []);
+  } finally { await w.close(); }
+});
+
+test('opt-in Staff iPhone layout trace records selected ordinal, actual viewport metrics, and no personal data', {timeout: 180000}, async () => {
+  const w = await createBrowserWorld();
+  try {
+    await w.fake.local.rpc(w.ids.org, 'fftt_create_event_v3',
+      {p_name: 'Example event middle', p_date: '2027-04-01', p_table_count: 2});
+    await w.fake.local.rpc(w.ids.org, 'fftt_create_event_v3',
+      {p_name: 'Example event top', p_date: '2027-05-01', p_table_count: 2});
+    const d = await w.device('trace', {viewport: {width: 390, height: 844}, mobile: true});
+    await d.open(STAFF + '/app/staff.html?layoutTrace=1');
+    await d.signIn('org', {choose: 'Synthetic Rehearsal Games'});
+    await d.page.locator('#evName').waitFor({timeout: T});
+    assert.equal(await d.page.locator('.staff-layout-trace').count(), 1);
+    assert.equal(await d.page.locator('.staff-layout-trace').evaluate(el => getComputedStyle(el).position), 'fixed');
+    const opts = await d.page.locator('#eventSelect option').count();
+    assert.equal(opts, 3);
+    for (const index of [0, 2, 1, 0]) {
+      await d.page.selectOption('#eventSelect', {index});
+      await d.page.waitForTimeout(1150);
+    }
+    const trace = await d.page.locator('.staff-layout-trace textarea').inputValue();
+    assert.match(trace, /"tag":"picker-change"/);
+    assert.match(trace, /"pos":"1\/3"/);
+    assert.match(trace, /"pos":"3\/3"/);
+    assert.match(trace, /"doc":390/);
+    assert.match(trace, /"vv":\[390,1,0\]/);
+    assert.doesNotMatch(trace, /Synthetic Rehearsal|Example event|@|[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
+    assert.deepEqual(w.pageErrors, []);
   } finally { await w.close(); }
 });
