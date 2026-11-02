@@ -38,6 +38,8 @@ test('sign-in needs no event id; several events are chosen by NAME; no technical
           scale: window.visualViewport?.scale ?? 1,
           cardLeft: card.left, cardRight: card.right, fieldLeft: dateField.left, fieldRight: dateField.right,
           frameLeft: dateFrame.left, frameRight: dateFrame.right, frameBorder: style.borderRightWidth,
+          frameOverlayBorder: getComputedStyle(frameEl, '::after').borderRightWidth,
+          frameOverlayPointer: getComputedStyle(frameEl, '::after').pointerEvents,
           inputPosition: getComputedStyle(frameEl.querySelector('input')).position,
           dateLeft: dateInput.left, dateRight: dateInput.right,
           createFrameRight: createFrame?.right, createFrameBorder: createFrameEl ? getComputedStyle(createFrameEl).borderRightWidth : null,
@@ -47,7 +49,9 @@ test('sign-in needs no event id; several events are chosen by NAME; no technical
       assert.ok(m.fieldLeft >= m.cardLeft - 1 && m.fieldRight <= m.cardRight - 2, label + ': date field fits card');
       assert.ok(m.frameLeft >= m.fieldLeft - 1 && m.frameRight <= m.fieldRight + 1,
         label + ': visible native-date frame fits the grid field');
-      assert.equal(m.frameBorder, '1px', label + ': visible right border belongs to frame, not clipped input');
+      assert.equal(m.frameBorder, '1px', label + ': frame retains its right border');
+      assert.equal(m.frameOverlayBorder, '1px', label + ': right border is also drawn over Safari native input');
+      assert.equal(m.frameOverlayPointer, 'none', label + ': date frame overlay does not block the native picker');
       assert.equal(m.inputPosition, 'absolute', label + ': intrinsic native date control cannot determine grid width');
       assert.ok(m.dateLeft >= m.frameLeft - 1 && m.dateRight <= m.frameRight + 1,
         label + ': native date control fits its visible frame');
@@ -58,12 +62,19 @@ test('sign-in needs no event id; several events are chosen by NAME; no technical
       return m;
     }
     const initialWidth = await assertMobileWidth('initial event');
+    const pickerTypography = await org.page.locator('#eventSelect').evaluate(el => {
+      el.querySelector('option').dataset.nativePickerGuard = 'persisted';
+      return parseFloat(getComputedStyle(el).fontSize);
+    });
+    assert.ok(pickerTypography >= 16, 'iPhone event selector must not trigger Safari small-input focus zoom');
     const options = await org.page.locator('#eventSelect option').allInnerTexts();
     assert.equal(options.length, 2);
     const spring = options.findIndex(o => o.includes(longEvent));
     await org.page.selectOption('#eventSelect', {index: spring});
     for (let i = 0; i < 40 && (await org.page.inputValue('#evName').catch(() => '')) !== longEvent; i++) await org.page.waitForTimeout(500);
     assert.equal(await org.page.inputValue('#evName'), longEvent);
+    assert.equal(await org.page.locator('#eventSelect option').first().getAttribute('data-native-picker-guard'), 'persisted',
+      'native picker options must not be replaced just because the active event changed');
     const longWidth = await assertMobileWidth('long event');
     await org.page.selectOption('#eventSelect', {index: options.findIndex(o => o.includes('Synthetic Rehearsal Games'))});
     for (let i = 0; i < 40 && (await org.page.inputValue('#evName').catch(() => '')) !== 'Synthetic Rehearsal Games'; i++) await org.page.waitForTimeout(500);
