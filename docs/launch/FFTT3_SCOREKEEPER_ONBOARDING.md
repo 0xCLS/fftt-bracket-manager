@@ -1,21 +1,21 @@
 # FFTT3 — scorekeeper onboarding and permission verification
 
-**Status: ready-to-use procedure, not proof that a volunteer has accepted or has an account.** This document contains no staff e-mail addresses, credentials, player contacts or private event identifiers. Use the Owner's private volunteer tracker for identities.
+**Status: ready-to-use onboarding procedure.** As of November 2, **Maydis Skeete, J'Mae Ferguson and Laura Nhiwatiwa** have each accepted their November 22 scorer roles; that does **not** establish an individual Auth account, verified login identity, rehearsal attendance, event grant, or authorization to issue one. This document contains no staff e-mail addresses, credentials, player contacts or private event identifiers. Use the Owner's private volunteer tracker for contact and identity checks.
 
 ## Intended event and roles
 - **Live tournament:** Sunday, November 22, 2026, 1:00 PM, Ypsilanti SDA Church. Venue secured, two physical tables permanently accessible to the Organizer.
-- **Onsite rehearsal:** Sunday, November 8, 2026, 10:00 AM. Two tables are available, but the church room/building entry arrangements remain to be confirmed.
+- **Onsite rehearsal:** Sunday, November 8, 2026, **1:00 PM EST** (corrected/confirmed November 2). Both physical tables and church room/building access are confirmed; individual volunteers' attendance, device readiness, and any additional setup coordination remain to be confirmed.
 - **Minimum people:** Organizer (laptop), Scorekeeper A (phone), Scorekeeper B (another phone), and an observer of the Spectator/TV display.
-- **Current volunteer status:** Maydis Skeete was asked to score, but acceptance, identity verification and volunteer account authorization remain **unconfirmed** in the private event record. Do not present her as confirmed. A second scorekeeper also needs confirmation.
+- **Current volunteer status (November 2, organizer-confirmed):** **Maydis Skeete, J'Mae Ferguson and Laura Nhiwatiwa are the three confirmed FFTT3 scorers.** There are still two physical tables: arrange a primary scorer per table and rotate/backup as needed, once assignments are approved. Their Nov 8 availability, preferred authentication emails (Laura's contact still needs collection), individual verified Auth identities, account creation/sign-in, and event-scoped Scorekeeper permissions remain pending. Their volunteer confirmations are not player registrations or approval to grant access.
 
 ## Stage A — approval and individual identity (Owner + Organizer)
-1. Ask each volunteer privately whether they accept, whether they can attend the rehearsal and November 22 event, and which personal e-mail identity to use. Keep any addresses in the private outreach tracker, **not this public repository**.
+1. Confirm each volunteer's **preferred authentication e-mail** and availability for the November 8 rehearsal (all three have already accepted the November 22 scorer roles). Keep contact information and identity verification in the owner-private outreach tracker, **not this public repository**.
 2. Confirm an existing Supabase Auth user is the *intended individual*. If none exists, the trusted administrator uses an **approved, owner-controlled invite/create procedure** and verifies the e-mail is confirmed. **Do not enable public self-signup**; the Organizer previously confirmed that toggle is disabled.
 3. Never share an Organizer account, reuse a single volunteer account on two phones, publish a password, or create a staff grant merely because someone was mentioned in a planning conversation.
 4. For an actual FFTT3 grant, require the Organizer's explicit confirmation of **the named volunteer and the target event**. Do not use the completed October 25 fictional tournament as an access test. Use a **new, separate fictional rehearsal event** to test permissions before real-event authorization.
 
 ## Stage B — event-specific grant
-1. Organizer signs in at `https://fftt3-staff-stg.pages.dev/app/staff`, chooses the **intended event by name**, then opens the **Staff** tab.
+1. After separate permission to grant access, Organizer signs in on the **correct Staff host** for the intended event: production `https://fftt-staff.clslifestyle.com/app/staff`, or `https://fftt3-staff-stg.pages.dev/app/staff` only if the authorized fictional fixture is actually on staging. Verify the host **and intended event by name** before opening the **Staff** tab. Staging authorization is not production authorization.
 2. Choose **Grant access** for the verified, confirmed individual Auth e-mail. Select **Scorekeeper** (not Organizer). Grant only for that event.
 3. Verify the event's Staff list reflects precisely the intended identities and roles. If it does not, **stop** and investigate; do not guess or grant broadly.
 4. Repeat independently for the second confirmed volunteer.
