@@ -94,29 +94,59 @@ function installLayoutTrace() {
     const r = node.getBoundingClientRect();
     return [round(r.left), round(r.right), round(r.width)];
   };
+  // Screen geometry only: no labels, names, URLs, private IDs or input values.
+  const nodeKind = node => {
+    if (!node) return null;
+    const cls = node.classList?.[0] ?? '';
+    const safeClass = /^[a-zA-Z][a-zA-Z0-9_-]{0,35}$/.test(cls) ? '.' + cls : '';
+    return node.tagName.toLowerCase() + safeClass;
+  };
+  const region = selector => {
+    const node = document.querySelector(selector);
+    if (!node || !node.getClientRects().length) return null;
+    const r = node.getBoundingClientRect();
+    return [round(r.right), node.clientWidth, node.scrollWidth, getComputedStyle(node).overflowX];
+  };
   function measure(tag) {
     const doc = document.documentElement, vv = window.visualViewport;
     const width = doc.clientWidth;
-    const over = [];
-    // Only identify elements by generic tag/first CSS class. Avoid all user
-    // text, URL, event identifiers, form values and private app state.
+    const over = [], unclipped = [];
+    // A horizontally scrolling navigation, bracket or table intentionally has
+    // children beyond its visible rectangle. Report these separately rather than
+    // letting them hide the culprit expanding the overall document.
     for (const node of document.querySelectorAll('#app *')) {
-      if (node.closest('.scroll-x, .bracket, .staff-layout-trace')) continue;
-      if (!node.getClientRects().length) continue;
+      if (!node.getClientRects().length || node.closest('.staff-layout-trace')) continue;
       const r = node.getBoundingClientRect();
       if (r.right <= width + 2 || r.width <= 1) continue;
-      const className = node.classList?.[0];
-      const safeClass = /^[a-zA-Z][a-zA-Z0-9_-]{0,35}$/.test(className || '') ? '.' + className : '';
-      over.push({name: node.tagName.toLowerCase() + safeClass, right: round(r.right), width: round(r.width)});
+      const item = {name: nodeKind(node), right: round(r.right), width: round(r.width)};
+      const scroller = node.closest('nav.tabs, .scroll-x, .bracket');
+      if (scroller) {
+        if (!node.closest('.scroll-x,.bracket')) over.push(item);
+      } else {
+        item.parent = nodeKind(node.parentElement);
+        unclipped.push(item);
+      }
     }
     over.sort((a, b) => b.right - a.right);
+    unclipped.sort((a, b) => b.right - a.right);
     const selected = picker.selectedIndex < 0 ? 'none' : String(picker.selectedIndex + 1);
     const snapshot = {
       t: Date.now() - start, tag, pos: selected + '/' + picker.options.length,
       inner: window.innerWidth, doc: width, scroll: doc.scrollWidth,
       vv: vv ? [round(vv.width), round(vv.scale), round(vv.offsetLeft)] : null,
       app: box('#app'), main: box('#main'), select: box('#eventSelect'),
-      date: box('#evDate'), off: over.slice(0, 4)
+      date: box('#evDate'),
+      // Each region: [right edge, clientWidth, scrollWidth, overflow-x].
+      regions: {
+        sidebar: region('.staff-sidebar'), tabs: region('nav.tabs'),
+        workspace: region('.staff-workspace'), topbar: region('#app .topbar'),
+        content: region('#main'), overview: region('.overview-page'),
+        settings: region('.overview-settings'), history: region('.overview-history'),
+        events: region('.events-card')
+      },
+      // "out" excludes intentionally scrolling tabs, brackets and tables.
+      // These are the strongest candidates for real document overflow.
+      out: unclipped.slice(0, 10), off: over.slice(0, 2)
     };
     entries.push(JSON.stringify(snapshot));
     if (entries.length > 35) entries.shift();
