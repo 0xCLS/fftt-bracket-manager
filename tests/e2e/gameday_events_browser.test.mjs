@@ -62,6 +62,34 @@ test('sign-in needs no event id; several events are chosen by NAME; no technical
       return m;
     }
     const initialWidth = await assertMobileWidth('initial event');
+    // In physical Safari an event-dependent native picker width caused
+    // topbar.scrollWidth 607px while its box remained 430px. Simulate an
+    // interior child wider than the phone and prove only the header contains
+    // it; never hide overflow across the page or break bracket scrollers.
+    const headerContainment = await org.page.evaluate(() => {
+      const top = document.querySelector('#app .topbar');
+      const probe = document.createElement('span');
+      probe.className = 'header-overflow-probe';
+      probe.style.cssText = 'position:absolute;left:580px;top:0;width:27px;height:2px;pointer-events:none';
+      top.append(probe);
+      const size = {
+        headerOverflow: getComputedStyle(top).overflowX,
+        headerY: getComputedStyle(top).overflowY,
+        headerScroll: top.scrollWidth,
+        workScroll: document.querySelector('#app .staff-workspace').scrollWidth,
+        documentScroll: document.documentElement.scrollWidth,
+        viewport: document.documentElement.clientWidth,
+        tabsOverflow: getComputedStyle(document.querySelector('#app nav.tabs')).overflowX
+      };
+      probe.remove();
+      return size;
+    });
+    assert.equal(headerContainment.headerOverflow, 'clip', 'mobile Staff header clips only escaping horizontal overflow');
+    assert.equal(headerContainment.headerY, 'visible', 'header vertical overflow and focus remain visible');
+    assert.ok(headerContainment.headerScroll > headerContainment.viewport + 150, 'synthetic header overflow reaches far past viewport');
+    assert.ok(headerContainment.workScroll <= headerContainment.viewport + 1, 'header overflow must not expand workspace');
+    assert.ok(headerContainment.documentScroll <= headerContainment.viewport + 1, 'header overflow must not widen iPhone document');
+    assert.equal(headerContainment.tabsOverflow, 'auto', 'horizontal tab navigation remains independently scrollable');
     const pickerTypography = await org.page.locator('#eventSelect').evaluate(el => {
       el.querySelector('option').dataset.nativePickerGuard = 'persisted';
       return parseFloat(getComputedStyle(el).fontSize);
