@@ -22,7 +22,7 @@ Status: Source implementation only in draft PR #44. NOT deployed or authorized f
 
 ## Event grants, safety and failure reporting
 
-- Organizer event snapshots are merged. A failed snapshot blocks changes rather than silently treating an inaccessible event as having no grants.
+- Organizer event snapshots for **non-archived** events are merged. Archived event staff remain historical and are not part of active access removal. A failed in-scope snapshot blocks changes rather than silently treating an inaccessible event as having no grants.
 - Saving uses separate fftt_set_staff_v3 RPCs under the signed-in Organizer's own token. Each event permission is checked by the backend. Removing one event leaves other checked grants intact.
 - Several event grant calls cannot be fully atomic with the current RPC API. Failed or uncertain operations never trigger automatic retries, and the UI reloads the server's actual state. A true atomic bulk RPC can be added later with SQL review.
 - Directory removal first revokes each currently active event grant, then archives the staff member from the directory. It must never delete an Auth user or historical score/audit rows.
