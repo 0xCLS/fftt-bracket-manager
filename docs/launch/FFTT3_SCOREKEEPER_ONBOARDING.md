@@ -12,10 +12,10 @@
 1. Confirm each volunteer's **preferred authentication e-mail** and availability for the November 8 rehearsal (all three have already accepted the November 22 scorer roles). Keep contact information and identity verification in the owner-private outreach tracker, **not this public repository**.
 2. Confirm an existing Supabase Auth user is the *intended individual*. If none exists, the trusted administrator uses an **approved, owner-controlled invite/create procedure** and verifies the e-mail is confirmed. **Do not enable public self-signup**; the Organizer previously confirmed that toggle is disabled.
 3. Never share an Organizer account, reuse a single volunteer account on two phones, publish a password, or create a staff grant merely because someone was mentioned in a planning conversation.
-4. For an actual FFTT3 grant, require the Organizer's explicit confirmation of **the named volunteer and the target event**. Do not use the completed October 25 fictional tournament as an access test. Use a **new, separate fictional rehearsal event** to test permissions before real-event authorization.
+4. For an actual FFTT3 grant, require the Organizer's explicit confirmation of **the named volunteer and the target event**. Do not use the completed October 25 fictional tournament as an access test. Use the **new, separate FFTT3 Rehearsal event**, with actual registered names and **practice-only results**, to test permissions. Its event grant is separate from the November 22 event grant; do not confuse them.
 
 ## Stage B — event-specific grant
-1. After separate permission to grant access, Organizer signs in on the **correct Staff host** for the intended event: production `https://fftt-staff.clslifestyle.com/app/staff`, or `https://fftt3-staff-stg.pages.dev/app/staff` only if the authorized fictional fixture is actually on staging. Verify the host **and intended event by name** before opening the **Staff** tab. Staging authorization is not production authorization.
+1. After separate permission to grant access, Organizer signs in on the **correct Staff host** for the intended event: production `https://fftt-staff.clslifestyle.com/app/staff`, or `https://fftt3-staff-stg.pages.dev/app/staff` only if the authorized rehearsal event is actually on staging. Verify the host **and intended event by name** before opening the **Staff** tab. Staging authorization is not production authorization.
 2. Choose **Grant access** for the verified, confirmed individual Auth e-mail. Select **Scorekeeper** (not Organizer). Grant only for that event.
 3. Verify the event's Staff list reflects precisely the intended identities and roles. If it does not, **stop** and investigate; do not guess or grant broadly.
 4. Repeat independently for the second confirmed volunteer.
@@ -23,8 +23,8 @@
 ## Stage C — each volunteer's own phone
 - [ ] Volunteer signs in with their **own** individual account on their phone and explicitly selects the correct event.
 - [ ] The account sees **Match Desk only** — no Organizer Players/Registration, Staff, event-setting, or publication controls.
-- [ ] On a **fictional rehearsal event** with two configured tables, each Scorekeeper can use one free table; the same table cannot be assigned concurrently to another active match.
-- [ ] Both try to submit the **same fictional match** at the same time: exactly one result accepted, the other rejected as stale/outdated.
+- [ ] On the **separate FFTT3 Rehearsal** event with two configured tables, each Scorekeeper can use one free table; the same table cannot be assigned concurrently to another active match.
+- [ ] Both try to submit the **same rehearsal match** at the same time: exactly one result accepted, the other rejected as stale/outdated.
 - [ ] On airplane-mode or lost connection, writes pause; reconnection does **not** silently re-submit. Confirm paper/server receipts before any intentional retry.
 - [ ] Organizer revokes one **rehearsal** Scorekeeper grant; that account's next attempted action is denied. Regrant only after the correct volunteer/event is reverified.
 - [ ] Scorekeeper and Organizer can find help and paper scorecards without needing new e-mailed recovery codes on event day.
@@ -33,4 +33,4 @@
 Do not use volunteer live scoring until: two independent authorized accounts are known, separate phone sign-ins pass, real event is not accidentally public, the paper fallback is available, and the Organizer validates actual scorekeeper roster/permissions. Failures must have an owner and a successful retest.
 
 ## Scope and history
-This guide prepares the steps only. It **does not** authorize creating accounts, granting live FFTT3 roles, reading registration answers, checking players in, changing the real event's visibility. PR #19 is already merged into `main`; that source integration is not volunteer authorization. Refer to `FFTT3_ACCEPTANCE_CHECKLIST.md`, `FFTT3_REHEARSAL_CHECKLIST_NOV8.md` and `FFTT3_EVENT_DAY_GUIDE_NOV22.md`.
+This guide prepares the steps only. The Organizer's November 3 plan is to check real registrants into a **separate rehearsal event**, but this document alone **does not** authorize creating accounts/grants, writing or checking players into the real Nov 22 FFTT3 event, changing its source settings, or publishing real names. PR #19 is already merged into `main`; that source integration is not volunteer authorization. Refer to `FFTT3_ACCEPTANCE_CHECKLIST.md`, `FFTT3_REHEARSAL_CHECKLIST_NOV8.md` and `FFTT3_EVENT_DAY_GUIDE_NOV22.md`.
