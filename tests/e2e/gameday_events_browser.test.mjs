@@ -190,6 +190,23 @@ test('opt-in Staff iPhone layout trace records selected ordinal, actual viewport
     assert.match(trace, /"pos":"3\/3"/);
     assert.match(trace, /"doc":390/);
     assert.match(trace, /"vv":\[390,1,0\]/);
+    assert.match(trace, /"regions":\{/);
+    assert.match(trace, /"out":\[/);
+    // Force one harmless offscreen node inside the real content. Verify it is
+    // distinguished from the intentionally scrollable sidebar navigation.
+    await d.page.evaluate(() => {
+      const probe = document.createElement('div');
+      probe.className = 'overflow-probe';
+      probe.style.cssText = 'position:absolute;left:415px;width:90px;height:1px';
+      document.querySelector('#main').append(probe);
+      document.querySelector('.staff-layout-trace button:last-child').click();
+    });
+    const diagnosed = await d.page.locator('.staff-layout-trace textarea').inputValue();
+    assert.match(diagnosed, /"name":"div.overflow-probe"/, 'real non-scroller overflow is reported');
+    const records = diagnosed.split('\n').slice(1).map(line => JSON.parse(line));
+    assert.ok(records.some(v => v.out.some(e => e.name === 'div.overflow-probe')),
+      'offscreen content is classified outside deliberate horizontal scrollers');
+    assert.doesNotMatch(diagnosed, /Synthetic Rehearsal|Example event|@|[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
     assert.doesNotMatch(trace, /Synthetic Rehearsal|Example event|@|[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
     assert.deepEqual(w.pageErrors, []);
   } finally { await w.close(); }
