@@ -36,6 +36,14 @@ test('unchecking a single event revokes only that scope; single role applies to 
   assert.throws(()=>planStaffChange(person,[],'scorekeeper',[events[0]]),/unknown-existing-scope/);
 });
 
+test('archived event history cannot be changed through the active People directory',()=>{
+  const archived={eventId:EVENT_B,role:'organizer',lifecycle:'archived'};
+  const live={eventId:EVENT_A,role:'organizer',lifecycle:'active'};
+  assert.throws(()=>planStaffChange({assignments:{}},[EVENT_B],'scorekeeper',[live,archived]),/out-of-scope/);
+  const people=directoryFromSnapshots([live,archived],{[EVENT_B]:{staff:[{email:EMAIL,role:'scorekeeper',active:true}]}},[]);
+  assert.equal(people.length,0,'archived-only grants remain historical and do not become removable assignments');
+});
+
 test('client never sends privileged credentials, and refuses malformed response',async()=>{
   let observed=null;
   const c=createStaffDirectoryClient({fetchImpl:async (path,opts)=>{
