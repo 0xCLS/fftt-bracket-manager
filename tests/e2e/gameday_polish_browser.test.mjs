@@ -255,7 +255,7 @@ test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Sta
       if (vp === 'tablet') {
         // Regression: Staff's narrower workspace must not keep the desktop four-column People grid.
         const layout = await org.page.evaluate(() => {
-          const columns = getComputedStyle(document.querySelector('.people-row')).gridTemplateColumns.trim().split(/\\s+/).length;
+          const columns = getComputedStyle(document.querySelector('.people-row')).gridTemplateColumns.trim().split(' ').length;
           return {columns, pageWidth: document.documentElement.scrollWidth, viewportWidth: window.innerWidth};
         });
         assert.equal(layout.columns, 2, 'People directory stacks into two columns at tablet width');
