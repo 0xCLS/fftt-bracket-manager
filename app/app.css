@@ -1091,9 +1091,9 @@ td.scores-cell{min-width:150px}
      align-content can stretch rows when the event's pane is temporarily
      empty, making the picker appear to leap down then snap back. */
   #app .topbar{align-content:start;flex:0 0 auto}
-  #app .statusline{min-height:66px;align-content:flex-start}
+  /* The real 390px-ready state occupies three pill rows (103px), while
+     the loading state only has two. Reserve all three rows at phone widths
+     so the native picker keeps its vertical position during event changes. */
+  #app .statusline{min-height:103px;align-content:flex-start}
   #app .event-switch{align-self:start}
-}
-@media(max-width:360px){
-  #app .statusline{min-height:103px}
 }
