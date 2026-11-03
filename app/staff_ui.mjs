@@ -7,6 +7,7 @@ import {suggestPartners, enginePlayers, seedSlots, roundName, partnerCandidates,
 import {normalizeSnapshotMatches, standingsFromSnapshot, resultsText, matchesCsv} from './exports.mjs';
 import {createPlayersView, levelShield} from './view_players.mjs';
 import {createEventsView} from './view_events.mjs';
+import {createStaffPeopleView} from './view_staff_people.mjs';
 import {scoreTiles} from './game_tiles.mjs';
 
 const ORGANIZER_TABS = [['overview', 'Overview'], ['players', 'Players'], ['championship', 'Championship'],
@@ -625,22 +626,8 @@ export function createStaffUi({core, els, config, signOut}) {
   }
 
   // ------------------------------------------------------------ Staff
-  function viewStaff() {
-    const sn = s.snapshot;
-    if (!sn) return loading();
-    const email = h('input', {type: 'email', id: 'stEmail', autocapitalize: 'none', autocomplete: 'off', placeholder: 'volunteer@example.org', 'data-draft': 'stEmail'});
-    const role = h('select', {id: 'stRole', 'data-draft': 'stRole'}, h('option', {value: 'scorekeeper', text: 'Scorekeeper'}), h('option', {value: 'bracket_manager', text: 'Bracket Manager'}), h('option', {value: 'organizer', text: 'Organizer'}));
-    return h('div', {},
-      h('section', {class: 'card', 'aria-labelledby': 'staffTitle'}, h('h2', {id: 'staffTitle', class: 'card-title', text: 'Event staff'}),
-        h('div', {class: 'scroll-x'}, h('table', {class: 'responsive-table'}, h('thead', {}, h('tr', {}, ['Account', 'Role', 'Status', ''].map(t => h('th', {scope: 'col', text: t})))),
-          h('tbody', {}, sn.staff.map(m => h('tr', {}, h('td', {'data-label': 'Account', text: m.email}), h('td', {'data-label': 'Role', text: m.role}), h('td', {'data-label': 'Status'}, pill(m.active ? 'Active' : 'Revoked', m.active ? 'good' : '')),
-            h('td', {}, m.active ? h('button', {class: 'small danger', type: 'button', disabled: !core.canWrite(), text: 'Revoke', 'aria-label': `Revoke access for ${m.email}`, on: {click: async () => {
-              if (await confirmDialog('Revoke access?', `${m.email} will lose access to this event immediately.`, 'Revoke', {danger: true})) result(await core.actions.setStaff(m.email, 'revoke', null), 'Access revoked.'); }}}) : null)))))),
-        h('p', {class: 'help', text: 'Staff accounts are created in advance by the administrator. Here you only give an existing account access to this event, or take it away.'})),
-      h('form', {class: 'card', 'aria-labelledby': 'grantTitle', on: {submit: async ev => { ev.preventDefault(); if (result(await core.actions.setStaff(email.value, 'grant', role.value), 'Access granted.')) { email.value = ''; forget('st'); } }}},
-        h('h2', {id: 'grantTitle', class: 'card-title', text: 'Give an existing account access'}), h('label', {for: 'stEmail', text: 'Account e-mail'}), email, h('label', {for: 'stRole', text: 'Role'}), role,
-        h('div', {class: 'row'}, h('button', {class: 'primary', type: 'submit', disabled: !core.canWrite(), text: 'Grant access'}))));
-  }
+  // One permanent People directory replaces the old per-event list and separate grant form.
+  const viewStaff = createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDialog,rerender:()=>render(true)});
 
   // ------------------------------------------------------------ render loop
   const views = {overview: viewOverview, players: viewPlayers, championship: viewChampionship, consolation: viewConsolation,
@@ -679,7 +666,8 @@ export function createStaffUi({core, els, config, signOut}) {
       s.brief?.lifecycle, s.deskStatus, s.pending?.submissionId, s.score.status,
       s.events.map(e => e.eventId + e.lifecycle + e.players + e.deletable).join(), s.audit?.length, s.busy,
       s.registrations.status, s.registrations.at, s.registrationSettings.status, s.registrationSettings.busy, s.registrationSettings.source?.updatedAt,
-      s.registrationSettings.inspect?.spreadsheetId, s.registrationSettings.diagnostic?.checks.map(c => c.status).join(), s.registrationSettings.capabilities?.googleMode]);
+      s.registrationSettings.inspect?.spreadsheetId, s.registrationSettings.diagnostic?.checks.map(c => c.status).join(), s.registrationSettings.capabilities?.googleMode,
+      s.staffDirectory.version]);
     if (!force && paneKey === lastPaneKey) { syncConnectionGuard(); return; }
     const active = document.activeElement;
     // typing: text being entered (15 s); a drop-down only protects its own just-made choice for a moment (2 s)
@@ -698,7 +686,7 @@ export function createStaffUi({core, els, config, signOut}) {
       desk: 'Assign tables and submit server-verified match scores.',
       finale: 'Pair finalists with selected consolation players.',
       results: 'Review standings, publish results and export private backups.',
-      staff: 'Manage organizer-approved roles for this event.'}[tab];
+      staff: 'Manage staff accounts and event-specific assignments.'}[tab];
     fill(els.main, title && s.signedIn ? h('div', {},
       h('header', {class: 'section-intro'},
         h('div', {class: 'feature-overline'}, h('span', {class: 'feature-spark', 'aria-hidden': 'true'}), 'FORGING FELLOWSHIP · TOURNAMENT DESK'),

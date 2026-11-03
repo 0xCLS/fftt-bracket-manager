@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://copmkalfkkrkzheohwuc.supabase.co; img-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer"><meta name="robots" content="noindex,nofollow">
+<title>FFTT Staff · Finish account setup</title>
+<link rel="stylesheet" href="./app.css">
+<script type="module" src="./staff-invite.mjs"></script>
+</head><body>
+<main class="signin" aria-labelledby="title">
+<div class="card">
+ <h1 id="title">Finish your FFTT Staff account setup</h1>
+ <p class="help">Choose a password for your own staff account. This does not grant access to any tournament; the Organizer assigns your events separately.</p>
+ <form id="finish" hidden>
+   <label for="newPassword">New password</label>
+   <input id="newPassword" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+   <label for="repeatPassword">Confirm password</label>
+   <input id="repeatPassword" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+   <p class="actions"><button class="primary" type="submit" id="savePassword">Set password</button></p>
+ </form>
+ <p role="status" aria-live="polite" id="status">Checking your invitation…</p>
+ <p class="help"><a href="./staff.html">Return to Staff sign-in</a></p>
+</div></main>
+</body></html>

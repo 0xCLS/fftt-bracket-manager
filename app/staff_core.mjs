@@ -12,6 +12,7 @@ import {StaffSignInError} from '../contracts/milestone1_password_transport.mjs';
 import {createMilestone1ScoreSession} from '../contracts/milestone1_score_session.mjs';
 import {seedSlots, enginePlayers, normalizeGameScores} from '../contracts/gameday_engine.mjs';
 import {RegistrationClientError} from '../contracts/registration_client.mjs';
+import {directoryFromSnapshots, planStaffChange, staffEmail} from '../contracts/staff_people.mjs';
 import {importCsv} from '../contracts/registration_model.mjs';
 
 export const POLL_MS = 7000;
@@ -121,7 +122,7 @@ const REG_ERRORS = Object.freeze({
 });
 export const REGISTRATION_MESSAGES = REG_ERRORS;
 
-export function createStaffCore({session, api, scoreTransport, registrationClient = null, ledger, now = () => Date.now(),
+export function createStaffCore({session, api, scoreTransport, registrationClient = null, peopleClient = null, ledger, now = () => Date.now(),
   randomId = () => crypto.randomUUID(), isOnline = () => true, onChange = () => {}} = {}) {
   const s = {
     signedIn: false, role: null, eventId: null, events: [], snapshot: null, brief: null, pulse: null,
@@ -132,6 +133,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     registrations: {status: 'idle', payload: null, error: null, at: 0},
     // organizer-only settings for THIS event's registration source: {status, source, capabilities, inspect, diagnostic, error}
     registrationSettings: {status: 'idle', source: null, capabilities: null, capabilitiesError: null, inspect: null, diagnostic: null, error: null, busy: null},
+    staffDirectory: {status: 'idle', people: [], error: null, version: 0},
   };
   let confirming = false;
   const refused = new Map();   // submission id -> reason: the database REFUSED it (validation), so nothing was recorded
@@ -195,7 +197,8 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
   function clearPrivate(reason = null) {
     s.snapshot = null; s.brief = null; s.pulse = null; s.desk = []; s.deskStatus = 'idle'; s.audit = null;
     s.registrations = {status: 'idle', payload: null, error: null, at: 0};
-    s.registrationSettings = {status: 'idle', source: null, capabilities: null, capabilitiesError: null, inspect: null, diagnostic: null, error: null, busy: null};
+    s.registrationSettings = {status: 'idle', source: null, capabilities: null, capabilitiesError: null, diagnostic: null, error: null, busy: null};
+    s.staffDirectory = {status: 'idle', people: [], error: null, version: s.staffDirectory.version + 1};
     rawDesk = new Map(); lastFullAt = 0;
     if (reason) s.endedReason = reason;
   }
@@ -583,6 +586,91 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     emit();
     return {ok: false, unknown: true, message: 'We could not confirm what the server recorded. Do not enter it again yet — press "Check what the server recorded".'};
   }
+  // ---------------------------------------------------------------- shared Staff & Access
+  async function loadStaffDirectory() {
+    if(s.role!=='organizer'||!s.signedIn)return {ok:false,message:'Organizer access is required.'};
+    const eventAtStart=s.eventId, requestVersion=s.staffDirectory.version+1;
+    // A late directory response must never restore private staff data after a sign-out,
+    // event switch, or newer load. clearPrivate() increments the generation.
+    const stillCurrent=()=>s.signedIn&&s.role==='organizer'&&s.eventId===eventAtStart
+      &&s.staffDirectory.version===requestVersion;
+    s.staffDirectory={...s.staffDirectory,status:'loading',error:null,version:requestVersion};emit();
+    const manageable=s.events.filter(e=>e.role==='organizer'&&e.lifecycle!=='archived');
+    try {
+      const details=await session.authorized(async ctx=>{
+        const snapshots={};
+        for(const event of manageable){
+          // A failed authorized read is an incomplete directory, not an empty event.
+          snapshots[event.eventId]=event.eventId===s.eventId&&s.snapshot
+            ? s.snapshot:await api.organizerSnapshot(ctx.token,{p_event_id:event.eventId});
+        }
+        let people=[],directoryError=null;
+        if(peopleClient) {
+          try {
+            const r=await peopleClient.request(ctx.token,'list',{eventId:ctx.eventId});
+            people=r.people;
+          } catch {
+            directoryError='Account invitations and directory removal are not available on this site yet. Existing event access can still be reviewed.';
+          }
+        } else directoryError='Account invitations require the protected Staff directory service.';
+        return {snapshots,people,directoryError};
+      },{wait:true});
+      if(!stillCurrent())return {ok:false,message:'The event or session changed during the directory request.'};
+      s.staffDirectory={status:'ready',people:directoryFromSnapshots(manageable,details.snapshots,details.people),
+        error:details.directoryError,version:s.staffDirectory.version+1};emit();
+      return {ok:true};
+    } catch(e) {
+      if(!stillCurrent())return {ok:false,message:'The event or session changed during the directory request.'};
+      s.staffDirectory={status:'error',people:[],error:'Could not verify all event permissions. No changes can be saved until the directory loads.',
+        version:s.staffDirectory.version+1};emit();
+      return {ok:false,message:describeError(e)};
+    }
+  }
+  async function addStaffPerson(name,email){
+    if(!peopleClient)return {ok:false,message:'Secure staff invitations are not configured on this site.'};
+    if(s.role!=='organizer'||!canWrite())return {ok:false,message:'Organizer access and a live connection are required.'};
+    const normalized=staffEmail(email);
+    if(!normalized||typeof name!=='string'||!name.trim())return {ok:false,message:'Enter the staff member’s name and valid email.'};
+    const r=await act(ctx=>peopleClient.request(ctx.token,'add',{eventId:ctx.eventId,name:name.trim(),email:normalized}),{refreshAfter:false});
+    if(r.ok)await loadStaffDirectory();
+    return r;
+  }
+  async function saveStaffPerson(person,selected,role){
+    if(s.staffDirectory.status!=='ready')return {ok:false,message:'Refresh the staff directory before changing access.'};
+    if(!person||!person.verified||!staffEmail(person.email))
+      return {ok:false,message:'This person must confirm their account before receiving event access.'};
+    let plan;
+    try{plan=planStaffChange(person,selected,role,s.events);}catch{return {ok:false,message:'The selected event assignments are not allowed.'};}
+    if(!plan.changed)return {ok:true,message:'No changes.'};
+    const r=await act(async ctx=>{
+      // Revocations first; any partial failure is surfaced and never silently retried.
+      for(const eventId of plan.revoke)await api.setStaff(ctx.token,{p_event_id:eventId,p_email:person.email,p_action:'revoke',p_role:null});
+      for(const eventId of plan.grant)await api.setStaff(ctx.token,{p_event_id:eventId,p_email:person.email,p_action:'grant',p_role:plan.role});
+    },{refreshAfter:false});
+    // Refresh server truth even after a partial/unknown outcome.
+    await Promise.all([loadStaffDirectory(),refresh({force:true})]);
+    return r.ok?r:{...r,message:'The change was not fully confirmed. Current server assignments have been reloaded. '+(r.message??'')};
+  }
+  async function removeStaffPerson(person) {
+    if(!peopleClient)return {ok:false,message:'Secure staff directory removal is not configured on this site.'};
+    if(s.staffDirectory.status!=='ready'||!staffEmail(person?.email))
+      return {ok:false,message:'Refresh the staff directory before removing anyone.'};
+    // Preflight ensures directory service is alive before any grant is revoked.
+    try{await session.authorized(ctx=>peopleClient.request(ctx.token,'list',{eventId:ctx.eventId}),{wait:true});}
+    catch{return {ok:false,message:'The directory service is unavailable. No event permissions were changed.'};}
+    const p=planStaffChange(person,[],Object.values(person.assignments)[0]??'scorekeeper',s.events);
+    const r=await act(async ctx=>{
+      for(const eventId of p.revoke)await api.setStaff(ctx.token,{p_event_id:eventId,p_email:person.email,p_action:'revoke',p_role:null});
+      await peopleClient.request(ctx.token,'archive',{eventId:ctx.eventId,email:person.email});
+    },{refreshAfter:false});
+    await Promise.all([loadStaffDirectory(),refresh({force:true})]);
+    return r.ok?r:{...r,message:'Removal was not fully confirmed. Review the refreshed permissions before taking further action. '+(r.message??'')};
+  }
+  actions.loadStaffDirectory=loadStaffDirectory;
+  actions.addStaffPerson=addStaffPerson;
+  actions.saveStaffPerson=saveStaffPerson;
+  actions.removeStaffPerson=removeStaffPerson;
+
   /** Look up the server's own record of the unresolved score (works after a reload too). */
   async function checkPendingScore() {
     const rec = s.pending;

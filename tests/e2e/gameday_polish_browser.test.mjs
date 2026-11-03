@@ -249,10 +249,22 @@ test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Sta
       const sel = await org.page.locator('#dbB').boundingBox();
       assert.ok(btn.y - (sel.y + sel.height) >= 12 || Math.abs(btn.y - sel.y) < sel.height, 'the doubles buttons are clear of the partner dropdowns');
       await goTab(org.page, 'Staff');
-      await org.page.locator('#stEmail').waitFor();
+      await org.page.locator('.people-directory-card').waitFor({timeout: T});
+      await org.page.locator('.people-row').first().waitFor({timeout: T});
       await spacing(org.page, `Staff @ ${vp}`);
-      const role = await org.page.locator('#stRole').boundingBox(), grant = await org.page.locator('button', {hasText: 'Grant access'}).boundingBox();
-      assert.ok(grant.y - (role.y + role.height) >= 14, `"Grant access" is clear of the Role dropdown (${grant.y - (role.y + role.height)}px)`);
+      if (vp === 'tablet') {
+        // Regression: Staff's narrower workspace must not keep the desktop four-column People grid.
+        const layout = await org.page.evaluate(() => {
+          const columns = getComputedStyle(document.querySelector('.people-row')).gridTemplateColumns.trim().split(' ').length;
+          return {columns, pageWidth: document.documentElement.scrollWidth, viewportWidth: window.innerWidth};
+        });
+        assert.equal(layout.columns, 2, 'People directory stacks into two columns at tablet width');
+        assert.ok(layout.pageWidth <= layout.viewportWidth + 1, `People directory tablet overflow: ${layout.pageWidth} > ${layout.viewportWidth}`);
+      }
+      const role = await org.page.locator('.people-role-control').first().boundingBox();
+      const save = await org.page.locator('.people-action-cell .primary').first().boundingBox();
+      assert.ok(role.x + role.width <= save.x + 2 || save.y >= role.y + role.height + 12,
+        `Staff Save is clear of the Role dropdown @ ${vp}`);
       await shot(org.page, `${vp}-staff`);
       await goTab(org.page, 'Match Desk');
       await org.page.locator('h2', {hasText: /Recent results/}).waitFor({timeout: T});
