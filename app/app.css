@@ -1109,7 +1109,7 @@ td.scores-cell{min-width:150px}
 .people-directory-card{padding:0;overflow:visible;min-width:0}
 .people-heading{padding:18px 20px;display:flex;gap:14px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
 .people-heading h2{margin:0}.people-heading .help{margin:4px 0 0}
-.people-controls{display:flex;align-items:center;flex-wrap:wrap;gap:7px}
+.people-controls{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
 .people-controls button{min-height:38px;padding:5px 12px;font-size:.86rem}
 .people-search-row{display:flex;gap:9px;padding:14px 20px;border-bottom:1px solid var(--line)}
 .people-search-row input{min-width:0;flex:1}
@@ -1152,7 +1152,8 @@ td.scores-cell{min-width:150px}
  .people-heading,.people-row{padding-left:14px;padding-right:14px}
  .people-colheads{padding-left:14px;padding-right:14px}
 }
-@media(max-width:780px){
+/* Staff People rows need the stacked layout throughout tablet widths: four columns overflow inside the Staff workspace. */
+@media(max-width:1050px){
  .people-colheads{display:none}
  .people-row{grid-template-columns:minmax(0,1fr) 130px;gap:12px 10px}
  .people-identity{grid-column:1/-1}
