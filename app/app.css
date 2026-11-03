@@ -1005,6 +1005,11 @@ td.scores-cell{min-width:150px}
   #app .topbar select#eventSelect{font-size:16px;line-height:1.35}
 }
 @media(max-width:760px){
+  /* Physical iPhone trace: event-specific intrinsic content makes the topbar
+     report 607px scrollWidth in a 430px page. Contain ONLY the header's
+     horizontal painting/scroll overflow; keep bracket/nav scrollers,
+     document pinch-zoom, and vertical focus/navigation behavior intact. */
+  #app .topbar{overflow-x:clip}
   #app .staff-workspace,#app main.content,
   #app .overview-page,#app .overview-content,#app .overview-main,
   #app .overview-settings,#app .overview-history,#app .events-card,
