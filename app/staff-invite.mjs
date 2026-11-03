@@ -4,7 +4,7 @@ import {PUBLISHABLE_KEY} from './config.mjs';
 import {$} from './dom.mjs';
 const jwt=/^[A-Za-z0-9_-]{2,}\.[A-Za-z0-9_-]{2,}\.[A-Za-z0-9_-]{2,}$/;
 const allowed=location.protocol==='https:'&&
-  (location.hostname==='fftt-staff.clslifestyle.com'||/^[a-z0-9-]+\.pages\.dev$/.test(location.hostname));
+  ['fftt-staff.clslifestyle.com','fftt-staff.pages.dev','fftt3-staff-stg.pages.dev'].includes(location.hostname);
 const fragment=new URLSearchParams(location.hash.slice(1));
 const type=fragment.get('type');
 let token=fragment.get('access_token');
