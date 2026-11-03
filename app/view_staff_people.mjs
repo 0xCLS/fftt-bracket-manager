@@ -6,7 +6,7 @@ export function createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDi
   const edits=new Map();
   const events=()=>s.events.filter(e=>e.role==='organizer');
   function pending(p) {
-    if(!edits.has(p.email)) edits.set(p.email,{selected:new Set(Object.keys(p.assignments)),
+    if(!edits.has(p.email)) edits.set(p.email,{selected:new Set(Object.keys(p.assignments).length ? Object.keys(p.assignments) : [s.eventId]),
       role:p.assignments[s.eventId]??Object.values(p.assignments)[0]??'scorekeeper'});
     return edits.get(p.email);
   }
