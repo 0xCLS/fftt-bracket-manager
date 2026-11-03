@@ -62,6 +62,44 @@ test('sign-in needs no event id; several events are chosen by NAME; no technical
       return m;
     }
     const initialWidth = await assertMobileWidth('initial event');
+    // iPhone recording: selecting an event briefly clears its snapshot;
+    // three stat chips vanish and the Overview becomes a short Loading pane.
+    // Recreate that read-only DOM state and assert stable header geometry.
+    const stableSwitch = await org.page.evaluate(() => {
+      const main = document.querySelector('#main');
+      const status = document.querySelector('#statusline');
+      const sidebar = document.querySelector('#app .staff-sidebar');
+      const picker = document.querySelector('#eventSelect');
+      const oldMain = [...main.childNodes], oldStatus = [...status.childNodes];
+      const measure = () => ({
+        sidebarBottom: sidebar.getBoundingClientRect().bottom,
+        pickerTop: picker.getBoundingClientRect().top,
+        docWidth: document.documentElement.scrollWidth,
+        viewport: document.documentElement.clientWidth,
+        loadingHeight: main.querySelector('.loading-state')?.getBoundingClientRect().height ?? 0
+      });
+      const ready = measure();
+      const loader = document.createElement('div');
+      loader.className = 'loading-state';
+      loader.textContent = 'Loading…';
+      try {
+        status.replaceChildren(...oldStatus.slice(0, 2));
+        main.replaceChildren(loader);
+        const loading = measure();
+        return {ready, loading};
+      } finally {
+        status.replaceChildren(...oldStatus);
+        main.replaceChildren(...oldMain);
+      }
+    });
+    assert.ok(Math.abs(stableSwitch.ready.sidebarBottom - stableSwitch.loading.sidebarBottom) <= 2,
+      'mobile sidebar must not stretch when a different event is loading');
+    assert.ok(Math.abs(stableSwitch.ready.pickerTop - stableSwitch.loading.pickerTop) <= 2,
+      'native event picker must not jump vertically during snapshot loading');
+    assert.ok(stableSwitch.loading.loadingHeight >= 844 - 1,
+      'loading pane holds the footer outside the iPhone viewport');
+    assert.ok(stableSwitch.loading.docWidth <= stableSwitch.loading.viewport + 1,
+      'loading state preserves the iPhone width correction');
     // In physical Safari an event-dependent native picker width caused
     // topbar.scrollWidth 607px while its box remained 430px. Simulate an
     // interior child wider than the phone and prove only the header contains
