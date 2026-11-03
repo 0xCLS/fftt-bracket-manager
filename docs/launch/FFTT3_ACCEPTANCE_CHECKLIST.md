@@ -35,7 +35,9 @@ Run on **real devices** after the cutover (and again, shorter, on Nov 8 and Nov 
 - [ ] TV at 1920×1080: readable from 5 m; no overflow with the longest registered name; it labels itself **stale** if the network drops and recovers by itself.
 - [ ] Phone (390 px): bracket scrolls horizontally inside its own area; the page itself does not scroll sideways.
 
-## 5. Flow to the end (rehearsal event, fictional names)
+## 5. Flow to the end (separate FFTT3 Rehearsal event, actual registered names; November 3 organizer update)
+
+Use a **private CSV import** of actual registered players into the separate rehearsal event, then check in November 8 attendees as they arrive. The Staff registration Function does **not** permit Google live loading on a new event unless its event ID is explicitly allowlisted and it has a separate enabled source; any such shared-configuration change requires distinct authorization. Do not check anyone into the **Nov 22 FFTT3** event while rehearsing. Use clearly simulated game results to finish the rehearsal; do not publish real names/results without Organizer approval. Earlier fictional-only acceptance wording is superseded for this rehearsal, but the isolation and security assertions still apply.
 - [ ] Bracket with byes → progression → consolation review (first-match losers) → consolation bracket → doubles finale (mixed-skill partners) → complete → export. Table conflicts are refused; the completed event is read-only except organizer corrections.
 - [ ] Private backup export after the final result restores in `restore_verify.mjs` (do on a laptop with the repo).
 
