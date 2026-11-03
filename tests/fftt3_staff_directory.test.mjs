@@ -33,7 +33,7 @@ test('unchecking a single event revokes only that scope; single role applies to 
   assert.deepEqual(planStaffChange(person,[EVENT_B],'bracket_manager',events).grant,[EVENT_B]);
   assert.throws(()=>planStaffChange(person,[EVENT_B,EVENT_B],'scorekeeper',events),/out-of-scope/);
   assert.throws(()=>planStaffChange(person,['cccccccc-cccc-4ccc-8ccc-cccccccccccc'],'organizer',events),/out-of-scope/);
-  assert.throws(()=>planStaffChange(person,[EVENT_B],'scorekeeper',[events[0]]),/unknown-existing-scope/);
+  assert.throws(()=>planStaffChange(person,[],'scorekeeper',[events[0]]),/unknown-existing-scope/);
 });
 
 test('client never sends privileged credentials, and refuses malformed response',async()=>{
