@@ -589,7 +589,12 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
   // ---------------------------------------------------------------- shared Staff & Access
   async function loadStaffDirectory() {
     if(s.role!=='organizer'||!s.signedIn)return {ok:false,message:'Organizer access is required.'};
-    s.staffDirectory={...s.staffDirectory,status:'loading',error:null,version:s.staffDirectory.version+1};emit();
+    const eventAtStart=s.eventId, requestVersion=s.staffDirectory.version+1;
+    // A late directory response must never restore private staff data after a sign-out,
+    // event switch, or newer load. clearPrivate() increments the generation.
+    const stillCurrent=()=>s.signedIn&&s.role==='organizer'&&s.eventId===eventAtStart
+      &&s.staffDirectory.version===requestVersion;
+    s.staffDirectory={...s.staffDirectory,status:'loading',error:null,version:requestVersion};emit();
     const manageable=s.events.filter(e=>e.role==='organizer'&&e.lifecycle!=='archived');
     try {
       const details=await session.authorized(async ctx=>{
@@ -610,10 +615,12 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
         } else directoryError='Account invitations require the protected Staff directory service.';
         return {snapshots,people,directoryError};
       },{wait:true});
+      if(!stillCurrent())return {ok:false,message:'The event or session changed during the directory request.'};
       s.staffDirectory={status:'ready',people:directoryFromSnapshots(manageable,details.snapshots,details.people),
         error:details.directoryError,version:s.staffDirectory.version+1};emit();
       return {ok:true};
     } catch(e) {
+      if(!stillCurrent())return {ok:false,message:'The event or session changed during the directory request.'};
       s.staffDirectory={status:'error',people:[],error:'Could not verify all event permissions. No changes can be saved until the directory loads.',
         version:s.staffDirectory.version+1};emit();
       return {ok:false,message:describeError(e)};
