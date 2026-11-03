@@ -62,6 +62,100 @@ $('signin').hidden = false;
 
 // ---- non-secret convenience: the last event, and an event link (?event=…)
 const params = new URLSearchParams(window.location.search);
+
+// Read-only iPhone layout trace. Enabled ONLY by ?layoutTrace=1, never sent to
+// a server, saved to storage or included in normal Staff UI. Records only
+// geometry, selected option ordinal, and generic element tags/classes.
+// This distinguishes Safari visual-viewport zoom from document overflow,
+// including the organizer's new top-of-list vs bottom-of-list observation.
+function installLayoutTrace() {
+  if (params.get('layoutTrace') !== '1') return;
+  const el = (tag, attrs = {}, text = '') => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    if (text) n.textContent = text;
+    return n;
+  };
+  const panel = el('details', {class: 'staff-layout-trace', 'aria-label': 'Staff layout diagnostics'});
+  const summary = el('summary', {}, 'Layout readings · tap to copy');
+  const help = el('p', {}, 'Read-only viewport measurements. No names, IDs, scores, credentials, or network uploads.');
+  const report = el('textarea', {readonly: '', 'aria-label': 'Layout diagnostic readings', spellcheck: 'false'});
+  const copy = el('button', {type: 'button'}, 'Copy readings');
+  const clear = el('button', {type: 'button'}, 'Clear');
+  panel.append(summary, help, report, copy, clear);
+  document.body.append(panel);
+  const picker = $('eventSelect');
+  const entries = [];
+  let start = Date.now();
+  const round = n => typeof n === 'number' && Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
+  const box = selector => {
+    const node = document.querySelector(selector);
+    if (!node || node.hidden || !node.getClientRects().length) return null;
+    const r = node.getBoundingClientRect();
+    return [round(r.left), round(r.right), round(r.width)];
+  };
+  function measure(tag) {
+    const doc = document.documentElement, vv = window.visualViewport;
+    const width = doc.clientWidth;
+    const over = [];
+    // Only identify elements by generic tag/first CSS class. Avoid all user
+    // text, URL, event identifiers, form values and private app state.
+    for (const node of document.querySelectorAll('#app *')) {
+      if (node.closest('.scroll-x, .bracket, .staff-layout-trace')) continue;
+      if (!node.getClientRects().length) continue;
+      const r = node.getBoundingClientRect();
+      if (r.right <= width + 2 || r.width <= 1) continue;
+      const className = node.classList?.[0];
+      const safeClass = /^[a-zA-Z][a-zA-Z0-9_-]{0,35}$/.test(className || '') ? '.' + className : '';
+      over.push({name: node.tagName.toLowerCase() + safeClass, right: round(r.right), width: round(r.width)});
+    }
+    over.sort((a, b) => b.right - a.right);
+    const selected = picker.selectedIndex < 0 ? 'none' : String(picker.selectedIndex + 1);
+    const snapshot = {
+      t: Date.now() - start, tag, pos: selected + '/' + picker.options.length,
+      inner: window.innerWidth, doc: width, scroll: doc.scrollWidth,
+      vv: vv ? [round(vv.width), round(vv.scale), round(vv.offsetLeft)] : null,
+      app: box('#app'), main: box('#main'), select: box('#eventSelect'),
+      date: box('#evDate'), off: over.slice(0, 4)
+    };
+    entries.push(JSON.stringify(snapshot));
+    if (entries.length > 35) entries.shift();
+    report.value = 'FFTT layout readings · local only · no personal data\n'
+      + entries.join('\n');
+  }
+  const measureLater = tag => [80, 350, 1100].forEach(ms => {
+    setTimeout(() => measure(tag + '+' + ms), ms);
+  });
+  picker.addEventListener('pointerdown', () => measure('picker-open'), {passive: true});
+  picker.addEventListener('focus', () => measure('picker-focus'), {passive: true});
+  picker.addEventListener('change', () => {
+    measure('picker-change'); measureLater('picker-change');
+  }, true);
+  let lastResize = 0;
+  const onResize = tag => {
+    if (Date.now() - lastResize < 180) return;
+    lastResize = Date.now(); measure(tag);
+  };
+  window.addEventListener('resize', () => onResize('window-resize'), {passive: true});
+  window.visualViewport?.addEventListener('resize', () => onResize('visual-resize'), {passive: true});
+  copy.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(report.value);
+      copy.textContent = 'Copied';
+    } catch {
+      report.focus();
+      report.select();
+      copy.textContent = 'Select and copy the text';
+    }
+  });
+  clear.addEventListener('click', () => {
+    entries.length = 0; start = Date.now(); measure('cleared');
+    copy.textContent = 'Copy readings';
+  });
+  measure('initial');
+}
+installLayoutTrace();
+
 const linked = params.get('event');
 // A link carries its event: use it. Otherwise nothing is typed: after sign-in the person chooses their event by name.
 if (linked && UUID.test(linked)) { $('eventId').value = linked; $('eventIdBox').open = true; }
