@@ -590,7 +590,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
   async function loadStaffDirectory() {
     if(s.role!=='organizer'||!s.signedIn)return {ok:false,message:'Organizer access is required.'};
     s.staffDirectory={...s.staffDirectory,status:'loading',error:null,version:s.staffDirectory.version+1};emit();
-    const manageable=s.events.filter(e=>e.role==='organizer');
+    const manageable=s.events.filter(e=>e.role==='organizer'&&e.lifecycle!=='archived');
     try {
       const details=await session.authorized(async ctx=>{
         const snapshots={};
