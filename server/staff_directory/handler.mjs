@@ -24,7 +24,7 @@ export function createStaffDirectoryHandler({env={},fetchImpl=fetch}={}) {
     const key=admin?SUPABASE_ADMIN_SECRET:SUPABASE_PUBLISHABLE_KEY;
     // The host is hard-pinned. No URL from the browser is ever used for server egress.
     const res=await fetchImpl(C3_HOST+path,{method,redirect:'manual',
-      headers:{apikey:key,Authorization:'Bearer '+(admin?key:token),Accept:'application/json',
+      headers:{apikey:key,...(admin&&key.startsWith('sb_secret_')?{}:{Authorization:'Bearer '+(admin?key:token)}),Accept:'application/json',
         ...(body===null?{}:{'Content-Type':'application/json'})},
       ...(body===null?{}:{body:JSON.stringify(body)})});
     return res;
