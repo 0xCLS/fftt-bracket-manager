@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {directoryFromSnapshots,planStaffChange} from '../contracts/staff_people.mjs';
 import {createStaffDirectoryClient, StaffDirectoryError} from '../contracts/staff_directory_client.mjs';
 import {createStaffDirectoryHandler} from '../server/staff_directory/handler.mjs';
+import {createStaffCore} from '../app/staff_core.mjs';
 import {C3_HOST} from '../contracts/phase1c_c3_readonly_supabase_transport.mjs';
 
 const EVENT_A='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -154,4 +155,25 @@ test('the approved People interface is integrated without removing event-scoped 
   assert.match(core,/api\.setStaff\(ctx\.token/);
   assert.match(staff,/createStaffDirectoryClient/);
   assert.doesNotMatch(staff,/SUPABASE_ADMIN_SECRET/);
+});
+
+test('stale directory load cannot repopulate private staff data after sign-out',async()=>{
+  let completeSnapshot;
+  const pendingSnapshot=new Promise(resolve=>{completeSnapshot=resolve;});
+  const core=createStaffCore({
+    session:{authorized:fn=>fn({token:TOKEN,eventId:EVENT_A})},
+    api:{organizerSnapshot:()=>pendingSnapshot},
+    peopleClient:{request:async()=>({people:[]})}
+  });
+  const s=core.state;
+  s.signedIn=true;s.role='organizer';s.eventId=EVENT_A;
+  s.events=[{eventId:EVENT_A,role:'organizer',lifecycle:'active'}];
+  const request=core.actions.loadStaffDirectory();
+  assert.equal(s.staffDirectory.status,'loading');
+  core.signedOut(); // clears private state and advances the directory generation
+  completeSnapshot({staff:[{email:EMAIL,role:'scorekeeper',active:true}]});
+  const result=await request;
+  assert.equal(result.ok,false,'superseded response is discarded');
+  assert.equal(s.staffDirectory.status,'idle');
+  assert.deepEqual(s.staffDirectory.people,[]);
 });
