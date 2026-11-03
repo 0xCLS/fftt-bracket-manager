@@ -65,7 +65,7 @@ test('sign-in needs no event id; several events are chosen by NAME; no technical
     // iPhone recording: selecting an event briefly clears its snapshot;
     // three stat chips vanish and the Overview becomes a short Loading pane.
     // Recreate that read-only DOM state and assert stable header geometry.
-    const stableSwitch = await org.page.evaluate(() => {
+    const measureSwitch = () => org.page.evaluate(() => {
       const main = document.querySelector('#main');
       const status = document.querySelector('#statusline');
       const sidebar = document.querySelector('#app .staff-sidebar');
@@ -74,6 +74,8 @@ test('sign-in needs no event id; several events are chosen by NAME; no technical
       const measure = () => ({
         sidebarBottom: sidebar.getBoundingClientRect().bottom,
         pickerTop: picker.getBoundingClientRect().top,
+        lastPillBottom: status.lastElementChild?.getBoundingClientRect().bottom ?? 0,
+        statusHeight: status.getBoundingClientRect().height,
         docWidth: document.documentElement.scrollWidth,
         viewport: document.documentElement.clientWidth,
         loadingHeight: main.querySelector('.loading-state')?.getBoundingClientRect().height ?? 0
@@ -92,6 +94,7 @@ test('sign-in needs no event id; several events are chosen by NAME; no technical
         main.replaceChildren(...oldMain);
       }
     });
+    const stableSwitch = await measureSwitch();
     assert.ok(Math.abs(stableSwitch.ready.sidebarBottom - stableSwitch.loading.sidebarBottom) <= 2,
       'mobile sidebar must not stretch when a different event is loading');
     assert.ok(Math.abs(stableSwitch.ready.pickerTop - stableSwitch.loading.pickerTop) <= 2,
@@ -100,6 +103,20 @@ test('sign-in needs no event id; several events are chosen by NAME; no technical
       'loading pane holds the footer outside the iPhone viewport');
     assert.ok(stableSwitch.loading.docWidth <= stableSwitch.loading.viewport + 1,
       'loading state preserves the iPhone width correction');
+    // At 430px the same five Organizer badges occupy two rows, not three.
+    // Ensure both the loaded and loading views stay aligned without a large
+    // gap before the event picker. Restore the 390px viewport for the rest.
+    await org.page.setViewportSize({width: 430, height: 844});
+    const compact430 = await measureSwitch();
+    assert.ok(Math.abs(compact430.ready.pickerTop - compact430.loading.pickerTop) <= 2,
+      '430px event picker stays steady during snapshot loading: ' + JSON.stringify(compact430));
+    assert.ok(compact430.ready.statusHeight <= 76,
+      '430px Organizer status uses at most two compact badge rows: ' + JSON.stringify(compact430));
+    assert.ok(compact430.ready.pickerTop - compact430.ready.lastPillBottom <= 44,
+      '430px Organizer has no oversized blank band before its event picker: ' + JSON.stringify(compact430));
+    assert.ok(compact430.loading.docWidth <= compact430.loading.viewport + 1,
+      '430px event reload does not reintroduce document overflow');
+    await org.page.setViewportSize({width: 390, height: 844});
     // In physical Safari an event-dependent native picker width caused
     // topbar.scrollWidth 607px while its box remained 430px. Simulate an
     // interior child wider than the phone and prove only the header contains
@@ -150,7 +167,27 @@ test('sign-in needs no event id; several events are chosen by NAME; no technical
     // one event only: entered directly, after a reload with the vault the person is not asked again
     const a = await w.device('a', {viewport: {width: 390, height: 844}, mobile: true});
     await a.signIn('a');
-    await a.page.locator('#statusline').waitFor({timeout: T});
+    await a.page.locator('#statusline .pill').first().waitFor({timeout: T});
+    // Scorekeeper with a single assigned event has no event picker. Its one
+    // or two status rows must not inherit the Organizer's 103px reservation.
+    await a.page.setViewportSize({width: 430, height: 844});
+    const scorekeeper430 = await a.page.evaluate(() => {
+      const line = document.querySelector('#statusline');
+      const header = document.querySelector('#app .topbar');
+      return {
+        pickerHidden: document.querySelector('#eventSwitch').hidden,
+        statusHeight: line.getBoundingClientRect().height,
+        trailingGap: header.getBoundingClientRect().bottom -
+          (line.lastElementChild?.getBoundingClientRect().bottom ?? 0),
+        documentWidth: document.documentElement.scrollWidth,
+        viewport: document.documentElement.clientWidth
+      };
+    });
+    assert.equal(scorekeeper430.pickerHidden, true, 'single-event Scorekeeper has no event picker');
+    assert.ok(scorekeeper430.statusHeight < 75 && scorekeeper430.trailingGap < 45,
+      'Scorekeeper header has no artificial status-row gap: ' + JSON.stringify(scorekeeper430));
+    assert.ok(scorekeeper430.documentWidth <= scorekeeper430.viewport + 1,
+      'Scorekeeper mobile header stays within the viewport');
     // cancelling a choice leaves nothing signed in
     const again = await w.device('org2');
     await again.signIn('org');
