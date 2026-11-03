@@ -295,12 +295,16 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
       assert.ok(reqs.every(r => r.path === '/rest/v1/fftt_public_tournament_v1' && r.auth === false), `${dev.name} uses only the anonymous public view`);
     }
 
-    // ---------------------------------------------------------------- revocation: the organizer removes scorekeeper B; B's phone is signed out
+    // ---------------------------------------------------------------- revocation: unchecking B's event and saving removes only that event grant.
     await goTab(org.page, 'Staff');
-    const row = org.page.locator('tr', {hasText: w.accounts.b[0]});
-    await row.locator('button', {hasText: 'Revoke'}).click();
-    await org.page.locator('dialog[open] button', {hasText: 'Revoke'}).click();
-    await waitToast(org.page, /Access revoked/);
+    const row = org.page.locator('.people-row', {hasText: w.accounts.b[0]});
+    await row.waitFor({timeout: T});
+    await row.locator('.people-event-dropdown summary').click();
+    await row.locator('.people-event-menu input[type=checkbox]').first().uncheck();
+    await row.locator('.people-action-cell button', {hasText: 'Save'}).click();
+    await org.page.locator('dialog[open]', {hasText: 'Save staff assignments?'}).waitFor();
+    await org.page.locator('dialog[open] button', {hasText: 'Save changes'}).click();
+    await waitToast(org.page, /Event access updated/);
     await b.page.locator('#signin:not([hidden])').waitFor({timeout: 20000});
     assert.match(await b.page.locator('#signInStatus').textContent(), /access ended|session ended/i);
     assert.equal(await b.page.locator('.queue-card').count(), 0, 'private rows are gone');
