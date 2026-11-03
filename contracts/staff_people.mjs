@@ -11,7 +11,7 @@ export function directoryFromSnapshots(events, snapshots, remote = []) {
     byEmail.set(email, {email, name: entry.name.trim() || email, verified: entry.verified === true,
       provisioned: entry.provisioned === true, assignments: {}});
   }
-  const valid = new Set(events.filter(e => e.role === 'organizer').map(e => e.eventId));
+  const valid = new Set(events.filter(e => e.role === 'organizer' && e.lifecycle !== 'archived').map(e => e.eventId));
   for (const [eventId, snap] of Object.entries(snapshots)) {
     if (!valid.has(eventId)) continue;
     for (const member of snap?.staff ?? []) {
@@ -32,7 +32,7 @@ export function directoryFromSnapshots(events, snapshots, remote = []) {
 export function planStaffChange(person, selected, role, manageableEvents) {
   if (!STAFF_ROLES.includes(role)) throw new Error('invalid-role');
   if (!Array.isArray(selected) || !Array.isArray(manageableEvents)) throw new Error('invalid-events');
-  const allowed = new Set(manageableEvents.filter(e=>e.role==='organizer').map(e=>e.eventId));
+  const allowed = new Set(manageableEvents.filter(e=>e.role==='organizer'&&e.lifecycle!=='archived').map(e=>e.eventId));
   const target = new Set(selected);
   if (target.size !== selected.length || [...target].some(id=>!allowed.has(id))) throw new Error('out-of-scope');
   const current = person?.assignments ?? {};
