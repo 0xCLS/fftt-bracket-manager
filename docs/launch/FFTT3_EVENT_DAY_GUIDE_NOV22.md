@@ -9,7 +9,7 @@ One page per role. Keep it short; follow it literally. **During normal online pl
 * **Owner (on call):** Cloudflare/Supabase/Google access for emergencies only.
 
 ## T-60 min (noon) — Organizer
-1. Sign in; open **FFTT3** (the real event, not the rehearsal). Check date, **2 tables** (Organizer confirms permanent access to both), and match formats on Overview. Public view must read **off**. The church venue is secured for November 22; November 8 room/building entry is a separate rehearsal checkpoint.
+1. Sign in; open **FFTT3** (the real event, not the rehearsal). Check date, **2 tables** (Organizer confirms permanent access to both), and match formats on Overview. Public view must read **off**. The church venue is secured for November 22; November 8 room/building access was separately confirmed November 2, with remaining setup coordination still to verify.
 2. Players → **Load registrations**. Resolve duplicate groups ("Same person" / "Different people"). Confirm every suggested level that you agree with; edit the rest. Names are full first + last.
 3. **Take a private backup** (hosted export query → private file → `restore_verify.mjs`) and keep it open on the laptop.
 4. Scorekeepers sign in and open Match Desk; confirm each sees only Match Desk.
@@ -62,4 +62,4 @@ Results & Export → **Private backup** (the app's own download; it contains lev
 4. After final reconciliation and with Organizer approval, the owner may return `REGISTRATION_GOOGLE_MODE` to `diagnostic` if no further registration reads are required. Treat this as a shared Cloudflare service change: record the decision, verify the Staff Function, and do **not** toggle it during a fictional rehearsal.
 
 ## Numbers to remember
-Event: Sunday Nov 22, 1:00 PM. Rehearsal: Nov 8, 10:00 AM. Formats: regular Bo3 to 11; championship final defaults to Bo3 to 11 (confirm approved format; only Bo1/Bo3 selectable); consolation single game to 21; doubles Bo3 to 11. Levels 1–5 are private (never shown publicly).
+Event: Sunday Nov 22, 1:00 PM. Rehearsal: Nov 8, 1:00 PM EST. Formats: regular Bo3 to 11; championship final defaults to Bo3 to 11 (confirm approved format; only Bo1/Bo3 selectable); consolation single game to 21; doubles Bo3 to 11. Levels 1–5 are private (never shown publicly).
