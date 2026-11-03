@@ -2,10 +2,17 @@
 
 **Purpose:** prove the real venue, real devices, real Wi-Fi and the real people work end to end **using fictional players only**. The rehearsal is **not** a dress rehearsal with real registrants. **The Organizer has permanent access to both physical tables; use two tables for the new fictional rehearsal event.** The November 22 venue is secured. **November 8 rehearsal room access was confirmed by the Organizer on November 2, along with the corrected 1:00 PM start**; coordinate any additional opening/setup details as necessary. This supersedes the prior 10:00 AM start and room-access uncertainty.
 
+## November 3 production-release and authorization boundary
+
+- **Production Staff:** https://fftt-staff.clslifestyle.com/ · **Spectator:** https://fftt-games.clslifestyle.com/ · **Homepage:** https://fftt.clslifestyle.com/
+- PR #43 is **merged into PR #22's feature branch**, deployed to Staff production at `3a37976e3b31320ab79b7943aec92ba833dfd50e`; full CI, 34/34 asset hashes and security checks passed. Organizer verified all three mobile issues fixed on a real iPhone. **PR #22 remains draft/unmerged into application main.** Do not repeat the completed mobile work without new evidence.
+- Three November 22 scorers are confirmed (Maydis Skeete, J'Mae Ferguson, Laura Nhiwatiwa); **their November 8 attendance and individual authenticated grants are not confirmed.** Debbie Young's November 22 Bracket Manager role is confirmed, but her identity/grant needs separate authorization. **Do not provision anyone or create the fictional event merely because this checklist exists.**
+- Keep the public FFTT3 event and actual registrations unchanged. At the rehearsal, first verify the explicitly authorized host, fixture, accounts, public-view policy and test operator. All physical device/network/TV/fallback gates are still **NOT TESTED** as of November 3.
+
 ## Ground rules
 * Use a **separate rehearsal event** created in the Staff app (name it `REHEARSAL — fictional — Nov 8`). Add only fictional names (e.g., Ada Quill, Ben Marlow) as walk-ins. **Do not** enable the Google source on it and **do not** put fictional people into the real FFTT3 event.
 * The real FFTT3 event may be **opened** (read-only: Players → Load registrations to eyeball names and suggested levels) but **nobody is checked in** and nothing is published.
-* Public visibility on the rehearsal event may be turned on to test the TV/spectator view; turn it off and **archive** the event afterwards. Archive keeps the audit trail (nothing is deleted).
+* Public visibility on the rehearsal event may be turned on only with the Organizer's explicit fictional-fixture approval; turn it off afterwards. **Archive only after Organizer review/authorization**. Archive keeps the audit trail (nothing is deleted).
 * If anything fails, write down the exact message and time; do not improvise fixes on the real event.
 
 ## Bring
@@ -38,7 +45,7 @@ Organizer laptop + charger; two scorekeeper phones (different people, different 
 - [ ] Download the **private backup** from Results & Export and the results text/CSV; open both.
 
 ## 3:00 PM — close out (proposed timing, not a confirmed end time)
-- [ ] Hide the rehearsal event from the public, archive it. Take a private backup. Write down: Wi-Fi sign-in times, any message that confused a volunteer, what to print/bring differently.
+- [ ] Hide the rehearsal event from the public; **archive only if the Organizer has reviewed and approved closing that fictional fixture**. Take a private backup. Write down: Wi-Fi sign-in times, any message that confused a volunteer, what to print/bring differently.
 - [ ] Decide go/no-go items for Nov 22: staff list and devices ready, the confirmed **2-table configuration** visible on the real event Overview, match formats agreed, and publication policy for real names (spectator notice) decided by the Organizer.
 
 ## Evidence to keep (no participant data)
