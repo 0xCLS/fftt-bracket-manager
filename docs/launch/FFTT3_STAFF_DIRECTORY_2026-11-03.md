@@ -1,6 +1,14 @@
 # FFTT3 — Staff & Access implementation, November 3, 2026
 
-Status (November 3): PR #44 was integrated into the production-compatible PR #22 feature branch as merge `2bde67269b734bb4fb0735fe5b797d305486beab`. Exact PR #44 head `e1e5bab26425789d92fabae40e0f086a300192e3` passed full GitHub CI run `41692239176`. This is source integration, NOT a production deployment or authorization for staff grants. PR #22 remains draft/unmerged to `main`.
+Status (November 3): PR #44 was integrated into the production-compatible PR #22 feature branch as merge `2bde67269b734bb4fb0735fe5b797d305486beab`. Exact PR #44 head `e1e5bab26425789d92fabae40e0f086a300192e3` passed full GitHub CI run `41692239176`. The first, fail-closed Staff-only production stage was deployed as recorded below; no individual staff grants were authorized or changed. PR #22 remains draft/unmerged to `main`.
+
+## November 3 first-stage production release — protected activation pending
+
+- Staff-only production deployed from exact source `9686ce23e5422f12b1ff0e1757046e207e7cf9e3` as Cloudflare deployment `f6b1ed25-c466-4e37-a67a-d7ca825e0f53`. Previous good rollback deployment `2430fcd7-ab32-465d-b02b-cb8ec7965c18` (source `3a37976e3b31320ab79b7943aec92ba833dfd50e`). Source differs from CI-tested PR #44 tree only in this documentation.
+- The sanitized export includes People and the invitation callback. Both `registrations` and `staff-directory` Pages Functions and dependencies compiled and deployed from the clean source. All 39 served asset hashes, live manifest, security headers, private-path denials, callback route and existing registration GET 405 / token-less POST 401 passed; Staff sign-in controls initialized without credentials. Staff directory returned fail-closed 503 `not-configured` and its server source paths returned 404. Spectator manifest and homepage bytes matched pre-release baselines; Spectator directory POST returned 405.
+- Focused fictional tests: 13/13 directory unit checks and the phone/tablet/desktop Organizer UI and accessibility audit passed. These do not establish authenticated production acceptance.
+- **Pending activation:** `SUPABASE_ADMIN_SECRET` was not available or installed; the connected Supabase account exposed only an unrelated project. The FFTT Auth callback allowlist, invite template and public-signup setting could not be verified. `STAFF_INVITE_REDIRECT_ENABLED` remains unset; invitation delivery, password setup, independently controlled identity and event grant/revoke/removal testing remain unverified. Existing Organizer sign-in and Google registration access were not exercised with credentials. Do not enable invitations until the exact FFTT project, redirect, template, protected endpoint and controlled identity are verified. No staging environment was created.
+- The People screen can show existing event access from authorized snapshots but account invitations and directory removal remain unavailable while the protected service is unconfigured. No real account, grant, tournament record or registration was modified. PR #22 remains draft/unmerged.
 
 ## Approved user experience
 
