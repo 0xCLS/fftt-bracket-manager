@@ -15,7 +15,7 @@
 4. For an actual FFTT3 grant, require the Organizer's explicit confirmation of **the named volunteer and the target event**. Do not use the completed October 25 fictional tournament as an access test. Use a **new, separate fictional rehearsal event** to test permissions before real-event authorization.
 
 ## Stage B — event-specific grant
-1. Organizer signs in at `https://fftt3-staff-stg.pages.dev/app/staff`, chooses the **intended event by name**, then opens the **Staff** tab.
+1. After separate permission to grant access, Organizer signs in on the **correct Staff host** for the intended event: production `https://fftt-staff.clslifestyle.com/app/staff`, or `https://fftt3-staff-stg.pages.dev/app/staff` only if the authorized fictional fixture is actually on staging. Verify the host **and intended event by name** before opening the **Staff** tab. Staging authorization is not production authorization.
 2. Choose **Grant access** for the verified, confirmed individual Auth e-mail. Select **Scorekeeper** (not Organizer). Grant only for that event.
 3. Verify the event's Staff list reflects precisely the intended identities and roles. If it does not, **stop** and investigate; do not guess or grant broadly.
 4. Repeat independently for the second confirmed volunteer.
