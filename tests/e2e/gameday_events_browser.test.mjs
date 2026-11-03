@@ -95,7 +95,7 @@ test('sign-in needs no event id; several events are chosen by NAME; no technical
     assert.ok(Math.abs(stableSwitch.ready.sidebarBottom - stableSwitch.loading.sidebarBottom) <= 2,
       'mobile sidebar must not stretch when a different event is loading');
     assert.ok(Math.abs(stableSwitch.ready.pickerTop - stableSwitch.loading.pickerTop) <= 2,
-      'native event picker must not jump vertically during snapshot loading');
+      'native event picker must not jump vertically during snapshot loading: ' + JSON.stringify(stableSwitch));
     assert.ok(stableSwitch.loading.loadingHeight >= 844 - 1,
       'loading pane holds the footer outside the iPhone viewport');
     assert.ok(stableSwitch.loading.docWidth <= stableSwitch.loading.viewport + 1,
