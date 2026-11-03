@@ -1075,3 +1075,25 @@ td.scores-cell{min-width:150px}
 .staff-layout-trace textarea{display:block;width:100%;height:170px;max-width:100%;
   font:16px/1.25 ui-monospace,monospace;white-space:pre;resize:vertical}
 .staff-layout-trace button{font-size:13px;min-height:35px;padding:6px 12px;margin:8px 8px 0 0}
+
+/* 2026-11-03 iPhone event switching: the selected event's snapshot is cleared
+   before its new snapshot arrives. With the short Loading pane, the mobile
+   shell's implicit grid rows used to share spare height and shift the whole
+   header down. Fix row sizing, not the browser's scroll/zoom behavior. */
+@media(max-width:800px){
+  #app.shell{grid-template-rows:max-content minmax(0,1fr);align-content:start}
+  /* Keep the footer off-screen while fresh event-specific data loads. */
+  #app .loading-state{min-height:100dvh}
+}
+@media(max-width:520px){
+  /* The temporary absence of three event-stat pills must not move the picker. */
+  /* Keep both grid tracks anchored to the header's top edge. Grid's normal
+     align-content can stretch rows when the event's pane is temporarily
+     empty, making the picker appear to leap down then snap back. */
+  #app .topbar{align-content:start;flex:0 0 auto}
+  /* The real 390px-ready state occupies three pill rows (103px), while
+     the loading state only has two. Reserve all three rows at phone widths
+     so the native picker keeps its vertical position during event changes. */
+  #app .statusline{min-height:103px;align-content:flex-start}
+  #app .event-switch{align-self:start}
+}
