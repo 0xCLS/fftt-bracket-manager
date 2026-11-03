@@ -7,6 +7,7 @@ import {suggestPartners, enginePlayers, seedSlots, roundName, partnerCandidates,
 import {normalizeSnapshotMatches, standingsFromSnapshot, resultsText, matchesCsv} from './exports.mjs';
 import {createPlayersView, levelShield} from './view_players.mjs';
 import {createEventsView} from './view_events.mjs';
+import {createStaffPeopleView} from './view_staff_people.mjs';
 import {scoreTiles} from './game_tiles.mjs';
 
 const ORGANIZER_TABS = [['overview', 'Overview'], ['players', 'Players'], ['championship', 'Championship'],
@@ -625,7 +626,7 @@ export function createStaffUi({core, els, config, signOut}) {
   }
 
   // ------------------------------------------------------------ Staff
-  function viewStaff() {
+  function legacyEventStaff() {
     const sn = s.snapshot;
     if (!sn) return loading();
     const email = h('input', {type: 'email', id: 'stEmail', autocapitalize: 'none', autocomplete: 'off', placeholder: 'volunteer@example.org', 'data-draft': 'stEmail'});
@@ -641,6 +642,9 @@ export function createStaffUi({core, els, config, signOut}) {
         h('h2', {id: 'grantTitle', class: 'card-title', text: 'Give an existing account access'}), h('label', {for: 'stEmail', text: 'Account e-mail'}), email, h('label', {for: 'stRole', text: 'Role'}), role,
         h('div', {class: 'row'}, h('button', {class: 'primary', type: 'submit', disabled: !core.canWrite(), text: 'Grant access'}))));
   }
+
+  // One permanent People directory replaces the old per-event list and separate grant form.
+  const viewStaff = createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDialog,rerender:()=>render(true)});
 
   // ------------------------------------------------------------ render loop
   const views = {overview: viewOverview, players: viewPlayers, championship: viewChampionship, consolation: viewConsolation,
@@ -679,7 +683,8 @@ export function createStaffUi({core, els, config, signOut}) {
       s.brief?.lifecycle, s.deskStatus, s.pending?.submissionId, s.score.status,
       s.events.map(e => e.eventId + e.lifecycle + e.players + e.deletable).join(), s.audit?.length, s.busy,
       s.registrations.status, s.registrations.at, s.registrationSettings.status, s.registrationSettings.busy, s.registrationSettings.source?.updatedAt,
-      s.registrationSettings.inspect?.spreadsheetId, s.registrationSettings.diagnostic?.checks.map(c => c.status).join(), s.registrationSettings.capabilities?.googleMode]);
+      s.registrationSettings.inspect?.spreadsheetId, s.registrationSettings.diagnostic?.checks.map(c => c.status).join(), s.registrationSettings.capabilities?.googleMode,
+      s.staffDirectory.version]);
     if (!force && paneKey === lastPaneKey) { syncConnectionGuard(); return; }
     const active = document.activeElement;
     // typing: text being entered (15 s); a drop-down only protects its own just-made choice for a moment (2 s)
@@ -698,7 +703,7 @@ export function createStaffUi({core, els, config, signOut}) {
       desk: 'Assign tables and submit server-verified match scores.',
       finale: 'Pair finalists with selected consolation players.',
       results: 'Review standings, publish results and export private backups.',
-      staff: 'Manage organizer-approved roles for this event.'}[tab];
+      staff: 'Manage staff accounts and event-specific assignments.'}[tab];
     fill(els.main, title && s.signedIn ? h('div', {},
       h('header', {class: 'section-intro'},
         h('div', {class: 'feature-overline'}, h('span', {class: 'feature-spark', 'aria-hidden': 'true'}), 'FORGING FELLOWSHIP · TOURNAMENT DESK'),
