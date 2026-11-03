@@ -16,7 +16,7 @@ function safeName(value) {
   return v.length>=2&&v.length<=120&&!/[\r\n<>{}\u0000-\u001f]/.test(v)?v:null;
 }
 export function createStaffDirectoryHandler({env={},fetchImpl=fetch}={}) {
-  const {STAFF_ORIGIN, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_ADMIN_SECRET}=env;
+  const {STAFF_ORIGIN, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_ADMIN_SECRET, STAFF_INVITE_REDIRECT_ENABLED}=env;
   const configured=ORIGIN.test(STAFF_ORIGIN??'')&&SUPABASE_URL===C3_HOST
     &&/^sb_publishable_[A-Za-z0-9_-]{8,}$/.test(SUPABASE_PUBLISHABLE_KEY??'')
     &&typeof SUPABASE_ADMIN_SECRET==='string'&&SUPABASE_ADMIN_SECRET.length>32;
@@ -99,7 +99,11 @@ export function createStaffDirectoryHandler({env={},fetchImpl=fetch}={}) {
       }
       let status='existing';
       if(!user){
-        const r=await request('/auth/v1/invite',null,'POST',{email,data:{name:body.name}},true);
+        // An incorrect Auth redirect silently falls back to the Supabase Site URL. Gate until the allowed
+        // Staff invite callback URL has been verified in Supabase Auth redirect settings.
+        if(STAFF_INVITE_REDIRECT_ENABLED!=='true')throw err(503,'invite-not-configured');
+        const target=STAFF_ORIGIN+'/app/staff-invite.html';
+        const r=await request('/auth/v1/invite?redirect_to='+encodeURIComponent(target),null,'POST',{email,data:{name:body.name}},true);
         if(r.status===429)throw err(429,'rate-limited');
         if(r.status!==200)throw err(503,'invite-not-confirmed');
         try{user=await r.json();}catch{throw err(503,'invite-not-confirmed');}
