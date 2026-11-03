@@ -11,6 +11,7 @@ import {createMilestone1EmailCodeRecovery} from '../contracts/milestone1_email_c
 import {createGamedayApi} from '../contracts/gameday_api.mjs';
 import {createGamedayScoreTransport} from '../contracts/gameday_score_transport.mjs';
 import {createRegistrationClient} from '../contracts/registration_client.mjs';
+import {createStaffDirectoryClient} from '../contracts/staff_directory_client.mjs';
 import {createStaffCore, createPendingLedger, POLL_MS} from './staff_core.mjs';
 import {createStaffUi} from './staff_ui.mjs';
 import {PUBLISHABLE_KEY} from './config.mjs';
@@ -225,12 +226,13 @@ if (networkAllowed) {
   const api = createGamedayApi({publishableKey: PUBLISHABLE_KEY, fetchImpl});
   const scoreTransport = createGamedayScoreTransport({publishableKey: PUBLISHABLE_KEY, fetchImpl});
   const registrationClient = createRegistrationClient({fetchImpl});   // same-origin, organizer-only, read-only
+  const peopleClient = createStaffDirectoryClient({fetchImpl});   // same-origin; administrative actions remain server-gated
   session = createMilestone1PasswordStaffSession({transport, isOnline: () => navigator.onLine, vault, allowTabPersistence: ALLOW_TAB_PERSISTENCE,
     listEvents: ({token}) => api.myEvents(token, {})});
   recovery = createMilestone1EmailCodeRecovery({transport, adopt: session.adoptVerifiedSession});
   let storage = null; try { storage = window.localStorage; } catch { storage = null; }
   const ledger = createPendingLedger(storage ?? {getItem: () => null, setItem: () => { throw new Error('no storage'); }, removeItem: () => {}});
-  core = createStaffCore({session, api, scoreTransport, registrationClient, ledger, isOnline: () => navigator.onLine, onChange: () => {
+  core = createStaffCore({session, api, scoreTransport, registrationClient, peopleClient, ledger, isOnline: () => navigator.onLine, onChange: () => {
     if (!core.state.signedIn && !$('app').hidden) { showSignIn(core.state.endedReason ?? 'Your session ended. Please sign in again.', 'bad'); return; }
     ui?.render();
   }});
