@@ -96,6 +96,20 @@ test('scorer and non-platform organizer cannot invite or browse directory',async
   }
 });
 
+test('new invitations are disabled until the exact Staff redirect has been verified',async()=>{
+  const mock=fake(),app=createStaffDirectoryHandler({env:{...config,STAFF_INVITE_REDIRECT_ENABLED:'false'},fetchImpl:mock.fetchImpl});
+  const res=await app(makeRequest('add',{email:EMAIL,name:'Volunteer Name'}));
+  assert.equal(res.status,503);
+  assert.equal(mock.hits.filter(x=>x.path==='/auth/v1/invite').length,0);
+});
+
+test('an arbitrary Pages domain cannot be configured as the privileged Staff directory host',async()=>{
+  const mock=fake(),app=createStaffDirectoryHandler({env:{...config,STAFF_ORIGIN:'https://unrelated.pages.dev'},fetchImpl:mock.fetchImpl});
+  const res=await app(makeRequest('list'));
+  assert.equal(res.status,503);
+  assert.deepEqual(mock.hits,[]);
+});
+
 test('approved owner can invite, then directory-tag without adding event role',async()=>{
   const mock=fake(),app=createStaffDirectoryHandler({env:config,fetchImpl:mock.fetchImpl});
   const response=await app(makeRequest('add',{email:EMAIL,name:'Volunteer Name'}));
