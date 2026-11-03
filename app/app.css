@@ -1087,7 +1087,12 @@ td.scores-cell{min-width:150px}
 }
 @media(max-width:520px){
   /* The temporary absence of three event-stat pills must not move the picker. */
+  /* Keep both grid tracks anchored to the header's top edge. Grid's normal
+     align-content can stretch rows when the event's pane is temporarily
+     empty, making the picker appear to leap down then snap back. */
+  #app .topbar{align-content:start;flex:0 0 auto}
   #app .statusline{min-height:66px;align-content:flex-start}
+  #app .event-switch{align-self:start}
 }
 @media(max-width:360px){
   #app .statusline{min-height:103px}
