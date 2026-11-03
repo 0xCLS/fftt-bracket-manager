@@ -1138,7 +1138,7 @@ td.scores-cell{min-width:150px}
 .people-event-option small{display:block;font-size:.72rem;color:var(--muted)}
 .people-event-menu>.help{padding:9px 6px 3px;border-top:1px solid var(--line);font-size:.72rem}
 .people-role-control{min-width:0;max-width:100%;font-size:.85rem}
-.people-action-cell{display:flex;align-items:center;justify-content:flex-end;gap:5px;white-space:nowrap}
+.people-action-cell{display:flex;align-items:center;justify-content:flex-end;gap:7px;white-space:nowrap}
 .people-action-cell button{flex:none}
 .people-action-cell .small{min-width:60px;font-size:.84rem}
 .people-remove{min-width:38px;width:38px;min-height:42px;height:42px;padding:0;border-radius:6px;border-color:transparent;background:transparent;color:#798592;font-size:1.35rem;font-weight:400}
@@ -1174,7 +1174,7 @@ td.scores-cell{min-width:150px}
  .people-avatar{width:37px;height:37px}
  .people-identity{gap:8px}
  .people-identity .pill{margin-left:auto}
- .people-action-cell{gap:2px}
+ .people-action-cell{gap:6px}
  .people-action-cell .small{min-width:58px;padding:6px 11px}
  .people-remove{min-width:40px}
 }
