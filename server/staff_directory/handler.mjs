@@ -6,7 +6,7 @@ import {C3_HOST} from '../../contracts/phase1c_c3_readonly_supabase_transport.mj
 const JWT=/^[A-Za-z0-9_-]{2,}\.[A-Za-z0-9_-]{2,}\.[A-Za-z0-9_-]{2,}$/;
 const UUID=/^[0-9a-f]{8}-[0-9a-f-]{27,36}$/i;
 const EMAIL=/^[^@\s<>]{1,64}@[^@\s<>]{1,190}$/;
-const ORIGIN=/^https:\/\/(?:[a-z0-9-]+\.pages\.dev|fftt-staff\.clslifestyle\.com)$/;
+const ORIGIN=/^https:\/\/(?:fftt-staff\.clslifestyle\.com|fftt-staff\.pages\.dev|fftt3-staff-stg\.pages\.dev)$/;
 const cors=origin=>({'content-type':'application/json','cache-control':'no-store','vary':'Origin',
   'access-control-allow-origin':origin});
 const reply=(status,code,origin,extra={})=>new Response(JSON.stringify({code,...extra}),{status,headers:cors(origin)});
