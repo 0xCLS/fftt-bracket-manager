@@ -252,6 +252,15 @@ test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Sta
       await org.page.locator('.people-directory-card').waitFor({timeout: T});
       await org.page.locator('.people-row').first().waitFor({timeout: T});
       await spacing(org.page, `Staff @ ${vp}`);
+      if (vp === 'tablet') {
+        // Regression: Staff's narrower workspace must not keep the desktop four-column People grid.
+        const layout = await org.page.evaluate(() => {
+          const columns = getComputedStyle(document.querySelector('.people-row')).gridTemplateColumns.trim().split(/\\s+/).length;
+          return {columns, pageWidth: document.documentElement.scrollWidth, viewportWidth: window.innerWidth};
+        });
+        assert.equal(layout.columns, 2, 'People directory stacks into two columns at tablet width');
+        assert.ok(layout.pageWidth <= layout.viewportWidth + 1, `People directory tablet overflow: ${layout.pageWidth} > ${layout.viewportWidth}`);
+      }
       const role = await org.page.locator('.people-role-control').first().boundingBox();
       const save = await org.page.locator('.people-action-cell .primary').first().boundingBox();
       assert.ok(role.x + role.width <= save.x + 2 || save.y >= role.y + role.height + 12,
