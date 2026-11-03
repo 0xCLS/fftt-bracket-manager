@@ -1,0 +1,123 @@
+/** One full-width People card. Auth state is read-only; event grants are server-authoritative. */
+import {STAFF_ROLES, planStaffChange} from '../contracts/staff_people.mjs';
+const roleLabel={scorekeeper:'Scorekeeper',bracket_manager:'Bracket Manager',organizer:'Organizer'};
+export function createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDialog,rerender}) {
+  let layout='people', query='';
+  const edits=new Map();
+  const events=()=>s.events.filter(e=>e.role==='organizer');
+  function pending(p) {
+    if(!edits.has(p.email)) edits.set(p.email,{selected:new Set(Object.keys(p.assignments)),
+      role:p.assignments[s.eventId]??Object.values(p.assignments)[0]??'scorekeeper'});
+    return edits.get(p.email);
+  }
+  function addModal(){
+    openDialog((dlg,close)=>{
+      const name=h('input',{type:'text',required:true,maxlength:120,autocomplete:'name',placeholder:'Full name'});
+      const email=h('input',{type:'email',required:true,autocomplete:'email',autocapitalize:'none',placeholder:'volunteer@example.org'});
+      const status=h('p',{class:'status','aria-live':'polite'});
+      const submit=h('button',{type:'submit',class:'primary',text:'Find or invite staff member'});
+      const form=h('form',{class:'dlg',on:{submit:async ev=>{
+        ev.preventDefault();if(!name.value.trim()||!email.validity.valid){status.textContent='Enter a name and a valid email.';return;}
+        submit.disabled=true;status.textContent='Verifying the account and invitation…';
+        const r=await core.actions.addStaffPerson(name.value,email.value);
+        if(r.ok){result(r,'Staff member added to the directory.');edits.clear();close();rerender();}
+        else{status.textContent=r.message??'Account setup was not confirmed. No event access was granted.';submit.disabled=false;}
+      }}},
+      h('h3',{text:'Add staff member'}),h('p',{class:'help',text:'One account works across events. Invitations require the protected Organizer service; no event role is granted automatically.'}),
+      h('label',{},'Name'),name,h('label',{},'Email'),email,status,
+      h('div',{class:'dlg-actions'},h('button',{type:'button',text:'Cancel',on:{click:close}}),submit));
+      dlg.append(form);
+    },{label:'Add staff member'});
+  }
+  function personRow(p) {
+    const d=pending(p), available=events();
+    const change=()=>{
+      const plan=planStaffChange(p,[...d.selected],d.role,available);
+      return plan;
+    };
+    const summary=h('span',{class:'people-event-summary-text',text:d.selected.size===0?'No events':
+      [...d.selected].map(id=>available.find(e=>e.eventId===id)?.name??'Event').join(', ')});
+    const menu=h('div',{class:'people-event-menu'},
+      h('p',{class:'people-event-heading',text:'ASSIGNED EVENTS'}),
+      available.map(e=>h('label',{class:'people-event-option'},
+        h('input',{type:'checkbox',checked:d.selected.has(e.eventId),on:{change:ev=>{
+          if(ev.target.checked)d.selected.add(e.eventId);else d.selected.delete(e.eventId);
+          summary.textContent=d.selected.size?[...d.selected].map(id=>available.find(a=>a.eventId===id)?.name??'Event').join(', '):'No events';
+          save.disabled=!change().changed||!p.verified||!core.canWrite();
+        }}}),
+        h('span',{},h('strong',{text:e.name}),h('small',{text:e.date})))),
+      h('p',{class:'help',text:'Uncheck an event and Save to revoke only that event’s access.'}));
+    const details=h('details',{class:'people-event-dropdown'},
+      h('summary',{'aria-label':'Events assigned to '+p.name},summary,h('span',{'aria-hidden':'true',text:'▾'})),menu);
+    const role=h('select',{'aria-label':'Role for '+p.name,class:'people-role-control',on:{change:ev=>{
+      d.role=ev.target.value;save.disabled=!change().changed||!p.verified||!core.canWrite();
+    }}},STAFF_ROLES.map(v=>h('option',{value:v,selected:d.role===v,text:roleLabel[v]})));
+    const save=h('button',{type:'button',class:'small primary',text:'Save',disabled:!change().changed||!p.verified||!core.canWrite(),
+      on:{click:async()=>{
+        const plan=change();if(!plan.changed)return;
+        const names=ids=>ids.map(id=>available.find(e=>e.eventId===id)?.name??'Unknown event').join(', ');
+        const msg=[
+          plan.revoke.length?'Remove access: '+names(plan.revoke)+'.':'',
+          plan.grant.length?'Grant '+roleLabel[d.role]+' access: '+names(plan.grant)+'.':''
+        ].filter(Boolean).join(' ');
+        if(!(await confirmDialog('Save staff assignments?',msg,'Save changes',{danger:plan.revoke.length>0})))return;
+        save.disabled=true;
+        const r=await core.actions.saveStaffPerson(p,Array.from(d.selected),d.role);
+        if(r.ok){edits.delete(p.email);result(r,'Event access updated.');}
+        else{result(r);save.disabled=false;}
+      }}});
+    const remove=h('button',{type:'button',class:'people-remove',text:'×',title:'Remove '+p.name+' from staff directory',
+      'aria-label':'Remove '+p.name+' from staff directory',disabled:!core.canWrite(),on:{click:async()=>{
+        const assigned=Object.keys(p.assignments).map(id=>available.find(e=>e.eventId===id)?.name??id);
+        const msg=assigned.length
+          ? 'This removes '+p.name+' from the People directory and revokes access to: '+assigned.join(', ')+'. Their login and historical records remain.'
+          : 'This removes '+p.name+' from the People directory. Their login and historical records remain.';
+        if(!(await confirmDialog('Remove staff member?',msg,'Remove staff member',{danger:true})))return;
+        const r=await core.actions.removeStaffPerson(p);
+        if(r.ok){edits.delete(p.email);result(r,'Staff member removed from the directory.');}
+        else result(r);
+      }}});
+    return h('article',{class:'people-row','data-person':p.email},
+      h('div',{class:'people-identity'},h('span',{class:'people-avatar','aria-hidden':'true',
+        text:p.name.split(/\s+/).map(x=>x[0]).slice(0,2).join('').toUpperCase()}),
+        h('div',{class:'people-name-wrap'},h('strong',{class:'people-name',text:p.name}),
+          h('span',{class:'people-email',text:p.email})),
+        pill(p.verified?'Verified':p.provisioned?'Invitation pending':'Identity unverified',p.verified?'good':'warn')),
+      h('div',{class:'people-event-cell'},h('label',{class:'people-field-label',text:'Event assignment'}),details),
+      h('div',{class:'people-role-cell'},h('label',{class:'people-field-label',text:'Role'}),role),
+      h('div',{class:'people-action-cell'},save,remove));
+  }
+  return function viewStaffPeople(){
+    if(s.staffDirectory.status==='idle')queueMicrotask(()=>{void core.actions.loadStaffDirectory();});
+    const people=s.staffDirectory.people??[];
+    const filtered=people.filter(p=>p.name.toLowerCase().includes(query)||p.email.includes(query));
+    const title=h('h2',{text:'People'});
+    const list=h('div',{class:'people-list'});
+    if(layout==='people')list.append(...filtered.map(personRow));
+    else for(const e of events()){
+      const group=filtered.filter(p=>p.assignments[e.eventId]);
+      list.append(h('h3',{class:'people-event-section-title',text:e.name+' · '+e.date}),
+        ...(group.length?group.map(personRow):[h('p',{class:'help',text:'No staff currently assigned to this event.'})]));
+    }
+    if(!filtered.length)list.append(h('p',{class:'empty-state',text:s.staffDirectory.status==='loading'?
+      'Loading staff…':'No staff members match your search.'}));
+    const search=h('input',{type:'search',value:query,placeholder:'Search by name or email','aria-label':'Search staff members',
+      on:{input:ev=>{query=ev.target.value.toLowerCase();for(const row of list.querySelectorAll('[data-person]')){
+        const p=people.find(x=>x.email===row.dataset.person);
+        row.hidden=!!p&&!(p.name.toLowerCase().includes(query)||p.email.includes(query));}
+      }}});
+    const viewMode=v=>h('button',{type:'button',class:layout===v?'small primary':'small',
+      'aria-pressed':String(layout===v),text:v==='people'?'People':'By event',
+      on:{click:()=>{layout=v;rerender();}}});
+    return h('section',{class:'card people-directory-card'},
+      h('div',{class:'people-heading'},
+        h('div',{},title,h('p',{class:'help',text:'One identity across events. Access is granted and revoked per event.'})),
+        h('div',{class:'people-controls'},viewMode('people'),viewMode('event'),
+          h('button',{type:'button',class:'primary',text:'+ Add Staff',on:{click:addModal}}))),
+      s.staffDirectory.error?h('p',{class:'notice warn',text:s.staffDirectory.error}):null,
+      h('div',{class:'people-search-row'},search,
+        h('button',{type:'button',text:'Refresh',on:{click:()=>{edits.clear();void core.actions.loadStaffDirectory();}}})),
+      h('div',{class:'people-colheads'},h('span',{text:'PERSON'}),h('span',{text:'EVENT ASSIGNMENT'}),h('span',{text:'ROLE'}),h('span',{text:'ACTIONS'})),
+      list,h('p',{class:'help people-footer',text:'Uncheck an event and Save to remove only its access. The × removes a person from the directory without deleting their login or past results.'}));
+  };
+}
