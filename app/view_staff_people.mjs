@@ -4,7 +4,7 @@ const roleLabel={scorekeeper:'Scorekeeper',bracket_manager:'Bracket Manager',org
 export function createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDialog,rerender}) {
   let layout='people', query='';
   const edits=new Map();
-  const events=()=>s.events.filter(e=>e.role==='organizer');
+  const events=()=>s.events.filter(e=>e.role==='organizer'&&e.lifecycle!=='archived');
   function pending(p) {
     if(!edits.has(p.email)) edits.set(p.email,{selected:new Set(Object.keys(p.assignments).length ? Object.keys(p.assignments) : [s.eventId]),
       role:p.assignments[s.eventId]??Object.values(p.assignments)[0]??'scorekeeper'});
