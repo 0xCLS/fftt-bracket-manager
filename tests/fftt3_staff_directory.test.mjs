@@ -12,7 +12,7 @@ const ORIGIN='https://fftt-staff.clslifestyle.com';
 const EMAIL='volunteer@example.org';
 const TOKEN='aaa.bbb.ccc';
 const admin='sb_secret_'+'a'.repeat(44);
-const config={STAFF_ORIGIN:ORIGIN,SUPABASE_URL:C3_HOST,SUPABASE_PUBLISHABLE_KEY:'sb_publishable_ABCDEF1234567',SUPABASE_ADMIN_SECRET:admin};
+const config={STAFF_ORIGIN:ORIGIN,SUPABASE_URL:C3_HOST,SUPABASE_PUBLISHABLE_KEY:'sb_publishable_ABCDEF1234567',SUPABASE_ADMIN_SECRET:admin,STAFF_INVITE_REDIRECT_ENABLED:'true'};
 
 test('directory merges existing grants with tagged people without inventing access',()=>{
   const events=[{eventId:EVENT_A,role:'organizer'},{eventId:EVENT_B,role:'organizer'}];
