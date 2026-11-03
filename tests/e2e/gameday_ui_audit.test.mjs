@@ -48,6 +48,24 @@ test('organizer screens: no horizontal overflow, no accessibility violations, us
         await org.page.locator('nav.tabs button', {hasText: new RegExp('^' + tab + '$')}).click();
         await org.page.waitForTimeout(450);
         if (tab === 'Players') { await org.page.locator('#regLoad').click(); await org.page.locator('.reg-row').first().waitFor({timeout: T}); await org.page.locator('.reg-row button', {hasText: 'Edit'}).first().click(); }
+        if (tab === 'Staff') {
+          await org.page.locator('.people-directory-card').waitFor({timeout: T});
+          // The directory is built from each Organizer-authorized event's snapshot.
+          // An unconfigured invitation endpoint must show an unavailable message, never fabricate a grant.
+          await org.page.locator('.people-directory-card .people-list').waitFor({timeout: T});
+          const cards = org.page.locator('.people-row');
+          if (await cards.count()) {
+            const first = cards.first();
+            await first.locator('.people-event-dropdown summary').click();
+            assert.ok(await first.locator('.people-event-menu input[type=checkbox]').count() >= 1,
+              'Staff event assignments are checkboxes inside one dropdown');
+            const menuGeometry = await first.locator('.people-event-menu').boundingBox();
+            assert.ok(menuGeometry.x >= -1 && menuGeometry.x + menuGeometry.width <= opts.viewport.width + 1,
+              'Staff assignment dropdown remains inside the viewport @ ' + vp);
+            await first.locator('.people-event-dropdown summary').click();
+            assert.equal(await first.locator('.people-remove').count(), 1, 'one quiet X per row');
+          }
+        }
         const label = `${tab} @ ${vp}`;
         const o = await overflow(org.page);
         assert.ok(o.sw <= o.iw + 1, `horizontal overflow on ${label}: ${o.sw} > ${o.iw}`);
