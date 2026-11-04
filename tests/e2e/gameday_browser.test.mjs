@@ -39,6 +39,10 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
   try {
     // ---------------------------------------------------------------- organizer signs in, loads players, builds
     const org = await w.device('org');
+    // The protected Staff directory Function is not part of this fictional world; serve the
+    // minimal, schema-valid answer production gives so the People directory becomes editable.
+    await org.context.route('**/api/staff-directory', route => route.fulfill({status: 200, contentType: 'application/json',
+      body: JSON.stringify({people: [{email: w.accounts.b[0], name: 'Scorekeeper B', verified: true, provisioned: true}]})}));
     await org.signIn('org');
     await org.page.locator('#evName').waitFor({timeout: T});
     assert.equal(await org.page.locator('#evName').inputValue(), 'Synthetic Rehearsal Games', 'selected organizer event remains correct');
@@ -222,6 +226,9 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
     await org.page.reload();   // a reload of the organizer tab: the session is not persisted, so sign in again
     await org.page.locator('#signIn:not([disabled])').waitFor({timeout: T});
     await org.signIn('org');
+    // The Staff app restores the previously active tab after a reload (session-scoped navigation),
+    // so return to Overview explicitly before reading the event name.
+    await goTab(org.page, 'Overview');
     await org.page.locator('#evName').waitFor({timeout: T});
     assert.equal(await org.page.locator('#evName').inputValue(), 'Synthetic Rehearsal Games', 'selected organizer event remains correct');
     await goTab(org.page, 'Match Desk');

@@ -242,6 +242,8 @@ jobs:
         env:
           FFTT_UPGRADED: '1'
         run: node --test tests/e2e/gameday_server.test.mjs tests/e2e/gameday_core.test.mjs tests/e2e/gameday_v4_server.test.mjs tests/e2e/gameday_v4_core.test.mjs
+      - name: LAUNCH MODE - separate rehearsal event beside a real-mode Nov 22 event (isolation, cross-event ids, per-event staff, per-event publication, byte-identical Nov 22 state)
+        run: node --test tests/e2e/gameday_rehearsal_isolation.test.mjs
       - name: LAUNCH MODE - browser rehearsal, failures, formats and events on a real-mode event (organizer, two scorekeepers, spectator, TV, outsider)
         env:
           FFTT_CHROME_CHANNEL: none
