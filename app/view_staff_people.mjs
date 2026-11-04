@@ -29,6 +29,27 @@ export function createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDi
       dlg.append(form);
     },{label:'Add staff member'});
   }
+  function confirmRemoval(p, available) {
+    return new Promise(resolve=>{
+      let answered=false;
+      const assignments=Object.entries(p.assignments).map(([id,role])=>{
+        const e=available.find(item=>item.eventId===id);
+        return (e ? e.name+' · '+e.date : 'Unknown event')+' — '+(roleLabel[role]??role);
+      });
+      const dlg=openDialog((d,close)=>{
+        const answer=value=>{answered=true;resolve(value);close();};
+        d.append(h('div',{class:'dlg people-remove-dialog'},
+          h('h3',{text:'Remove staff member?'}),
+          h('p',{class:'people-remove-email'},h('span',{text:'Account email'}),h('strong',{text:p.email})),
+          h('p',{class:'notice warn',text:'The directory entry will be archived and the event assignments below will be revoked. The login and historical records remain.'}),
+          h('p',{text:'Event assignments to revoke:'}),
+          assignments.length?h('ul',{},assignments.map(text=>h('li',{text}))):h('p',{text:'No active event assignments.'}),
+          h('div',{class:'dlg-actions'},h('button',{type:'button',text:'Cancel',on:{click:()=>answer(false)}}),
+            h('button',{type:'button',class:'danger',text:'Remove staff member',on:{click:()=>answer(true)}}))));
+      },{label:'Remove staff member'});
+      dlg.addEventListener('close',()=>{if(!answered)resolve(false);});
+    });
+  }
   function personRow(p) {
     const d=pending(p), available=events(), editable=s.staffDirectory.status==='ready';
     const change=()=>{
@@ -68,11 +89,7 @@ export function createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDi
       }}});
     const remove=h('button',{type:'button',class:'people-remove',text:'×',title:'Remove '+p.name+' from staff directory',
       'aria-label':'Remove '+p.name+' from staff directory',disabled:!editable||!core.canWrite(),on:{click:async()=>{
-        const assigned=Object.keys(p.assignments).map(id=>available.find(e=>e.eventId===id)?.name??id);
-        const msg=assigned.length
-          ? 'This removes '+p.name+' from the People directory and revokes access to: '+assigned.join(', ')+'. Their login and historical records remain.'
-          : 'This removes '+p.name+' from the People directory. Their login and historical records remain.';
-        if(!(await confirmDialog('Remove staff member?',msg,'Remove staff member',{danger:true})))return;
+        if(!(await confirmRemoval(p,available)))return;
         const r=await core.actions.removeStaffPerson(p);
         if(r.ok){edits.delete(p.email);result(r,'Staff member removed from the directory.');}
         else result(r);

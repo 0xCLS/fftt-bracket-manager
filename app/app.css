@@ -1199,3 +1199,12 @@ td.scores-cell{min-width:150px}
 #app .event-title .event-title-label{white-space:nowrap;color:#56616e;font-size:12px}
 #app .event-title strong{min-width:0;font-size:14px;line-height:1.3;font-weight:700;color:var(--ink,#1f2933);overflow-wrap:anywhere}
 @media(max-width:520px){#app .event-title{flex:1 1 100%;max-width:100%}}
+
+/* Keep the complete directory view selector aligned with its adjacent action. */
+#app .people-mode-switch{box-sizing:border-box;height:46px;min-height:46px}
+#app .people-mode-switch button{box-sizing:border-box;display:flex;align-items:center;justify-content:center;height:36px;min-height:36px;padding:0 8px;white-space:nowrap}
+#app .people-controls>.primary{box-sizing:border-box;height:46px;min-height:46px;white-space:nowrap}
+.people-remove-email{overflow-wrap:anywhere}
+.people-remove-email span,.people-remove-email strong{display:block}
+.people-remove-email strong{font-size:1.05rem;color:var(--ink)}
+.people-remove-dialog li{overflow-wrap:anywhere}
