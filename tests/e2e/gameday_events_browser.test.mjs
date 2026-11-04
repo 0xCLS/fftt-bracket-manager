@@ -326,12 +326,41 @@ test('Organizer event Create/Edit dialogs keep rehearsal setup isolated and acce
   const w = await createBrowserWorld();
   try {
     const org = await w.device('event-dialog', {viewport: {width: 390, height: 844}, mobile: true});
-    await org.signIn('org', {choose: 'Synthetic Rehearsal Games'});
+    await org.signIn('org');
     await org.page.locator('#evName').waitFor({timeout: T});
     assert.equal(await org.page.locator('.create-event').count(), 0, 'old inline create form is removed');
     assert.equal(await org.page.locator('#openCreateEvent').count(), 1);
     assert.equal(await org.page.locator('#editEventButton').count(), 1);
     const before = await org.page.locator('#eventSelect option').count();
+    // Dialog geometry at the narrowest phone, validation, Escape and focus return (nothing is created by any of these).
+    for (const width of [320, 390]) {
+      await org.page.setViewportSize({width, height: 700});
+      await org.page.locator('#openCreateEvent').click();
+      const d = org.page.locator('dialog[open]');
+      await d.locator('#newName').waitFor();
+      const g = await org.page.evaluate(() => {
+        const dialog = document.querySelector('dialog[open]'), box = dialog.getBoundingClientRect();
+        const fields = [...dialog.querySelectorAll('input')].map(i => i.getBoundingClientRect());
+        return {left: box.left, right: box.right, vw: document.documentElement.clientWidth,
+          columns: getComputedStyle(dialog.querySelector('.event-dialog-grid')).gridTemplateColumns.split(' ').length,
+          fieldsInside: fields.every(r => r.left >= box.left - 1 && r.right <= box.right + 1),
+          pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          focusedId: document.activeElement?.id, labelled: [...dialog.querySelectorAll('input')].every(i => document.querySelector(`label[for="${i.id}"]`))};
+      });
+      assert.ok(g.left >= 0 && g.right <= g.vw, `dialog fits the ${width}px viewport`);
+      assert.equal(g.columns, 1, `fields stack on a ${width}px phone`);
+      assert.ok(g.fieldsInside && g.pageOverflow <= 1, `no field or page overflow @ ${width}`);
+      assert.equal(g.focusedId, 'newName', 'focus starts on the name field');
+      assert.ok(g.labelled, 'every field has a label');
+      await d.locator('#newTables').fill('99');
+      await d.getByRole('button', {name: 'Create event'}).click();
+      assert.match(await d.locator('[role=alert]').innerText(), /table count from 1 to 12/, 'invalid input is explained in the dialog');
+      assert.equal(await org.page.locator('#eventSelect option').count(), before, 'invalid input creates nothing');
+      await org.page.keyboard.press('Escape');
+      await org.page.locator('dialog[open]').waitFor({state: 'detached'});
+      assert.equal(await org.page.evaluate(() => document.activeElement?.id), 'openCreateEvent', 'focus returns to the opener');
+    }
+    await org.page.setViewportSize({width: 390, height: 844});
     await org.page.locator('#openCreateEvent').click();
     let dlg = org.page.locator('dialog[open]');
     await dlg.locator('#newName').fill('Private Nov 8 Practice');
