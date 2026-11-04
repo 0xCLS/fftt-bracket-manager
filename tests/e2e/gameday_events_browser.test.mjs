@@ -171,6 +171,8 @@ test('sign-in needs no event id; several events are chosen by NAME; no technical
     // Scorekeeper with a single assigned event has no event picker. Its one
     // or two status rows must not inherit the Organizer's 103px reservation.
     await a.page.setViewportSize({width: 430, height: 844});
+    // The authorized event name renders with the first snapshot; wait for it instead of racing the paint.
+    await a.page.locator('#eventTitle:not([hidden])').waitFor({timeout: T});
     const scorekeeper430 = await a.page.evaluate(() => {
       const line = document.querySelector('#statusline');
       const header = document.querySelector('#app .topbar');
