@@ -698,7 +698,7 @@ td.scores-cell{min-width:150px}
 @media(max-width:560px){.toasts{top:calc(8px + env(safe-area-inset-top));left:12px;right:12px;width:auto}}
 @media print{.toasts{display:none}}
 
-/* Overview: "How each match is scored" is the LAST section and spans the whole content width */
+/* Overview: "How each match is scored" spans the whole content width, above Your events. */
 #app .overview-formats{margin:var(--gap-section) 0 0;width:100%}
 #app .overview-formats .formats-card{padding:30px}
 #app .overview-formats .format-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:var(--gap-field);border-top:0;margin-bottom:var(--gap-actions)}
@@ -1208,3 +1208,27 @@ td.scores-cell{min-width:150px}
 .people-remove-email span,.people-remove-email strong{display:block}
 .people-remove-email strong{font-size:1.05rem;color:var(--ink)}
 .people-remove-dialog li{overflow-wrap:anywhere}
+
+/* November 8 readiness polish: Match Desk results, event dialogs, and title editing. */
+#app .match-desk-page > :is(.empty-state,.queue) + .card{margin-top:24px}
+#app .overview-title-row{display:flex;align-items:center;gap:12px;min-width:0}
+#app .overview-title-row h1{min-width:0;overflow-wrap:anywhere}
+#app .event-title-edit{display:inline-flex;align-items:center;justify-content:center;flex:none;width:36px;height:36px;
+  border:1px solid var(--line-strong);border-radius:8px;background:var(--surface);color:var(--ink);padding:0;cursor:pointer}
+#app .event-title-edit:hover{background:var(--surface-soft)}
+#app .event-title-edit:focus-visible{outline:3px solid #5a93c2;outline-offset:3px}
+#app .event-title-edit:disabled{opacity:.45;cursor:not-allowed}
+#app .overview-history{margin-top:var(--gap-section)}
+dialog .event-dialog{width:min(100%,550px)}
+dialog .event-dialog-form{display:grid;gap:16px}
+dialog .event-dialog-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.4fr) minmax(0,.75fr);gap:12px}
+dialog .event-dialog-field{min-width:0}
+dialog .event-dialog-field label{display:block;margin:0 0 6px}
+dialog .event-dialog-field input{box-sizing:border-box;min-width:0;width:100%;max-width:100%}
+dialog .event-dialog .status{min-height:0}
+dialog .event-dialog .dlg-actions{margin-top:0}
+@media(max-width:620px){
+ #app .overview-title-row{align-items:flex-start;gap:8px}
+ #app .event-title-edit{margin-top:12px}
+ dialog .event-dialog-grid{grid-template-columns:minmax(0,1fr)}
+}

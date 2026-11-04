@@ -448,7 +448,7 @@ test('SCORE TILES: equal squares, tabular numerals, green winner / red loser per
   } finally { await w.close(); }
 });
 
-test('OVERVIEW: "How each match is scored" is the LAST section and spans the full content width, with balanced labels and dropdowns', {timeout: 400000}, async () => {
+test('OVERVIEW: full-width match formats above Your events, balanced labels and dropdowns', {timeout: 400000}, async () => {
   const w = await createBrowserWorld();
   try {
     await stageTournament(w);
@@ -461,13 +461,13 @@ test('OVERVIEW: "How each match is scored" is the LAST section and spans the ful
         const kids = [...page.children].filter(x => x.getBoundingClientRect().height > 0);
         const rows = [...document.querySelectorAll('.format-row')].map(r => { const rr = r.getBoundingClientRect(); const sels = [...r.querySelectorAll('select')].map(s => s.getBoundingClientRect()); return {x: rr.x, y: rr.y, w: rr.width, sel: sels.map(s => [s.width, s.height]), labelW: r.querySelector('.format-name').getBoundingClientRect().width}; });
         const pr = page.getBoundingClientRect(), cr = card.getBoundingClientRect();
-        return {isLast: kids[kids.length - 1] === sec, pageW: pr.width, cardW: cr.width, leftGap: cr.left - pr.left, rows, inLeftColumn: !!card.closest('.overview-main'), setupBottom: document.querySelector('.overview-settings').getBoundingClientRect().bottom, cardTop: cr.top,
-          historyBottom: document.querySelector('.overview-history').getBoundingClientRect().bottom, cols: new Set(rows.map(r => Math.round(r.x))).size, overflow: document.documentElement.scrollWidth > window.innerWidth + 1};
+        return {isLast: kids[kids.length - 1] === document.querySelector('.overview-history'), pageW: pr.width, cardW: cr.width, leftGap: cr.left - pr.left, rows, inLeftColumn: !!card.closest('.overview-main'), setupBottom: document.querySelector('.overview-settings').getBoundingClientRect().bottom, cardTop: cr.top,
+          cardBottom: cr.bottom, historyTop: document.querySelector('.overview-history').getBoundingClientRect().top, cols: new Set(rows.map(r => Math.round(r.x))).size, overflow: document.documentElement.scrollWidth > window.innerWidth + 1};
       });
-      assert.ok(g.isLast, `the formats section is the last section @ ${vp}`);
+      assert.ok(g.isLast, `the events section is the last section @ ${vp}`);
       assert.equal(g.inLeftColumn, false, 'it is no longer a card confined to the left column');
       assert.ok(g.cardW >= g.pageW - 1 && g.leftGap <= 1, `full width of the page (${g.cardW} of ${g.pageW}) @ ${vp}`);
-      assert.ok(g.cardTop >= g.historyBottom - 1 && g.cardTop >= g.setupBottom, 'it sits below the event setup and the event list');
+      assert.ok(g.cardBottom <= g.historyTop + 1 && g.cardTop >= g.setupBottom, 'match formats precedes the event list');
       assert.equal(g.rows.length, 5, 'all five format categories');
       if (vp === 'desktop') {
         assert.ok(g.cols >= 2, `the wide layout is used: ${g.cols} columns of format tiles`);

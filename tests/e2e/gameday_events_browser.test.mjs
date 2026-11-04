@@ -320,3 +320,58 @@ test('opt-in Staff iPhone layout trace records selected ordinal, actual viewport
     assert.deepEqual(w.pageErrors, []);
   } finally { await w.close(); }
 });
+
+
+test('Organizer event Create/Edit dialogs keep rehearsal setup isolated and accessible', {timeout: 180000}, async () => {
+  const w = await createBrowserWorld();
+  try {
+    const org = await w.device('event-dialog', {viewport: {width: 390, height: 844}, mobile: true});
+    await org.signIn('org', {choose: 'Synthetic Rehearsal Games'});
+    await org.page.locator('#evName').waitFor({timeout: T});
+    assert.equal(await org.page.locator('.create-event').count(), 0, 'old inline create form is removed');
+    assert.equal(await org.page.locator('#openCreateEvent').count(), 1);
+    assert.equal(await org.page.locator('#editEventButton').count(), 1);
+    const before = await org.page.locator('#eventSelect option').count();
+    await org.page.locator('#openCreateEvent').click();
+    let dlg = org.page.locator('dialog[open]');
+    await dlg.locator('#newName').fill('Private Nov 8 Practice');
+    await dlg.getByRole('button', {name: 'Cancel'}).click();
+    assert.equal(await org.page.locator('#eventSelect option').count(), before, 'cancellation creates nothing');
+    await org.page.locator('#openCreateEvent').click();
+    dlg = org.page.locator('dialog[open]');
+    await dlg.locator('#newName').fill('Private Nov 8 Practice');
+    await dlg.locator('#newDate').fill('2026-11-08');
+    await dlg.locator('#newTables').fill('2');
+    await dlg.getByRole('button', {name: 'Create event'}).click();
+    await toast(org.page, /Event created/);
+    await org.page.locator('#evName').waitFor({timeout: T});
+    assert.equal(await org.page.locator('#evName').inputValue(), 'Private Nov 8 Practice');
+    await org.page.locator('nav.tabs button', {hasText: 'Overview'}).click();
+    await org.page.locator('#editEventButton').click();
+    dlg = org.page.locator('dialog[open]');
+    assert.equal(await dlg.locator('#editName').inputValue(), 'Private Nov 8 Practice');
+    assert.equal(await dlg.locator('#editDate').inputValue(), '2026-11-08');
+    assert.equal(await dlg.locator('#editTables').inputValue(), '2');
+    await dlg.locator('#editName').fill('Changed only in unsaved modal');
+    await dlg.getByRole('button', {name: 'Cancel'}).click();
+    assert.equal(await org.page.locator('#evName').inputValue(), 'Private Nov 8 Practice');
+    await org.page.locator('#editEventButton').click();
+    dlg = org.page.locator('dialog[open]');
+    await dlg.locator('#editName').fill('Private Nov 8 Rehearsal');
+    await dlg.getByRole('button', {name: 'Save event'}).click();
+    await toast(org.page, /Event saved/);
+    assert.equal(await org.page.locator('#evName').inputValue(), 'Private Nov 8 Rehearsal');
+    const placement = await org.page.evaluate(() => {
+      const formats = document.querySelector('.overview-formats').getBoundingClientRect();
+      const history = document.querySelector('.overview-history').getBoundingClientRect();
+      return {formatsBottom: formats.bottom, eventsTop: history.top,
+        overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1};
+    });
+    assert.ok(placement.formatsBottom <= placement.eventsTop + 1, 'event management follows match formats');
+    assert.equal(placement.overflow, false, 'event title and event list fit phone viewport');
+    const original = await w.fake.local.admin(
+      "select name from fftt_private.events where name = 'Synthetic Rehearsal Games'");
+    assert.equal(original.length, 1, 'an unrelated existing event remains unchanged');
+    assert.deepEqual(w.pageErrors, []);
+  } finally { await w.close(); }
+});
