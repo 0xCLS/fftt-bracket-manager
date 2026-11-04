@@ -30,7 +30,7 @@ export function createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDi
     },{label:'Add staff member'});
   }
   function personRow(p) {
-    const d=pending(p), available=events();
+    const d=pending(p), available=events(), editable=s.staffDirectory.status==='ready';
     const change=()=>{
       const plan=planStaffChange(p,[...d.selected],d.role,available);
       return plan;
@@ -40,19 +40,19 @@ export function createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDi
     const menu=h('div',{class:'people-event-menu'},
       h('p',{class:'people-event-heading',text:'ASSIGNED EVENTS'}),
       available.map(e=>h('label',{class:'people-event-option'},
-        h('input',{type:'checkbox',checked:d.selected.has(e.eventId),on:{change:ev=>{
+        h('input',{type:'checkbox',checked:d.selected.has(e.eventId),disabled:!editable,on:{change:ev=>{
           if(ev.target.checked)d.selected.add(e.eventId);else d.selected.delete(e.eventId);
           summary.textContent=d.selected.size?[...d.selected].map(id=>available.find(a=>a.eventId===id)?.name??'Event').join(', '):'No events';
-          save.disabled=!change().changed||!p.verified||!core.canWrite();
+          save.disabled=!change().changed||!p.verified||!editable||!core.canWrite();
         }}}),
         h('span',{},h('strong',{text:e.name}),h('small',{text:e.date})))),
       h('p',{class:'help',text:'Uncheck an event and Save to revoke only that event’s access.'}));
     const details=h('details',{class:'people-event-dropdown'},
-      h('summary',{'aria-label':'Events assigned to '+p.name},summary,h('span',{'aria-hidden':'true',text:'▾'})),menu);
-    const role=h('select',{'aria-label':'Role for '+p.name,class:'people-role-control',on:{change:ev=>{
-      d.role=ev.target.value;save.disabled=!change().changed||!p.verified||!core.canWrite();
+      h('summary',{'aria-label':'Events assigned to '+p.name},summary),menu);
+    const role=h('select',{'aria-label':'Role for '+p.name,class:'people-role-control',disabled:!editable,on:{change:ev=>{
+      d.role=ev.target.value;save.disabled=!change().changed||!p.verified||!editable||!core.canWrite();
     }}},STAFF_ROLES.map(v=>h('option',{value:v,selected:d.role===v,text:roleLabel[v]})));
-    const save=h('button',{type:'button',class:'small primary',text:'Save',disabled:!change().changed||!p.verified||!core.canWrite(),
+    const save=h('button',{type:'button',class:'small primary',text:'Save',disabled:!change().changed||!p.verified||!editable||!core.canWrite(),
       on:{click:async()=>{
         const plan=change();if(!plan.changed)return;
         const names=ids=>ids.map(id=>available.find(e=>e.eventId===id)?.name??'Unknown event').join(', ');
@@ -67,7 +67,7 @@ export function createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDi
         else{result(r);save.disabled=false;}
       }}});
     const remove=h('button',{type:'button',class:'people-remove',text:'×',title:'Remove '+p.name+' from staff directory',
-      'aria-label':'Remove '+p.name+' from staff directory',disabled:!core.canWrite(),on:{click:async()=>{
+      'aria-label':'Remove '+p.name+' from staff directory',disabled:!editable||!core.canWrite(),on:{click:async()=>{
         const assigned=Object.keys(p.assignments).map(id=>available.find(e=>e.eventId===id)?.name??id);
         const msg=assigned.length
           ? 'This removes '+p.name+' from the People directory and revokes access to: '+assigned.join(', ')+'. Their login and historical records remain.'
@@ -88,7 +88,7 @@ export function createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDi
       h('div',{class:'people-action-cell'},save,remove));
   }
   return function viewStaffPeople(){
-    if(s.staffDirectory.status==='idle')queueMicrotask(()=>{void core.actions.loadStaffDirectory();});
+    if(s.staffDirectory.status==='idle'&&!s.paused&&core.connection()==='live')queueMicrotask(()=>{if(s.staffDirectory.status==='idle'&&!s.paused)void core.actions.loadStaffDirectory();});
     const people=s.staffDirectory.people??[];
     const filtered=people.filter(p=>p.name.toLowerCase().includes(query)||p.email.includes(query));
     const title=h('h2',{text:'People'});
@@ -97,26 +97,25 @@ export function createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDi
     else for(const e of events()){
       const group=filtered.filter(p=>p.assignments[e.eventId]);
       list.append(h('h3',{class:'people-event-section-title',text:e.name+' · '+e.date}),
-        ...(group.length?group.map(personRow):[h('p',{class:'help',text:'No staff currently assigned to this event.'})]));
+        ...(group.length?group.map(personRow):s.staffDirectory.status==='ready'?[h('p',{class:'help',text:'No staff currently assigned to this event.'})]:[]));
     }
-    if(!filtered.length)list.append(h('p',{class:'empty-state',text:s.staffDirectory.status==='loading'?
-      'Loading staff…':'No staff members match your search.'}));
+    if(!filtered.length)list.append(h('p',{class:'empty-state',text:s.staffDirectory.status==='error'?'Staff access is unavailable. Refresh to try again.':s.staffDirectory.status==='ready'?'No staff members match your search.':'Loading staff…'}));
     const search=h('input',{type:'search',value:query,placeholder:'Search by name or email','aria-label':'Search staff members',
       on:{input:ev=>{query=ev.target.value.toLowerCase();for(const row of list.querySelectorAll('[data-person]')){
         const p=people.find(x=>x.email===row.dataset.person);
         row.hidden=!!p&&!(p.name.toLowerCase().includes(query)||p.email.includes(query));}
       }}});
-    const viewMode=v=>h('button',{type:'button',class:layout===v?'small primary':'small',
+    const viewMode=v=>h('button',{type:'button',class:'small',
       'aria-pressed':String(layout===v),text:v==='people'?'People':'By event',
       on:{click:()=>{layout=v;rerender();}}});
     return h('section',{class:'card people-directory-card'},
       h('div',{class:'people-heading'},
         h('div',{},title,h('p',{class:'help',text:'One identity across events. Access is granted and revoked per event.'})),
-        h('div',{class:'people-controls'},viewMode('people'),viewMode('event'),
-          h('button',{type:'button',class:'primary',text:'+ Add Staff',on:{click:addModal}}))),
+        h('div',{class:'people-controls'},h('div',{class:'people-mode-switch',role:'group','aria-label':'Staff directory view'},viewMode('people'),viewMode('event')),
+          h('button',{type:'button',class:'primary',text:'+ Add Staff',disabled:s.staffDirectory.status!=='ready',on:{click:addModal}}))),
       s.staffDirectory.error?h('p',{class:'notice warn',text:s.staffDirectory.error}):null,
       h('div',{class:'people-search-row'},search,
-        h('button',{type:'button',text:'Refresh',on:{click:()=>{edits.clear();void core.actions.loadStaffDirectory();}}})),
+        h('button',{type:'button','data-read-retry':'true',text:'Refresh',disabled:s.paused,on:{click:()=>{edits.clear();void core.actions.loadStaffDirectory();}}})),
       h('div',{class:'people-colheads'},h('span',{text:'PERSON'}),h('span',{text:'EVENT ASSIGNMENT'}),h('span',{text:'ROLE'}),h('span',{text:'ACTIONS'})),
       list,h('p',{class:'help people-footer',text:'Uncheck an event and Save to remove only its access. The × removes a person from the directory without deleting their login or past results.'}));
   };

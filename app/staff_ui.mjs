@@ -40,6 +40,9 @@ const OFFLINE_TOOL = 'https://0xcls.github.io/fftt-bracket-manager/';
 
 export function createStaffUi({core, els, config, signOut}) {
   const s = core.state;
+  const NAV_KEY='fftt.staff.navigation';
+  const tabsForRole=role=>role==='organizer'?ORGANIZER_TABS:role==='bracket_manager'?BRACKET_MANAGER_TABS:SCOREKEEPER_TABS;
+  const rememberTab=id=>{try{sessionStorage.setItem(NAV_KEY,id);}catch{/* navigation is optional */}};
   let tab = 'overview', lastInputAt = 0, dirtyDialog = 0, lastPaneKey = '';
   // On iPhone, scroll/pan momentum can outlive the touchend event. Do not
   // replace a bracket mid-gesture or immediately after its scroll settles.
@@ -138,7 +141,7 @@ export function createStaffUi({core, els, config, signOut}) {
       clear(els.tabs);
       for (const [id, label] of tabs) {
         els.tabs.append(h('button', {type: 'button', 'data-tab': id, 'aria-current': id === tab ? 'page' : null,
-          on: {click: () => { if (tab !== id) abandonDrafts(); tab = id; render(true); focusMain(); }}}, staffNavIcon(id), h('span', {text: label})));
+          on: {click: () => { if (tab !== id) abandonDrafts(); tab = id; rememberTab(id); render(true); focusMain(); }}}, staffNavIcon(id), h('span', {text: label})));
       }
       els.tabs.dataset.key = tabsKey;
       if (hadFocus) els.tabs.querySelector(`[data-tab="${hadFocus}"]`)?.focus();
@@ -154,7 +157,7 @@ export function createStaffUi({core, els, config, signOut}) {
   // ------------------------------------------------------------ shared view helpers
   const loading = () => h('div', {class: 'loading-state', role: 'status', 'aria-live': 'polite'},
     h('span', {class: 'spinner', 'aria-hidden': 'true'}), s.endedReason ?? 'Loading…');
-  const goTab = id => { if (tab !== id) abandonDrafts(); tab = id; render(true); focusMain(); };
+  const goTab = id => { if (tab !== id) abandonDrafts(); tab = id; rememberTab(id); render(true); focusMain(); };
   function parseBulk(text) {
     const players = [], errors = [];
     text.split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach((line, i) => {
@@ -167,7 +170,7 @@ export function createStaffUi({core, els, config, signOut}) {
     return {players, errors};
   }
   const viewCtx = {core, s, h, clear, fill, pill, toast, result, confirmDialog, openDialog, remember, draft, forget, loading, parseBulk, goTab,
-    rerender: () => render(true), openEvent: () => { abandonDrafts(); tab = 'overview'; render(true); focusMain(); }};
+    rerender: () => render(true), openEvent: () => { abandonDrafts(); tab = 'overview'; rememberTab(tab); render(true); focusMain(); }};
   const viewPlayers = createPlayersView(viewCtx);
   const {formatsCard, eventsCard} = createEventsView(viewCtx);
   const formatOf = m => ({bestOf: m.bestOf, points: m.points});
@@ -636,7 +639,7 @@ export function createStaffUi({core, els, config, signOut}) {
     // A heartbeat may change writability without rebuilding (and erasing) a draft.
     const writable = core.canWrite();
     for (const el of els.main.querySelectorAll('input, select, textarea, button')) {
-      if (!writable && !el.disabled) { el.disabled = true; el.dataset.connectionPaused = '1'; }
+      if (!writable && el.dataset.readRetry !== 'true' && !el.disabled) { el.disabled = true; el.dataset.connectionPaused = '1'; }
       else if (writable && el.dataset.connectionPaused === '1') {
         el.disabled = false; delete el.dataset.connectionPaused;
       }
@@ -740,5 +743,8 @@ export function createStaffUi({core, els, config, signOut}) {
     const writable = core.canWrite();
     if (writable !== lastWritable) { lastWritable = writable; syncConnectionGuard(); }
   }, 1000);
-  return Object.freeze({render, openTab: id => { if (tab !== id) abandonDrafts(); tab = id; render(true); }});
+  return Object.freeze({render, openTab: id => { if (tab !== id) abandonDrafts(); tab = id; rememberTab(id); render(true); },
+    restoreTab: role => { let saved=null; try{saved=sessionStorage.getItem(NAV_KEY);}catch{}
+      const allowed=tabsForRole(role); tab=allowed.some(([id])=>id===saved)?saved:allowed[0][0]; render(true); },
+    clearNavigation:()=>{try{sessionStorage.removeItem(NAV_KEY);}catch{}}});
 }

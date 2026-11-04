@@ -1179,3 +1179,16 @@ td.scores-cell{min-width:150px}
  .people-action-cell .small{min-width:58px;padding:6px 11px}
  .people-remove{min-width:40px}
 }
+
+/* Staff directory view selector and aligned assignment controls. */
+#app .people-mode-switch{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:4px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface-soft)}
+#app .people-mode-switch button{min-height:40px;border:0;background:transparent;color:var(--muted);border-radius:calc(var(--radius) - 3px);padding:8px 10px;font-weight:700}
+#app .people-mode-switch button[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:0 0 0 1px var(--line-strong)}
+#app .people-mode-switch button:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
+.people-event-cell,.people-role-cell{min-width:0}
+.people-event-dropdown>summary,.people-role-control{box-sizing:border-box;height:44px;min-height:44px;padding:10px 38px 10px 12px;border:1px solid #dbe0e6;border-radius:5px;font:inherit;font-size:.85rem;background-color:#fff;background-image:linear-gradient(45deg,transparent 50%,var(--chevron) 50%),linear-gradient(135deg,var(--chevron) 50%,transparent 50%);background-position:calc(100% - 19px) 52%,calc(100% - 14px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.people-event-dropdown>summary{justify-content:flex-start}
+@media(max-width:820px){#app .people-controls{gap:10px}#app .people-mode-switch{flex:1;min-width:0}}
+.people-role-control{display:block;width:100%}
+#app .people-role-cell>.people-role-control{margin-top:0}
+#app .card .people-role-cell>label+.people-role-control{margin-top:0}

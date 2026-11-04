@@ -139,6 +139,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
   const refused = new Map();   // submission id -> reason: the database REFUSED it (validation), so nothing was recorded
   let scoreSession = null, scope = null, rawDesk = new Map(), refreshing = false, queuedForce = false, lastFullAt = 0;
   const emit = () => { try { onChange(); } catch { /* a view error must not stop the core */ } };
+  const staffScope = events => events.filter(e=>e.role==='organizer'&&e.lifecycle!=='archived').map(e=>e.eventId+':'+e.lifecycle).sort().join('|');
 
   // ---------------------------------------------------------------- score session wiring
   function newScoreSession(eventId) {
@@ -242,7 +243,10 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
         lastFullAt = now();
         if (out.snapshot) s.snapshot = out.snapshot;
         if (out.brief) s.brief = out.brief;
-        if (out.events) s.events = out.events;
+        if (out.events) {
+          if(staffScope(s.events)!==staffScope(out.events)) s.staffDirectory={status:'idle',people:[],error:null,version:s.staffDirectory.version+1};
+          s.events = out.events;
+        }
         if (out.notActive) { s.desk = []; s.deskStatus = 'not-active'; }
         else if (out.deskLoaded) {
           syncScoreView();
@@ -589,20 +593,22 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
   // ---------------------------------------------------------------- shared Staff & Access
   async function loadStaffDirectory() {
     if(s.role!=='organizer'||!s.signedIn)return {ok:false,message:'Organizer access is required.'};
+    if(s.paused) return {ok:false,message:'Reconnect before refreshing staff access.'};
     const eventAtStart=s.eventId, requestVersion=s.staffDirectory.version+1;
     // A late directory response must never restore private staff data after a sign-out,
     // event switch, or newer load. clearPrivate() increments the generation.
     const stillCurrent=()=>s.signedIn&&s.role==='organizer'&&s.eventId===eventAtStart
       &&s.staffDirectory.version===requestVersion;
     s.staffDirectory={...s.staffDirectory,status:'loading',error:null,version:requestVersion};emit();
-    const manageable=s.events.filter(e=>e.role==='organizer'&&e.lifecycle!=='archived');
     try {
       const details=await session.authorized(async ctx=>{
+        const events=await api.myEvents(ctx.token,{});
+        const manageable=events.filter(e=>e.role==='organizer'&&e.lifecycle!=='archived');
+        if(ctx.role!=='organizer'||!manageable.some(e=>e.eventId===ctx.eventId)) throw new Error('scope-unverified');
         const snapshots={};
         for(const event of manageable){
           // A failed authorized read is an incomplete directory, not an empty event.
-          snapshots[event.eventId]=event.eventId===s.eventId&&s.snapshot
-            ? s.snapshot:await api.organizerSnapshot(ctx.token,{p_event_id:event.eventId});
+          snapshots[event.eventId]=await api.organizerSnapshot(ctx.token,{p_event_id:event.eventId});
         }
         let people=[],directoryError=null;
         if(peopleClient) {
@@ -613,21 +619,24 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
             directoryError='Account invitations and directory removal are not available on this site yet. Existing event access can still be reviewed.';
           }
         } else directoryError='Account invitations require the protected Staff directory service.';
-        return {snapshots,people,directoryError};
+        return {events,manageable,snapshots,people,directoryError};
       },{wait:true});
       if(!stillCurrent())return {ok:false,message:'The event or session changed during the directory request.'};
-      s.staffDirectory={status:'ready',people:directoryFromSnapshots(manageable,details.snapshots,details.people),
+      s.events=details.events;
+      s.staffDirectory={status:details.directoryError?'error':'ready',people:directoryFromSnapshots(details.manageable,details.snapshots,details.people),
         error:details.directoryError,version:s.staffDirectory.version+1};emit();
-      return {ok:true};
+      return details.directoryError ? {ok:false,message:details.directoryError} : {ok:true};
     } catch(e) {
       if(!stillCurrent())return {ok:false,message:'The event or session changed during the directory request.'};
-      s.staffDirectory={status:'error',people:[],error:'Could not verify all event permissions. No changes can be saved until the directory loads.',
+      if(isSessionEnded(e)){endSession(e.kind);return {ok:false,message:describeError(e)};}
+      s.staffDirectory={status:'error',people:s.staffDirectory.people,error:s.staffDirectory.people.length?'Staff access could not be verified. The last loaded information is read-only. Reconnect and refresh before making changes.':'Staff access could not be verified. Reconnect and refresh before making changes.',
         version:s.staffDirectory.version+1};emit();
       return {ok:false,message:describeError(e)};
     }
   }
   async function addStaffPerson(name,email){
     if(!peopleClient)return {ok:false,message:'Secure staff invitations are not configured on this site.'};
+    if(s.staffDirectory.status!=='ready')return {ok:false,message:'Refresh the staff directory before adding anyone.'};
     if(s.role!=='organizer'||!canWrite())return {ok:false,message:'Organizer access and a live connection are required.'};
     const normalized=staffEmail(email);
     if(!normalized||typeof name!=='string'||!name.trim())return {ok:false,message:'Enter the staff member’s name and valid email.'};

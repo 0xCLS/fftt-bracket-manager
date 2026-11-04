@@ -233,7 +233,7 @@ if (networkAllowed) {
   let storage = null; try { storage = window.localStorage; } catch { storage = null; }
   const ledger = createPendingLedger(storage ?? {getItem: () => null, setItem: () => { throw new Error('no storage'); }, removeItem: () => {}});
   core = createStaffCore({session, api, scoreTransport, registrationClient, peopleClient, ledger, isOnline: () => navigator.onLine, onChange: () => {
-    if (!core.state.signedIn && !$('app').hidden) { showSignIn(core.state.endedReason ?? 'Your session ended. Please sign in again.', 'bad'); return; }
+    if (!core.state.signedIn && !$('app').hidden) { ui?.clearNavigation(); showSignIn(core.state.endedReason ?? 'Your session ended. Please sign in again.', 'bad'); return; }
     ui?.render();
   }});
   ui = createStaffUi({core, config, els: {main: $('main'), tabs: $('tabs'), status: $('statusline'), banner: $('banner'), eventSelect: $('eventSelect'), eventSwitch: $('eventSwitch')}});
@@ -256,7 +256,7 @@ async function enter(r, eventIdHint) {
   // start() records the role synchronously; choose the landing tab BEFORE the slow first load so a tab the
   // person taps while it loads is never overwritten afterwards
   const loaded = core.started({role: r.role, eventId});
-  ui.openTab(r.role === 'organizer' ? 'overview' : r.role === 'bracket_manager' ? 'championship' : 'desk');
+  ui.restoreTab(r.role);
   await loaded;
 }
 for (const ev of ['pointerdown', 'keydown', 'touchstart']) document.addEventListener(ev, () => session?.touch(), {passive: true});
@@ -328,6 +328,7 @@ $('verifyCode').addEventListener('click', async () => {
 async function leave(global) {
   const r = await session.signOut({global});
   core.signedOut();
+  ui.clearNavigation();
   showSignIn(r.serverRevoked ? 'Signed out.' : 'Signed out on this device. The server could not be reached; ask the organizer to end any other session.');
 }
 $('signOut').addEventListener('click', () => leave(false));

@@ -161,8 +161,8 @@ test('stale directory load cannot repopulate private staff data after sign-out',
   let completeSnapshot;
   const pendingSnapshot=new Promise(resolve=>{completeSnapshot=resolve;});
   const core=createStaffCore({
-    session:{authorized:fn=>fn({token:TOKEN,eventId:EVENT_A})},
-    api:{organizerSnapshot:()=>pendingSnapshot},
+    session:{authorized:fn=>fn({token:TOKEN,eventId:EVENT_A,role:'organizer'})},
+    api:{myEvents:async()=>[{eventId:EVENT_A,role:'organizer',lifecycle:'active'}],organizerSnapshot:()=>pendingSnapshot},
     peopleClient:{request:async()=>({people:[]})}
   });
   const s=core.state;
@@ -176,4 +176,30 @@ test('stale directory load cannot repopulate private staff data after sign-out',
   assert.equal(result.ok,false,'superseded response is discarded');
   assert.equal(s.staffDirectory.status,'idle');
   assert.deepEqual(s.staffDirectory.people,[]);
+});
+
+test('directory suspends safely and recovers after a verified refresh; failed scope stays read-only',async()=>{
+  let calls=0,fail=false;
+  const events=[{eventId:EVENT_A,role:'organizer',lifecycle:'active'},{eventId:EVENT_B,role:'organizer',lifecycle:'active'}];
+  const core=createStaffCore({session:{authorized:fn=>fn({token:TOKEN,eventId:EVENT_A,role:'organizer'})},
+    api:{myEvents:async()=>events,organizerSnapshot:async(token,{p_event_id})=>{calls++;if(fail&&p_event_id===EVENT_B)throw Error('snapshot unavailable');return {staff:[{email:EMAIL,active:true,role:'scorekeeper'}]};}},
+    peopleClient:{request:async()=>({people:[]})}});
+  const s=core.state; s.signedIn=true;s.role='organizer';s.eventId=EVENT_A;s.events=events;
+  assert.equal((await core.actions.loadStaffDirectory()).ok,true);
+  assert.equal(calls,2);assert.equal(s.staffDirectory.people.length,1);
+  fail=true;assert.equal((await core.actions.loadStaffDirectory()).ok,false);
+  assert.equal(s.staffDirectory.status,'error');assert.equal(s.staffDirectory.people.length,1);
+  assert.equal((await core.actions.saveStaffPerson(s.staffDirectory.people[0],[EVENT_A],'organizer')).ok,false);
+  s.paused=true;const before=calls;await core.actions.loadStaffDirectory();assert.equal(calls,before);
+  s.paused=false;fail=false;assert.equal((await core.actions.loadStaffDirectory()).ok,true);
+  assert.equal(s.staffDirectory.status,'ready');
+});
+
+test('a failed protected directory cannot enable account or access changes',async()=>{
+  const events=[{eventId:EVENT_A,role:'organizer',lifecycle:'active'}];
+  const core=createStaffCore({session:{authorized:fn=>fn({token:TOKEN,eventId:EVENT_A,role:'organizer'})},
+    api:{myEvents:async()=>events,organizerSnapshot:async()=>({staff:[]})},peopleClient:{request:async()=>{throw Error('unavailable');}}});
+  Object.assign(core.state,{signedIn:true,role:'organizer',eventId:EVENT_A,events});
+  await core.actions.loadStaffDirectory();assert.equal(core.state.staffDirectory.status,'error');
+  assert.equal((await core.actions.addStaffPerson('Test',EMAIL)).ok,false);
 });
