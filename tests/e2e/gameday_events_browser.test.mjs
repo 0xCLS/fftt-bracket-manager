@@ -362,6 +362,16 @@ test('Organizer event Create/Edit dialogs keep rehearsal setup isolated and acce
     await dlg.getByRole('button', {name: 'Save event'}).click();
     await toast(org.page, /Event saved/);
     assert.equal(await org.page.locator('#evName').inputValue(), 'Private Nov 8 Rehearsal');
+    // The match desk's empty queue and results card must have a visible section gap.
+    await org.page.locator('nav.tabs button', {hasText: 'Match Desk'}).click();
+    await org.page.locator('.match-desk-page > .empty-state + .card').waitFor({timeout: T});
+    const deskGap = await org.page.evaluate(() => {
+      const empty = document.querySelector('.match-desk-page > .empty-state');
+      const recent = document.querySelector('.match-desk-page > .empty-state + .card');
+      return recent.getBoundingClientRect().top - empty.getBoundingClientRect().bottom;
+    });
+    assert.ok(deskGap >= 20, 'empty Match Desk queue and recent results have >=20px spacing');
+    await org.page.locator('nav.tabs button', {hasText: 'Overview'}).click();
     const placement = await org.page.evaluate(() => {
       const formats = document.querySelector('.overview-formats').getBoundingClientRect();
       const history = document.querySelector('.overview-history').getBoundingClientRect();
@@ -371,7 +381,7 @@ test('Organizer event Create/Edit dialogs keep rehearsal setup isolated and acce
     assert.ok(placement.formatsBottom <= placement.eventsTop + 1, 'event management follows match formats');
     assert.equal(placement.overflow, false, 'event title and event list fit phone viewport');
     const original = await w.fake.local.admin(
-      "select name from fftt_private.events where name = 'Synthetic Rehearsal Games'");
+      "select event_name from fftt_private.events where event_name = 'Synthetic Rehearsal Games'");
     assert.equal(original.length, 1, 'an unrelated existing event remains unchanged');
     assert.deepEqual(w.pageErrors, []);
   } finally { await w.close(); }
