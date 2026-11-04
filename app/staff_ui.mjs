@@ -132,6 +132,14 @@ export function createStaffUi({core, els, config, signOut}) {
     }
     if (els.eventSelect.value !== s.eventId) els.eventSelect.value = s.eventId ?? '';
     (els.eventSwitch ?? els.eventSelect).hidden = evs.length < 2;
+    // A person assigned to one event has no switcher, so name that event instead of leaving only generic branding.
+    // The name comes only from data the server already scoped to this account (its authorized event list or event brief).
+    if (els.eventTitle) {
+      const shown = evs.length < 2 ? (evs.find(e => e.eventId === s.eventId)?.name ?? (s.brief?.eventId === s.eventId ? s.brief?.name : null) ?? null) : null;
+      els.eventTitle.hidden = !shown;
+      if (els.eventTitleName.textContent !== (shown ?? '')) els.eventTitleName.textContent = shown ?? '';
+      els.eventTitleName.title = shown ?? '';
+    }
     const tabs = isOrganizer() ? ORGANIZER_TABS : isBracketManager() ? BRACKET_MANAGER_TABS : SCOREKEEPER_TABS;
     if (!tabs.some(([id]) => id === tab)) tab = tabs[0][0];
     // keep the same buttons (and focus) when nothing changed; rebuild only when the tab set or selection changed

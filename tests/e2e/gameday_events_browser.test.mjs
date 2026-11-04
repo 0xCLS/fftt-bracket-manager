@@ -177,13 +177,17 @@ test('sign-in needs no event id; several events are chosen by NAME; no technical
       return {
         pickerHidden: document.querySelector('#eventSwitch').hidden,
         statusHeight: line.getBoundingClientRect().height,
-        trailingGap: header.getBoundingClientRect().bottom -
-          (line.lastElementChild?.getBoundingClientRect().bottom ?? 0),
+        // the authorized event name is real content under the status row; only empty space after the last visible content is a gap
+        titleVisible: !document.querySelector('#eventTitle').hidden,
+        trailingGap: header.getBoundingClientRect().bottom - Math.max(
+          line.lastElementChild?.getBoundingClientRect().bottom ?? 0,
+          document.querySelector('#eventTitle').hidden ? 0 : document.querySelector('#eventTitle').getBoundingClientRect().bottom),
         documentWidth: document.documentElement.scrollWidth,
         viewport: document.documentElement.clientWidth
       };
     });
     assert.equal(scorekeeper430.pickerHidden, true, 'single-event Scorekeeper has no event picker');
+    assert.equal(scorekeeper430.titleVisible, true, 'single-event Scorekeeper sees the name of the authorized event');
     assert.ok(scorekeeper430.statusHeight < 75 && scorekeeper430.trailingGap < 45,
       'Scorekeeper header has no artificial status-row gap: ' + JSON.stringify(scorekeeper430));
     assert.ok(scorekeeper430.documentWidth <= scorekeeper430.viewport + 1,

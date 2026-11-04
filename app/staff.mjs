@@ -236,7 +236,7 @@ if (networkAllowed) {
     if (!core.state.signedIn && !$('app').hidden) { ui?.clearNavigation(); showSignIn(core.state.endedReason ?? 'Your session ended. Please sign in again.', 'bad'); return; }
     ui?.render();
   }});
-  ui = createStaffUi({core, config, els: {main: $('main'), tabs: $('tabs'), status: $('statusline'), banner: $('banner'), eventSelect: $('eventSelect'), eventSwitch: $('eventSwitch')}});
+  ui = createStaffUi({core, config, els: {main: $('main'), tabs: $('tabs'), status: $('statusline'), banner: $('banner'), eventSelect: $('eventSelect'), eventSwitch: $('eventSwitch'), eventTitle: $('eventTitle'), eventTitleName: $('eventTitleName')}});
   $('eventSelect').addEventListener('change', async ev => {
     const r = await core.selectEvent(ev.target.value);
     if (!r.ok) { toast(r.message, 'bad'); return; }
