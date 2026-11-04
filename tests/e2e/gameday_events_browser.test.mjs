@@ -344,9 +344,10 @@ test('Organizer event Create/Edit dialogs keep rehearsal setup isolated and acce
     await dlg.locator('#newTables').fill('2');
     await dlg.getByRole('button', {name: 'Create event'}).click();
     await toast(org.page, /Event created/);
+    // Existing createEvent intentionally selects the new event and opens Players.
+    await org.page.locator('nav.tabs button', {hasText: 'Overview'}).click();
     await org.page.locator('#evName').waitFor({timeout: T});
     assert.equal(await org.page.locator('#evName').inputValue(), 'Private Nov 8 Practice');
-    await org.page.locator('nav.tabs button', {hasText: 'Overview'}).click();
     await org.page.locator('#editEventButton').click();
     dlg = org.page.locator('dialog[open]');
     assert.equal(await dlg.locator('#editName').inputValue(), 'Private Nov 8 Practice');
