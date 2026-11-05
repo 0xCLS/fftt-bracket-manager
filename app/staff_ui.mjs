@@ -310,7 +310,7 @@ export function createStaffUi({core, els, config, signOut}) {
                 disabled:!eligible || !core.canWrite(),text:p.checkedIn?'Undo':'Check in',
                 'aria-label':`${p.checkedIn?'Undo check-in for':'Check in'} ${p.name}`,
                 on:{click:async()=>result(await core.actions.setCheckin(p.id,!p.checkedIn),p.checkedIn?'Check-in undone.':'Player checked in.')}}))
-            ))))),
+            )))))),
       h('section',{class:'card'},h('h2',{text:'Add a walk-in'}),
         h('p',{class:'card-sub',text:'Use a full first and last name. A walk-in is added and checked in together; no contact information is collected.'}),
         h('form',{on:{submit:async ev=>{
