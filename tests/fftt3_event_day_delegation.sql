@@ -113,23 +113,19 @@ select fftt_day.expect('outsider walkin',
 -- Manager can change an unplayed match format, adjudicate no-show and correct an accepted result.
 select fftt_day.as_user(fftt_day.id('mgr'));
 do $play$
-declare e uuid:=fftt_day.id('event'); r record; n integer:=0; sc text; winner uuid;
+declare e uuid:=fftt_day.id('event'); r record; n integer:=0; sc text; m jsonb;
 begin
   select * into r from public.fftt_matchdesk_v2(e) order by round_number,slot limit 1;
   if not found then raise exception 'no ready match'; end if;
   perform public.fftt_set_match_format_v4(e,r.match_id,1,21);
   perform public.fftt_forfeit_match_v3(e,r.match_id,r.match_version,r.player_2_id,'Did not arrive at table');
   -- Correct a completed result with a required reason and an expected version.
-  select m into r from (
-    select m.*, r2.bracket_generation as ignored_gen
-    from public.fftt_matchdesk_v2(e) r2
-    cross join lateral (select r2.match_id as match_id) m
-  ) q limit 0; -- no-op; receipt is taken from the manager snapshot below
-  -- The first completed match was a walkover. Correct its score without changing the winner.
-  perform (select public.fftt_correct_result_v3(e,(m->>'id')::uuid,(m->>'version')::bigint,
-                    (m->>'winner_id')::uuid,'21-0','Scorecard verified')
-    from jsonb_array_elements(public.fftt_bracket_manager_snapshot_v1(e)->'matches') m
-    where m->>'status'='complete' and m->>'game_scores'='W/O' limit 1);
+  -- The first completed match was a walkover. Test audited correction without changing the winner.
+  select x into m from jsonb_array_elements(public.fftt_bracket_manager_snapshot_v1(e)->'matches') x
+    where x->>'status'='complete' and x->>'game_scores'='W/O' limit 1;
+  if m is null then raise exception 'no completed walkover to correct'; end if;
+  perform public.fftt_correct_result_v3(e,(m->>'id')::uuid,(m->>'version')::bigint,
+    (m->>'winner_id')::uuid,'21-0','Scorecard verified');
   loop
     select * into r from public.fftt_matchdesk_v2(e) order by round_number,slot limit 1;
     exit when not found;
