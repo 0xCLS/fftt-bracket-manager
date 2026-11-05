@@ -153,6 +153,7 @@ test('sign-in needs no event id; several events are chosen by NAME; no technical
     const options = await org.page.locator('#eventSelect option').allInnerTexts();
     assert.equal(options.length, 2);
     const spring = options.findIndex(o => o.includes(longEvent));
+    assert.equal(options[spring], longEvent + ' · Mar 6, 2027', 'the event picker uses short month and local-calendar-safe date formatting');
     await org.page.selectOption('#eventSelect', {index: spring});
     for (let i = 0; i < 40 && (await org.page.inputValue('#evName').catch(() => '')) !== longEvent; i++) await org.page.waitForTimeout(500);
     assert.equal(await org.page.inputValue('#evName'), longEvent);
@@ -377,7 +378,7 @@ test('Organizer Create Event dialog and existing Overview setup keep rehearsal i
     await org.page.locator('#evName').waitFor({timeout: T});
     assert.equal(await org.page.locator('nav.tabs button[data-tab="overview"]').getAttribute('aria-current'), 'page');
     assert.equal(await org.page.locator('#evName').inputValue(), 'Private Nov 8 Practice');
-    assert.match(await org.page.locator('#eventSelect option:checked').innerText(), /Private Nov 8 Practice/);
+    assert.equal(await org.page.locator('#eventSelect option:checked').innerText(), 'Private Nov 8 Practice · Nov 8, 2026');
     await org.page.waitForFunction(() => window.scrollY <= 1, null, {timeout: T});
     assert.equal(await org.page.locator('dialog[open]').count(), 0, 'the creation dialog is closed');
     // The original Overview setup form remains the supported edit path.
