@@ -373,10 +373,13 @@ test('Organizer Create Event dialog and existing Overview setup keep rehearsal i
     await dlg.locator('#newTables').fill('2');
     await dlg.getByRole('button', {name: 'Create event'}).click();
     await toast(org.page, /Event created/);
-    // Existing createEvent intentionally selects the new event and opens Players.
-    await org.page.locator('nav.tabs button', {hasText: 'Overview'}).click();
+    // Successful creation selects the new event and remains on Overview.
     await org.page.locator('#evName').waitFor({timeout: T});
+    assert.equal(await org.page.locator('nav.tabs button[data-tab="overview"]').getAttribute('aria-current'), 'page');
     assert.equal(await org.page.locator('#evName').inputValue(), 'Private Nov 8 Practice');
+    assert.match(await org.page.locator('#eventSelect option:checked').innerText(), /Private Nov 8 Practice/);
+    await org.page.waitForFunction(() => window.scrollY <= 1, null, {timeout: T});
+    assert.equal(await org.page.locator('dialog[open]').count(), 0, 'the creation dialog is closed');
     // The original Overview setup form remains the supported edit path.
     await org.page.locator('#evName').fill('Private Nov 8 Rehearsal');
     await org.page.getByRole('button', {name: /Save event setup/}).click();
