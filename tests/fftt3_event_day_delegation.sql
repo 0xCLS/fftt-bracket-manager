@@ -141,7 +141,7 @@ begin
   perform fftt_day.expect('manager archive remains denied',
       format($q$select public.fftt_set_lifecycle_v3(%L,'archived')$q$,e),'42501','forbidden');
   perform public.fftt_set_lifecycle_v3(e,'complete');
-  if not exists(select 1 from fftt_private.events where id=e and lifecycle='complete')
+  if (public.fftt_event_brief_v3(e)->>'lifecycle') is distinct from 'complete'
     then raise exception 'event not complete'; end if;
 end $play$;
 rollback;
