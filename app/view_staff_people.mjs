@@ -6,8 +6,9 @@ export function createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDi
   const edits=new Map();
   const events=()=>s.events.filter(e=>e.role==='organizer'&&e.lifecycle!=='archived');
   function pending(p) {
-    if(!edits.has(p.email)) edits.set(p.email,{selected:new Set(Object.keys(p.assignments).length ? Object.keys(p.assignments) : [s.eventId]),
-      role:p.assignments[s.eventId]??Object.values(p.assignments)[0]??'scorekeeper'});
+    // Start from the server's actual grants only. An unassigned person has no events and no role until someone chooses them.
+    if(!edits.has(p.email)) edits.set(p.email,{selected:new Set(Object.keys(p.assignments)),
+      role:p.assignments[s.eventId]??Object.values(p.assignments)[0]??''});
     return edits.get(p.email);
   }
   function addModal(){
@@ -52,10 +53,8 @@ export function createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDi
   }
   function personRow(p) {
     const d=pending(p), available=events(), editable=s.staffDirectory.status==='ready';
-    const change=()=>{
-      const plan=planStaffChange(p,[...d.selected],d.role,available);
-      return plan;
-    };
+    // No role chosen yet means there is nothing valid to save (an unassigned person must get an explicit role).
+    const change=()=>STAFF_ROLES.includes(d.role)?planStaffChange(p,[...d.selected],d.role,available):{changed:false,revoke:[],grant:[]};
     const summary=h('span',{class:'people-event-summary-text',text:d.selected.size===0?'No events':
       [...d.selected].map(id=>available.find(e=>e.eventId===id)?.name??'Event').join(', ')});
     const menu=h('div',{class:'people-event-menu'},
@@ -72,7 +71,8 @@ export function createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDi
       h('summary',{'aria-label':'Events assigned to '+p.name},summary),menu);
     const role=h('select',{'aria-label':'Role for '+p.name,class:'people-role-control',disabled:!editable,on:{change:ev=>{
       d.role=ev.target.value;save.disabled=!change().changed||!p.verified||!editable||!core.canWrite();
-    }}},STAFF_ROLES.map(v=>h('option',{value:v,selected:d.role===v,text:roleLabel[v]})));
+    }}},d.role===''?h('option',{value:'',selected:true,disabled:true,text:'Select role'}):null,
+      STAFF_ROLES.map(v=>h('option',{value:v,selected:d.role===v,text:roleLabel[v]})));
     const save=h('button',{type:'button',class:'small primary',text:'Save',disabled:!change().changed||!p.verified||!editable||!core.canWrite(),
       on:{click:async()=>{
         const plan=change();if(!plan.changed)return;
@@ -84,7 +84,7 @@ export function createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDi
         if(!(await confirmDialog('Save staff assignments?',msg,'Save changes',{danger:plan.revoke.length>0})))return;
         save.disabled=true;
         const r=await core.actions.saveStaffPerson(p,Array.from(d.selected),d.role);
-        if(r.ok){edits.delete(p.email);result(r,'Event access updated.');}
+        if(r.ok){edits.delete(p.email);result(r,'Event access updated.');rerender();}  // repaint from the reloaded server grants, not the stale edit
         else{result(r);save.disabled=false;}
       }}});
     const remove=h('button',{type:'button',class:'people-remove',text:'×',title:'Remove '+p.name+' from staff directory',

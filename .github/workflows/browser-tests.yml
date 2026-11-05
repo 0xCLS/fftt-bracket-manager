@@ -240,6 +240,10 @@ jobs:
         env:
           FFTT_CHROME_CHANNEL: none
         run: node --test tests/e2e/gameday_polish_browser.test.mjs
+      - name: Staff People directory - unassigned, pending, verified, assigned and revoked staff show actual server grants (fictional, local database)
+        env:
+          FFTT_CHROME_CHANNEL: none
+        run: node --test tests/e2e/staff_people_assignment_display.test.mjs
       - name: V4 browser - responsive layout, accessibility (axe-core), keyboard and tap targets
         env:
           FFTT_CHROME_CHANNEL: none
