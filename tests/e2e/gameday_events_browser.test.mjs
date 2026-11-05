@@ -322,7 +322,7 @@ test('opt-in Staff iPhone layout trace records selected ordinal, actual viewport
 });
 
 
-test('Organizer event Create/Edit dialogs keep rehearsal setup isolated and accessible', {timeout: 180000}, async () => {
+test('Organizer Create Event dialog and existing Overview setup keep rehearsal isolated', {timeout: 180000}, async () => {
   const w = await createBrowserWorld();
   try {
     const org = await w.device('event-dialog', {viewport: {width: 390, height: 844}, mobile: true});
@@ -330,7 +330,7 @@ test('Organizer event Create/Edit dialogs keep rehearsal setup isolated and acce
     await org.page.locator('#evName').waitFor({timeout: T});
     assert.equal(await org.page.locator('.create-event').count(), 0, 'old inline create form is removed');
     assert.equal(await org.page.locator('#openCreateEvent').count(), 1);
-    assert.equal(await org.page.locator('#editEventButton').count(), 1);
+    assert.equal(await org.page.locator('#editEventButton').count(), 0, 'pencil is absent');
     const before = await org.page.locator('#eventSelect option').count();
     // Dialog geometry at the narrowest phone, validation, Escape and focus return (nothing is created by any of these).
     for (const width of [320, 390]) {
@@ -377,20 +377,12 @@ test('Organizer event Create/Edit dialogs keep rehearsal setup isolated and acce
     await org.page.locator('nav.tabs button', {hasText: 'Overview'}).click();
     await org.page.locator('#evName').waitFor({timeout: T});
     assert.equal(await org.page.locator('#evName').inputValue(), 'Private Nov 8 Practice');
-    await org.page.locator('#editEventButton').click();
-    dlg = org.page.locator('dialog[open]');
-    assert.equal(await dlg.locator('#editName').inputValue(), 'Private Nov 8 Practice');
-    assert.equal(await dlg.locator('#editDate').inputValue(), '2026-11-08');
-    assert.equal(await dlg.locator('#editTables').inputValue(), '2');
-    await dlg.locator('#editName').fill('Changed only in unsaved modal');
-    await dlg.getByRole('button', {name: 'Cancel'}).click();
-    assert.equal(await org.page.locator('#evName').inputValue(), 'Private Nov 8 Practice');
-    await org.page.locator('#editEventButton').click();
-    dlg = org.page.locator('dialog[open]');
-    await dlg.locator('#editName').fill('Private Nov 8 Rehearsal');
-    await dlg.getByRole('button', {name: 'Save event'}).click();
+    // The original Overview setup form remains the supported edit path.
+    await org.page.locator('#evName').fill('Private Nov 8 Rehearsal');
+    await org.page.getByRole('button', {name: /Save event setup/}).click();
     await toast(org.page, /Event saved/);
     assert.equal(await org.page.locator('#evName').inputValue(), 'Private Nov 8 Rehearsal');
+    assert.equal(await org.page.locator('dialog[open]').count(), 0, 'no Edit Event popup');
     // The match desk's empty queue and results card must have a visible section gap.
     await org.page.locator('nav.tabs button', {hasText: 'Match Desk'}).click();
     await org.page.locator('.match-desk-page > .empty-state + .card').waitFor({timeout: T});

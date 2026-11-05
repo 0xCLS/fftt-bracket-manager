@@ -96,21 +96,18 @@ export function createEventsView(ctx) {
   }
 
 
-  // All create/edit changes use the existing Organizer-only event RPCs; dialogs never store private drafts.
-  function eventDialog(event = null) {
+  // Create is Organizer-only; edits remain in the Overview event setup form.
+  function eventDialog() {
     if (!writable() || s.role !== 'organizer') return;
-    const editing = !!event;
-    const selectedId = s.eventId;
-    const title = editing ? 'Edit event' : 'Create a new event';
+    const title = 'Create a new event';
     openDialog((dlg, close) => {
-      const name = h('input', {type: 'text', id: editing ? 'editName' : 'newName',
-        value: event?.name ?? '', maxlength: 120, autocomplete: 'off', required: true});
-      const date = h('input', {type: 'date', id: editing ? 'editDate' : 'newDate',
-        value: event?.date ?? '', required: true});
-      const tables = h('input', {type: 'number', id: editing ? 'editTables' : 'newTables',
-        min: 1, max: 12, value: event?.tables ?? 2, required: true});
+      const name = h('input', {type: 'text', id: 'newName',
+        maxlength: 120, autocomplete: 'off', required: true});
+      const date = h('input', {type: 'date', id: 'newDate', required: true});
+      const tables = h('input', {type: 'number', id: 'newTables',
+        min: 1, max: 12, value: 2, required: true});
       const error = h('p', {class: 'status bad', role: 'alert', 'aria-live': 'polite'});
-      const save = h('button', {type: 'submit', class: 'primary', text: editing ? 'Save event' : 'Create event'});
+      const save = h('button', {type: 'submit', class: 'primary', text: 'Create event'});
       const field = (text, input) => h('div', {class: 'event-dialog-field'},
         h('label', {for: input.id, text}), input);
       const form = h('form', {class: 'event-dialog-form', novalidate: true, on: {submit: async ev => {
@@ -121,20 +118,17 @@ export function createEventsView(ctx) {
           error.textContent = 'Enter an event name, a valid date and a table count from 1 to 12.';
           return;
         }
-        if (!writable() || (editing && s.eventId !== selectedId)) {
-          error.textContent = 'The selected event or connection has changed. Close this dialog and try again.';
+        if (!writable()) {
+          error.textContent = 'The connection has changed. Close this dialog and try again.';
           return;
         }
         save.disabled = true;
         try {
-          const r = editing
-            ? await core.actions.updateEvent(eventName, eventDate, count)
-            : await core.actions.createEvent(eventName, eventDate, count);
-          if (!r.ok) { error.textContent = r.message ?? 'The event could not be saved.'; return; }
-          toast(editing ? 'Event saved.' : 'Event created. It is empty and not public.');
+          const r = await core.actions.createEvent(eventName, eventDate, count);
+          if (!r.ok) { error.textContent = r.message ?? 'The event could not be created.'; return; }
+          toast('Event created. It is empty and not public.');
           close();
-          if (editing) { forget('ev'); rerender(); }
-          else { forget('new'); ctx.goTab('players'); }
+          forget('new'); ctx.goTab('players');
         } finally { save.disabled = !writable(); }
       }}},
         h('div', {class: 'event-dialog-grid'}, field('Name', name), field('Date', date), field('Tables', tables)),
@@ -183,5 +177,5 @@ export function createEventsView(ctx) {
         : h('div', {class: 'empty-state', text: counts.all ? `No ${(FILTERS.find(f => f[0] === filter)?.[1] ?? '').toLowerCase()} events.` : 'No events yet.'}),
       );
   }
-  return {formatsCard, eventsCard, editEventDialog: eventDialog};
+  return {formatsCard, eventsCard};
 }

@@ -24,7 +24,6 @@ const STAFF_NAV_GEOMETRY = Object.freeze({
   finale: [['circle',{cx:7.5,cy:7,r:3}],['circle',{cx:16.5,cy:7,r:3}],['path',{d:'M2 20v-2a5.5 5.5 0 0 1 11 0v2M11 20v-2a5.5 5.5 0 0 1 11 0v2'}]],
   results: [['path',{d:'M4 7V4h16v3M5 7h14v13H5V7ZM9 12h6M9 16h6'}]],
   staff: [['circle',{cx:9,cy:8,r:3}],['path',{d:'M3 21v-2a6 6 0 0 1 12 0v2M17 11h5M19.5 8.5v5'}]],
-  edit: [['path',{d:'M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L10 16l-4 1 1-4 9.5-9.5Z'}]],
 });
 function staffNavIcon(kind) {
   const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg');
@@ -181,7 +180,7 @@ export function createStaffUi({core, els, config, signOut}) {
   const viewCtx = {core, s, h, clear, fill, pill, toast, result, confirmDialog, openDialog, remember, draft, forget, loading, parseBulk, goTab,
     rerender: () => render(true), openEvent: () => { abandonDrafts(); tab = 'overview'; rememberTab(tab); render(true); focusMain(); }};
   const viewPlayers = createPlayersView(viewCtx);
-  const {formatsCard, eventsCard, editEventDialog} = createEventsView(viewCtx);
+  const {formatsCard, eventsCard} = createEventsView(viewCtx);
   const formatOf = m => ({bestOf: m.bestOf, points: m.points});
   const formatText = f => formatLabel(f);
 
@@ -224,10 +223,7 @@ export function createStaffUi({core, els, config, signOut}) {
     return h('div', {class: 'overview-page'},
       h('section', {class: 'overview-feature'},
         h('span', {class: 'feature-overline'}, h('span', {class: 'feature-spark', 'aria-hidden': 'true'}), 'FORGING FELLOWSHIP · TOURNAMENT DESK'),
-        h('div', {class: 'overview-title-row'}, h('h1', {text: e.name}),
-          isOrganizer() ? h('button', {id: 'editEventButton', class: 'event-title-edit', type: 'button',
-            title: 'Edit event', 'aria-label': 'Edit event details', disabled: !core.canWrite(),
-            on: {click: () => editEventDialog(e)}}, staffNavIcon('edit')) : null),
+        h('h1', {text: e.name}),
         h('p', {text: 'Everything you need to prepare the Games, organize players, and keep the competition moving.'}),
         h('div', {class: 'feature-actions'},
           h('button', {type: 'button', class: 'feature-primary', on: {click: () => goTab('players')}}, 'Manage players  ↗'),
