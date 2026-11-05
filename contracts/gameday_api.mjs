@@ -43,7 +43,7 @@ const MESSAGE_KIND = Object.freeze({
 
 const WRITE_ROUTES = Object.freeze([
   'fftt_create_event_v3', 'fftt_update_event_v3', 'fftt_set_lifecycle_v3', 'fftt_set_visibility_v3',
-  'fftt_upsert_players_v3', 'fftt_remove_player_v3', 'fftt_set_checkin_v3', 'fftt_set_checkin_bulk_v3', 'fftt_build_championship_v3',
+  'fftt_upsert_players_v3', 'fftt_remove_player_v3', 'fftt_set_checkin_v3', 'fftt_set_checkin_bulk_v3', 'fftt_event_day_walkin_v1', 'fftt_build_championship_v3',
   'fftt_build_consolation_v3', 'fftt_assign_table_v3', 'fftt_forfeit_match_v3', 'fftt_correct_result_v3',
   'fftt_set_doubles_teams_v3', 'fftt_record_doubles_result_v3', 'fftt_set_staff_v3',
   'fftt_set_formats_v4', 'fftt_set_match_format_v4', 'fftt_checkin_registrants_v4', 'fftt_confirm_ratings_v4',
@@ -245,6 +245,7 @@ export function createGamedayApi({projectUrl = C3_HOST, publishableKey, fetchImp
     upsertPlayers: w('fftt_upsert_players_v3'),
     removePlayer: w('fftt_remove_player_v3'),
     setCheckin: w('fftt_set_checkin_v3'),
+    eventDayWalkIn: w('fftt_event_day_walkin_v1'),
     setCheckinBulk: w('fftt_set_checkin_bulk_v3'),
     buildChampionship: w('fftt_build_championship_v3'),
     buildConsolation: w('fftt_build_consolation_v3'),
