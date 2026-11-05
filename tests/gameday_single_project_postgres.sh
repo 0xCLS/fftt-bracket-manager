@@ -53,4 +53,7 @@ done
 "${PSQL[@]}" -d "$db_name" -f tests/fftt3_bracket_manager_strict.sql
 "${PSQL[@]}" -d "$db_name" -f supabase/proposals/FFTT3_EVENT_DAY_DELEGATION_20261105_DO_NOT_APPLY.sql > /dev/null
 "${PSQL[@]}" -d "$db_name" -f tests/fftt3_event_day_delegation.sql
+"${PSQL[@]}" -d "$db_name" -f supabase/proposals/FFTT3_EVENT_DAY_DELEGATION_20261105_ROLLBACK_DO_NOT_APPLY.sql > /dev/null
+"${PSQL[@]}" -d "$db_name" -c "do \$\$ begin if to_regprocedure('public.fftt_event_day_walkin_v1(uuid,text,integer)') is not null then raise exception 'delegation rollback left walkin RPC'; end if; end \$\$;" > /dev/null
+"${PSQL[@]}" -d "$db_name" -f tests/fftt3_bracket_manager_strict.sql
 echo "PASS: source-pinned in-place SQL candidate against populated disposable PostgreSQL"
