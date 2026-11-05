@@ -35,4 +35,7 @@ test('event-day SQL candidate retains privileged boundaries',()=>{
  for(const forbidden of ['set_visibility_v3','set_staff_v3','set_registration_source_v5','delete_event_v4','restore_event_v4'])
    assert.ok(!sql.includes('function fftt_private.'+forbidden+'('),'cannot broaden '+forbidden);
  assert.match(sql,/DO NOT APPLY TO HOSTED SUPABASE/);
+ assert.match(sql,/grant execute on function public\.fftt_event_day_walkin_v1\(uuid,text,integer\) to authenticated/);
+ assert.match(sql,/p_lifecycle is distinct from 'complete'/);
+ assert.match(sql,/v_event\.lifecycle <> 'active'/);
 });
