@@ -49,7 +49,7 @@ test('manager interface does not expose organizer-only tabs or correction contro
   const ui = read('app/staff_ui.mjs');
   const m = ui.match(/const BRACKET_MANAGER_TABS = (.*);/);
   assert.ok(m);
-  for (const tab of ['championship','consolation','desk','finale']) assert.ok(m[1].includes("'"+tab+"'"));
+  for (const tab of ['checkin','championship','consolation','desk','finale','wrap']) assert.ok(m[1].includes("'"+tab+"'"));
   for (const tab of ['overview','players','results','staff']) assert.ok(!m[1].includes("'"+tab+"'"));
   assert.match(ui, /const org = isOrganizer\(\)/);
   assert.match(ui, /: isOrganizer\(\) \? h\('button'.*Rebuild \(replaces the bracket\)/s);
