@@ -1,0 +1,42 @@
+name: Delegation independently signed local Auth
+on:
+  push:
+    branches: ['verify/fftt-delegation-signed-20261105']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  signed-delegation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Pin the reviewed implementation
+        run: |
+          test "$(git rev-parse HEAD^)" = 7a951c8f20e63fd464db528dd7c44a93acdfc2a0
+          echo 'e9e277b18cfd3fd14d33ebeb1d4ccbbc04471eed04e55979c4431b594bfaf97b  supabase/proposals/FFTT3_EVENT_DAY_DELEGATION_20261105_DO_NOT_APPLY.sql' | sha256sum -c -
+          git diff --exit-code HEAD^ HEAD -- supabase app contracts server functions
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.79.0
+      - name: Start isolated local Supabase and GoTrue
+        run: supabase start
+      - name: Apply reviewed source chain only to local PostgreSQL
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          for file in supabase/proposals/MILESTONE1_DURABLE_SCORING_V2_DO_NOT_APPLY.sql supabase/proposals/GAMEDAY_TOURNAMENT_V3_STAGING.sql supabase/proposals/GAMEDAY_TOURNAMENT_V4_STAGING.sql supabase/proposals/GAMEDAY_TOURNAMENT_V5_STAGING.sql; do
+            psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres -f "$file" >/dev/null
+          done
+          candidate="$(mktemp)"
+          rm "$candidate"
+          python3 tools/release/build_single_project_upgrade.py --out "$candidate"
+          for file in "$candidate" supabase/proposals/FFTT3_BRACKET_MANAGER_ROLE_20261030_DO_NOT_APPLY.sql supabase/proposals/FFTT3_EVENT_DAY_DELEGATION_20261105_DO_NOT_APPLY.sql; do
+            psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres -f "$file" >/dev/null
+          done
+          rm "$candidate"
+      - name: Verify six independently signed fictional identities and event-scoped boundaries
+        run: python3 tests/fftt3_delegation_signed_http.py
