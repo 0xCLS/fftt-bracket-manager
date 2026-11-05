@@ -119,12 +119,27 @@ begin
   if not found then raise exception 'no ready match'; end if;
   perform public.fftt_set_match_format_v4(e,r.match_id,1,21);
   perform public.fftt_forfeit_match_v3(e,r.match_id,r.match_version,r.player_2_id,'Did not arrive at table');
-  select * into r from public.fftt_matchdesk_v2(e) order by round_number,slot limit 1;
-  if found then
-    sc := string_agg(r.points_to_win::text||'-0',',')
+  -- Correct a completed result with a required reason and an expected version.
+  select m into r from (
+    select m.*, r2.bracket_generation as ignored_gen
+    from public.fftt_matchdesk_v2(e) r2
+    cross join lateral (select r2.match_id as match_id) m
+  ) q limit 0; -- no-op; receipt is taken from the manager snapshot below
+  -- The first completed match was a walkover. Correct its score without changing the winner.
+  perform (select public.fftt_correct_result_v3(e,(m->>'id')::uuid,(m->>'version')::bigint,
+                    (m->>'winner_id')::uuid,'21-0','Scorecard verified')
+    from jsonb_array_elements(public.fftt_bracket_manager_snapshot_v1(e)->'matches') m
+    where m->>'status'='complete' and m->>'game_scores'='W/O' limit 1);
+  loop
+    select * into r from public.fftt_matchdesk_v2(e) order by round_number,slot limit 1;
+    exit when not found;
+    select string_agg(r.points_to_win::text || '-0',',') into sc
       from generate_series(1,((r.best_of + 1)/2));
-    perform public.fftt_submit_match_result_v2(e,r.match_id,r.bracket_generation,r.match_version,gen_random_uuid(),r.player_1_id,sc,1);
-  end if;
+    perform public.fftt_submit_match_result_v2(e,r.match_id,r.bracket_generation,r.match_version,
+      gen_random_uuid(),r.player_1_id,sc,1);
+    n:=n+1;
+    if n>10 then raise exception 'unexpected match loop'; end if;
+  end loop;
   if (public.fftt_bracket_manager_snapshot_v1(e)->'brackets'->0->>'status') is null
      then raise exception 'manager snapshot missing'; end if;
   perform fftt_day.expect('manager archive remains denied',
