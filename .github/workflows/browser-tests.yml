@@ -268,7 +268,9 @@ jobs:
       - name: Install Supabase CLI (local only)
         uses: supabase/setup-cli@v3
         with:
-          version: 2.79.0
+          version: ^3
+      - name: Report Supabase CLI version
+        run: supabase --version
       - name: Start isolated local Supabase PostgreSQL and GoTrue (no remote link)
         run: supabase start
       - name: Verify existing B1-B2d migrations before v2
