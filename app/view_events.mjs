@@ -133,7 +133,11 @@ export function createEventsView(ctx) {
       rows.length ? h('div', {class: 'scroll-x'}, h('table', {class: 'responsive-table'}, h('thead', {}, h('tr', {}, ['Event', 'Date', 'Status', 'Actions'].map(t => h('th', {scope: 'col', text: t})))), h('tbody', {}, rows)))
         : h('div', {class: 'empty-state', text: counts.all ? `No ${(FILTERS.find(f => f[0] === filter)?.[1] ?? '').toLowerCase()} events.` : 'No events yet.'}),
       create ? h('form', {class: 'create-event', novalidate: true, on: {submit: async ev => { ev.preventDefault();
-          if (result(await core.actions.createEvent(name.value, date.value, Number(tables.value)), 'Event created. It is empty and not public.')) { forget('new'); ctx.goTab('players'); } }}},
+          if (result(await core.actions.createEvent(name.value, date.value, Number(tables.value)), 'Event created. It is empty and not public.')) {
+             forget('new');
+             ctx.openEvent();
+             window.scrollTo(0, 0);
+           } }}},
         h('h3', {text: 'Create a new event'}),
         h('div', {class: 'create-grid'},
           h('div', {class: 'create-name'}, h('label', {for: 'newName', text: 'Name'}), name),
