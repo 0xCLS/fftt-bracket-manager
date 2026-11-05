@@ -15,7 +15,11 @@ function safeName(value) {
   const v=typeof value==='string'?value.trim():'';
   return v.length>=2&&v.length<=120&&!/[\r\n<>{}\u0000-\u001f]/.test(v)?v:null;
 }
-export function createStaffDirectoryHandler({env={},fetchImpl=fetch}={}) {
+// A resend also invalidates the previous link, so repeats inside this window are refused, not merely throttled.
+const RESEND_COOLDOWN_MS=10*60*1000;
+export function createStaffDirectoryHandler({env={},fetchImpl=fetch,now=Date.now}={}) {
+  // Best-effort, per Function instance: one resend per email at a time, and no resend after an unconfirmed outcome.
+  const inFlight=new Set(),uncertainUntil=new Map();
   const {STAFF_ORIGIN, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_ADMIN_SECRET, STAFF_INVITE_REDIRECT_ENABLED}=env;
   const configured=ORIGIN.test(STAFF_ORIGIN??'')&&SUPABASE_URL===C3_HOST
     &&/^sb_publishable_[A-Za-z0-9_-]{8,}$/.test(SUPABASE_PUBLISHABLE_KEY??'')
@@ -61,6 +65,30 @@ export function createStaffDirectoryHandler({env={},fetchImpl=fetch}={}) {
     if(r.status===429)throw err(429,'rate-limited');
     if(r.status!==200)throw err(503,'invite-not-confirmed');
     return r;
+  }
+  async function freshUser(id){
+    const u=await checkedJson(await request('/auth/v1/admin/users/'+encodeURIComponent(id),null,'GET',null,true));
+    if(u?.id!==id)throw err(503,'unavailable');
+    return u;
+  }
+  const sentRecently=u=>{const at=Date.parse(u?.confirmation_sent_at??'');return Number.isFinite(at)&&now()-at<RESEND_COOLDOWN_MS;};
+  /** Sends ONE replacement and reports what is actually known. Never retries. Returns 'reinvited' or 'uncertain'. */
+  async function resendInvite(user,email){
+    const before=user.confirmation_sent_at??null;
+    let res=null;
+    try{res=await request('/auth/v1/invite?redirect_to='+encodeURIComponent(STAFF_ORIGIN+'/app/staff-invite.html'),null,'POST',{email},true);}catch{res=null;}
+    if(res?.status===200)return 'reinvited';
+    if(res?.status===429)throw err(429,'rate-limited');          // Auth refused it: nothing was sent
+    // Outcome unknown (a 5xx or no answer): Auth's own send timestamp tells us whether a message was issued.
+    try{
+      const after=await freshUser(user.id);
+      if((after.confirmation_sent_at??null)!==before)return 'reinvited';
+      throw err(503,'invite-not-confirmed');                       // timestamp unchanged: nothing was sent, a retry is safe
+    }catch(e){
+      if(e?.code==='invite-not-confirmed')throw e;
+      uncertainUntil.set(email,now()+RESEND_COOLDOWN_MS);          // could not tell: do not send again from here for a while
+      return 'uncertain';
+    }
   }
   async function patch(id,metadata){
     const res=await request('/auth/v1/admin/users/'+encodeURIComponent(id),null,'PUT',
@@ -114,15 +142,23 @@ export function createStaffDirectoryHandler({env={},fetchImpl=fetch}={}) {
         try{user=await r.json();}catch{throw err(503,'invite-not-confirmed');}
         if(user?.user)user=user.user;
         status='invited';
-      }else if(!user.email_confirmed_at&&!(user.banned_until&&Date.parse(user.banned_until)>Date.now())){
-        // An invitation that was never accepted (Supabase invitation links expire; the default is one hour) is
-        // re-sent to the SAME identity. Confirmed accounts are never re-invited, and nothing here confirms,
-        // recreates or re-addresses the identity or grants an event role. Directory metadata is written first so that
-        // a retry after a partial failure cannot send a second message; there is no automatic retry.
+      }else if(user.app_metadata?.fftt_staff_directory===true&&user.invited_at&&!user.email_confirmed_at
+        &&!(user.banned_until&&Date.parse(user.banned_until)>now())){
+        // Replacement invitation: ONLY for an existing FFTT Staff directory identity that this system invited
+        // (Auth sets invited_at only through its invite endpoint) and that has never confirmed. Unrelated Auth users,
+        // confirmed, banned and archived identities are never messaged. Nothing here confirms, recreates, re-addresses
+        // or grants. Eligibility is judged on the state BEFORE this request, so tagging an account cannot make it eligible
+        // in the same call.
         if(STAFF_INVITE_REDIRECT_ENABLED!=='true')throw err(503,'invite-not-configured');
-        await patch(user.id,{...user.app_metadata,fftt_staff_directory:true,fftt_staff_name:body.name});
-        await sendInvite(email,null);
-        return reply(200,'ok',STAFF_ORIGIN,{status:'reinvited'});
+        if(inFlight.has(email))return reply(200,'ok',STAFF_ORIGIN,{status:'in-progress'});
+        if((uncertainUntil.get(email)??0)>now())return reply(200,'ok',STAFF_ORIGIN,{status:'uncertain'});
+        inFlight.add(email);                       // no await between the check and the add
+        try{
+          const current=await freshUser(user.id);  // a request that read the list before another send finished must not duplicate it
+          if(current.email_confirmed_at||sentRecently(current))return reply(200,'ok',STAFF_ORIGIN,{status:current.email_confirmed_at?'existing':'recently-sent'});
+          await patch(user.id,{...current.app_metadata,fftt_staff_directory:true,fftt_staff_name:body.name});
+          return reply(200,'ok',STAFF_ORIGIN,{status:await resendInvite(current,email)});
+        }finally{inFlight.delete(email);}
       }
       if(!UUID.test(user?.id??''))throw err(503,'invite-not-confirmed');
       await patch(user.id,{...user.app_metadata,fftt_staff_directory:true,fftt_staff_name:body.name});

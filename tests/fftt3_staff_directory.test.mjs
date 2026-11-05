@@ -204,63 +204,155 @@ test('a failed protected directory cannot enable account or access changes',asyn
   assert.equal((await core.actions.addStaffPerson('Test',EMAIL)).ok,false);
 });
 
-// ---- Replacement invitation for an existing, never-confirmed identity (expired link recovery) ----
-const PENDING_USER={id:'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',email:EMAIL,email_confirmed_at:null,
-  app_metadata:{provider:'email',fftt_staff_directory:true,fftt_staff_name:'Volunteer Name'}};
-const invites=mock=>mock.hits.filter(x=>x.path==='/auth/v1/invite');
+// ---- Replacement invitation for an existing, never-confirmed FFTT Staff identity (expired link recovery) ----
+// A small stateful stand-in for Supabase Auth: a send records `confirmation_sent_at`, exactly as Auth does.
+const T0=Date.parse('2026-11-05T12:00:00Z'),MIN=60*1000;
+const iso=t=>new Date(t).toISOString();
+const STAFF_PENDING={id:'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',email:EMAIL,email_confirmed_at:null,invited_at:'2026-11-05T07:43:52Z',
+  confirmation_sent_at:'2026-11-05T07:43:52Z',app_metadata:{provider:'email',fftt_staff_directory:true,fftt_staff_name:'Volunteer Name'}};
+function authFake({users=[STAFF_PENDING],mode='ok',readFails=false,readFailsAfterInvite=false,staleList=false,delay=0,env={}}={}){
+  const store=new Map(users.map(u=>[u.id,JSON.parse(JSON.stringify(u))]));
+  const snapshot=[...store.values()].map(u=>JSON.parse(JSON.stringify(u)));
+  const state={t:T0,mode,readFails,readFailsAfterInvite,hits:[]};
+  const sent=u=>{u.confirmation_sent_at=iso(state.t);};
+  const fetchImpl=async(url,opts)=>{
+    const u=new URL(url),path=u.pathname,method=opts.method;
+    state.hits.push({path,method,body:opts.body,search:u.search});
+    const json=(x,status=200)=>new Response(JSON.stringify(x),{status});
+    if(path==='/auth/v1/user')return json({id:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',is_anonymous:false});
+    if(path.endsWith('/fftt_staff_role_v1'))return json('organizer');
+    if(path.endsWith('/fftt_my_events_v4'))return json([{event_id:EVENT_A,role:'organizer',can_create:true}]);
+    if(path==='/auth/v1/admin/users'&&method==='GET')return json({users:staleList?snapshot:[...store.values()]});
+    const m=/^\/auth\/v1\/admin\/users\/([^/]+)$/.exec(path);
+    if(m&&method==='GET')return state.readFails?json({},503):json(store.get(m[1]));
+    if(m&&method==='PUT'){const u0=store.get(m[1]);u0.app_metadata={...u0.app_metadata,...JSON.parse(opts.body).app_metadata};return json(u0);}
+    if(path==='/auth/v1/invite'){
+      if(delay)await new Promise(r=>setTimeout(r,delay));
+      const target=[...store.values()].find(x=>x.email===JSON.parse(opts.body).email);
+      if(state.readFailsAfterInvite)state.readFails=true;   // Auth is unreachable from the moment the send is attempted
+      switch(state.mode){
+        case 'ok':sent(target);return json(target);
+        case 'http500-sent':sent(target);return json({},500);
+        case 'http500-unsent':return json({},500);
+        case 'throw-sent':sent(target);throw new TypeError('network');
+        case 'throw-unsent':throw new TypeError('network');
+        case 'http429':return json({},429);
+      }
+    }
+    throw Error('unexpected fetch '+method+' '+url);
+  };
+  const app=createStaffDirectoryHandler({env:{...config,...env},fetchImpl,now:()=>state.t});
+  const add=async(extra={})=>{const r=await app(makeRequest('add',{email:EMAIL,name:'Volunteer Name',...extra}));return {status:r.status,body:await r.json()};};
+  const calls=path=>state.hits.filter(x=>x.path===path);
+  return {state,store,app,add,invites:()=>calls('/auth/v1/invite'),calls};
+}
+const mutating=f=>f.state.hits.filter(x=>x.method==='DELETE'||x.path.includes('fftt_set_staff_v3')||(x.path==='/auth/v1/admin/users'&&x.method==='POST'));
 
-test('Add Staff on an existing never-confirmed identity sends exactly one replacement invitation to the same account',async()=>{
-  const mock=fake({users:[PENDING_USER]}),app=createStaffDirectoryHandler({env:config,fetchImpl:mock.fetchImpl});
-  const res=await app(makeRequest('add',{email:EMAIL,name:'Volunteer Name'}));
-  assert.equal(res.status,200);
-  assert.equal((await res.json()).status,'reinvited');
-  assert.equal(invites(mock).length,1,'one message, no automatic retry');
-  assert.deepEqual(JSON.parse(invites(mock)[0].body),{email:EMAIL},'no profile data is rewritten by the invitation');
-  const idx=mock.hits.findIndex(x=>x.path==='/auth/v1/invite');
-  const patchIdx=mock.hits.findIndex(x=>x.path.startsWith('/auth/v1/admin/users/')&&x.method==='PUT');
-  assert.ok(patchIdx>=0&&patchIdx<idx,'directory metadata is written before the message so a retry cannot double-send');
-  // Never creates, confirms, deletes, re-addresses or grants.
-  assert.ok(!mock.hits.some(x=>x.method==='DELETE'||x.path.includes('fftt_set_staff_v3')));
-  const patchBody=JSON.parse(mock.hits[patchIdx].body);
-  assert.deepEqual(Object.keys(patchBody),['app_metadata'],'only app_metadata is written (no email, no email_confirm)');
-  assert.ok(!('email' in patchBody)&&!('email_confirm' in patchBody));
+test('an existing pending FFTT Staff identity gets one replacement to the same account and the pinned callback',async()=>{
+  const f=authFake();
+  const r=await f.add();
+  assert.deepEqual([r.status,r.body.status],[200,'reinvited']);
+  assert.equal(f.invites().length,1);
+  assert.deepEqual(JSON.parse(f.invites()[0].body),{email:EMAIL},'no profile data is rewritten by the invitation');
+  assert.equal(new URLSearchParams(f.invites()[0].search).get('redirect_to'),ORIGIN+'/app/staff-invite.html');
+  const idx=f.state.hits.findIndex(x=>x.path==='/auth/v1/invite');
+  const put=f.state.hits.findIndex(x=>x.method==='PUT'&&x.path.startsWith('/auth/v1/admin/users/'));
+  assert.ok(put>=0&&put<idx,'directory metadata is written before the message');
+  assert.deepEqual(Object.keys(JSON.parse(f.state.hits[put].body)),['app_metadata'],'no email, no email_confirm, nothing else');
+  assert.equal(f.store.size,1,'no account was created');
+  assert.deepEqual(mutating(f),[],'no creation, deletion or event grant');
+  assert.equal(f.store.get(STAFF_PENDING.id).email_confirmed_at,null,'nothing is confirmed on the person\'s behalf');
 });
 
-test('the replacement invitation redirects only to the pinned Staff callback',async()=>{
-  const urls=[];
-  const mock=fake({users:[PENDING_USER]});
-  const spy=async(url,opts)=>{if(new URL(url).pathname==='/auth/v1/invite')urls.push(new URL(url));return mock.fetchImpl(url,opts);};
-  const app=createStaffDirectoryHandler({env:config,fetchImpl:spy});
-  await app(makeRequest('add',{email:EMAIL,name:'Volunteer Name'}));
-  assert.equal(urls.length,1);
-  assert.equal(urls[0].searchParams.get('redirect_to'),ORIGIN+'/app/staff-invite.html');
-});
-
-test('a confirmed account is never re-invited, and a banned pending account is not messaged',async()=>{
-  for(const user of [{...PENDING_USER,email_confirmed_at:'2026-11-03T00:00:00Z'},{...PENDING_USER,banned_until:'2999-01-01T00:00:00Z'}]){
-    const mock=fake({users:[user]}),app=createStaffDirectoryHandler({env:config,fetchImpl:mock.fetchImpl});
-    const res=await app(makeRequest('add',{email:EMAIL,name:'Volunteer Name'}));
-    assert.equal(res.status,200);
-    assert.equal((await res.json()).status,'existing');
-    assert.equal(invites(mock).length,0);
+test('identities that are not pending FFTT Staff are never messaged: unrelated, untagged-then-tagged, confirmed, banned, archived',async()=>{
+  const base={id:'ffffffff-ffff-4fff-8fff-ffffffffffff',email:EMAIL,email_confirmed_at:null};
+  const cases={
+    'unrelated Auth user (never invited, not in the directory)':{...base,invited_at:null,confirmation_sent_at:null,app_metadata:{provider:'email'}},
+    'confirmed staff identity':{...STAFF_PENDING,email_confirmed_at:'2026-11-03T00:00:00Z'},
+    'banned pending identity':{...STAFF_PENDING,banned_until:'2999-01-01T00:00:00Z'},
+    'pending but archived from the directory':{...STAFF_PENDING,app_metadata:{...STAFF_PENDING.app_metadata,fftt_staff_directory:false}},
+  };
+  for(const [label,user] of Object.entries(cases)){
+    const f=authFake({users:[user]});
+    const r=await f.add();
+    assert.deepEqual([r.status,r.body.status],[200,'existing'],label);
+    assert.equal(f.invites().length,0,label+': no message');
+    assert.deepEqual(mutating(f),[],label);
   }
+  // Tagging an unrelated account in one call must not make it eligible in the next call.
+  const f=authFake({users:[{...base,invited_at:null,confirmation_sent_at:null,app_metadata:{provider:'email'}}]});
+  await f.add();
+  assert.equal(f.store.get(base.id).app_metadata.fftt_staff_directory,true,'it is tagged (existing behaviour)');
+  const again=await f.add();
+  assert.equal(again.body.status,'existing');
+  assert.equal(f.invites().length,0,'still never messaged: it was never invited by this system');
 });
 
-test('replacement invitations stay disabled until the Staff redirect gate is on, and fail without silent retry',async()=>{
-  const off=fake({users:[PENDING_USER]});
-  assert.equal((await createStaffDirectoryHandler({env:{...config,STAFF_INVITE_REDIRECT_ENABLED:'false'},fetchImpl:off.fetchImpl})(makeRequest('add',{email:EMAIL,name:'Volunteer Name'}))).status,503);
-  assert.equal(invites(off).length,0);
-  assert.equal(off.hits.filter(x=>x.path.startsWith('/auth/v1/admin/users/')&&x.method==='PUT').length,0,'nothing is written while the gate is closed');
-  const limited=fake({users:[PENDING_USER],inviteStatus:429}),r429=await createStaffDirectoryHandler({env:config,fetchImpl:limited.fetchImpl})(makeRequest('add',{email:EMAIL,name:'Volunteer Name'}));
-  assert.equal(r429.status,429);assert.equal((await r429.json()).code,'rate-limited');assert.equal(invites(limited).length,1);
-  const down=fake({users:[PENDING_USER],inviteStatus:500}),r503=await createStaffDirectoryHandler({env:config,fetchImpl:down.fetchImpl})(makeRequest('add',{email:EMAIL,name:'Volunteer Name'}));
-  assert.equal(r503.status,503);assert.equal((await r503.json()).code,'invite-not-confirmed');assert.equal(invites(down).length,1);
+test('repeated requests: a resend inside the cooldown is refused and nothing is sent twice',async()=>{
+  const f=authFake();
+  assert.equal((await f.add()).body.status,'reinvited');
+  f.state.t+=30*1000;
+  assert.equal((await f.add()).body.status,'recently-sent');
+  f.state.t+=5*MIN;
+  assert.equal((await f.add()).body.status,'recently-sent');
+  assert.equal(f.invites().length,1,'one message across three requests');
+  f.state.t+=6*MIN;   // more than ten minutes since the send: a deliberate, bounded second resend is allowed
+  assert.equal((await f.add()).body.status,'reinvited');
+  assert.equal(f.invites().length,2);
 });
 
-test('only an Organizer can trigger a replacement invitation, and the client accepts the new status',async()=>{
-  const mock=fake({users:[PENDING_USER],role:'scorekeeper'}),app=createStaffDirectoryHandler({env:config,fetchImpl:mock.fetchImpl});
-  assert.equal((await app(makeRequest('add',{email:EMAIL,name:'Volunteer Name'}))).status,403);
-  assert.equal(invites(mock).length,0);
-  const c=createStaffDirectoryClient({fetchImpl:async()=>new Response(JSON.stringify({status:'reinvited'}),{status:200})});
-  assert.equal((await c.request(TOKEN,'add',{eventId:EVENT_A,name:'Volunteer Name',email:EMAIL})).status,'reinvited');
+test('concurrent requests send one message; a request holding a stale account list cannot duplicate it',async()=>{
+  const f=authFake({delay:25});
+  const [a,b]=await Promise.all([f.add(),f.add()]);
+  assert.deepEqual([a.body.status,b.body.status].sort(),['in-progress','reinvited']);
+  assert.equal(f.invites().length,1);
+  const g=authFake({staleList:true});     // the account list always shows the OLD send time
+  assert.equal((await g.add()).body.status,'reinvited');
+  assert.equal((await g.add()).body.status,'recently-sent','the fresh per-account read overrides the stale list');
+  assert.equal(g.invites().length,1);
+});
+
+test('uncertain results: Auth\'s own send time decides; if that is unknown nothing more is sent from here',async()=>{
+  for(const mode of ['http500-sent','throw-sent']){
+    const f=authFake({mode});
+    const r=await f.add();
+    assert.deepEqual([r.status,r.body.status],[200,'reinvited'],mode+': Auth recorded a send');
+    assert.equal(f.invites().length,1);
+  }
+  for(const mode of ['http500-unsent','throw-unsent']){
+    const f=authFake({mode});
+    const r=await f.add();
+    assert.equal(r.status,503);assert.equal(r.body.code,'invite-not-confirmed');
+    f.state.mode='ok';                      // Auth shows nothing was sent, so a retry is safe and sends once
+    assert.equal((await f.add()).body.status,'reinvited');
+    assert.equal(f.invites().length,2,mode+': one failed attempt that sent nothing, one real send');
+  }
+  const u=authFake({mode:'throw-sent',readFailsAfterInvite:true});
+  const first=await u.add();
+  assert.deepEqual([first.status,first.body.status],[200,'uncertain'],'cannot tell: reported as uncertain, never as sent');
+  u.state.mode='ok';u.state.readFails=false;u.state.readFailsAfterInvite=false;
+  assert.equal((await u.add()).body.status,'uncertain','no automatic or immediate second send after an unconfirmed outcome');
+  assert.equal(u.invites().length,1);
+  u.state.t+=5*MIN;
+  assert.equal((await u.add()).body.status,'uncertain','still blocked inside the cooldown');
+  assert.equal(u.invites().length,1);
+  u.state.t+=6*MIN;   // eleven minutes after the (recorded) send: a deliberate, bounded resend is allowed again
+  assert.equal((await u.add()).body.status,'reinvited');
+  assert.equal(u.invites().length,2);
+  const limited=authFake({mode:'http429'}),lim=await limited.add();
+  assert.equal(lim.status,429);assert.equal(lim.body.code,'rate-limited');assert.equal(limited.invites().length,1);
+});
+
+test('replacement invitations stay behind the redirect gate and the Organizer check',async()=>{
+  const off=authFake({env:{STAFF_INVITE_REDIRECT_ENABLED:'false'}}),closed=await off.add();
+  assert.equal(closed.status,503);
+  assert.equal(off.invites().length,0);
+  assert.equal(off.state.hits.filter(x=>x.method==='PUT').length,0,'nothing is written while the redirect gate is closed');
+  const scorer=fake({users:[STAFF_PENDING],role:'scorekeeper'}),denied=createStaffDirectoryHandler({env:config,fetchImpl:scorer.fetchImpl});
+  assert.equal((await denied(makeRequest('add',{email:EMAIL,name:'Volunteer Name'}))).status,403);
+  assert.equal(scorer.hits.filter(x=>x.path==='/auth/v1/invite').length,0);
+  for(const status of ['reinvited','recently-sent','in-progress','uncertain']){
+    const client=createStaffDirectoryClient({fetchImpl:async()=>new Response(JSON.stringify({status}),{status:200})});
+    assert.equal((await client.request(TOKEN,'add',{eventId:EVENT_A,name:'Volunteer Name',email:EMAIL})).status,status);
+  }
 });

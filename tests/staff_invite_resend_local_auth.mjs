@@ -8,7 +8,9 @@
  *
  *  Proves: invite -> replacement invite reuse the SAME identity (one user), the older link is refused and leaves the
  *  account unconfirmed, the newest link returns the callback format the deployed page accepts, password setup and a
- *  later individual sign-in work, no event access appears, and a confirmed account is never re-invited.
+ *  later individual sign-in work, no event access appears, and a confirmed account is never re-invited. It also proves the
+ *  duplicate-send safeguards against REAL Auth state (`invited_at`, `confirmation_sent_at`): a repeat inside the cooldown and
+ *  concurrent requests send nothing extra, and an unrelated unconfirmed Auth user is never messaged.
  */
 import {execFileSync} from 'node:child_process';
 import assert from 'node:assert/strict';
@@ -42,16 +44,19 @@ async function fetchImpl(url, opts) {
 }
 const handler = createStaffDirectoryHandler({fetchImpl, env: {STAFF_ORIGIN: ORIGIN, SUPABASE_URL: C3_HOST,
   SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_localdisposable', SUPABASE_ADMIN_SECRET: SERVICE, STAFF_INVITE_REDIRECT_ENABLED: 'true'}});
-const add = async () => {
+const addFor = async email => {
   const res = await handler(new Request(ORIGIN + '/api/staff-directory', {method: 'POST',
     headers: {origin: ORIGIN, authorization: 'Bearer aaa.bbb.ccc', 'content-type': 'application/json'},
-    body: JSON.stringify({action: 'add', event_id: EVENT, name: 'Fictional Invitee', email: EMAIL})}));
+    body: JSON.stringify({action: 'add', event_id: EVENT, name: 'Fictional Invitee', email})}));
   return {status: res.status, body: await res.json()};
 };
+const add = () => addFor(EMAIL);
+// The per-account cooldown is judged on Auth's own send time; age it in this disposable database instead of waiting ten minutes.
+const ageLastSend = () => psql(`update auth.users set confirmation_sent_at = now() - interval '1 hour' where email='${EMAIL}'`);
 
-async function messages() {
+async function messages(email = EMAIL) {
   const list = await (await fetch(MAIL + '/api/v1/messages?limit=200')).json();
-  const mine = (list.messages ?? []).filter(m => (m.To ?? []).some(t => t.Address?.toLowerCase() === EMAIL));
+  const mine = (list.messages ?? []).filter(m => (m.To ?? []).some(t => t.Address?.toLowerCase() === email));
   const out = [];
   for (const m of mine.sort((a, b) => new Date(a.Created) - new Date(b.Created))) {
     const full = await (await fetch(MAIL + '/api/v1/message/' + m.ID)).json();
@@ -84,15 +89,25 @@ const id = psql(`select id from auth.users where email='${EMAIL}'`);
 assert.equal(confirmed(), false);
 const first = await waitForMessages(1);
 
-// 2. The link was never used and is replaced: Add Staff on the same, still-unconfirmed identity sends ONE replacement.
-await sleep(2500);   // supabase/config.toml sets a 1s per-user email interval for this disposable stack
+// 2. Real Auth state: the account carries invited_at and a send time, so a repeat inside the cooldown sends nothing.
+assert.ok(psql(`select invited_at is not null and confirmation_sent_at is not null from auth.users where email='${EMAIL}'`) === 't',
+  'Auth records invited_at and confirmation_sent_at for an invited account');
+await sleep(1500);
 r = await add();
-assert.deepEqual([r.status, r.body.status], [200, 'reinvited'], 'second Add Staff re-sends to the existing account');
+assert.deepEqual([r.status, r.body.status], [200, 'recently-sent'], 'an immediate repeat is refused by the cooldown');
+assert.equal((await messages()).length, 1, 'no second message was sent');
+
+// 3. After the cooldown, two simultaneous Add Staff requests send exactly ONE replacement to the SAME identity.
+ageLastSend();
+const pair = await Promise.all([add(), add()]);
+const outcomes = pair.map(x => x.body.status).sort();
+assert.equal(outcomes.filter(x => x === 'reinvited').length, 1, `exactly one replacement was sent (got ${outcomes})`);
+assert.ok(outcomes.every(x => ['reinvited', 'in-progress', 'recently-sent'].includes(x)), 'the other request sent nothing');
 assert.equal(userCount(), 1, 'no second identity was created');
 assert.equal(psql(`select id from auth.users where email='${EMAIL}'`), id, 'same Auth identity');
 assert.equal(confirmed(), false, 'sending does not confirm the account');
 const both = await waitForMessages(2);
-assert.equal((await messages()).length, 2, 'exactly one replacement message was sent');
+assert.equal((await messages()).length, 2, 'exactly one replacement message in total');
 assert.notEqual(both[0], both[1], 'the replacement carries a different one-time token');
 
 // 3. The OLD link is now refused, as an explicit expiry error the page recognises, and does not confirm the account.
@@ -123,10 +138,23 @@ assert.ok(session.access_token, 'the invitee holds their own session');
 assert.equal(grants(), 0);
 
 // 6. A confirmed account is never re-invited by Add Staff.
-await sleep(1500);
+ageLastSend();
 r = await add();
 assert.deepEqual([r.status, r.body.status], [200, 'existing'], 'confirmed account: nothing is sent');
 assert.equal((await messages()).length, 2, 'no further email was sent');
 assert.equal(userCount(), 1);
-assert.equal(Number(psql('select count(*) from auth.users')), usersBefore + 1, 'the whole run created exactly one (fictional) identity');
+// 7. An UNRELATED unconfirmed Auth user (not created by an invitation, not in the directory) is never messaged, even on repeat.
+const OTHER = `fftt-unrelated-${Date.now().toString(36)}@example.test`;
+const made = await fetch(API + '/auth/v1/admin/users', {method: 'POST', headers: {apikey: SERVICE, Authorization: 'Bearer ' + SERVICE, 'content-type': 'application/json'},
+  body: JSON.stringify({email: OTHER, email_confirm: false})});
+assert.equal(made.status, 200, 'fixture: an unrelated unconfirmed local user');
+assert.equal(psql(`select invited_at is null and email_confirmed_at is null from auth.users where email='${OTHER}'`), 't', 'fixture really is unrelated and unconfirmed');
+for (let i = 0; i < 2; i++) {
+  const o = await addFor(OTHER);
+  assert.deepEqual([o.status, o.body.status], [200, 'existing'], `unrelated account, request ${i + 1}: nothing is sent`);
+  await sleep(1200);
+}
+assert.equal((await messages(OTHER)).length, 0, 'no email reached the unrelated account');
+assert.equal(psql(`select email_confirmed_at is null from auth.users where email='${OTHER}'`), 't', 'it was not confirmed on anyone\'s behalf');
+assert.equal(Number(psql('select count(*) from auth.users')), usersBefore + 2, 'the run created exactly two fictional identities: the invitee and the unrelated fixture');
 console.log('OK: replacement invitation recovery verified against local GoTrue (old link refused, new link accepted, password + sign-in, no grants, no duplicate account)');

@@ -1,6 +1,12 @@
 /** One full-width People card. Auth state is read-only; event grants are server-authoritative. */
 import {STAFF_ROLES, planStaffChange} from '../contracts/staff_people.mjs';
 const roleLabel={scorekeeper:'Scorekeeper',bracket_manager:'Bracket Manager',organizer:'Organizer'};
+// What the Organizer is told for each add outcome. "Sent" means the Auth service issued a message, not that it was delivered or opened.
+const INVITE_NOTES={
+  reinvited:'A new invitation was sent to this existing account. The link works for one hour and replaces the previous link. No event access was granted.',
+  'recently-sent':'An invitation was sent to this account a few minutes ago, so no new message was sent. That link still works until it expires. Try again in about ten minutes if it was not used.',
+  'in-progress':'An invitation for this account is already being sent. Wait a moment and refresh before trying again.',
+  uncertain:'The service could not confirm whether a new invitation was sent. Do not send another yet: wait about ten minutes, ask the person whether a new email arrived, then try again.'};
 export function createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDialog,rerender}) {
   let layout='people', query='';
   const edits=new Map();
@@ -21,7 +27,8 @@ export function createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDi
         ev.preventDefault();if(!name.value.trim()||!email.validity.valid){status.textContent='Enter a name and a valid email.';return;}
         submit.disabled=true;status.textContent='Verifying the account and invitation…';
         const r=await core.actions.addStaffPerson(name.value,email.value);
-        if(r.ok){result(r,r.res?.status==='reinvited'?'A new invitation was sent to this existing account. The link works for one hour. No event access was granted.':'Staff member added to the directory.');edits.clear();close();rerender();}
+        if(r.ok&&r.res?.status==='uncertain'){status.textContent=INVITE_NOTES.uncertain;return;}  // keep the dialog open; do not invite a retry
+        if(r.ok){result(r,INVITE_NOTES[r.res?.status]??'Staff member added to the directory.');edits.clear();close();rerender();}
         else{status.textContent=r.message??'Account setup was not confirmed. No event access was granted.';submit.disabled=false;}
       }}},
       h('h3',{text:'Add staff member'}),h('p',{class:'help',text:'One account works across events. Invitations require the protected Organizer service; no event role is granted automatically.'}),

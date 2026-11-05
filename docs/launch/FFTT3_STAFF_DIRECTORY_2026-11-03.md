@@ -55,3 +55,20 @@ The Organizer explicitly approved a direct, **Staff-only production rollout** ra
 4. Preserve existing PR #22 draft state. No merge/deploy to production or individual account/grant creation without subsequent authorization and identity verification.
 
 Known limitation: Add Staff and directory removal require the protected backend, so they stay unavailable on unconfigured hosts. This must never be disguised as a successful account creation. Staff account invitations still need to be received and completed by each person before event access works.
+
+## Replacement invitation for an expired link (bounded resend)
+
+Supabase invitation links last **one hour** (`mailer_otp_exp = 3600` on the hosted project; not changed by this work). **Add Staff** on an existing person now sends one replacement invitation to the *same* Auth identity instead of silently doing nothing.
+
+**Who can be re-invited.** Only an existing identity that is (a) tagged as an FFTT Staff directory member, (b) was created by an invitation (Auth records `invited_at` only through its invite endpoint, so this cannot be forged by the Organizer's request), (c) has never confirmed its email and (d) is not banned. Unrelated Auth users, confirmed, banned and archived identities are never messaged. Eligibility is judged on the state *before* the request, so tagging an unrelated account in one call does not make it eligible in the next.
+
+**What it never does.** It does not create, delete, confirm, re-address or reset the account, does not write a password, does not grant or change any event role, and builds the callback only from the pinned Staff origin (`/app/staff-invite.html`). Hosted Auth settings are not changed.
+
+**Duplicate-send safeguards (bounded, not exactly-once).**
+- Auth's own `confirmation_sent_at` is the durable record. A resend inside **10 minutes** of the last send is refused (`recently-sent`) because a new message also invalidates the previous link. Auth's own 60 second per-user email throttle remains a second layer.
+- One resend per email at a time per Function instance, and a fresh read of the account after taking that lock, so a request holding a stale account list cannot duplicate a send that just finished.
+- If the invite call fails or gives no answer, the account's send time is re-read: changed means Auth issued a message (reported as sent); unchanged means nothing was sent and a retry is safe; if even that cannot be read the result is reported as **uncertain** and further resends from that instance are blocked for 10 minutes. There is no automatic retry.
+
+**Limits that remain.** Without new infrastructure there is no cross-instance lock: two requests handled by *different* Function instances at the very same instant could both pass the checks, and only Auth's 60 second throttle would stop the second one if it arrives after the first is recorded. "Sent" means the Auth service issued a message; it does not prove delivery, that the person opened it, or that they accepted. Acceptance is established only by the person's own password setup and sign-in. The Organizer-facing messages for each outcome are in `app/view_staff_people.mjs`.
+
+**Tests.** `tests/fftt3_staff_directory.test.mjs` (pending staff identity, unrelated, confirmed, banned and archived identities, repeats, concurrent requests, stale list, uncertain results, no creation or grant, pinned callback); `tests/e2e/staff_invite_page.test.mjs`; and `tests/staff_invite_resend_local_auth.mjs`, which runs the whole flow against a real disposable local GoTrue with fictional accounts.
