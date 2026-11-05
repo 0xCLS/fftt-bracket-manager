@@ -36,6 +36,14 @@ function staffNavIcon(kind) {
   return svg;
 }
 
+const EVENT_PICKER_DATE = new Intl.DateTimeFormat('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC'});
+function eventPickerDate(isoDate) {
+  // Event dates are calendar dates, not local timestamps: UTC prevents a day shift in US time zones.
+  if (typeof isoDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return isoDate ?? '';
+  const date = new Date(isoDate + 'T00:00:00Z');
+  return Number.isNaN(date.getTime()) ? isoDate : EVENT_PICKER_DATE.format(date);
+}
+
 const OFFLINE_TOOL = 'https://0xcls.github.io/fftt-bracket-manager/';
 
 export function createStaffUi({core, els, config, signOut}) {
@@ -127,7 +135,7 @@ export function createStaffUi({core, els, config, signOut}) {
     // change: synchronize the value without replacing the focused control.
     if (els.eventSelect.dataset.optionsKey !== eventOptionsKey) {
       clear(els.eventSelect);
-      for (const e of evs) els.eventSelect.append(h('option', {value: e.eventId, text: `${e.name} · ${e.date}${e.lifecycle === 'archived' ? ' (archived)' : ''}`, selected: e.eventId === s.eventId}));
+      for (const e of evs) els.eventSelect.append(h('option', {value: e.eventId, text: `${e.name} · ${eventPickerDate(e.date)}${e.lifecycle === 'archived' ? ' (archived)' : ''}`, selected: e.eventId === s.eventId}));
       els.eventSelect.dataset.optionsKey = eventOptionsKey;
     }
     if (els.eventSelect.value !== s.eventId) els.eventSelect.value = s.eventId ?? '';
