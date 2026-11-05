@@ -127,8 +127,11 @@ export function createEventsView(ctx) {
           const r = await core.actions.createEvent(eventName, eventDate, count);
           if (!r.ok) { error.textContent = r.message ?? 'The event could not be created.'; return; }
           toast('Event created. It is empty and not public.');
+          // The dialog normally restores focus to its opener on close. Navigate after that
+          // restoration so the newly selected event opens on Overview at the top of the page.
+          dlg.addEventListener('close', () => { ctx.openEvent(); window.scrollTo(0, 0); }, {once: true});
           close();
-          forget('new'); ctx.goTab('players');
+          forget('new');
         } finally { save.disabled = !writable(); }
       }}},
         h('div', {class: 'event-dialog-grid'}, field('Name', name), field('Date', date), field('Tables', tables)),
