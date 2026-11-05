@@ -45,14 +45,14 @@ select public.fftt_set_staff_v3(fftt_day.id('event'),'scorer@fftt-day.invalid','
 -- The manager's own scope; check-in and one safe walk-in.
 select fftt_day.as_user(fftt_day.id('mgr'));
 do $run$
-declare e uuid:=fftt_day.id('event'); sn jsonb; p uuid; ids jsonb;
+declare e uuid:=fftt_day.id('event'); sn jsonb; v_player uuid; ids jsonb;
 begin
   sn := public.fftt_bracket_manager_snapshot_v1(e);
   if sn -> 'staff' <> '[]'::jsonb or sn::text like '%@fftt-day.invalid%' then raise exception 'private info leaked'; end if;
   if exists(select 1 from jsonb_array_elements(sn->'players') p where p->'registration_refs'<>'[]'::jsonb)
     then raise exception 'registration references leaked'; end if;
-  for p in select (x->>'id')::uuid from jsonb_array_elements(sn->'players') x loop
-    perform public.fftt_set_checkin_v3(e,p,true);
+  for v_player in select (x->>'id')::uuid from jsonb_array_elements(sn->'players') x loop
+    perform public.fftt_set_checkin_v3(e,v_player,true);
   end loop;
   if (public.fftt_event_day_walkin_v1(e,'Fictional Charlie Walkin',1))->>'status'<>'saved'
     then raise exception 'walk-in was not saved'; end if;
