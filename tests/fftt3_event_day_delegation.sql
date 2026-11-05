@@ -38,7 +38,7 @@ select fftt_day.as_user(fftt_day.id('org'));
 select set_config('fftt_day.event',(public.fftt_create_event_v3('FICTIONAL EVENT DAY','2026-11-08',2)->>'event_id'),true);
 select set_config('fftt_day.foreign',(public.fftt_create_event_v3('FICTIONAL FOREIGN EVENT','2026-11-08',2)->>'event_id'),true);
 select public.fftt_upsert_players_v3(fftt_day.id('event'),
-  '[{"name":"Fictional Alpha Player","rating":3,"rating_status":"provisional"},{"name":"Fictional Bravo Player","rating":2,"rating_status":"provisional"}]'::jsonb);
+  '[{"name":"Fictional Alpha Player","rating":3,"rating_status":"provisional"},{"name":"Fictional Bravo Player","rating":2,"rating_status":"provisional"},{"name":"Fictional Delta Player","rating":4,"rating_status":"provisional"}]'::jsonb);
 select public.fftt_set_staff_v3(fftt_day.id('event'),'manager@fftt-day.invalid','grant','bracket_manager');
 select public.fftt_set_staff_v3(fftt_day.id('event'),'scorer@fftt-day.invalid','grant','scorekeeper');
 
@@ -66,8 +66,8 @@ begin
     format($q$select public.fftt_event_day_walkin_v1(%L,'Fictional Delta Walkin',0)$q$,e),
     '22023','fftt_validation_error');
   sn := public.fftt_bracket_manager_snapshot_v1(e);
-  if jsonb_array_length(sn->'players')<>3 then raise exception 'walk-in count wrong'; end if;
-  if (select count(*) from jsonb_array_elements(sn->'players') p where p->>'checked_in'='true')<>3
+  if jsonb_array_length(sn->'players')<>4 then raise exception 'walk-in count wrong'; end if;
+  if (select count(*) from jsonb_array_elements(sn->'players') p where p->>'checked_in'='true')<>4
     then raise exception 'check-in count wrong'; end if;
   perform fftt_day.expect('organizer snapshot',
     format($q$select public.fftt_organizer_snapshot_v3(%L)$q$,e),'42501','forbidden');
