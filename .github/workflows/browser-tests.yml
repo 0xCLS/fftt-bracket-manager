@@ -214,6 +214,10 @@ jobs:
         env:
           FFTT_CHROME_CHANNEL: none
         run: node --test tests/e2e/gameday_browser.test.mjs
+      - name: Event-day Bracket Manager check-in and scorer isolation in fictional Chrome
+        env:
+          FFTT_CHROME_CHANNEL: none
+        run: node --test tests/e2e/gameday_event_day_ui_browser.test.mjs
       - name: Game-day browser failure paths (background/resume, outage, stale TV, reload, renewal, wrong password)
         env:
           FFTT_CHROME_CHANNEL: none
