@@ -12,12 +12,14 @@ import {scoreTiles} from './game_tiles.mjs';
 
 const ORGANIZER_TABS = [['overview', 'Overview'], ['players', 'Players'], ['championship', 'Championship'],
   ['consolation', 'Consolation'], ['desk', 'Match Desk'], ['finale', 'Doubles Finale'], ['results', 'Results & Export'], ['staff', 'Staff']];
-const BRACKET_MANAGER_TABS = [['championship', 'Championship'], ['consolation', 'Consolation'], ['desk', 'Match Desk'], ['finale', 'Doubles Finale']];
+const BRACKET_MANAGER_TABS = [['checkin', 'Check-in'], ['championship', 'Championship'], ['consolation', 'Consolation'], ['desk', 'Match Desk'], ['finale', 'Doubles Finale'], ['wrap', 'Finish']];
 const SCOREKEEPER_TABS = [['desk', 'Match Desk']];
 /** Fixed outline icon geometry from the approved single-file FFTT navigation. */
 const STAFF_NAV_GEOMETRY = Object.freeze({
   overview: [['rect',{x:3,y:3,width:7,height:7,rx:1}],['rect',{x:14,y:3,width:7,height:7,rx:1}],['rect',{x:3,y:14,width:7,height:7,rx:1}],['rect',{x:14,y:14,width:7,height:7,rx:1}]],
   players: [['path',{d:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'}],['circle',{cx:9,cy:7,r:4}],['path',{d:'M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75'}]],
+  checkin: [['path',{d:'M3 12l4 4 8-9'}],['path',{d:'M14 18h7M14 13h7M14 8h7'}]],
+  wrap: [['rect',{x:4,y:4,width:16,height:16,rx:2}],['path',{d:'M8 12l3 3 5-6'}]],
   championship: [['path',{d:'M8 21h8M12 17v4M7 4h10v7a5 5 0 0 1-10 0V4ZM7 6H4v3a4 4 0 0 0 4 4M17 6h3v3a4 4 0 0 1-4 4'}]],
   consolation: [['path',{d:'M3 11a9 9 0 0 1 16-5l2 2M21 3v5h-5M21 13a9 9 0 0 1-16 5l-2-2M3 21v-5h5'}]],
   desk: [['rect',{x:5,y:4,width:14,height:17,rx:2}],['path',{d:'M9 4.5V3h6v1.5M9 10h6M9 14h6M9 18h4'}]],
@@ -278,6 +280,52 @@ export function createStaffUi({core, els, config, signOut}) {
     return seen;
   };
 
+  // Event-day check-in is deliberately separate from the organizer's Google registration screen.
+  // It uses the sanitized Bracket Manager snapshot: no contacts, source settings or registration refs.
+  function viewManagerCheckin() {
+    if (!isBracketManager()) return loading();
+    const sn = s.snapshot;
+    if (!sn) return loading();
+    const built = sn.brackets.some(b => b.kind === 'championship');
+    const eligible = !built && ['draft', 'active'].includes(sn.event.lifecycle);
+    const checked = sn.players.filter(p => p.checkedIn).length;
+    const name = h('input', {type:'text', id:'edName', maxlength:80, autocomplete:'off',
+      placeholder:'First and last name', value:draft('edName',''), disabled:!eligible || !core.canWrite()});
+    const level = h('select', {id:'edLevel', disabled:!eligible || !core.canWrite()},
+      [['1','Beginner'],['2','Recreational'],['3','Intermediate'],['4','Strong intermediate'],['5','Advanced / competitive']].map(
+        ([v,label])=>h('option',{value:v,text:`Level ${v} · ${label}`,selected:String(draft('edLevel','1'))===v})));
+    return h('div', {},
+      h('section', {class:'card'}, h('h2', {text:'Arrivals and check-in'}),
+        h('p', {class:'card-sub',text:`${checked} of ${sn.players.length} roster players checked in. Check in only those present.`}),
+        built ? h('div',{class:'notice warn',text:'The Championship bracket has been built. Check-in changes and new walk-ins are locked to protect the active bracket. Contact the Organizer about a late arrival.'}) :
+          h('p',{class:'help',text:'The Organizer prepares the registration roster before play. This screen shows player names and levels, not private registration data.'}),
+        h('div', {class:'scroll-x'},
+          h('table',{class:'responsive-table', 'aria-label':'Event-day roster'},
+            h('thead',{},h('tr',{},['Player','Level','Attendance','Action'].map(t=>h('th',{scope:'col',text:t})))),
+            h('tbody',{}, sn.players.map(p=>h('tr',{},
+              h('td',{'data-label':'Player',text:p.name}),
+              h('td',{'data-label':'Level',text:`Level ${p.rating}`}),
+              h('td',{'data-label':'Attendance'},pill(p.checkedIn?'Checked in':'Expected',p.checkedIn?'good':'warn')),
+              h('td',{'data-label':'Action'},h('button',{type:'button',class:'small'+(p.checkedIn?'':' primary'),
+                disabled:!eligible || !core.canWrite(),text:p.checkedIn?'Undo':'Check in',
+                'aria-label':`${p.checkedIn?'Undo check-in for':'Check in'} ${p.name}`,
+                on:{click:async()=>result(await core.actions.setCheckin(p.id,!p.checkedIn),p.checkedIn?'Check-in undone.':'Player checked in.')}}))
+            ))))),
+      h('section',{class:'card'},h('h2',{text:'Add a walk-in'}),
+        h('p',{class:'card-sub',text:'Use a full first and last name. A walk-in is added and checked in together; no contact information is collected.'}),
+        h('form',{on:{submit:async ev=>{
+          ev.preventDefault();
+          if(!eligible)return;
+          const r=await core.actions.eventDayWalkIn(name.value.trim(),Number(level.value));
+          if(result(r,'Walk-in added and checked in.')){forget('edName');name.value='';}
+        }}},
+          h('div',{class:'grid two'},h('div',{},h('label',{for:'edName',text:'Full name'}),name),
+            h('div',{},h('label',{for:'edLevel',text:'Player level'}),level)),
+          h('div',{class:'row'},h('button',{class:'primary',type:'submit',
+            disabled:!eligible || !core.canWrite(),text:'Add & check in'})))),
+      h('div',{class:'notice',text:'After check-in, open Championship to review the field and build the bracket. Never rebuild an active bracket to add a late player.'}));
+  }
+
   function viewChampionship() {
     const sn = s.snapshot;
     if (!sn) return loading();
@@ -346,6 +394,7 @@ export function createStaffUi({core, els, config, signOut}) {
     const tables = s.snapshot?.event.tables ?? s.brief?.tables ?? 12;
     const rows = s.desk;
     const org = isOrganizer();
+    const canAdjudicate = org || isBracketManager();
     const children = [];
     if (s.pending) children.push(pendingBanner());
     if (s.deskStatus === 'not-active') children.push(h('div', {class: 'notice warn', text: s.brief?.lifecycle === 'complete'
@@ -357,15 +406,15 @@ export function createStaffUi({core, els, config, signOut}) {
       Array.from({length: tables}, (_, i) => { const m = usage.get(i + 1);
         return pill(m ? `Table ${i + 1} · ${m.players[0].name} v ${m.players[1].name}` : `Table ${i + 1} · free`, (m ? 'blue' : 'good') + ' table-pill'); }))));
     children.push(h('h2', {class: 'page-h2', text: `Ready to play (${rows.length})`}));
-    children.push(rows.length ? h('div', {class: 'queue'}, rows.map(r => queueCard(r, tables, org)))
+    children.push(rows.length ? h('div', {class: 'queue'}, rows.map(r => queueCard(r, tables, canAdjudicate)))
       : h('div', {class: 'empty-state', text:
         s.deskStatus === 'not-active' && (s.brief?.lifecycle === 'complete' || s.snapshot?.event.lifecycle === 'complete')
           ? 'This event is complete. There are no further matches to play.'
           : s.deskStatus === 'not-active' ? 'No bracket is active yet. The organizer builds it from Championship.'
           : s.deskStatus === 'ready' ? 'No playable matches are waiting right now.' : 'Waiting for the Match Desk…'}));
-    if (org && s.snapshot) {
+    if (canAdjudicate && s.snapshot) {
       const done = normalizeSnapshotMatches(s.snapshot).filter(m => m.status === 'complete').sort((a, b) => b.round - a.round).slice(0, 12);
-      children.push(h('section', {class: 'card', 'aria-labelledby': 'recentTitle'}, h('h2', {id: 'recentTitle', class: 'card-title', text: 'Recent results (organizer corrections)'}),
+      children.push(h('section', {class: 'card', 'aria-labelledby': 'recentTitle'}, h('h2', {id: 'recentTitle', class: 'card-title', text: 'Recent results and corrections'}),
         done.length ? h('div', {class: 'scroll-x'}, h('table', {class: 'responsive-table'}, h('tbody', {}, done.map(m => h('tr', {}, h('td', {'data-label': 'Match'}, `${m.name1} v ${m.name2}`), h('td', {'data-label': 'Winner'}, `${m.winnerName} won`), h('td', {'data-label': 'Scores', class: 'scores-cell'}, scoreTiles(m.scores, {left: m.name1, right: m.name2, caption: false})),
           h('td', {'data-label': 'Format'}, h('span', {class: 'muted', text: m.bestOf ? `${formatText({bestOf: m.bestOf, points: m.points})}${m.formatLegacy ? ' (historical)' : ''}` : ''})),
           h('td', {}, h('button', {class: 'small', type: 'button', disabled: !core.canWrite(), text: 'Correct…', 'aria-label': `Correct the result of ${m.name1} versus ${m.name2}`, on: {click: () => openCorrection(m)}})))))))
@@ -591,6 +640,44 @@ export function createStaffUi({core, els, config, signOut}) {
             h('div', {class: 'row'}, h('button', {class: 'primary', type: 'submit', disabled: !core.canWrite(), text: 'Record doubles result'})))) : null);
   }
 
+  // Manager-only closeout: standings and public-safe exports, never publication, archive,
+  // registration contacts, staff directory, audit log or the private event backup.
+  function viewManagerWrap() {
+    if (!isBracketManager()) return loading();
+    const sn = s.snapshot;
+    if (!sn) return loading();
+    const e = sn.event, st = standingsFromSnapshot(sn);
+    const champDone = sn.brackets.some(b=>b.kind==='championship' && b.status==='complete');
+    const unfinished = sn.brackets.some(b=>b.status!=='complete');
+    const doublesPending = !!(sn.doubles?.partner1 && !sn.doubles?.winnerTeam);
+    const ready = champDone && !unfinished && !doublesPending && e.lifecycle==='active';
+    const line = (label,v) => v ? h('tr',{},h('th',{scope:'row',text:label}),
+      h('td',{text:Array.isArray(v)?v.join(', '):v})) : null;
+    return h('div',{},
+      h('section',{class:'card'},h('h2',{text:'Review final results'}),
+        st.champion ? h('table',{class:'kv-table'},h('tbody',{},
+          line('Singles champion',st.champion),line('Runner-up',st.runnerUp),
+          line('Consolation champion',st.consolationChampion),
+          line('Consolation runner-up',st.consolationRunnerUp),
+          st.doubles ? line('Doubles winners',st.doubles.winners.join(' + ')) : null))
+          : h('p',{text:'Final standings appear once the Championship is complete.'}),
+        h('p',{class:'help',text:'Confirm the winners with the scorecards before sharing results. Prize assignments remain outside the app.'}),
+        h('div',{class:'row'},
+          h('button',{type:'button',text:'Results (text)',on:{click:()=>download(`FFTT_results_${e.date}.txt`,resultsText(sn))}}),
+          h('button',{type:'button',text:'Matches (CSV)',on:{click:()=>download(`FFTT_matches_${e.date}.csv`,matchesCsv(sn),'text/csv')}})),
+        h('p',{class:'help',text:'These exports contain match details, not private registration contacts or the complete backup.'})),
+      h('section',{class:'card'},h('h2',{text:'Finish tournament'}),
+        e.lifecycle==='complete' ? h('div',{class:'notice good',text:'This event is complete. New scoring and table assignments are closed.'}) :
+          h('p',{text:ready?'All required brackets and recorded doubles are complete. Review the results, then close the event.':'Finish the Championship, Consolation (if built), and Doubles Finale (if teams are set) before completing the event.'}),
+        h('div',{class:'row'},h('button',{type:'button',class:'primary',disabled:!core.canWrite() || !ready,
+          text:'Mark event complete',on:{click:async()=>{
+            if(await confirmDialog('Mark this event complete?',
+              'New scoring and table assignments stop. Saved results stay available and changes remain audited. Public visibility does not change.',
+              'Mark complete'))result(await core.actions.setLifecycle('complete'),'Event complete.');
+          }}})),
+        h('p',{class:'help',text:'Archiving, deleting, changing visibility and private backups remain Organizer-only.'})));
+  }
+
   // ------------------------------------------------------------ Results & export
   function viewResults() {
     const sn = s.snapshot;
@@ -648,8 +735,8 @@ export function createStaffUi({core, els, config, signOut}) {
   const viewStaff = createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDialog,rerender:()=>render(true)});
 
   // ------------------------------------------------------------ render loop
-  const views = {overview: viewOverview, players: viewPlayers, championship: viewChampionship, consolation: viewConsolation,
-    desk: viewDesk, finale: viewFinale, results: viewResults, staff: viewStaff};
+  const views = {overview: viewOverview, players: viewPlayers, checkin: viewManagerCheckin, championship: viewChampionship, consolation: viewConsolation,
+    desk: viewDesk, finale: viewFinale, wrap: viewManagerWrap, results: viewResults, staff: viewStaff};
   function syncConnectionGuard() {
     // A heartbeat may change writability without rebuilding (and erasing) a draft.
     const writable = core.canWrite();
@@ -696,13 +783,15 @@ export function createStaffUi({core, els, config, signOut}) {
     const ui = captureUi();
     const view = views[tab] ?? views.desk;
     const pane = s.signedIn ? view() : loading();
-    const title = {players: 'Players & check-in', championship: 'Championship', consolation: 'Consolation', desk: 'Match Desk',
-      finale: 'Doubles Finale', results: 'Results & Export', staff: 'Staff'}[tab];
+    const title = {players: 'Players & check-in', checkin: 'Event-day check-in', championship: 'Championship', consolation: 'Consolation', desk: 'Match Desk',
+      finale: 'Doubles Finale', wrap: 'Tournament finish', results: 'Results & Export', staff: 'Staff'}[tab];
     const description = {players: 'Check in registered players with one click, add walk-ins and confirm their levels before seeding the bracket.',
+      checkin: 'Record arrivals from the prepared roster and add full-name walk-ins before bracket creation.',
       championship: 'Seed the field and build the singles championship bracket.',
       consolation: 'Review first-match losses and build fair additional matches.',
       desk: 'Assign tables and submit server-verified match scores.',
       finale: 'Pair finalists with selected consolation players.',
+      wrap: 'Verify final standings, download public-safe results and mark the tournament complete.',
       results: 'Review standings, publish results and export private backups.',
       staff: 'Manage staff accounts and event-specific assignments.'}[tab];
     fill(els.main, title && s.signedIn ? h('div', {},
