@@ -360,6 +360,9 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     updatePlayer: p => act(ctx => api.upsertPlayers(ctx.token, {p_event_id: E(), p_players: [{id: p.id, name: p.name, rating: p.rating, rating_status: p.ratingStatus}]})),
     removePlayer: id => act(ctx => api.removePlayer(ctx.token, {p_event_id: E(), p_player_id: id})),
     setCheckin: (id, v) => act(ctx => api.setCheckin(ctx.token, {p_event_id: E(), p_player_id: id, p_checked_in: v})),
+    eventDayWalkIn: (name, rating) => s.role === 'bracket_manager'
+      ? act(ctx => api.eventDayWalkIn(ctx.token, {p_event_id: E(), p_name: name, p_rating: rating}))
+      : Promise.resolve({ok: false, message: 'Bracket Manager access required.'}),
     setCheckinAll: v => act(ctx => api.setCheckinBulk(ctx.token, {p_event_id: E(), p_player_ids: null, p_checked_in: v})),
     buildChampionship: ({confirm = false} = {}) => {
       const snap = s.snapshot;
