@@ -1,0 +1,33 @@
+name: Supabase CLI v3 hosted migration preflight (no remote access)
+
+on:
+  pull_request:
+    paths:
+      - tools/supabase_v3_preflight.py
+      - supabase/hosted_migration_baseline.json
+      - .github/workflows/supabase-v3-preflight.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  read-only-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confirm migration baselines are unchanged
+        run: python3 tools/supabase_v3_preflight.py --mode audit
+      - name: Verify hosted mutation gate denies deployment
+        shell: bash
+        run: |
+          set +e
+          python3 tools/supabase_v3_preflight.py --mode gate
+          code=$?
+          set -e
+          if [ "$code" -ne 3 ]; then
+            echo "Expected fail-closed exit status 3, got $code"
+            exit 1
+          fi
+          echo "PASS: guarded CLI v3 hosted deployment stays blocked"
