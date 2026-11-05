@@ -318,3 +318,28 @@ test('opt-in Staff iPhone layout trace records selected ordinal, actual viewport
     assert.deepEqual(w.pageErrors, []);
   } finally { await w.close(); }
 });
+
+test('Organizer creation keeps selected private event on Overview and scrolls to the top', {timeout: 120000}, async () => {
+  const w = await createBrowserWorld();
+  try {
+    const org = await w.device('create-overview', {viewport: {width: 390, height: 844}, mobile: true});
+    await org.signIn('org');
+    await org.page.locator('#evName').waitFor({timeout: T});
+    const originalName = await org.page.locator('#evName').inputValue();
+    const before = await org.page.locator('#eventSelect option').count();
+
+    await org.page.locator('#newName').fill('Private Nov 8 Practice');
+    await org.page.locator('#newDate').fill('2026-11-08');
+    await org.page.locator('#newTables').fill('2');
+    await org.page.getByRole('button', {name: 'Create event'}).click();
+    await toast(org.page, /Event created\. It is empty and not public/);
+    await org.page.waitForFunction(() => document.querySelector('#evName')?.value === 'Private Nov 8 Practice', null, {timeout: T});
+
+    assert.equal(await org.page.locator('nav.tabs button[data-tab="overview"]').getAttribute('aria-current'), 'page');
+    assert.equal(await org.page.locator('#eventSelect option').count(), before + 1);
+    assert.match(await org.page.locator('#eventSelect option:checked').innerText(), /Private Nov 8 Practice/);
+    await org.page.waitForFunction(() => window.scrollY <= 1, null, {timeout: T});
+    assert.notEqual(await org.page.locator('#evName').inputValue(), originalName);
+    assert.deepEqual(w.pageErrors, []);
+  } finally { await w.close(); }
+});
