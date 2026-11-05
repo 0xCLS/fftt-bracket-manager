@@ -21,7 +21,7 @@ export function createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDi
         ev.preventDefault();if(!name.value.trim()||!email.validity.valid){status.textContent='Enter a name and a valid email.';return;}
         submit.disabled=true;status.textContent='Verifying the account and invitation…';
         const r=await core.actions.addStaffPerson(name.value,email.value);
-        if(r.ok){result(r,'Staff member added to the directory.');edits.clear();close();rerender();}
+        if(r.ok){result(r,r.res?.status==='reinvited'?'A new invitation was sent to this existing account. The link works for one hour. No event access was granted.':'Staff member added to the directory.');edits.clear();close();rerender();}
         else{status.textContent=r.message??'Account setup was not confirmed. No event access was granted.';submit.disabled=false;}
       }}},
       h('h3',{text:'Add staff member'}),h('p',{class:'help',text:'One account works across events. Invitations require the protected Organizer service; no event role is granted automatically.'}),

@@ -54,6 +54,14 @@ export function createStaffDirectoryHandler({env={},fetchImpl=fetch}={}) {
     }
     return users;
   }
+  /** One admin invitation. The redirect is built only from the pinned Staff origin, never from the browser. */
+  async function sendInvite(email,name){
+    const target=STAFF_ORIGIN+'/app/staff-invite.html';
+    const r=await request('/auth/v1/invite?redirect_to='+encodeURIComponent(target),null,'POST',name===null?{email}:{email,data:{name}},true);
+    if(r.status===429)throw err(429,'rate-limited');
+    if(r.status!==200)throw err(503,'invite-not-confirmed');
+    return r;
+  }
   async function patch(id,metadata){
     const res=await request('/auth/v1/admin/users/'+encodeURIComponent(id),null,'PUT',
       {app_metadata:metadata},true);
@@ -102,13 +110,19 @@ export function createStaffDirectoryHandler({env={},fetchImpl=fetch}={}) {
         // An incorrect Auth redirect silently falls back to the Supabase Site URL. Gate until the allowed
         // Staff invite callback URL has been verified in Supabase Auth redirect settings.
         if(STAFF_INVITE_REDIRECT_ENABLED!=='true')throw err(503,'invite-not-configured');
-        const target=STAFF_ORIGIN+'/app/staff-invite.html';
-        const r=await request('/auth/v1/invite?redirect_to='+encodeURIComponent(target),null,'POST',{email,data:{name:body.name}},true);
-        if(r.status===429)throw err(429,'rate-limited');
-        if(r.status!==200)throw err(503,'invite-not-confirmed');
+        const r=await sendInvite(email,body.name);
         try{user=await r.json();}catch{throw err(503,'invite-not-confirmed');}
         if(user?.user)user=user.user;
         status='invited';
+      }else if(!user.email_confirmed_at&&!(user.banned_until&&Date.parse(user.banned_until)>Date.now())){
+        // An invitation that was never accepted (Supabase invitation links expire; the default is one hour) is
+        // re-sent to the SAME identity. Confirmed accounts are never re-invited, and nothing here confirms,
+        // recreates or re-addresses the identity or grants an event role. Directory metadata is written first so that
+        // a retry after a partial failure cannot send a second message; there is no automatic retry.
+        if(STAFF_INVITE_REDIRECT_ENABLED!=='true')throw err(503,'invite-not-configured');
+        await patch(user.id,{...user.app_metadata,fftt_staff_directory:true,fftt_staff_name:body.name});
+        await sendInvite(email,null);
+        return reply(200,'ok',STAFF_ORIGIN,{status:'reinvited'});
       }
       if(!UUID.test(user?.id??''))throw err(503,'invite-not-confirmed');
       await patch(user.id,{...user.app_metadata,fftt_staff_directory:true,fftt_staff_name:body.name});

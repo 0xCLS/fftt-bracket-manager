@@ -37,7 +37,7 @@ export function createStaffDirectoryClient({fetchImpl, basePath='/api/staff-dire
           if(typeof p.email!=='string'||!EMAIL.test(p.email)||typeof p.name!=='string'||p.name.length>120
             ||typeof p.verified!=='boolean'||typeof p.provisioned!=='boolean') throw new StaffDirectoryError('malformed');
         }
-      } else if(result.status!=='existing'&&result.status!=='invited'&&result.status!=='archived') throw new StaffDirectoryError('malformed');
+      } else if(!['existing','invited','reinvited','archived'].includes(result.status)) throw new StaffDirectoryError('malformed');
       return result;
     },
   });

@@ -12,3 +12,13 @@ enabled = false
 # able to sign in without a real email inbox. Hosted Auth is NOT modified.
 [auth.email]
 enable_confirmations = false
+# Local-only settings for tests/staff_invite_resend_local_auth.mjs (fictional users, disposable stack; hosted Auth is NOT modified):
+# the Staff invitation callback must be on the redirect allow-list for redirect_to to be honoured, a replacement
+# invitation is allowed after one second, and the per-hour email cap is raised above the default of 2.
+max_frequency = "1s"
+
+[auth]
+additional_redirect_urls = ["https://fftt-staff.clslifestyle.com/app/staff-invite.html"]
+
+[auth.rate_limit]
+email_sent = 30

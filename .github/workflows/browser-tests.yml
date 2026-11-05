@@ -244,6 +244,10 @@ jobs:
         env:
           FFTT_CHROME_CHANNEL: none
         run: node --test tests/e2e/staff_people_assignment_display.test.mjs
+      - name: Staff invitation page - expired link versus malformed callback, no token left in the address bar (fictional fragments)
+        env:
+          FFTT_CHROME_CHANNEL: none
+        run: node --test tests/e2e/staff_invite_page.test.mjs
       - name: V4 browser - responsive layout, accessibility (axe-core), keyboard and tap targets
         env:
           FFTT_CHROME_CHANNEL: none
@@ -287,6 +291,8 @@ jobs:
         run: supabase start
       - name: Verify existing B1-B2d migrations before v2
         run: supabase test db
+      - name: Staff invitation recovery against real local GoTrue (fictional account - replacement invite, old link refused, callback format, password setup, no grants)
+        run: node tests/staff_invite_resend_local_auth.mjs
       - name: Apply v2 candidate ONLY to ephemeral local PostgreSQL
         env:
           PGPASSWORD: postgres

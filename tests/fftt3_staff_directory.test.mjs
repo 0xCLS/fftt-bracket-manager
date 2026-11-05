@@ -63,7 +63,7 @@ const makeRequest=(action,more={},origin=ORIGIN,token=TOKEN)=>new Request(ORIGIN
   method:'POST',headers:{origin,authorization:'Bearer '+token,'content-type':'application/json'},
   body:JSON.stringify({action,event_id:EVENT_A,...more})
 });
-function fake({role='organizer',canCreate=true,users=[]}={}){
+function fake({role='organizer',canCreate=true,users=[],inviteStatus=200}={}){
   const hits=[];
   const responder=async (url,opts)=>{
     const path=new URL(url).pathname;hits.push({path,method:opts.method,auth:opts.headers.Authorization,body:opts.body});
@@ -72,7 +72,7 @@ function fake({role='organizer',canCreate=true,users=[]}={}){
     if(path.endsWith('/fftt_staff_role_v1'))return json(role);
     if(path.endsWith('/fftt_my_events_v4'))return json([{event_id:EVENT_A,role:'organizer',can_create:canCreate}]);
     if(path==='/auth/v1/admin/users')return json({users});
-    if(path==='/auth/v1/invite')return json({id:'dddddddd-dddd-4ddd-8ddd-dddddddddddd',email:EMAIL,app_metadata:{}});
+    if(path==='/auth/v1/invite')return inviteStatus!==200?new Response('{}',{status:inviteStatus}):json({id:'dddddddd-dddd-4ddd-8ddd-dddddddddddd',email:EMAIL,app_metadata:{}});
     if(path.includes('/auth/v1/admin/users/'))return json({id:'dddddddd-dddd-4ddd-8ddd-dddddddddddd'});
     throw Error('unexpected fetch '+url);
   };
@@ -202,4 +202,65 @@ test('a failed protected directory cannot enable account or access changes',asyn
   Object.assign(core.state,{signedIn:true,role:'organizer',eventId:EVENT_A,events});
   await core.actions.loadStaffDirectory();assert.equal(core.state.staffDirectory.status,'error');
   assert.equal((await core.actions.addStaffPerson('Test',EMAIL)).ok,false);
+});
+
+// ---- Replacement invitation for an existing, never-confirmed identity (expired link recovery) ----
+const PENDING_USER={id:'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',email:EMAIL,email_confirmed_at:null,
+  app_metadata:{provider:'email',fftt_staff_directory:true,fftt_staff_name:'Volunteer Name'}};
+const invites=mock=>mock.hits.filter(x=>x.path==='/auth/v1/invite');
+
+test('Add Staff on an existing never-confirmed identity sends exactly one replacement invitation to the same account',async()=>{
+  const mock=fake({users:[PENDING_USER]}),app=createStaffDirectoryHandler({env:config,fetchImpl:mock.fetchImpl});
+  const res=await app(makeRequest('add',{email:EMAIL,name:'Volunteer Name'}));
+  assert.equal(res.status,200);
+  assert.equal((await res.json()).status,'reinvited');
+  assert.equal(invites(mock).length,1,'one message, no automatic retry');
+  assert.deepEqual(JSON.parse(invites(mock)[0].body),{email:EMAIL},'no profile data is rewritten by the invitation');
+  const idx=mock.hits.findIndex(x=>x.path==='/auth/v1/invite');
+  const patchIdx=mock.hits.findIndex(x=>x.path.startsWith('/auth/v1/admin/users/')&&x.method==='PUT');
+  assert.ok(patchIdx>=0&&patchIdx<idx,'directory metadata is written before the message so a retry cannot double-send');
+  // Never creates, confirms, deletes, re-addresses or grants.
+  assert.ok(!mock.hits.some(x=>x.method==='DELETE'||x.path.includes('fftt_set_staff_v3')));
+  const patchBody=JSON.parse(mock.hits[patchIdx].body);
+  assert.deepEqual(Object.keys(patchBody),['app_metadata'],'only app_metadata is written (no email, no email_confirm)');
+  assert.ok(!('email' in patchBody)&&!('email_confirm' in patchBody));
+});
+
+test('the replacement invitation redirects only to the pinned Staff callback',async()=>{
+  const urls=[];
+  const mock=fake({users:[PENDING_USER]});
+  const spy=async(url,opts)=>{if(new URL(url).pathname==='/auth/v1/invite')urls.push(new URL(url));return mock.fetchImpl(url,opts);};
+  const app=createStaffDirectoryHandler({env:config,fetchImpl:spy});
+  await app(makeRequest('add',{email:EMAIL,name:'Volunteer Name'}));
+  assert.equal(urls.length,1);
+  assert.equal(urls[0].searchParams.get('redirect_to'),ORIGIN+'/app/staff-invite.html');
+});
+
+test('a confirmed account is never re-invited, and a banned pending account is not messaged',async()=>{
+  for(const user of [{...PENDING_USER,email_confirmed_at:'2026-11-03T00:00:00Z'},{...PENDING_USER,banned_until:'2999-01-01T00:00:00Z'}]){
+    const mock=fake({users:[user]}),app=createStaffDirectoryHandler({env:config,fetchImpl:mock.fetchImpl});
+    const res=await app(makeRequest('add',{email:EMAIL,name:'Volunteer Name'}));
+    assert.equal(res.status,200);
+    assert.equal((await res.json()).status,'existing');
+    assert.equal(invites(mock).length,0);
+  }
+});
+
+test('replacement invitations stay disabled until the Staff redirect gate is on, and fail without silent retry',async()=>{
+  const off=fake({users:[PENDING_USER]});
+  assert.equal((await createStaffDirectoryHandler({env:{...config,STAFF_INVITE_REDIRECT_ENABLED:'false'},fetchImpl:off.fetchImpl})(makeRequest('add',{email:EMAIL,name:'Volunteer Name'}))).status,503);
+  assert.equal(invites(off).length,0);
+  assert.equal(off.hits.filter(x=>x.path.startsWith('/auth/v1/admin/users/')&&x.method==='PUT').length,0,'nothing is written while the gate is closed');
+  const limited=fake({users:[PENDING_USER],inviteStatus:429}),r429=await createStaffDirectoryHandler({env:config,fetchImpl:limited.fetchImpl})(makeRequest('add',{email:EMAIL,name:'Volunteer Name'}));
+  assert.equal(r429.status,429);assert.equal((await r429.json()).code,'rate-limited');assert.equal(invites(limited).length,1);
+  const down=fake({users:[PENDING_USER],inviteStatus:500}),r503=await createStaffDirectoryHandler({env:config,fetchImpl:down.fetchImpl})(makeRequest('add',{email:EMAIL,name:'Volunteer Name'}));
+  assert.equal(r503.status,503);assert.equal((await r503.json()).code,'invite-not-confirmed');assert.equal(invites(down).length,1);
+});
+
+test('only an Organizer can trigger a replacement invitation, and the client accepts the new status',async()=>{
+  const mock=fake({users:[PENDING_USER],role:'scorekeeper'}),app=createStaffDirectoryHandler({env:config,fetchImpl:mock.fetchImpl});
+  assert.equal((await app(makeRequest('add',{email:EMAIL,name:'Volunteer Name'}))).status,403);
+  assert.equal(invites(mock).length,0);
+  const c=createStaffDirectoryClient({fetchImpl:async()=>new Response(JSON.stringify({status:'reinvited'}),{status:200})});
+  assert.equal((await c.request(TOKEN,'add',{eventId:EVENT_A,name:'Volunteer Name',email:EMAIL})).status,'reinvited');
 });

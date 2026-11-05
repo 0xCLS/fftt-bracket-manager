@@ -8,11 +8,15 @@ const allowed=location.protocol==='https:'&&
 const fragment=new URLSearchParams(location.hash.slice(1));
 const type=fragment.get('type');
 let token=fragment.get('access_token');
+const authError=fragment.get('error_code')??new URLSearchParams(location.search).get('error_code')??'';  // read before the address bar is cleaned
 // Strip token material from the address bar immediately. We never persist refresh tokens.
 history.replaceState(null,'',location.pathname);
 const status=$('status'),form=$('finish'),button=$('savePassword');
 if(!allowed||type!=='invite'||!token||!jwt.test(token)||token.length>10000){
-  token=null;status.textContent='This invitation is invalid or has expired. Please ask the Organizer for a fresh invitation.';
+  // Supabase reports a used or timed-out link as error_code=otp_expired (invitation links last one hour).
+  token=null;status.textContent=authError==='otp_expired'
+    ?'This invitation link has expired or was already used. Ask the Organizer to send a new invitation, then open the newest email promptly.'
+    :'This invitation is invalid. Please ask the Organizer for a fresh invitation.';
 }else{
   form.hidden=false;
   status.textContent='Invite verified locally. Set a new password to finish account setup.';
