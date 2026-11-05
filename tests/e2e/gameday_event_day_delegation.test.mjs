@@ -38,7 +38,8 @@ test('Bracket Manager can run a complete fictional event day but cannot become O
       {p_event_id: E, p_email: 'scorer@fftt-delegation.invalid', p_action: 'grant', p_role: 'scorekeeper'});
     await db.rpc(org, 'fftt_upsert_players_v3', {p_event_id: E, p_players: [
       {name: 'Fictional Alpha Player', rating: 3, rating_status: 'provisional'},
-      {name: 'Fictional Bravo Player', rating: 2, rating_status: 'provisional'}
+      {name: 'Fictional Bravo Player', rating: 2, rating_status: 'provisional'},
+      {name: 'Fictional Delta Player', rating: 4, rating_status: 'provisional'}
     ]});
     const untouched = JSON.stringify(await db.rpc(org, 'fftt_organizer_snapshot_v3', {p_event_id: other}));
 
@@ -66,7 +67,7 @@ test('Bracket Manager can run a complete fictional event day but cannot become O
       {p_event_id: E, p_name: 'Fictional Charlie Walkin', p_rating: 1});
     assert.equal(walkin.status, 'saved');
     snap = await db.rpc(manager, 'fftt_bracket_manager_snapshot_v1', {p_event_id: E});
-    assert.equal(snap.players.length, 3);
+    assert.equal(snap.players.length, 4);
     assert.ok(snap.players.every(p => p.checked_in));
 
     const ids = snap.players.map(p => p.id);
