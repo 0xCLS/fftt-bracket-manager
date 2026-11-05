@@ -1,0 +1,52 @@
+{
+  "project": "FFTT Bracket Manager synthetic development",
+  "project_ref": "copmkalfkkrkzheohwuc",
+  "captured_date": "2026-11-05",
+  "hosted_push_approved": false,
+  "hosted_migrations": [
+    {
+      "version": "20261008183821",
+      "name": "phase1b_foundation"
+    },
+    {
+      "version": "20261008183851",
+      "name": "restrict_auto_rls_helper_execution"
+    },
+    {
+      "version": "20261008195706",
+      "name": "b2a_staff_read_api"
+    },
+    {
+      "version": "20261008201142",
+      "name": "b2b_transactional_score"
+    },
+    {
+      "version": "20261009044012",
+      "name": "b2d_staff_grants"
+    },
+    {
+      "version": "20261013101523",
+      "name": "milestone1_durable_scoring_v2_synthetic"
+    }
+  ],
+  "version_aliases": {
+    "20261008000100": "20261008183821",
+    "20261008000200": "20261008183851",
+    "20261008000300": "20261008195706",
+    "20261008000400": "20261008201142",
+    "20261009000100": "20261009044012"
+  },
+  "tracked_sources": {
+    "supabase/migrations/20261008000100_phase1b_foundation.sql": "e8d09249033cd8c5ddd2aa7768ef6932fea39105",
+    "supabase/migrations/20261008000200_restrict_auto_rls_helper.sql": "506c86a846457081334be530496abe4bbc301f72",
+    "supabase/migrations/20261008000300_b2a_staff_read_api.sql": "8b1c07df22f8c03bb82ca26b380fd59ad1e144f2",
+    "supabase/migrations/20261008000400_b2b_transactional_score.sql": "e7d7e230ed5b4b4a2b366bfc65a24acd67ca1d87",
+    "supabase/migrations/20261009000100_b2d_staff_grants.sql": "c731f36792fa67b94d2f0235ce959f0a268d0e1f",
+    "supabase/proposals/MILESTONE1_DURABLE_SCORING_V2_DO_NOT_APPLY.sql": "af46f1d2cf7de1387086a6e2416f358a00e59b1a"
+  },
+  "review_notes": [
+    "Four hosted migration bodies match repository SQL byte-for-byte; the hosted helper-hardening migration differs from the local conditional DO block.",
+    "The sixth hosted migration body matches supabase/proposals/MILESTONE1_DURABLE_SCORING_V2_DO_NOT_APPLY.sql exactly; its explicit DO NOT APPLY / DO NOT RENAME gate remains in force.",
+    "Tracked local migration version IDs differ from hosted IDs. Never run db push or migration repair until a reviewed reconciliation and separate approval; never reset consumed scoring fixtures."
+  ]
+}
