@@ -221,7 +221,7 @@ jobs:
         env:
           FFTT_CHROME_CHANNEL: none
         run: node --test tests/e2e/gameday_event_day_ui_browser.test.mjs
-      - name: Bracket Manager registration desk in fictional Chrome (desktop and phone: search, one-tap check-in, review, duplicates, locked and failure states, no private data)
+      - name: Bracket Manager registration desk in fictional Chrome (desktop and phone; search, one-tap check-in, review, duplicates, locked and failure states, no private data)
         env:
           FFTT_CHROME_CHANNEL: none
         run: node --test tests/e2e/gameday_desk_registration_browser.test.mjs
