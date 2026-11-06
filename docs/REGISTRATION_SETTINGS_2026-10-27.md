@@ -1,5 +1,7 @@
 # Event-specific registration sources and the UI/UX polish pass (October 27, 2026)
 
+> **Proposed change, not deployed:** the in-progress November 6 registration-access branch removes the deployment-level `REGISTRATION_EVENT_IDS` check. Until it is reviewed and separately released, the historical production behavior below remains in force. The global enable/mode switches, Google credentials, reference secret, event-scoped role and saved enabled source, non-synthetic rule, and controlled egress remain required. Bracket Manager registration lookup and its database authorization remain under design; no source-configuration access is granted by this proposal.
+
 _Current status, October 27: registration-settings UI polish is deployed to **existing synthetic Staff staging** from commit `00068134`; PR #19 remains open/draft/unmerged. Christopher's authenticated **read-only actual Google Sheets diagnostic passed**. Live Google registration **loading/import remains disabled** pending the reviewed **in-place real-event upgrade of the existing Supabase project** and launch acceptance. See the current deployment note and section 7._
 
 ## Current UI staging deployment (October 27, 2026; after the V5 diagnostic)

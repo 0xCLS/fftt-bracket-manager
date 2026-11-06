@@ -24,7 +24,7 @@
  * Deployment settings (Cloudflare Pages Function variables/secrets): REGISTRATION_ENABLED, STAFF_ORIGIN, SUPABASE_URL,
  * SUPABASE_PUBLISHABLE_KEY; REGISTRATION_FIXTURE (or the legacy REGISTRATION_SOURCE=synthetic-fixture) allows the fictional
  * demo source; REGISTRATION_GOOGLE_MODE = off | diagnostic | enabled (default off) with the secrets GOOGLE_SA_EMAIL and
- * GOOGLE_SA_PRIVATE_KEY (and, for `enabled`, REGISTRATION_REF_SECRET and an event allowlist REGISTRATION_EVENT_IDS). */
+ * GOOGLE_SA_PRIVATE_KEY (and, for `enabled`, REGISTRATION_REF_SECRET). */
 import {C3_HOST} from '../../contracts/phase1c_c3_readonly_supabase_transport.mjs';
 import {buildRegistrants, looksLikeContact, mapHeaders, parseCsv, parseRegistrationPayload} from '../../contracts/registration_model.mjs';
 import {cleanMapping, mappingKey, parseSourceRecord, parseSpreadsheetRef, validWorksheetTitle} from '../../contracts/registration_source.mjs';
@@ -59,17 +59,15 @@ export function createRegistrationHandler({env = {}, fetchImpl, now = () => Date
   function readConfig(e) {
     if (e.REGISTRATION_ENABLED !== 'true' || !STAFF_ORIGIN.test(e.STAFF_ORIGIN ?? '') || e.SUPABASE_URL !== C3_HOST
       || !KEY.test(e.SUPABASE_PUBLISHABLE_KEY ?? '')) return null;
-    const allow = String(e.REGISTRATION_EVENT_IDS ?? '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
-    if (allow.some(x => !UUID.test(x))) return null;
     const mode = ['off', 'diagnostic', 'enabled'].includes(e.REGISTRATION_GOOGLE_MODE) ? e.REGISTRATION_GOOGLE_MODE : 'off';
     const credentials = typeof e.GOOGLE_SA_EMAIL === 'string' && typeof e.GOOGLE_SA_PRIVATE_KEY === 'string' && e.GOOGLE_SA_PRIVATE_KEY.includes('BEGIN PRIVATE KEY');
     const refSecret = typeof e.REGISTRATION_REF_SECRET === 'string' && e.REGISTRATION_REF_SECRET.length >= 32 ? e.REGISTRATION_REF_SECRET : null;
     return {
-      staffOrigin: e.STAFF_ORIGIN, publishableKey: e.SUPABASE_PUBLISHABLE_KEY, allow,
+      staffOrigin: e.STAFF_ORIGIN, publishableKey: e.SUPABASE_PUBLISHABLE_KEY,
       fixture: e.REGISTRATION_FIXTURE === 'true' || e.REGISTRATION_SOURCE === 'synthetic-fixture',
       googleMode: credentials ? mode : 'off', googleRequested: mode, sa: e.GOOGLE_SA_EMAIL, key: e.GOOGLE_SA_PRIVATE_KEY, credentials,
-      // a live source needs the explicit event allowlist AND a reference secret, in addition to mode `enabled`
-      googleLive: mode === 'enabled' && credentials && refSecret !== null && allow.length > 0, refSecret,
+      // Event eligibility comes from the event-scoped saved source and current role, not deployment configuration.
+      googleLive: mode === 'enabled' && credentials && refSecret !== null, refSecret,
     };
   }
 
@@ -148,7 +146,6 @@ export function createRegistrationHandler({env = {}, fetchImpl, now = () => Date
       if (!src.enabled) throw new RegistrationSourceError('disabled');
       if (src.eventSynthetic || cfg.googleMode !== 'enabled') throw new RegistrationSourceError('not-allowed');
       if (!cfg.googleLive) throw new RegistrationSourceError('not-configured');
-      if (!cfg.allow.includes(eventId)) throw new RegistrationSourceError('event-not-enabled');
       kind = 'google-sheets'; mapping = src.columnMap; name = src.spreadsheetTitle;
       refScope = `event:${eventId}|sheet:${src.spreadsheetId}`;
       cacheKey = `${eventId}|${src.spreadsheetId}|${src.worksheet}|${mappingKey(mapping)}`;
