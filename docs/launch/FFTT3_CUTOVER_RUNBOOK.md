@@ -75,7 +75,7 @@ It compares every served file's SHA-256 and the live `MANIFEST.json` with the lo
 ## Step 6 — turn on Google registration for that one event (Cloudflare → Pages → `fftt3-staff-stg` → Settings → Variables and Secrets, **Production**)
 | Name | Type | Value |
 | --- | --- | --- |
-| `REGISTRATION_EVENT_IDS` | plain text | the real FFTT3 event UUID from Step 5 (only this one) |
+| `REGISTRATION_EVENT_IDS` | plain text | the real FFTT3 event UUID from Step 5 (only this one). **Retired by the PR #52 release** ([November 6 note](FFTT3_BRACKET_MANAGER_REGISTRATION_2026-11-06.md)): required until that release is deployed, ignored and to be deleted afterwards; later events need no Cloudflare edit. |
 | `REGISTRATION_REF_SECRET` | **secret** | the 64-character value in `~/Documents/FFTT-private/secrets/REGISTRATION_REF_SECRET.txt` (generated locally on October 27; never pasted into chat or GitHub) — or set with `npx wrangler@4 pages secret put REGISTRATION_REF_SECRET --project-name fftt3-staff-stg < that file` |
 | `REGISTRATION_GOOGLE_MODE` | plain text | change `diagnostic` → `enabled` **last** |
 | `GOOGLE_SA_EMAIL`, `GOOGLE_SA_PRIVATE_KEY` | secret | **unchanged** (already saved; do not re-enter) |

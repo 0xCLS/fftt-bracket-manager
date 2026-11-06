@@ -17,6 +17,7 @@ One page per role. Keep it short; follow it literally. **During normal online pl
 
 ## T-0 — check-in (until the start)
 * Registrants: **Check in** next to the name (one tap) or tick several and **Check in N selected**. Undo is next to a checked-in name.
+* If a **Bracket Manager** runs the desk (after the PR #52 release only): **Check-in → Registered players** → search the name → **Check in** (one tap) or **Review & check in** when it asks for a decision (duplicates, a missing level, a name already on the roster). It shows names and levels only. A sign-up without a full name must be fixed by the Organizer or added as a walk-in.
 * Walk-ins: type the **full first and last name**, choose the level 1–5, **Add and check in**. The same name twice is refused: ask whether it is the same person.
 * The checked-in count on Players must equal the paper tally when you build the bracket.
 

@@ -1,6 +1,6 @@
 # Event-specific registration sources and the UI/UX polish pass (October 27, 2026)
 
-> **Proposed change, not deployed:** the in-progress November 6 registration-access branch removes the deployment-level `REGISTRATION_EVENT_IDS` check. Until it is reviewed and separately released, the historical production behavior below remains in force. The global enable/mode switches, Google credentials, reference secret, event-scoped role and saved enabled source, non-synthetic rule, and controlled egress remain required. Bracket Manager registration lookup and its database authorization remain under design; no source-configuration access is granted by this proposal.
+> **Proposed change, not deployed (PR #52, November 6, 2026):** removes the deployment-level `REGISTRATION_EVENT_IDS` check, so a new eligible real event reads its own enabled Google Sheet without a Cloudflare update, and adds a Bracket Manager registration lookup/check-in with its own database authorization. Until the release is reviewed and separately authorized, the historical production behavior below remains in force. The global enable/mode switches, Google credentials, reference secret, event-scoped role and saved enabled source, non-synthetic rule and controlled egress remain required; source configuration stays Organizer-only. Details and release steps: [FFTT3_BRACKET_MANAGER_REGISTRATION_2026-11-06.md](launch/FFTT3_BRACKET_MANAGER_REGISTRATION_2026-11-06.md).
 
 _Current status, October 27: registration-settings UI polish is deployed to **existing synthetic Staff staging** from commit `00068134`; PR #19 remains open/draft/unmerged. Christopher's authenticated **read-only actual Google Sheets diagnostic passed**. Live Google registration **loading/import remains disabled** pending the reviewed **in-place real-event upgrade of the existing Supabase project** and launch acceptance. See the current deployment note and section 7._
 
@@ -57,9 +57,11 @@ When playing-assessment questions are missing or unrecognized, **no level and no
 | `REGISTRATION_FIXTURE=true` (or legacy `REGISTRATION_SOURCE=synthetic-fixture`) | allows the fictional demo data (synthetic events only) |
 | `REGISTRATION_GOOGLE_MODE` = `off` (default) \| `diagnostic` \| `enabled` | `diagnostic`: the connection test works, nothing is read for event operations. `enabled`: real reads (needs the next three) |
 | `GOOGLE_SA_EMAIL`, `GOOGLE_SA_PRIVATE_KEY` (secrets) | the read-only connection account |
-| `REGISTRATION_REF_SECRET` (≥ 32 random chars), `REGISTRATION_EVENT_IDS` (explicit allowlist) | required for `enabled` |
+| `REGISTRATION_REF_SECRET` (≥ 32 random chars) | required for `enabled` |
+| `REGISTRATION_EVENT_IDS` | **retired by the PR #52 release; ignored.** Until that release is deployed, production still requires it as an explicit allowlist. |
+| `REGISTRATION_GATE_SECRET` (32–200 chars, same value stored in the database) | required only for Bracket Manager lookup/check-in (PR #52) |
 
-Fail-closed rules: a live Google source is **never** served for a synthetic event (the database refuses to enable it too), in `off`/`diagnostic` mode, when switched off, or outside the allowlist. The old single-sheet variables (`REGISTRATION_SHEET_ID`, `REGISTRATION_SHEET_RANGE`) are gone.
+Fail-closed rules: a live Google source is **never** served for a synthetic event (the database refuses to enable it too), in `off`/`diagnostic` mode, when switched off. (Before the PR #52 release it was also refused outside the deployment's event allowlist.) The old single-sheet variables (`REGISTRATION_SHEET_ID`, `REGISTRATION_SHEET_RANGE`) are gone.
 
 ## 4. UI/UX polish
 

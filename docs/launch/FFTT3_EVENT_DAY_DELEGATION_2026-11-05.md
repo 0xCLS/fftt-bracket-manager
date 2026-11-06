@@ -20,11 +20,12 @@ Let the Organizer participate in the tournament rather than operate the applicat
 | Adjust a single unplayed match format | Yes | No |
 | Select / record Doubles Finale | Yes | Match Desk scoring only |
 | View/download public-safe results and mark a *finished* event complete | Yes | No |
-| Read Google registration answers, contact fields, opaque source references | No | No |
+| Search registered players by name and check one in from the event's own sign-up sheet (names, suggested levels, duplicate review; proof-verified server-side; before bracket creation) — see [the November 6 note](FFTT3_BRACKET_MANAGER_REGISTRATION_2026-11-06.md) | Candidate (PR #52) | No |
+| Read Google registration answers, contact fields (even masked), the sheet link or mapping, opaque source references | No | No |
 | Staff invites/grants, event settings, public visibility, private backups | No | No |
 | Rebuild existing brackets, modify or delete original player records, archive/delete | No | No |
 
-The existing `bracket_manager` event grant is reused, with no new broad administrator role. Revocation, cross-event isolation and server-authoritative results remain in place. The Organizer retains sign-in and sensitive controls for **pre-event preparation or emergency escalation only**, not routine match flow.
+The existing `bracket_manager` event grant is reused, with no new broad administrator role. **November 6 addendum (candidate, not live):** the Check-in screen also gains a *Registered players* lookup, with its own database authorization and provenance proof; source configuration stays Organizer-only. See [FFTT3_BRACKET_MANAGER_REGISTRATION_2026-11-06.md](FFTT3_BRACKET_MANAGER_REGISTRATION_2026-11-06.md). Revocation, cross-event isolation and server-authoritative results remain in place. The Organizer retains sign-in and sensitive controls for **pre-event preparation or emergency escalation only**, not routine match flow.
 
 ## Before the event
 
