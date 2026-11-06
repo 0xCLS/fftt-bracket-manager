@@ -213,7 +213,7 @@ export function createRegistrationHandler({env = {}, fetchImpl, now = () => Date
         ? {configured: true, event_synthetic: raw.event_synthetic, kind: raw.kind, spreadsheet_id: raw.spreadsheet_id, spreadsheet_title: raw.spreadsheet_title, worksheet: raw.worksheet,
           column_map: raw.column_map, enabled: raw.enabled, status: 'untested', last_error: null, last_checked_at: null, last_ok_at: null, last_response_count: null, updated_at: null}
         : {configured: false, event_synthetic: raw.event_synthetic});
-      if (typeof raw.check_in_open !== 'boolean' || !Number.isSafeInteger(raw.roster_size) || !Array.isArray(raw.links) || raw.links.length > 400
+      if (typeof raw.check_in_open !== 'boolean' || !Number.isSafeInteger(raw.roster_size) || !Array.isArray(raw.links) || raw.links.length > 5000
         || typeof raw.source_fp !== 'string' || raw.source_fp !== await sourceFingerprint(src)) throw new TypeError('shape');
       const links = new Map();
       for (const l of raw.links) {
