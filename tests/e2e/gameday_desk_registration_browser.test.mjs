@@ -42,6 +42,10 @@ test('desktop: load, search, one-tap check-in, review a duplicate group and a mi
     assert.equal(await page.locator('.desk-reg-row').count(), 20);
     assert.match(await page.locator('#deskRegCount').innerText(), /20 registered · 0 checked in/);
     assert.equal(await page.locator('tbody tr').count(), 0, 'nobody is on the roster yet');
+    const arrivals = page.locator('.manager-checkin-page .mini-kpi.lime');
+    assert.equal(await arrivals.locator('span').innerText(), 'Awaiting arrival');
+    assert.equal(await arrivals.locator('strong').innerText(), '20', 'the 20 sign-ups are awaiting arrival, despite an empty roster');
+    assert.match(await arrivals.getAttribute('title'), /duplicate sign-ups may be counted separately/);
     const layout = await page.evaluate(() => {
       const top = document.querySelector('.manager-checkin-page > .players-overview');
       const registration = document.querySelector('#deskReg');
@@ -81,6 +85,7 @@ test('desktop: load, search, one-tap check-in, review a duplicate group and a mi
     assert.equal(await levelCell.locator('.rank-badge[data-level="2"] svg').count(), 1);
     assert.match(await levelCell.innerText(), /Level 2/);
     assert.equal(await levelCell.locator('select,input,button').count(), 0, 'roster level is read-only');
+    await until(async () => (await arrivals.locator('strong').innerText()) === '19', 'a checked-in registrant reduces awaiting arrival');
 
     assert.match(await page.locator('#deskRegCount').innerText(), /1 checked in/);
     assert.deepEqual((await players(w)).map(p => [p.display_name, p.rating, p.source, p.checked_in]), [['Ben Marlowe', 2, 'registration', true]]);
@@ -97,6 +102,7 @@ test('desktop: load, search, one-tap check-in, review a duplicate group and a mi
     await until(async () => (await page.locator('.desk-reg-row .pill', {hasText: /^Checked in$/}).count()) === 4, 'all three Ada sign-ups and Ben show as checked in');
     const after = await players(w);
     assert.deepEqual(after.map(p => [p.display_name, p.refs]), [['Ada Quillfeather', 3], ['Ben Marlowe', 1]]);
+    assert.equal(await arrivals.locator('strong').innerText(), '16', 'three merged duplicate registrations no longer await arrival');
 
     // a registration with no suggested level: the level must be chosen first
     await page.fill('#bmSearch', 'kit');
@@ -106,6 +112,7 @@ test('desktop: load, search, one-tap check-in, review a duplicate group and a mi
     await page.locator('#deskReviewGo').click();
     await toast(page, /Kit Alderman checked in\./);
     assert.deepEqual((await players(w)).find(p => p.display_name === 'Kit Alderman')?.rating, 4);
+    assert.equal(await arrivals.locator('strong').innerText(), '15', 'reviewed registration updates awaiting arrival');
 
     // an incomplete name cannot be checked in from the sheet
     await page.fill('#bmSearch', 'lia');
@@ -128,10 +135,14 @@ test('desktop: load, search, one-tap check-in, review a duplicate group and a mi
     await page.getByRole('button', {name: 'Add & check in'}).click();
     await page.locator('tbody tr', {hasText: 'Walt Winters'}).waitFor({timeout: T});
     assert.equal((await players(w)).find(p => p.display_name === 'Walt Winters').rating, 4, 'walk-in uses selected level');
+    assert.equal(await arrivals.locator('strong').innerText(), '15', 'a walk-in not in the sheet must not reduce awaiting arrival');
     const row1 = page.locator('tbody tr', {hasText: 'Ben Marlowe'});
     await row1.locator('button', {hasText: 'Undo'}).click();
     await row1.locator('.pill', {hasText: 'Expected'}).waitFor({timeout: T});
     await row(page, 'Ben Marlowe').locator('button', {hasText: 'Check in'}).waitFor({timeout: T});
+    assert.equal(await arrivals.locator('strong').innerText(), '16', 'undoing registration check-in increases awaiting arrival');
+    await page.locator('tbody tr', {hasText: 'Ada Quillfeather'}).locator('button', {hasText: 'Undo'}).click();
+    await until(async () => (await arrivals.locator('strong').innerText()) === '17', 'linked duplicate group counts as one arrival after Undo');
     assert.deepEqual(w.pageErrors, []);
   } finally { await w.close(); }
 });
@@ -144,6 +155,7 @@ test('phone layout: the lookup fits, buttons are tappable, the dialog is usable'
     const page = dev.page;
     await goCheckin(page);
     await page.locator('.desk-reg-row').first().waitFor({timeout: T});
+    assert.equal(await page.locator('.mini-kpi.lime strong').innerText(), '20', 'phone shows registration-based awaiting arrival');
     assert.equal(await page.getByRole('radiogroup', {name: 'FFTT level for the new player'}).getByRole('radio').count(), 5);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     assert.ok(overflow <= 1, 'no sideways scrolling: ' + overflow);
@@ -195,6 +207,7 @@ test('failure and locked states: not set up, switched off, outage, uncertain out
     await page.locator('#deskRegLoad').click();
     await page.locator('#deskRegError').waitFor({timeout: T});
     assert.match(await page.locator('#deskRegError').innerText(), /switched off|Ask the Organizer/);
+    assert.equal(await page.locator('.mini-kpi.lime strong').innerText(), '—', 'an unavailable lookup cannot appear as zero or a current arrival count');
     assert.ok(await page.locator('.desk-reg-row').count() > 0, 'the earlier list stays, marked as old');
     assert.equal(await page.locator('#edName').isDisabled(), false, 'walk-ins still work');
     await w.fake.local.rpc(w.ids.org, 'fftt_set_registration_source_v5', {p_event_id: w.eventId, p_source: {kind: 'google-sheets', spreadsheet_id: SHEET, worksheet: TAB, column_map: {}, enabled: true}});
@@ -207,6 +220,7 @@ test('failure and locked states: not set up, switched off, outage, uncertain out
     await page.locator('#deskRegLoad').click();
     await toast(page, /20 registered players loaded/);
     assert.equal(await page.locator('#deskRegError').count(), 0);
+    assert.equal(await page.locator('.mini-kpi.lime strong').innerText(), '19', 'recovered source restores registration count');
 
     // the proof secret is missing in the Function (not yet released): a clear, harmless message
     const saved = w.registrationEnv.REGISTRATION_GATE_SECRET; delete w.registrationEnv.REGISTRATION_GATE_SECRET;
