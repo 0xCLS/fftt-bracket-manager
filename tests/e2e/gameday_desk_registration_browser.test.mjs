@@ -112,7 +112,7 @@ test('desktop: load, search, one-tap check-in, review a duplicate group and a mi
     await page.locator('#deskReviewGo').click();
     await toast(page, /Kit Alderman checked in\./);
     assert.deepEqual((await players(w)).find(p => p.display_name === 'Kit Alderman')?.rating, 4);
-    assert.equal(await arrivals.locator('strong').innerText(), '15', 'reviewed registration updates awaiting arrival');
+    await until(async () => (await arrivals.locator('strong').innerText()) === '15', 'reviewed registration updates awaiting arrival');
 
     // an incomplete name cannot be checked in from the sheet
     await page.fill('#bmSearch', 'lia');
@@ -140,7 +140,7 @@ test('desktop: load, search, one-tap check-in, review a duplicate group and a mi
     await row1.locator('button', {hasText: 'Undo'}).click();
     await row1.locator('.pill', {hasText: 'Expected'}).waitFor({timeout: T});
     await row(page, 'Ben Marlowe').locator('button', {hasText: 'Check in'}).waitFor({timeout: T});
-    assert.equal(await arrivals.locator('strong').innerText(), '16', 'undoing registration check-in increases awaiting arrival');
+    await until(async () => (await arrivals.locator('strong').innerText()) === '16', 'undoing registration check-in increases awaiting arrival');
     await page.locator('tbody tr', {hasText: 'Ada Quillfeather'}).locator('button', {hasText: 'Undo'}).click();
     await until(async () => (await arrivals.locator('strong').innerText()) === '17', 'linked duplicate group counts as one arrival after Undo');
     assert.deepEqual(w.pageErrors, []);
