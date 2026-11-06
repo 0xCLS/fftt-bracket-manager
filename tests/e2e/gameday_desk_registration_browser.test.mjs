@@ -52,9 +52,11 @@ test('desktop: load, search, one-tap check-in, review a duplicate group and a mi
       const arrivals = document.querySelector('[aria-label="Event-day roster"]').closest('section');
       const [t, r, a] = [top, registration, arrivals].map(el => el.getBoundingClientRect());
       return {ordered: t.bottom <= r.top && r.bottom <= a.top,
+        aligned: Math.abs(document.querySelector('.manager-checkin-page .add-players-card').getBoundingClientRect().bottom - document.querySelector('.manager-checkin-page .mini-kpis').getBoundingClientRect().bottom) <= 2,
         widths: [t.width, r.width, a.width], walkins: [...document.querySelectorAll('h2')].filter(x => x.textContent === 'Add a walk-in').length};
     });
     assert.ok(layout.ordered, 'top, registrations and arrivals appear in order');
+    assert.ok(layout.aligned, 'desktop summary tiles align with the walk-in card');
     assert.ok(layout.widths.every(w => Math.abs(w - layout.widths[0]) < 2), 'registrations and arrivals use the full page width');
     assert.equal(layout.walkins, 1, 'one walk-in card');
     assert.equal(await page.getByRole('button', {name: 'Add to roster'}).count(), 0);

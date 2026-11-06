@@ -52,7 +52,7 @@ test('People directory: unassigned, pending, unverified, assigned and revoked st
       const toggle = async (email, eventName) => {
         const r = row(email);
         if (!(await r.locator('.people-event-menu').isVisible())) await r.locator('summary').click();
-        await r.locator('.people-event-option', {hasText: eventName}).locator('input').click();
+        await r.locator('.people-event-option', {hasText: eventName}).locator('strong').click();
       };
       await openStaff();
       // Assignment disclosures are mutually exclusive and close on role focus,
@@ -192,4 +192,115 @@ test('People directory: unassigned, pending, unverified, assigned and revoked st
     assert.deepEqual(finalGrants.filter(g => !before.includes(g)), [], 'no new grant anywhere');
     assert.deepEqual(w.pageErrors, []);
   } finally { await w.close(); }
+});
+
+test('assignment labels, explicit saves and failure recovery use server truth on desktop and mobile', {timeout: 240000}, async () => {
+  for (const width of [390, 1440]) {
+    const w = await createBrowserWorld();
+    try {
+      const [other] = await w.fake.local.admin("insert into fftt_private.events(event_name,event_date,created_by) values ($1,'2099-01-02',$2) returning id", [SECOND, w.ids.org]);
+      await w.fake.local.admin("insert into fftt_private.event_staff(event_id,user_id,role) values ($1,$2,'organizer')", [other.id, w.ids.org]);
+      const email='fictional-new@fftt-staging.invalid';
+      const userId=await w.fake.addAccount(email,'fictional-password-123');
+      const people=[{email,name:'New Volunteer',verified:true,provisioned:true},
+        {email:w.accounts.a[0],name:'Assigned Scorekeeper A',verified:true,provisioned:true}];
+      const deviceName='assignment-'+width;
+      const d=await w.device(deviceName,{viewport:{width,height:900},mobile:width===390});
+      let directoryOffline=false;
+      await d.context.route('**/api/staff-directory', route=>route.fulfill({status:directoryOffline?503:200,contentType:'application/json',body:JSON.stringify(directoryOffline?{}:{people})}));
+      await d.signIn('org',{keep:true,event:w.eventId});
+      const p=d.page; await p.locator('nav.tabs button[data-tab="staff"]').click();
+      const person=address=>p.locator('.people-row').filter({has:p.getByText(address,{exact:true})});
+      await person(email).waitFor({timeout:T});
+      const assignments=async id=>(await w.fake.local.admin('select event_id,role from fftt_private.event_staff where user_id=$1 and active order by event_id',[id])).map(x=>`${x.event_id}:${x.role}`);
+      const toggle=async (address,eventName)=>{
+        const row=person(address), menu=row.locator('.people-event-dropdown');
+        if (!await menu.evaluate(el=>el.open)) await menu.locator('summary').click();
+        await menu.locator('.people-event-option',{hasText:eventName}).locator('strong').click();
+      };
+      const save=address=>person(address).getByRole('button',{name:'Save',exact:true});
+      const confirm=()=>p.getByRole('dialog',{name:'Save staff assignments?'});
+      const clearToasts=async()=>{const box=p.locator('#toasts');if(await box.count())await box.evaluate(el=>el.replaceChildren());};
+      const submit=async (address,phrase)=>{
+        await clearToasts();
+        await save(address).click(); const dlg=confirm(); await dlg.waitFor();
+        assert.match(await dlg.innerText(),phrase);
+        await dlg.getByRole('button',{name:'Save changes'}).click();
+        await p.getByText('Event access updated.',{exact:true}).last().waitFor({timeout:T});
+        await p.waitForFunction(() => !document.querySelector('dialog[open]'),null,{timeout:T});
+      };
+      // Label click selects visibly and survives closing, but no role means no grant.
+      await toggle(email,'Synthetic Rehearsal Games');
+      assert.equal(await person(email).locator('input:checked').count(),1, 'one event-name click checks immediately');
+      assert.match(await person(email).locator('summary').innerText(),/Synthetic Rehearsal Games/);
+      const option=person(email).locator('.people-event-option',{hasText:'Synthetic Rehearsal Games'});
+      await option.locator('input').click();
+      assert.equal(await option.locator('input').isChecked(),false, 'one checkbox click unchecks immediately');
+      assert.match(await person(email).locator('summary').innerText(),/No events/);
+      await option.click({position:{x:4,y:4}});
+      assert.equal(await option.locator('input').isChecked(),true, 'one row click checks immediately');
+      assert.match(await person(email).locator('summary').innerText(),/Synthetic Rehearsal Games/);
+      assert.equal(await save(email).isDisabled(),true, 'a role is still required before granting access');
+      await p.getByRole('searchbox',{name:'Search staff members'}).click();
+      assert.equal(await person(email).locator('details').evaluate(el=>el.open),false);
+      assert.match(await person(email).locator('summary').innerText(),/Synthetic Rehearsal Games/);
+      assert.equal(await save(email).isDisabled(),true);
+      await person(email).locator('select').selectOption('scorekeeper');
+      assert.equal(await save(email).isEnabled(),true);
+      await save(email).click(); await confirm().getByRole('button',{name:'Cancel'}).click();
+      assert.deepEqual(await assignments(userId),[], 'cancel grants nothing');
+      await submit(email,/Grant Scorekeeper access: Synthetic Rehearsal Games/);
+      assert.deepEqual(await assignments(userId),[`${w.eventId}:scorekeeper`]);
+      await p.getByRole('button',{name:'Refresh',exact:true}).click();
+      const addStaff=p.getByRole('button',{name:'+ Add Staff'});
+      for(let i=0;i<100 && !await addStaff.isEnabled();i++) await p.waitForTimeout(100);
+      assert.equal(await addStaff.isEnabled(),true, 'directory refresh completed');
+      await person(email).locator('summary').waitFor({timeout:T});
+      assert.match(await person(email).locator('summary').innerText(),/Synthetic Rehearsal Games/);
+      assert.equal(await save(email).isDisabled(),true);
+      // Add another event, remove one, then remove the final event with the existing role.
+      await toggle(email,SECOND); await submit(email,/Grant Scorekeeper access: Second synthetic event/);
+      assert.equal((await assignments(userId)).length,2);
+      await toggle(email,SECOND); await submit(email,/Remove access: Second synthetic event/);
+      assert.deepEqual(await assignments(userId),[`${w.eventId}:scorekeeper`]);
+      await toggle(email,'Synthetic Rehearsal Games'); await submit(email,/Remove access: Synthetic Rehearsal Games/);
+      assert.deepEqual(await assignments(userId),[]);
+      assert.match(await person(email).locator('summary').innerText(),/No events/);
+      // An already assigned member can add and remove a second event without disturbing the original grant.
+      await toggle(w.accounts.a[0],SECOND); await submit(w.accounts.a[0],/Grant Scorekeeper access: Second synthetic event/);
+      assert.equal((await assignments(w.ids.a)).length,2);
+      await toggle(w.accounts.a[0],SECOND); await submit(w.accounts.a[0],/Remove access: Second synthetic event/);
+      assert.deepEqual(await assignments(w.ids.a),[`${w.eventId}:scorekeeper`]);
+      // A failed request does not leave a stale draft displayed; the server was reloaded.
+      await person(email).locator('select').selectOption('scorekeeper'); await toggle(email,SECOND);
+      w.fake.failNext(deviceName,'/rest/v1/rpc/fftt_set_staff_v3',503);
+      await clearToasts(); await save(email).click(); await confirm().getByRole('button',{name:'Save changes'}).click();
+      await p.getByText(/change was not fully confirmed/i).last().waitFor({timeout:T});
+      assert.deepEqual(await assignments(userId),[]);
+      assert.match(await person(email).locator('summary').innerText(),/No events/);
+      assert.equal(await save(email).isDisabled(),true);
+      // A lost response can still have applied the grant: reload must display what actually happened.
+      await person(email).locator('select').selectOption('scorekeeper'); await toggle(email,SECOND);
+      w.fake.loseNextReply(deviceName,'/rest/v1/rpc/fftt_set_staff_v3');
+      await clearToasts(); await save(email).click(); await confirm().getByRole('button',{name:'Save changes'}).click();
+      await p.getByText(/change was not fully confirmed/i).last().waitFor({timeout:T});
+      assert.deepEqual(await assignments(userId),[`${other.id}:scorekeeper`]);
+      assert.match(await person(email).locator('summary').innerText(),/Second synthetic event/);
+      assert.equal(await save(email).isDisabled(),true);
+      // If the follow-up directory read fails, do not claim it was reloaded or permit another edit.
+      await toggle(email,'Synthetic Rehearsal Games');
+      w.fake.failNext(deviceName,'/rest/v1/rpc/fftt_set_staff_v3',503); directoryOffline=true;
+      await clearToasts(); await save(email).click(); await confirm().getByRole('button',{name:'Save changes'}).click();
+      await p.getByText(/staff directory could not be refreshed/i).last().waitFor({timeout:T});
+      assert.equal(await save(email).isDisabled(),true, 'unverified directory is read-only');
+      assert.deepEqual(await assignments(userId),[`${other.id}:scorekeeper`]);
+      assert.deepEqual(await assignments(w.ids.a),[`${w.eventId}:scorekeeper`], 'other staff grants unchanged');
+      await assert.rejects(w.fake.local.rpc(w.ids.a,'fftt_set_staff_v3',{p_event_id:other.id,p_email:email,p_action:'grant',p_role:'organizer'}));
+      await person(email).locator('summary').click();
+      await p.locator('#signOut').click();
+      await p.locator('#signin:not([hidden])').waitFor({timeout:T});
+      assert.equal(await p.locator('.people-row:visible').count(),0, 'sign-out hides private staff data even with a menu open');
+      assert.deepEqual(w.pageErrors,[]);
+    } finally { await w.close(); }
+  }
 });

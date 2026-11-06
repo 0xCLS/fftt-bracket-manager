@@ -761,7 +761,8 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
       for(const eventId of plan.grant)await api.setStaff(ctx.token,{p_event_id:eventId,p_email:person.email,p_action:'grant',p_role:plan.role});
     },{refreshAfter:false});
     // Refresh server truth even after a partial/unknown outcome.
-    await Promise.all([loadStaffDirectory(),refresh({force:true})]);
+    const [directory] = await Promise.all([loadStaffDirectory(),refresh({force:true})]);
+    if (!directory.ok) return {ok:false, message:'The change could not be verified because the staff directory could not be refreshed. Reconnect and refresh before making further changes.'};
     return r.ok?r:{...r,message:'The change was not fully confirmed. Current server assignments have been reloaded. '+(r.message??'')};
   }
   async function removeStaffPerson(person) {

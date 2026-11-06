@@ -17,9 +17,21 @@ export function createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDi
       if (menu !== except) menu.open = false;
     }
   };
-  document.addEventListener('pointerdown', ev => closeAssignments(ev.target.closest?.('.people-event-dropdown')));
-  document.addEventListener('focusin', ev => closeAssignments(ev.target.closest?.('.people-event-dropdown')));
-  document.addEventListener('keydown', ev => { if (ev.key === 'Escape') closeAssignments(); });
+  // Browser pointer focus can temporarily leave the menu before a label activates
+  // its checkbox. Defer dismissal until the click has reached its intended target;
+  // keyboard focus changes still dismiss immediately.
+  let pointerActive = false;
+  document.addEventListener('pointerdown', () => { pointerActive = true; });
+  document.addEventListener('pointerup', () => { setTimeout(() => { pointerActive = false; }, 0); });
+  document.addEventListener('pointercancel', () => { pointerActive = false; });
+  document.addEventListener('click', ev => {
+    closeAssignments(ev.target.closest?.('.people-event-dropdown'));
+    pointerActive = false;
+  });
+  document.addEventListener('focusin', ev => {
+    if (!pointerActive) closeAssignments(ev.target.closest?.('.people-event-dropdown'));
+  });
+  document.addEventListener('keydown', ev => { pointerActive = false; if (ev.key === 'Escape') closeAssignments(); });
   const events=()=>s.events.filter(e=>e.role==='organizer'&&e.lifecycle!=='archived');
   function pending(p) {
     // Start from the server's actual grants only. An unassigned person has no events and no role until someone chooses them.
@@ -101,8 +113,9 @@ export function createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDi
         if(!(await confirmDialog('Save staff assignments?',msg,'Save changes',{danger:plan.revoke.length>0})))return;
         save.disabled=true;
         const r=await core.actions.saveStaffPerson(p,Array.from(d.selected),d.role);
-        if(r.ok){edits.delete(p.email);result(r,'Event access updated.');rerender();}  // repaint from the reloaded server grants, not the stale edit
-        else{result(r);save.disabled=false;}
+        edits.delete(p.email); // Always discard the submitted draft after the server-truth reload.
+        if(r.ok) result(r,'Event access updated.'); else result(r);
+        rerender();
       }}});
     const remove=h('button',{type:'button',class:'people-remove',text:'×',title:'Remove '+p.name+' from staff directory',
       'aria-label':'Remove '+p.name+' from staff directory',disabled:!editable||!core.canWrite(),on:{click:async()=>{
@@ -149,7 +162,7 @@ export function createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDi
           h('button',{type:'button',class:'primary',text:'+ Add Staff',disabled:s.staffDirectory.status!=='ready',on:{click:addModal}}))),
       s.staffDirectory.error?h('p',{class:'notice warn',text:s.staffDirectory.error}):null,
       h('div',{class:'people-search-row'},search,
-        h('button',{type:'button','data-read-retry':'true',text:'Refresh',disabled:s.paused,on:{click:()=>{edits.clear();void core.actions.loadStaffDirectory();}}})),
+        h('button',{type:'button','data-read-retry':'true',text:'Refresh',disabled:s.paused,on:{click:()=>{closeAssignments();edits.clear();void core.actions.loadStaffDirectory();}}})),
       h('div',{class:'people-colheads'},h('span',{text:'PERSON'}),h('span',{text:'EVENT ASSIGNMENT'}),h('span',{text:'ROLE'}),h('span',{text:'ACTIONS'})),
       list,h('p',{class:'help people-footer',text:'Uncheck an event and Save to remove only its access. The × removes a person from the directory without deleting their login or past results.'}));
   };

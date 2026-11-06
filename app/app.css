@@ -803,6 +803,11 @@ td.scores-cell{min-width:150px}
 #app .players-registration-config>.reg-settings{width:100%;margin:0}
 #app .players-page>.reg-card{margin-bottom:var(--gap-section)}
 #app .players-page>.reg-card .empty-state{padding-block:16px}
+/* Align only the manager's desktop snapshot with the walk-in card. */
+@container (min-width:981px){
+  #app .manager-checkin-page .players-snapshot{align-self:end}
+  #app .manager-checkin-page .players-snapshot .mini-kpi{min-height:125px}
+}
 @container (max-width:980px){
   #app .players-overview{grid-template-columns:minmax(0,1fr)}
   #app .players-snapshot .mini-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -1173,7 +1178,7 @@ td.scores-cell{min-width:150px}
  .people-role-cell{grid-column:1;min-width:0}
  .people-action-cell{grid-column:2;align-self:end}
  .people-field-label{display:block}
- .people-event-menu{min-width:0;width:100%;max-width:100%}
+ .people-event-menu{position:static;min-width:0;width:100%;max-width:100%;margin-top:6px}
  .people-heading{align-items:flex-start;flex-direction:column}
  .people-controls{width:100%}
 }

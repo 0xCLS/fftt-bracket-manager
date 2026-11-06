@@ -813,7 +813,9 @@ export function createStaffUi({core, els, config, signOut}) {
     const typing = active && els.main.contains(active) && Date.now() - lastInputAt < (active.tagName === 'SELECT' ? 2000 : 15000) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName);
     const bracketInUse = ['championship', 'consolation'].includes(tab) && renderedEventId === s.eventId
       && (bracketTouching || Date.now() - lastBracketMotionAt < BRACKET_SCROLL_IDLE_MS);
-    if (!force && (typing || dirtyDialog > 0 || bracketInUse)) { syncConnectionGuard(); return; } // never rebuild under a person's fingers
+    const staffMenuOpen = tab === 'staff' && s.signedIn && s.role === 'organizer' && renderedEventId === s.eventId
+      && !!els.main.querySelector('.people-event-dropdown[open]');
+    if (!force && (typing || dirtyDialog > 0 || bracketInUse || staffMenuOpen)) { syncConnectionGuard(); return; } // never rebuild under a person's fingers
     const ui = captureUi();
     const view = views[tab] ?? views.desk;
     const pane = s.signedIn ? view() : loading();
