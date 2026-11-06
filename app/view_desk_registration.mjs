@@ -5,7 +5,7 @@
  * players, and checks a person in (adding them to the roster when needed).
  * What it never does: show or hold a contact detail, a sheet link, a credential or a raw form answer; send a name or a level the
  * server did not give it as anything but a choice of level (the server re-reads the sheet and the database verifies it); or change
- * the registration source. Walk-ins stay a separate form below. Every permission and every outcome is decided by the server; this
+ * the registration source. Walk-ins stay a separate form above. Every permission and every outcome is decided by the server; this
  * file shows state and asks. */
 import {nameKey} from '../contracts/registration_model.mjs';
 import {ratingName} from '../contracts/gameday_engine.mjs';

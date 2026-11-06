@@ -297,36 +297,46 @@ export function createStaffUi({core, els, config, signOut}) {
     const level = h('select', {id:'edLevel', disabled:!eligible || !core.canWrite()},
       [['1','Beginner'],['2','Recreational'],['3','Intermediate'],['4','Strong intermediate'],['5','Advanced / competitive']].map(
         ([v,label])=>h('option',{value:v,text:`Level ${v} · ${label}`,selected:String(draft('edLevel','1'))===v})));
-    return h('div', {},
+    const kpi = (n, label, tone) => h('div', {class: 'mini-kpi ' + tone}, h('strong', {text: String(n)}), h('span', {text: label}));
+    return h('div', {class:'players-page manager-checkin-page'},
+      h('div', {class:'players-overview'},
+        h('div', {class:'players-add-column'},
+          h('section',{class:'card add-players-card'},h('h2',{text:'Add a walk-in'}),
+            h('p',{class:'card-sub',text:'Use a full first and last name. A walk-in is added and checked in together; no contact information is collected.'}),
+            h('form',{on:{submit:async ev=>{
+              ev.preventDefault();
+              if(!eligible)return;
+              const r=await core.actions.eventDayWalkIn(name.value.trim(),Number(level.value));
+              if(result(r,'Walk-in added and checked in.')){forget('edName');name.value='';}
+            }}},
+              h('div',{class:'grid two'},h('div',{},h('label',{for:'edName',text:'Full name'}),name),
+                h('div',{},h('label',{for:'edLevel',text:'Player level'}),level)),
+              h('div',{class:'row'},h('button',{class:'primary',type:'submit',
+                disabled:!eligible || !core.canWrite(),text:'Add & check in'}))),
+            h('p',{class:'help add-privacy',text:'Levels are private to staff. Do not enter contact details.'}))),
+        h('section', {class:'players-snapshot', 'aria-labelledby':'managerSnapshotTitle'},
+          h('div', {class:'side-section-heading'}, h('span', {class:'section-overline', text:'LIVE SNAPSHOT'}),
+            h('h2', {id:'managerSnapshotTitle', text:'At a glance'})),
+          h('div', {class:'mini-kpis', role:'group', 'aria-label':'Check-in summary'},
+            kpi(checked, 'Checked in', 'ice'), kpi(sn.players.length, 'On the roster', 'lav'),
+            kpi(sn.players.length - checked, 'Expected', 'lime'), kpi(Math.max(0, 64 - sn.players.length), 'Roster spots left', 'butter')))),
       deskRegistrationCard(sn, {eligible}),
       h('section', {class:'card'}, h('h2', {text:'Arrivals and check-in'}),
         h('p', {class:'card-sub',text:`${checked} of ${sn.players.length} roster players checked in. Check in only those present.`}),
         built ? h('div',{class:'notice warn',text:'The Championship bracket has been built. Check-in changes and new walk-ins are locked to protect the active bracket. Contact the Organizer about a late arrival.'}) :
-          h('p',{class:'help',text:'Players already on the roster are listed here. Search the registered players above to check in someone who is not on the roster yet, or add a walk-in below. No private registration data is shown.'}),
+          h('p',{class:'help',text:'Players already on the roster are listed here. Search the registered players above to check in someone who is not on the roster yet, or add a walk-in above. No private registration data is shown.'}),
         h('div', {class:'scroll-x'},
           h('table',{class:'responsive-table', 'aria-label':'Event-day roster'},
             h('thead',{},h('tr',{},['Player','Level','Attendance','Action'].map(t=>h('th',{scope:'col',text:t})))),
             h('tbody',{}, sn.players.map(p=>h('tr',{},
               h('td',{'data-label':'Player',text:p.name}),
-              h('td',{'data-label':'Level',text:`Level ${p.rating}`}),
+              h('td',{'data-label':'Level'},h('div',{class:'roster-level'},levelShield(p.rating),h('span',{text:`Level ${p.rating}`}))),
               h('td',{'data-label':'Attendance'},pill(p.checkedIn?'Checked in':'Expected',p.checkedIn?'good':'warn')),
               h('td',{'data-label':'Action'},h('button',{type:'button',class:'small'+(p.checkedIn?'':' primary'),
                 disabled:!eligible || !core.canWrite(),text:p.checkedIn?'Undo':'Check in',
                 'aria-label':`${p.checkedIn?'Undo check-in for':'Check in'} ${p.name}`,
                 on:{click:async()=>result(await core.actions.setCheckin(p.id,!p.checkedIn),p.checkedIn?'Check-in undone.':'Player checked in.')}}))
             )))))),
-      h('section',{class:'card'},h('h2',{text:'Add a walk-in'}),
-        h('p',{class:'card-sub',text:'Use a full first and last name. A walk-in is added and checked in together; no contact information is collected.'}),
-        h('form',{on:{submit:async ev=>{
-          ev.preventDefault();
-          if(!eligible)return;
-          const r=await core.actions.eventDayWalkIn(name.value.trim(),Number(level.value));
-          if(result(r,'Walk-in added and checked in.')){forget('edName');name.value='';}
-        }}},
-          h('div',{class:'grid two'},h('div',{},h('label',{for:'edName',text:'Full name'}),name),
-            h('div',{},h('label',{for:'edLevel',text:'Player level'}),level)),
-          h('div',{class:'row'},h('button',{class:'primary',type:'submit',
-            disabled:!eligible || !core.canWrite(),text:'Add & check in'})))),
       h('div',{class:'notice',text:'After check-in, open Championship to review the field and build the bracket. Never rebuild an active bracket to add a late player.'}));
   }
 

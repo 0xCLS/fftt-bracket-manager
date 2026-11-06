@@ -42,6 +42,19 @@ test('desktop: load, search, one-tap check-in, review a duplicate group and a mi
     assert.equal(await page.locator('.desk-reg-row').count(), 20);
     assert.match(await page.locator('#deskRegCount').innerText(), /20 registered · 0 checked in/);
     assert.equal(await page.locator('tbody tr').count(), 0, 'nobody is on the roster yet');
+    const layout = await page.evaluate(() => {
+      const top = document.querySelector('.manager-checkin-page > .players-overview');
+      const registration = document.querySelector('#deskReg');
+      const arrivals = document.querySelector('[aria-label="Event-day roster"]').closest('section');
+      const [t, r, a] = [top, registration, arrivals].map(el => el.getBoundingClientRect());
+      return {ordered: t.bottom <= r.top && r.bottom <= a.top,
+        widths: [t.width, r.width, a.width], walkins: [...document.querySelectorAll('h2')].filter(x => x.textContent === 'Add a walk-in').length};
+    });
+    assert.ok(layout.ordered, 'top, registrations and arrivals appear in order');
+    assert.ok(layout.widths.every(w => Math.abs(w - layout.widths[0]) < 2), 'registrations and arrivals use the full page width');
+    assert.equal(layout.walkins, 1, 'one walk-in card');
+    assert.equal(await page.getByRole('button', {name: 'Add to roster'}).count(), 0);
+
     // search narrows the list live and keeps the text
     await page.fill('#bmSearch', 'marl');
     assert.deepEqual(await page.locator('.desk-reg-name').allInnerTexts(), ['Ben Marlowe']);
@@ -55,6 +68,11 @@ test('desktop: load, search, one-tap check-in, review a duplicate group and a mi
     await toast(page, /Ben Marlowe checked in\./);
     await row(page, 'Ben Marlowe').locator('.pill', {hasText: 'Checked in'}).waitFor({timeout: T});
     await page.locator('tbody tr', {hasText: 'Ben Marlowe'}).waitFor({timeout: T});
+    const levelCell = page.locator('tbody tr', {hasText: 'Ben Marlowe'}).locator('[data-label="Level"]');
+    assert.equal(await levelCell.locator('.rank-badge[data-level="2"] svg').count(), 1);
+    assert.match(await levelCell.innerText(), /Level 2/);
+    assert.equal(await levelCell.locator('select,input,button').count(), 0, 'roster level is read-only');
+
     assert.match(await page.locator('#deskRegCount').innerText(), /1 checked in/);
     assert.deepEqual((await players(w)).map(p => [p.display_name, p.rating, p.source, p.checked_in]), [['Ben Marlowe', 2, 'registration', true]]);
     assert.equal(await row(page, 'Ben Marlowe').locator('button').count(), 0, 'no second tap is offered');
@@ -128,6 +146,16 @@ test('phone layout: the lookup fits, buttons are tappable, the dialog is usable'
     assert.ok(dlg.width <= 390 && dlg.x >= 0, 'the dialog fits the phone');
     await page.locator('dialog[open] button', {hasText: 'Cancel'}).click();
     assert.equal((await players(w)).length, 0, 'cancel changes nothing');
+    await page.fill('#bmSearch', 'cy');
+    await row(page, 'Cy Fennelwick').locator('button', {hasText: 'Check in'}).click();
+    const rosterRow = page.locator('tbody tr', {hasText: 'Cy Fennelwick'});
+    await rosterRow.waitFor({timeout: T});
+    assert.equal(await rosterRow.locator('[data-label="Level"] .rank-badge[data-level="5"]').count(), 1);
+    assert.equal(await rosterRow.locator('[data-label="Level"] select').count(), 0);
+    const boxes = await page.evaluate(() => [...document.querySelectorAll('.manager-checkin-page > .players-overview, .manager-checkin-page > #deskReg, [aria-label="Event-day roster"]')].map(el => el.getBoundingClientRect().width));
+    assert.equal(boxes.length, 3);
+    assert.ok(boxes.every(width => width <= 390), 'check-in sections fit the phone');
+    await page.fill('#bmSearch', 'ada');
     await row(page, 'Ada Quillfeather').first().locator('.is-attn, button').first().waitFor();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth) <= 1, true);
     assert.deepEqual(w.pageErrors, []);

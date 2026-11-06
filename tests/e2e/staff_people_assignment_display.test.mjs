@@ -55,6 +55,28 @@ test('People directory: unassigned, pending, unverified, assigned and revoked st
         await r.locator('.people-event-option', {hasText: eventName}).locator('input').click();
       };
       await openStaff();
+      // Assignment disclosures are mutually exclusive and close on role focus,
+      // outside interaction, Escape and navigation, without changing grants.
+      const aMenu = row(w.accounts.a[0]).locator('.people-event-dropdown');
+      const bMenu = row(w.accounts.b[0]).locator('.people-event-dropdown');
+      await bMenu.locator('summary').click();
+      assert.equal(await bMenu.evaluate(el => el.open), true);
+      await aMenu.locator('summary').click();
+      assert.equal(await bMenu.evaluate(el => el.open), false);
+      assert.equal(await aMenu.evaluate(el => el.open), true);
+      await row(w.accounts.a[0]).locator('select').focus();
+      assert.equal(await aMenu.evaluate(el => el.open), false, 'role control closes assignment');
+      await aMenu.locator('summary').click();
+      await p.getByRole('searchbox', {name: 'Search staff members'}).click();
+      assert.equal(await aMenu.evaluate(el => el.open), false, 'outside click closes assignment');
+      await aMenu.locator('summary').click();
+      await p.keyboard.press('Escape');
+      assert.equal(await aMenu.evaluate(el => el.open), false, 'Escape closes assignment');
+      await aMenu.locator('summary').click();
+      await p.locator('nav.tabs button[data-tab="overview"]').click();
+      await openStaff();
+      assert.equal(await p.locator('.people-event-dropdown[open]').count(), 0, 'tab change clears menus');
+      assert.deepEqual(await grants(), before, 'menu interactions do not change grants');
 
       // 1-3. Unassigned, pending and unverified people: no events, no checked boxes, placeholder role, Save disabled.
       for (const email of [UNASSIGNED, PENDING, UNVERIFIED]) {

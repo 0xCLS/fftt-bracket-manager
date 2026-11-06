@@ -10,6 +10,16 @@ const INVITE_NOTES={
 export function createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDialog,rerender}) {
   let layout='people', query='';
   const edits=new Map();
+  // Native role selects manage their own popup. Close assignment disclosures before
+  // another control takes focus or receives a pointer, without rebuilding the rows.
+  const closeAssignments = except => {
+    for (const menu of document.querySelectorAll('.people-event-dropdown[open]')) {
+      if (menu !== except) menu.open = false;
+    }
+  };
+  document.addEventListener('pointerdown', ev => closeAssignments(ev.target.closest?.('.people-event-dropdown')));
+  document.addEventListener('focusin', ev => closeAssignments(ev.target.closest?.('.people-event-dropdown')));
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape') closeAssignments(); });
   const events=()=>s.events.filter(e=>e.role==='organizer'&&e.lifecycle!=='archived');
   function pending(p) {
     // Start from the server's actual grants only. An unassigned person has no events and no role until someone chooses them.
