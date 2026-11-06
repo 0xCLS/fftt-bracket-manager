@@ -3,19 +3,24 @@
  * a worksheet name and a column mapping), nothing else, and rebuilds every answer through a strict contract: any field
  * outside the allowlist (a contact detail, an unexpected key) makes the whole answer invalid and nothing is shown.
  * It holds no credential of any kind and cannot reach any other host. */
-import {parseRegistrationPayload} from './registration_model.mjs';
+import {REF_PATTERN, looksLikeContact, parseRegistrationPayload} from './registration_model.mjs';
 import {FIELD_KEYS} from './registration_source.mjs';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const JWT = /^[A-Za-z0-9_-]{2,}\.[A-Za-z0-9_-]{2,}\.[A-Za-z0-9_-]{2,}$/;
 export const REGISTRATION_ERROR_KINDS = Object.freeze(['not-configured', 'not-enabled', 'source-disabled', 'not-allowed-here', 'forbidden', 'access-rejected', 'rate-limited',
-  'source-unauthorized', 'source-not-found', 'source-worksheet', 'source-columns', 'source-auth', 'source-busy', 'source-unavailable', 'invalid-spreadsheet', 'network', 'malformed']);
+  'source-unauthorized', 'source-not-found', 'source-worksheet', 'source-columns', 'source-auth', 'source-busy', 'source-unavailable', 'invalid-spreadsheet', 'network', 'malformed',
+  // Bracket Manager desk check-in
+  'registration-not-found', 'name-incomplete', 'level-required', 'registration-not-duplicate', 'registration-invalid', 'outcome-unknown', 'conflict']);
+/** The only conflict details the desk can be told about (mirrors the Function's allowlist). */
+export const CHECKIN_CONFLICT_DETAILS = Object.freeze(['check-in-closed', 'bracket-locked', 'lifecycle', 'duplicate-name', 'roster-full', 'already-linked', 'source-not-enabled', 'source-changed', 'link-name-mismatch']);
 
 export class RegistrationClientError extends Error {
-  constructor(kind, {serviceAccountEmail = null} = {}) {
+  constructor(kind, {serviceAccountEmail = null, detail = null} = {}) {
     super('Registration request failed');
     this.name = 'RegistrationClientError';
     this.kind = REGISTRATION_ERROR_KINDS.includes(kind) ? kind : 'source-unavailable';
+    this.detail = CHECKIN_CONFLICT_DETAILS.includes(detail) ? detail : null;
     // an identifier the organizer needs to share a sheet with; only ever the connection account's e-mail
     this.serviceAccountEmail = typeof serviceAccountEmail === 'string' && /^[a-z0-9-]{6,30}@[a-z0-9-]{6,30}\.iam\.gserviceaccount\.com$/.test(serviceAccountEmail) ? serviceAccountEmail : null;
   }
@@ -58,6 +63,51 @@ export function parseDiagnostic(raw) {
     assessment: Object.freeze({found: fields(raw.assessment.found), absent: fields(raw.assessment.absent)}), responseCount: raw.responseCount});
 }
 
+const UUIDRE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const REASONS = ['same-email', 'same-phone', 'same-name', 'similar-name'];
+/** The Bracket Manager desk's view of an event's registrations: an explicit allowlist with NO contact hints at all, and each
+ * registration's roster state as decided by the database. Anything outside the contract throws, so nothing is shown. */
+export function parseLookupPayload(raw) {
+  const keys = (o, list) => plain(o) && Object.keys(o).length === list.length && list.every(k => k in o);
+  if (!keys(raw, ['source', 'sourceName', 'fetchedAt', 'checkInOpen', 'rosterSize', 'registrants', 'duplicates', 'summary', 'warnings'])
+    || !['google-sheets', 'synthetic-fixture'].includes(raw.source) || typeof raw.fetchedAt !== 'string' || raw.fetchedAt.length > 40 || typeof raw.checkInOpen !== 'boolean'
+    || !Number.isSafeInteger(raw.rosterSize) || !(raw.sourceName === null || (typeof raw.sourceName === 'string' && raw.sourceName.length <= 200 && !looksLikeContact(raw.sourceName)))
+    || !Array.isArray(raw.registrants) || raw.registrants.length > 200 || !Array.isArray(raw.duplicates) || raw.duplicates.length > 200 || !Array.isArray(raw.warnings) || raw.warnings.length > 50) bad();
+  const seen = new Set();
+  const registrants = raw.registrants.map(r => {
+    if (!keys(r, ['ref', 'name', 'registeredAt', 'suggestedRating', 'ratingConfidence', 'ratingBasis', 'ratingReview', 'nameIssue', 'duplicate', 'roster'])
+      || typeof r.ref !== 'string' || !REF_PATTERN.test(r.ref) || seen.has(r.ref) || typeof r.name !== 'string' || r.name.length < 1 || r.name.length > 120 || looksLikeContact(r.name)
+      || typeof r.registeredAt !== 'string' || r.registeredAt.length > 40 || !(r.suggestedRating === null || (Number.isInteger(r.suggestedRating) && r.suggestedRating >= 1 && r.suggestedRating <= 5))
+      || !['none', 'low', 'medium', 'high'].includes(r.ratingConfidence) || !Array.isArray(r.ratingBasis) || r.ratingBasis.length > 8
+      || !r.ratingBasis.every(b => typeof b === 'string' && b.length <= 120 && !looksLikeContact(b)) || typeof r.ratingReview !== 'boolean'
+      || !(r.nameIssue === null || (typeof r.nameIssue === 'string' && r.nameIssue.length <= 120))
+      || !(r.duplicate === null || (keys(r.duplicate, ['group', 'reasons', 'strength']) && /^g\d{1,4}$/.test(r.duplicate.group) && Array.isArray(r.duplicate.reasons)
+        && r.duplicate.reasons.every(x => REASONS.includes(x)) && ['definite', 'probable', 'possible'].includes(r.duplicate.strength)))
+      || !(r.roster === null || (keys(r.roster, ['playerId', 'checkedIn']) && typeof r.roster.playerId === 'string' && UUIDRE.test(r.roster.playerId) && typeof r.roster.checkedIn === 'boolean'))) bad();
+    seen.add(r.ref);
+    return Object.freeze({ref: r.ref, name: r.name, registeredAt: r.registeredAt, suggestedRating: r.suggestedRating, ratingConfidence: r.ratingConfidence,
+      ratingBasis: Object.freeze([...r.ratingBasis]), ratingReview: r.ratingReview, nameIssue: r.nameIssue,
+      duplicate: r.duplicate && Object.freeze({group: r.duplicate.group, reasons: Object.freeze([...r.duplicate.reasons]), strength: r.duplicate.strength}),
+      roster: r.roster && Object.freeze({playerId: r.roster.playerId.toLowerCase(), checkedIn: r.roster.checkedIn})});
+  });
+  const duplicates = raw.duplicates.map(d => {
+    if (!keys(d, ['id', 'reasons', 'strength', 'refs']) || !/^g\d{1,4}$/.test(d.id) || !Array.isArray(d.reasons) || !d.reasons.every(x => REASONS.includes(x))
+      || !['definite', 'probable', 'possible'].includes(d.strength) || !Array.isArray(d.refs) || d.refs.length < 2 || !d.refs.every(x => seen.has(x))) bad();
+    return Object.freeze({id: d.id, reasons: Object.freeze([...d.reasons]), strength: d.strength, refs: Object.freeze([...d.refs])});
+  });
+  const counts = ['total', 'duplicateGroups', 'needsNameFix', 'lowConfidence', 'needsRating'];
+  if (!plain(raw.summary) || !counts.every(k => Number.isInteger(raw.summary[k]))) bad();
+  return Object.freeze({source: raw.source, sourceName: raw.sourceName, fetchedAt: raw.fetchedAt, checkInOpen: raw.checkInOpen, rosterSize: raw.rosterSize,
+    registrants: Object.freeze(registrants), duplicates: Object.freeze(duplicates), summary: Object.freeze(Object.fromEntries(counts.map(k => [k, raw.summary[k]]))),
+    warnings: Object.freeze(raw.warnings.map(w => String(w).slice(0, 200)))});
+}
+/** The Function's answer to one desk check-in. */
+export function parseCheckinResult(raw) {
+  if (!plain(raw) || Object.keys(raw).length !== 4 || !['saved', 'unchanged'].includes(raw.status) || !['created', 'linked', 'existing'].includes(raw.outcome)
+    || typeof raw.playerId !== 'string' || !UUIDRE.test(raw.playerId) || !Number.isSafeInteger(raw.eventRevision)) bad();
+  return Object.freeze({status: raw.status, outcome: raw.outcome, playerId: raw.playerId.toLowerCase(), eventRevision: raw.eventRevision});
+}
+
 export function createRegistrationClient({fetchImpl, endpoint = '/api/registrations'} = {}) {
   if (typeof fetchImpl !== 'function' || !/^\/[a-z0-9/_-]{1,60}$/.test(endpoint)) throw new RegistrationClientError('malformed');
   async function post(token, eventId, action, extra, parse) {
@@ -71,9 +121,10 @@ export function createRegistrationClient({fetchImpl, endpoint = '/api/registrati
     if (res?.status === 200) {
       try { return parse(await res.json()); } catch (e) { throw e instanceof RegistrationClientError ? e : new RegistrationClientError('malformed'); }
     }
-    let code = null, email = null;
-    try { const j = await res.json(); code = j?.error ?? null; email = j?.serviceAccountEmail ?? null; } catch { /* generic */ }
-    const err = kind => new RegistrationClientError(kind, {serviceAccountEmail: email});
+    let code = null, email = null, detailText = null;
+    try { const j = await res.json(); code = j?.error ?? null; email = j?.serviceAccountEmail ?? null; detailText = typeof j?.detail === 'string' ? j.detail : null; } catch { /* generic */ }
+    const err = kind => new RegistrationClientError(kind, {serviceAccountEmail: email, detail: detailText});
+    if (['registration-not-found', 'name-incomplete', 'level-required', 'registration-not-duplicate', 'registration-invalid', 'outcome-unknown', 'conflict'].includes(code)) throw err(code);
     switch (res?.status) {
       case 400: throw err(code === 'invalid-spreadsheet' ? 'invalid-spreadsheet' : 'malformed');
       case 401: throw err('access-rejected');
@@ -95,5 +146,13 @@ export function createRegistrationClient({fetchImpl, endpoint = '/api/registrati
     inspect: (token, {eventId, spreadsheet} = {}) => post(token, eventId, 'inspect', {spreadsheet}, parseInspect),
     /** The read-only connection diagnostic (readiness only, never rows). */
     test: (token, {eventId, spreadsheet, worksheet, mapping = {}} = {}) => post(token, eventId, 'test', {spreadsheet, worksheet, mapping}, parseDiagnostic),
+    /** Bracket Manager only: this event's registrations reduced for the desk (no contact hints). */
+    lookup: (token, {eventId} = {}) => post(token, eventId, 'lookup', {}, parseLookupPayload),
+    /** Bracket Manager only: check one registration in by its opaque reference (names and levels are never sent). `level` is an optional 1-5 override. */
+    checkin: async (token, {eventId, ref, mergeRefs = [], level = null, linkPlayerId = null} = {}) => {
+      if (typeof ref !== 'string' || !REF_PATTERN.test(ref)) throw new RegistrationClientError('malformed');
+      return post(token, eventId, 'checkin', {ref, ...(mergeRefs.length ? {merge_refs: mergeRefs} : {}), ...(level === null ? {} : {level}),
+        ...(linkPlayerId ? {link_player_id: linkPlayerId} : {})}, parseCheckinResult);
+    },
   });
 }
