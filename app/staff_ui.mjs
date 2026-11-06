@@ -5,7 +5,7 @@ import {h, clear, fill, toast, download, pill} from './dom.mjs';
 import {bracketView} from './bracket_view.mjs';
 import {suggestPartners, enginePlayers, seedSlots, roundName, partnerCandidates, normalizeGameScores, formatLabel, ALLOWED_BEST_OF, ALLOWED_POINTS} from '../contracts/gameday_engine.mjs';
 import {normalizeSnapshotMatches, standingsFromSnapshot, resultsText, matchesCsv} from './exports.mjs';
-import {createPlayersView, levelShield} from './view_players.mjs';
+import {createPlayersView, levelShield, playerLevelSelector} from './view_players.mjs';
 import {createDeskRegistration} from './view_desk_registration.mjs';
 import {createEventsView} from './view_events.mjs';
 import {createStaffPeopleView} from './view_staff_people.mjs';
@@ -294,9 +294,9 @@ export function createStaffUi({core, els, config, signOut}) {
     const checked = sn.players.filter(p => p.checkedIn).length;
     const name = h('input', {type:'text', id:'edName', maxlength:80, autocomplete:'off',
       placeholder:'First and last name', value:draft('edName',''), disabled:!eligible || !core.canWrite()});
-    const level = h('select', {id:'edLevel', disabled:!eligible || !core.canWrite()},
-      [['1','Beginner'],['2','Recreational'],['3','Intermediate'],['4','Strong intermediate'],['5','Advanced / competitive']].map(
-        ([v,label])=>h('option',{value:v,text:`Level ${v} · ${label}`,selected:String(draft('edLevel','1'))===v})));
+    let rating = Number(draft('edLevel','1'));
+    const level = playerLevelSelector(h, {name:'edLevel', rating, disabled:!eligible || !core.canWrite(),
+      onChange:n=>{rating=n;remember('edLevel',String(n));}});
     const kpi = (n, label, tone) => h('div', {class: 'mini-kpi ' + tone}, h('strong', {text: String(n)}), h('span', {text: label}));
     return h('div', {class:'players-page manager-checkin-page'},
       h('div', {class:'players-overview'},
@@ -306,11 +306,10 @@ export function createStaffUi({core, els, config, signOut}) {
             h('form',{on:{submit:async ev=>{
               ev.preventDefault();
               if(!eligible)return;
-              const r=await core.actions.eventDayWalkIn(name.value.trim(),Number(level.value));
+              const r=await core.actions.eventDayWalkIn(name.value.trim(),rating);
               if(result(r,'Walk-in added and checked in.')){forget('edName');name.value='';}
             }}},
-              h('div',{class:'grid two'},h('div',{},h('label',{for:'edName',text:'Full name'}),name),
-                h('div',{},h('label',{for:'edLevel',text:'Player level'}),level)),
+              h('div',{class:'grid two'},h('div',{},h('label',{for:'edName',text:'Full name'}),name), level),
               h('div',{class:'row'},h('button',{class:'primary',type:'submit',
                 disabled:!eligible || !core.canWrite(),text:'Add & check in'}))),
             h('p',{class:'help add-privacy',text:'Levels are private to staff. Do not enter contact details.'}))),

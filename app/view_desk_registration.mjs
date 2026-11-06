@@ -152,7 +152,7 @@ export function createDeskRegistration(ctx) {
       list.replaceChildren(...shown.map(x => rowView(x, locked)));
       const inCount = rows.filter(x => x.state === 'in').length;
       count.textContent = rows.length === 0 ? '' : keys.length ? `${shown.length} of ${rows.length} registered match “${q.trim()}” · ${inCount} checked in` : `${rows.length} registered · ${inCount} checked in`;
-      if (rows.length && !shown.length) list.append(h('li', {class: 'empty-state', text: 'No registered player matches that name. They may be a walk-in: use the form below.'}));
+      if (rows.length && !shown.length) list.append(h('li', {class: 'empty-state', text: 'No registered player matches that name. They may be a walk-in: use the form above.'}));
     };
     const search = h('input', {type: 'search', id: 'bmSearch', 'data-draft': 'bmSearch', autocomplete: 'off', spellcheck: 'false', maxlength: 80, placeholder: 'Search registered players by name',
       'aria-label': 'Search registered players by name', disabled: !payload, on: {input: ev => paint(ev.target.value)}});

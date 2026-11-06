@@ -66,6 +66,15 @@ export function levelShield(level) {
   return tile;
 }
 
+/** Shared, keyboard-accessible level buttons for a single new player. */
+export function playerLevelSelector(h, {name, rating, onChange, disabled = false}) {
+  const hint = h('span', {class: 'muted', text: ratingName(rating)});
+  const choices = h('div', {class: 'seg', role: 'radiogroup', 'aria-label': 'FFTT level for the new player'},
+    [1, 2, 3, 4, 5].map(n => h('label', {}, h('input', {type: 'radio', name, value: n, checked: n === rating, disabled,
+      on: {change: () => { hint.textContent = ratingName(n); onChange(n); }}}), h('span', {text: String(n)}))));
+  return h('fieldset', {class: 'walk-level'}, h('legend', {}, 'FFTT level · ', hint), choices);
+}
+
 const ago = ms => { const s = Math.max(0, Math.round(ms / 1000)); return s < 5 ? 'just now' : s < 90 ? `${s} seconds ago` : `${Math.round(s / 60)} minutes ago`; };
 
 export function createPlayersView(ctx) {
@@ -389,10 +398,7 @@ export function createPlayersView(ctx) {
     const name = h('input', {type: 'text', id: 'wName', maxlength: 80, autocomplete: 'off',
       placeholder: 'First and last name', 'data-draft': 'walkName', required: true, 'aria-describedby': 'wHelp'});
     const msg = h('p', {class: 'status bad', role: 'alert', id: 'wMsg'});
-    const hint = h('span', {class: 'muted', text: ratingName(rating)});
-    const seg = h('div', {class: 'seg', role: 'radiogroup', 'aria-label': 'FFTT level for the new player'},
-      [1, 2, 3, 4, 5].map(n => h('label', {}, h('input', {type: 'radio', name: 'wRating', value: n, checked: n === rating,
-        on: {change: () => { rating = n; remember('walkRating', n); hint.textContent = ratingName(n); }}}), h('span', {text: String(n)}))));
+    const level = playerLevelSelector(h, {name: 'wRating', rating, onChange: n => { rating = n; remember('walkRating', n); }});
     const add = async (checkIn) => {
       msg.textContent = '';
       const v = name.value.trim().replace(/\s+/g, ' ');
@@ -422,7 +428,7 @@ export function createPlayersView(ctx) {
       h('form', {class: 'walk-form add-one-form', novalidate: true,
         on: {submit: ev => { ev.preventDefault(); add(false); }}},
         h('div', {class: 'walk-name'}, h('label', {for: 'wName', text: 'Player name'}), name),
-        h('fieldset', {class: 'walk-level'}, h('legend', {}, 'FFTT level · ', hint), seg),
+        level,
         h('div', {class: 'add-one-actions'},
           h('button', {type: 'submit', disabled: !writable(), text: 'Add to roster'}),
           h('button', {type: 'button', class: 'primary', disabled: !writable(), text: 'Add & check in',

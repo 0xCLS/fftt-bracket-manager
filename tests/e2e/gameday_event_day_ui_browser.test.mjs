@@ -37,7 +37,7 @@ test('manager independently checks in players and sees audited controls; scorers
       await page.locator('#toasts .toast',{hasText:'Player checked in.'}).waitFor({timeout:15000});
     }
     await page.locator('#edName').fill('Fictional Charlie Walkin');
-    await page.locator('#edLevel').selectOption('2');
+    await page.getByRole('radiogroup', {name:'FFTT level for the new player'}).getByLabel('2', {exact:true}).check();
     await page.getByRole('button',{name:'Add & check in'}).click();
     await page.locator('tbody tr',{hasText:'Fictional Charlie Walkin'}).waitFor({timeout:20000});
     await page.locator('[data-tab="championship"]').click();
@@ -46,6 +46,7 @@ test('manager independently checks in players and sees audited controls; scorers
     assert.equal(await page.locator('button',{hasText:'Format…'}).count()>0,true);
     await page.locator('[data-tab="checkin"]').click();
     assert.equal(await page.locator('button',{hasText:'Add & check in'}).isDisabled(),true);
+    for (const radio of await page.getByRole('radiogroup', {name:'FFTT level for the new player'}).getByRole('radio').all()) assert.equal(await radio.isDisabled(),true);
     await page.locator('[data-tab="wrap"]').click();
     assert.equal(await page.getByRole('button',{name:'Mark event complete'}).isDisabled(),true);
     const scorer=await w.device('scorer');

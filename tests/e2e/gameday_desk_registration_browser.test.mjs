@@ -54,6 +54,14 @@ test('desktop: load, search, one-tap check-in, review a duplicate group and a mi
     assert.ok(layout.widths.every(w => Math.abs(w - layout.widths[0]) < 2), 'registrations and arrivals use the full page width');
     assert.equal(layout.walkins, 1, 'one walk-in card');
     assert.equal(await page.getByRole('button', {name: 'Add to roster'}).count(), 0);
+    const walkLevels = page.getByRole('radiogroup', {name: 'FFTT level for the new player'});
+    assert.equal(await walkLevels.getByRole('radio').count(), 5);
+    assert.equal(await walkLevels.getByRole('radio', {name: '1', exact: true}).isChecked(), true);
+    await walkLevels.getByRole('radio', {name: '4', exact: true}).check();
+    await page.locator('#deskRegLoad').click();
+    await toast(page, /20 registered players loaded/);
+    assert.equal(await page.getByRole('radio', {name: '4', exact: true}).isChecked(), true, 'walk-in level survives refresh');
+
 
     // search narrows the list live and keeps the text
     await page.fill('#bmSearch', 'marl');
@@ -61,6 +69,7 @@ test('desktop: load, search, one-tap check-in, review a duplicate group and a mi
     assert.match(await page.locator('#deskRegCount').innerText(), /1 of 20 registered match “marl”/);
     await page.fill('#bmSearch', 'zzzz');
     await page.locator('#deskRegList .empty-state', {hasText: 'walk-in'}).waitFor();
+    assert.match(await page.locator('#deskRegList .empty-state').innerText(), /form above/);
     await page.fill('#bmSearch', '');
 
     // one tap for a plain registration: added to the roster and checked in, at the suggested level
@@ -118,6 +127,7 @@ test('desktop: load, search, one-tap check-in, review a duplicate group and a mi
     await page.locator('#edName').fill('Walt Winters');
     await page.getByRole('button', {name: 'Add & check in'}).click();
     await page.locator('tbody tr', {hasText: 'Walt Winters'}).waitFor({timeout: T});
+    assert.equal((await players(w)).find(p => p.display_name === 'Walt Winters').rating, 4, 'walk-in uses selected level');
     const row1 = page.locator('tbody tr', {hasText: 'Ben Marlowe'});
     await row1.locator('button', {hasText: 'Undo'}).click();
     await row1.locator('.pill', {hasText: 'Expected'}).waitFor({timeout: T});
@@ -134,6 +144,7 @@ test('phone layout: the lookup fits, buttons are tappable, the dialog is usable'
     const page = dev.page;
     await goCheckin(page);
     await page.locator('.desk-reg-row').first().waitFor({timeout: T});
+    assert.equal(await page.getByRole('radiogroup', {name: 'FFTT level for the new player'}).getByRole('radio').count(), 5);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     assert.ok(overflow <= 1, 'no sideways scrolling: ' + overflow);
     const box = await row(page, 'Cy Fennelwick').locator('button', {hasText: 'Check in'}).boundingBox();
