@@ -17,9 +17,10 @@ function safeName(value) {
 }
 // A resend also invalidates the previous link, so repeats inside this window are refused, not merely throttled.
 const RESEND_COOLDOWN_MS=10*60*1000;
-export function createStaffDirectoryHandler({env={},fetchImpl=fetch,now=Date.now}={}) {
-  // Best-effort, per Function instance: one resend per email at a time, and no resend after an unconfirmed outcome.
-  const inFlight=new Set(),uncertainUntil=new Map();
+// Only Auth user IDs and temporary deadlines are retained; no request, credentials or contact details.
+export function createStaffDirectoryState() { return {inFlight:new Set(),uncertainUntil:new Map()}; }
+export function createStaffDirectoryHandler({env={},fetchImpl=fetch,now=Date.now,state=createStaffDirectoryState()}={}) {
+  const {inFlight,uncertainUntil}=state;
   const {STAFF_ORIGIN, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_ADMIN_SECRET, STAFF_INVITE_REDIRECT_ENABLED}=env;
   const configured=ORIGIN.test(STAFF_ORIGIN??'')&&SUPABASE_URL===C3_HOST
     &&/^sb_publishable_[A-Za-z0-9_-]{8,}$/.test(SUPABASE_PUBLISHABLE_KEY??'')
@@ -86,7 +87,7 @@ export function createStaffDirectoryHandler({env={},fetchImpl=fetch,now=Date.now
       throw err(503,'invite-not-confirmed');                       // timestamp unchanged: nothing was sent, a retry is safe
     }catch(e){
       if(e?.code==='invite-not-confirmed')throw e;
-      uncertainUntil.set(email,now()+RESEND_COOLDOWN_MS);          // could not tell: do not send again from here for a while
+      uncertainUntil.set(user.id,now()+RESEND_COOLDOWN_MS);        // could not tell: do not send again from here for a while
       return 'uncertain';
     }
   }
@@ -150,15 +151,17 @@ export function createStaffDirectoryHandler({env={},fetchImpl=fetch,now=Date.now
         // or grants. Eligibility is judged on the state BEFORE this request, so tagging an account cannot make it eligible
         // in the same call.
         if(STAFF_INVITE_REDIRECT_ENABLED!=='true')throw err(503,'invite-not-configured');
-        if(inFlight.has(email))return reply(200,'ok',STAFF_ORIGIN,{status:'in-progress'});
-        if((uncertainUntil.get(email)??0)>now())return reply(200,'ok',STAFF_ORIGIN,{status:'uncertain'});
-        inFlight.add(email);                       // no await between the check and the add
+        if(!UUID.test(user.id??''))throw err(503,'invite-not-confirmed');
+        for(const [id,until] of uncertainUntil)if(until<=now())uncertainUntil.delete(id);
+        if(inFlight.has(user.id))return reply(200,'ok',STAFF_ORIGIN,{status:'in-progress'});
+        if((uncertainUntil.get(user.id)??0)>now())return reply(200,'ok',STAFF_ORIGIN,{status:'uncertain'});
+        inFlight.add(user.id);                     // no await between the check and the add
         try{
           const current=await freshUser(user.id);  // a request that read the list before another send finished must not duplicate it
           if(current.email_confirmed_at||sentRecently(current))return reply(200,'ok',STAFF_ORIGIN,{status:current.email_confirmed_at?'existing':'recently-sent'});
           await patch(user.id,{...current.app_metadata,fftt_staff_directory:true,fftt_staff_name:body.name});
           return reply(200,'ok',STAFF_ORIGIN,{status:await resendInvite(current,email)});
-        }finally{inFlight.delete(email);}
+        }finally{inFlight.delete(user.id);}
       }
       if(!UUID.test(user?.id??''))throw err(503,'invite-not-confirmed');
       await patch(user.id,{...user.app_metadata,fftt_staff_directory:true,fftt_staff_name:body.name});

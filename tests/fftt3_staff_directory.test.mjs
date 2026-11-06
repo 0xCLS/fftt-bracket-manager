@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {directoryFromSnapshots,planStaffChange} from '../contracts/staff_people.mjs';
 import {createStaffDirectoryClient, StaffDirectoryError} from '../contracts/staff_directory_client.mjs';
 import {createStaffDirectoryHandler} from '../server/staff_directory/handler.mjs';
+import {onRequest as staffDirectoryEntrypoint} from '../functions/api/staff-directory.js';
 import {createStaffCore} from '../app/staff_core.mjs';
 import {C3_HOST} from '../contracts/phase1c_c3_readonly_supabase_transport.mjs';
 
@@ -244,9 +245,37 @@ function authFake({users=[STAFF_PENDING],mode='ok',readFails=false,readFailsAfte
   const app=createStaffDirectoryHandler({env:{...config,...env},fetchImpl,now:()=>state.t});
   const add=async(extra={})=>{const r=await app(makeRequest('add',{email:EMAIL,name:'Volunteer Name',...extra}));return {status:r.status,body:await r.json()};};
   const calls=path=>state.hits.filter(x=>x.path===path);
-  return {state,store,app,add,invites:()=>calls('/auth/v1/invite'),calls};
+  return {state,store,app,add,fetchImpl,invites:()=>calls('/auth/v1/invite'),calls};
 }
 const mutating=f=>f.state.hits.filter(x=>x.method==='DELETE'||x.path.includes('fftt_set_staff_v3')||(x.path==='/auth/v1/admin/users'&&x.method==='POST'));
+
+test('production entrypoint shares resend lock and uncertain cooldown across requests in one isolate',async()=>{
+  const originalFetch=globalThis.fetch, originalNow=Date.now;
+  let clock=T0;
+  const entry=async()=>{
+    const response=await staffDirectoryEntrypoint({env:config,request:makeRequest('add',{email:EMAIL,name:'Volunteer Name'})});
+    return {status:response.status,body:await response.json()};
+  };
+  try{
+    Date.now=()=>clock;
+    const concurrent=authFake({delay:30,staleList:true});
+    globalThis.fetch=concurrent.fetchImpl;
+    const results=await Promise.all([entry(),entry()]);
+    assert.deepEqual(results.map(r=>r.body.status).sort(),['in-progress','reinvited']);
+    assert.ok(results.every(r=>r.status===200));
+    assert.equal(concurrent.invites().length,1,'two entrypoint calls initiate only one invitation');
+
+    const uncertain=authFake({mode:'throw-unsent',readFailsAfterInvite:true});
+    globalThis.fetch=uncertain.fetchImpl;
+    assert.equal((await entry()).body.status,'uncertain');
+    uncertain.state.readFails=false;
+    assert.equal((await entry()).body.status,'uncertain','a later entrypoint request retains the uncertainty');
+    assert.equal(uncertain.invites().length,1,'no second invitation during uncertainty');
+    clock+=10*MIN; uncertain.state.t=clock; uncertain.state.readFailsAfterInvite=false; uncertain.state.mode='ok';
+    assert.equal((await entry()).body.status,'reinvited','an expired uncertainty is cleared');
+    assert.equal(uncertain.invites().length,2);
+  }finally{globalThis.fetch=originalFetch;Date.now=originalNow;}
+});
 
 test('an existing pending FFTT Staff identity gets one replacement to the same account and the pinned callback',async()=>{
   const f=authFake();
