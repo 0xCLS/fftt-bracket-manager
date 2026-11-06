@@ -122,6 +122,43 @@ const REG_ERRORS = Object.freeze({
 });
 export const REGISTRATION_MESSAGES = REG_ERRORS;
 
+// The desk (Bracket Manager) never sees source settings, so its messages say what to do at the desk and who to ask.
+const DESK_ERRORS = Object.freeze({
+  'not-configured': 'Registration lookup is not set up for this event. Use the roster below, or add a walk-in.',
+  'not-enabled': 'The Organizer has not enabled a registration sheet for this event. Use the roster below, or ask the Organizer.',
+  'source-disabled': 'The registration sheet is switched off for this event. Ask the Organizer to switch it on, or use the roster below.',
+  'not-allowed-here': 'Live registrations are not available on this practice site. Use the roster below.',
+  'forbidden': 'Your account cannot look up registrations for this event.',
+  'access-rejected': 'Your sign-in expired. Sign in again.',
+  'rate-limited': 'That was a lot of requests in a short time. Wait a moment, then try again.',
+  'source-unauthorized': 'The registration sheet is not shared with the connection account. Ask the Organizer to check the sheet. Nothing was changed.',
+  'source-auth': 'The connection to the registration sheet failed. Ask the Organizer to check it. Nothing was changed.',
+  'source-not-found': 'The registration sheet could not be found. Ask the Organizer to check it. Nothing was changed.',
+  'source-worksheet': 'The registration sheet\'s tab could not be found. Ask the Organizer to check it. Nothing was changed.',
+  'source-columns': 'The registration sheet\'s columns changed. Ask the Organizer to check it. Nothing was changed.',
+  'source-busy': 'Google asked us to slow down. Try again in a minute.',
+  'source-unavailable': 'The registrations are temporarily unavailable. Nothing was changed. Try again shortly, or use the roster below.',
+  'network': 'You appear to be offline. Nothing was sent.',
+  'malformed': 'The registration answer was not in the expected form, so nothing was shown.',
+  'registration-not-found': 'That registration is no longer in the sign-up sheet. The list was reloaded.',
+  'name-incomplete': 'This registration does not have a full first and last name. Ask the Organizer to fix the sheet, or add the player as a walk-in with their full name.',
+  'level-required': 'Choose a level for this player first.',
+  'registration-not-duplicate': 'Those registrations are no longer grouped as the same person. The list was reloaded.',
+  'registration-invalid': 'That registration could not be used. The list was reloaded.',
+  'outcome-unknown': 'The connection dropped before we heard back. The list was refreshed: check whether this player is checked in before trying again.',
+});
+const DESK_CONFLICTS = Object.freeze({
+  'check-in-closed': 'Check-in is closed: the Championship bracket has been built or the event is not open. Contact the Organizer about a late arrival.',
+  'bracket-locked': 'The Championship bracket has been built, so check-in is locked. Contact the Organizer about a late arrival.',
+  'lifecycle': 'This event is not open for check-in.',
+  'duplicate-name': 'A player with this name is already on the roster. Open Review to link them if it is the same person.',
+  'roster-full': 'The roster is full (64 players).',
+  'already-linked': 'One of those registrations already belongs to a different player. The list was reloaded.',
+  'source-not-enabled': 'The registration source is not available for this event right now. Ask the Organizer.',
+  'source-changed': 'The registration source changed. The list was reloaded; try again.',
+  'link-name-mismatch': 'That roster player has a different name, so the registration cannot be linked to them.',
+});
+
 export function createStaffCore({session, api, scoreTransport, registrationClient = null, peopleClient = null, ledger, now = () => Date.now(),
   randomId = () => crypto.randomUUID(), isOnline = () => true, onChange = () => {}} = {}) {
   const s = {
@@ -131,6 +168,9 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     lastScoreMessage: null,
     // organizer-only, in memory only, dropped with every other private view: {status, payload, error, at}
     registrations: {status: 'idle', payload: null, error: null, at: 0},
+    // Bracket Manager desk only, in memory only, dropped with every other private view: this event's registrations reduced for the desk
+    // {status, payload, error, code, at, rev, busyRef}; `rev` counts local roster marks so the view repaints without another sheet read
+    registrationLookup: {status: 'idle', payload: null, error: null, code: null, at: 0, rev: 0, busyRef: null},
     // organizer-only settings for THIS event's registration source: {status, source, capabilities, inspect, diagnostic, error}
     registrationSettings: {status: 'idle', source: null, capabilities: null, capabilitiesError: null, inspect: null, diagnostic: null, error: null, busy: null},
     staffDirectory: {status: 'idle', people: [], error: null, version: 0},
@@ -198,6 +238,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
   function clearPrivate(reason = null) {
     s.snapshot = null; s.brief = null; s.pulse = null; s.desk = []; s.deskStatus = 'idle'; s.audit = null;
     s.registrations = {status: 'idle', payload: null, error: null, at: 0};
+    s.registrationLookup = {status: 'idle', payload: null, error: null, code: null, at: 0, rev: 0, busyRef: null};
     s.registrationSettings = {status: 'idle', source: null, capabilities: null, capabilitiesError: null, diagnostic: null, error: null, busy: null};
     s.staffDirectory = {status: 'idle', people: [], error: null, version: s.staffDirectory.version + 1};
     rawDesk = new Map(); lastFullAt = 0;
@@ -442,6 +483,66 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
         s.registrations = {...s.registrations, status: s.registrations.payload ? 'ready' : 'error', error: message, code: kind, at: s.registrations.at}; emit();
         return {ok: false, message, kind};
       }
+    },
+    /** Bracket Manager desk, read-only: this event's registrations (reduced: no contact hints) from the event's saved source, via the
+     * Function. The database decides who may; this only asks. A failed reload keeps an earlier list on screen, clearly marked. */
+    async loadRegistrationLookup() {
+      if (!registrationClient) { s.registrationLookup = {...s.registrationLookup, status: 'error', payload: null, error: DESK_ERRORS['not-configured'], code: 'not-configured', at: now()}; emit(); return {ok: false, message: DESK_ERRORS['not-configured'], kind: 'not-configured'}; }
+      if (s.role !== 'bracket_manager' || !s.eventId) return {ok: false, message: DESK_ERRORS.forbidden, kind: 'forbidden'};
+      if (!isOnline()) return {ok: false, message: DESK_ERRORS.network, kind: 'network'};
+      if (s.registrationLookup.status === 'loading') return {ok: false, message: '', kind: 'superseded'};
+      s.registrationLookup = {...s.registrationLookup, status: 'loading', error: null}; emit();
+      const eventAtStart = s.eventId;
+      try {
+        const payload = await session.authorized(ctx => {
+          if (ctx.role !== 'bracket_manager') throw new RegistrationClientError('forbidden');
+          return registrationClient.lookup(ctx.token, {eventId: ctx.eventId});
+        });
+        if (eventAtStart !== s.eventId || !s.signedIn) return {ok: false, message: 'The event changed while loading. Try again.', kind: 'stale'};
+        s.registrationLookup = {status: 'ready', payload, error: null, code: null, at: now(), rev: s.registrationLookup.rev + 1, busyRef: null}; emit();
+        return {ok: true, payload};
+      } catch (e) {
+        if (isSessionEnded(e)) { endSession(e.kind); return {ok: false, message: describeError(e)}; }
+        const kind = e instanceof RegistrationClientError ? e.kind : null;
+        const message = kind ? (DESK_ERRORS[kind] ?? DESK_ERRORS['source-unavailable']) : describeError(e);
+        s.registrationLookup = {...s.registrationLookup, status: s.registrationLookup.payload ? 'ready' : 'error', error: message, code: kind, rev: s.registrationLookup.rev + 1}; emit();
+        return {ok: false, message, kind};
+      }
+    },
+    /** Bracket Manager desk: check ONE registration in (optionally merging its duplicate submissions / linking a same-named roster
+     * player). Only the opaque reference travels; the Function re-reads the sheet and the database verifies it. One at a time. */
+    async checkinRegistration({ref, mergeRefs = [], level = null, linkPlayerId = null} = {}) {
+      if (!registrationClient) return {ok: false, message: DESK_ERRORS['not-configured'], kind: 'not-configured'};
+      if (s.role !== 'bracket_manager' || !s.eventId) return {ok: false, message: DESK_ERRORS.forbidden, kind: 'forbidden'};
+      if (!isOnline()) return {ok: false, message: DESK_ERRORS.network, kind: 'network'};
+      if (!canWrite()) return {ok: false, message: connection() === 'live' ? 'One moment: another change is being saved.' : 'The connection is not confirmed, so changes are paused. Check the connection, then try again.'};
+      if (s.registrationLookup.busyRef) return {ok: false, message: 'One moment: another check-in is being saved.', kind: 'busy'};
+      const at = s.eventId;
+      s.registrationLookup = {...s.registrationLookup, busyRef: ref}; emit();
+      try {
+        const result = await session.authorized(ctx => {
+          if (ctx.role !== 'bracket_manager') throw new RegistrationClientError('forbidden');
+          return registrationClient.checkin(ctx.token, {eventId: ctx.eventId, ref, mergeRefs, level, linkPlayerId});
+        });
+        if (at !== s.eventId || !s.signedIn) return {ok: false, message: 'The event changed. Try again.', kind: 'stale'};
+        const lk = s.registrationLookup;
+        const marked = new Set([ref, ...mergeRefs]);
+        const payload = lk.payload && Object.freeze({...lk.payload, rosterSize: lk.payload.rosterSize + (result.outcome === 'created' ? 1 : 0),
+          registrants: Object.freeze(lk.payload.registrants.map(r => marked.has(r.ref) ? Object.freeze({...r, roster: Object.freeze({playerId: result.playerId, checkedIn: true})}) : r))});
+        s.registrationLookup = {...lk, payload: payload ?? lk.payload, rev: lk.rev + 1};
+        await refresh({force: true});
+        return {ok: true, result};
+      } catch (e) {
+        if (isSessionEnded(e)) { endSession(e.kind); return {ok: false, message: describeError(e)}; }
+        const kind = e instanceof RegistrationClientError ? e.kind : 'source-unavailable';
+        const message = kind === 'conflict' ? (DESK_CONFLICTS[e.detail] ?? 'The roster changed. Reload the list and try again.') : (DESK_ERRORS[kind] ?? DESK_ERRORS['source-unavailable']);
+        // anything that may have changed, or no longer matches, is re-read from the server so the screen shows the truth
+        const stale = ['outcome-unknown', 'registration-not-found', 'registration-not-duplicate', 'registration-invalid'].includes(kind)
+          || (kind === 'conflict' && ['already-linked', 'source-changed', 'source-not-enabled', 'bracket-locked', 'check-in-closed', 'lifecycle', 'duplicate-name', 'roster-full'].includes(e.detail));
+        s.registrationLookup = {...s.registrationLookup, busyRef: null}; 
+        if (stale) { await refresh({force: true}); if (kind !== 'conflict' || ['already-linked', 'source-changed'].includes(e.detail)) await actions.loadRegistrationLookup(); }
+        return {ok: false, message, kind, detail: e?.detail ?? null};
+      } finally { s.registrationLookup = {...s.registrationLookup, busyRef: null}; emit(); }
     },
     /** The organizer's PRIVATE fallback: a CSV file read in memory in this browser; never uploaded, never stored. */
     async importRegistrationsCsv(text) {

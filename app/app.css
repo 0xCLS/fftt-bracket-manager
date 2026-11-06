@@ -290,6 +290,18 @@ body.tv .champ{font-size:clamp(26px,3vw,50px);color:#f7e99b;font-weight:800}
 
 .reg-state{min-width:0}
 .reg-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.desk-reg-list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.desk-reg-row{display:grid;grid-template-columns:minmax(0,1fr) 220px 290px;gap:var(--space-2) var(--space-4);align-items:center;padding:12px 4px;border-bottom:1px solid var(--line)}
+.desk-reg-row.is-in{background:#f6fbf4}.desk-reg-row.is-attn{background:#fffaf0}
+.desk-reg-main{display:flex;flex-direction:column;gap:2px;min-width:0}
+.desk-reg-name{font-size:15px;overflow-wrap:anywhere}
+.desk-reg-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.desk-reg .reg-tools{margin-bottom:var(--space-2)}.desk-reg .reg-search{max-width:420px}
+.desk-reg-basis{margin:6px 0 0;padding-left:18px;font-size:12px;color:#46525f}
+.desk-reg-merge{border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;margin:0}
+.desk-reg-merge legend{font-weight:650;font-size:13px;padding:0 4px}
+.desk-reg-merge-row{display:flex;gap:10px;align-items:flex-start;min-height:44px}
+@media(max-width:760px){.desk-reg-row{grid-template-columns:minmax(0,1fr);padding:14px 2px}.desk-reg-actions{justify-content:flex-start}#app .desk-reg-actions button.small{min-height:44px;padding:5px 18px}}
 .reg-edit{grid-column:2/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--space-3);padding:12px;margin-top:6px;background:#f7f9fb;border:1px solid var(--line);border-radius:var(--radius)}
 .reg-edit label{margin-top:0}
 .reg-edit-note{grid-column:1/-1;margin:0;color:#596774;font-size:12px;line-height:1.5}

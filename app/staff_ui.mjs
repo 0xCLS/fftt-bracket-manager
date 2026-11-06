@@ -6,6 +6,7 @@ import {bracketView} from './bracket_view.mjs';
 import {suggestPartners, enginePlayers, seedSlots, roundName, partnerCandidates, normalizeGameScores, formatLabel, ALLOWED_BEST_OF, ALLOWED_POINTS} from '../contracts/gameday_engine.mjs';
 import {normalizeSnapshotMatches, standingsFromSnapshot, resultsText, matchesCsv} from './exports.mjs';
 import {createPlayersView, levelShield} from './view_players.mjs';
+import {createDeskRegistration} from './view_desk_registration.mjs';
 import {createEventsView} from './view_events.mjs';
 import {createStaffPeopleView} from './view_staff_people.mjs';
 import {scoreTiles} from './game_tiles.mjs';
@@ -190,6 +191,7 @@ export function createStaffUi({core, els, config, signOut}) {
   const viewCtx = {core, s, h, clear, fill, pill, toast, result, confirmDialog, openDialog, remember, draft, forget, loading, parseBulk, goTab,
     rerender: () => render(true), openEvent: () => { abandonDrafts(); tab = 'overview'; rememberTab(tab); render(true); focusMain(); }};
   const viewPlayers = createPlayersView(viewCtx);
+  const deskRegistrationCard = createDeskRegistration(viewCtx);
   const {formatsCard, eventsCard} = createEventsView(viewCtx);
   const formatOf = m => ({bestOf: m.bestOf, points: m.points});
   const formatText = f => formatLabel(f);
@@ -280,8 +282,9 @@ export function createStaffUi({core, els, config, signOut}) {
     return seen;
   };
 
-  // Event-day check-in is deliberately separate from the organizer's Google registration screen.
-  // It uses the sanitized Bracket Manager snapshot: no contacts, source settings or registration refs.
+  // Event-day check-in is deliberately separate from the organizer's registration settings and CSV tools. The roster below uses the
+  // sanitized Bracket Manager snapshot (no contacts, source settings or registration refs); the registered-player lookup above it is
+  // read through the server, which re-reads the event's own sheet and never sends contact details or sheet settings.
   function viewManagerCheckin() {
     if (!isBracketManager()) return loading();
     const sn = s.snapshot;
@@ -295,10 +298,11 @@ export function createStaffUi({core, els, config, signOut}) {
       [['1','Beginner'],['2','Recreational'],['3','Intermediate'],['4','Strong intermediate'],['5','Advanced / competitive']].map(
         ([v,label])=>h('option',{value:v,text:`Level ${v} · ${label}`,selected:String(draft('edLevel','1'))===v})));
     return h('div', {},
+      deskRegistrationCard(sn, {eligible}),
       h('section', {class:'card'}, h('h2', {text:'Arrivals and check-in'}),
         h('p', {class:'card-sub',text:`${checked} of ${sn.players.length} roster players checked in. Check in only those present.`}),
         built ? h('div',{class:'notice warn',text:'The Championship bracket has been built. Check-in changes and new walk-ins are locked to protect the active bracket. Contact the Organizer about a late arrival.'}) :
-          h('p',{class:'help',text:'The Organizer prepares the registration roster before play. This screen shows player names and levels, not private registration data.'}),
+          h('p',{class:'help',text:'Players already on the roster are listed here. Search the registered players above to check in someone who is not on the roster yet, or add a walk-in below. No private registration data is shown.'}),
         h('div', {class:'scroll-x'},
           h('table',{class:'responsive-table', 'aria-label':'Event-day roster'},
             h('thead',{},h('tr',{},['Player','Level','Attendance','Action'].map(t=>h('th',{scope:'col',text:t})))),
@@ -770,7 +774,7 @@ export function createStaffUi({core, els, config, signOut}) {
       s.pulse?.revision, s.pulse?.generation, s.snapshot?.event.revision,
       s.brief?.lifecycle, s.deskStatus, s.pending?.submissionId, s.score.status,
       s.events.map(e => e.eventId + e.lifecycle + e.players + e.deletable).join(), s.audit?.length, s.busy,
-      s.registrations.status, s.registrations.at, s.registrationSettings.status, s.registrationSettings.busy, s.registrationSettings.source?.updatedAt,
+      s.registrations.status, s.registrations.at, s.registrationLookup.status, s.registrationLookup.rev, s.registrationLookup.busyRef, s.registrationSettings.status, s.registrationSettings.busy, s.registrationSettings.source?.updatedAt,
       s.registrationSettings.inspect?.spreadsheetId, s.registrationSettings.diagnostic?.checks.map(c => c.status).join(), s.registrationSettings.capabilities?.googleMode,
       s.staffDirectory.version]);
     if (!force && paneKey === lastPaneKey) { syncConnectionGuard(); return; }
@@ -786,7 +790,7 @@ export function createStaffUi({core, els, config, signOut}) {
     const title = {players: 'Players & check-in', checkin: 'Event-day check-in', championship: 'Championship', consolation: 'Consolation', desk: 'Match Desk',
       finale: 'Doubles Finale', wrap: 'Tournament finish', results: 'Results & Export', staff: 'Staff'}[tab];
     const description = {players: 'Check in registered players with one click, add walk-ins and confirm their levels before seeding the bracket.',
-      checkin: 'Record arrivals from the prepared roster and add full-name walk-ins before bracket creation.',
+      checkin: 'Find registered players, record arrivals and add full-name walk-ins before bracket creation.',
       championship: 'Seed the field and build the singles championship bracket.',
       consolation: 'Review first-match losses and build fair additional matches.',
       desk: 'Assign tables and submit server-verified match scores.',
