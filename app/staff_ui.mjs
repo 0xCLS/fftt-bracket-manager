@@ -282,6 +282,21 @@ export function createStaffUi({core, els, config, signOut}) {
     return seen;
   };
 
+  // The registration lookup is an event-scoped, sanitized snapshot. A sign-up only stops
+  // awaiting arrival when linked to a checked-in roster player. Merge-linked duplicate
+  // submissions share a single roster identity; unresolved duplicates remain separate
+  // entries until staff review them, so this is not a confirmed unique-person total.
+  function awaitingArrivalCount(players, lookup) {
+    if (lookup?.status !== 'ready' || lookup.error || !Array.isArray(lookup.payload?.registrants)) return null;
+    const checked = new Map(players.map(p => [p.id, p.checkedIn]));
+    const awaiting = new Set();
+    for (const r of lookup.payload.registrants) {
+      const linked = r.roster;
+      if (linked && (checked.get(linked.playerId) ?? linked.checkedIn)) continue;
+      awaiting.add(linked ? 'player:' + linked.playerId : 'registration:' + r.ref);
+    }
+    return awaiting.size;
+  }
   // Event-day check-in is deliberately separate from the organizer's registration settings and CSV tools. The roster below uses the
   // sanitized Bracket Manager snapshot (no contacts, source settings or registration refs); the registered-player lookup above it is
   // read through the server, which re-reads the event's own sheet and never sends contact details or sheet settings.
@@ -292,12 +307,17 @@ export function createStaffUi({core, els, config, signOut}) {
     const built = sn.brackets.some(b => b.kind === 'championship');
     const eligible = !built && ['draft', 'active'].includes(sn.event.lifecycle);
     const checked = sn.players.filter(p => p.checkedIn).length;
+    const awaiting = awaitingArrivalCount(sn.players, s.registrationLookup);
+    const awaitingInfo = awaiting === null
+      ? 'Registration list not available. Load or reload it in Registered players.'
+      : 'Registration entries not checked in; unresolved duplicate sign-ups may be counted separately until reviewed.';
     const name = h('input', {type:'text', id:'edName', maxlength:80, autocomplete:'off',
       placeholder:'First and last name', value:draft('edName',''), disabled:!eligible || !core.canWrite()});
     let rating = Number(draft('edLevel','1'));
     const level = playerLevelSelector(h, {name:'edLevel', rating, disabled:!eligible || !core.canWrite(),
       onChange:n=>{rating=n;remember('edLevel',String(n));}});
-    const kpi = (n, label, tone) => h('div', {class: 'mini-kpi ' + tone}, h('strong', {text: String(n)}), h('span', {text: label}));
+    const kpi = (n, label, tone, hint = null) => h('div', {class: 'mini-kpi ' + tone, ...(hint ? {title: hint} : {})},
+      h('strong', {text: String(n)}), h('span', {text: label}));
     return h('div', {class:'players-page manager-checkin-page'},
       h('div', {class:'players-overview'},
         h('div', {class:'players-add-column'},
@@ -318,7 +338,8 @@ export function createStaffUi({core, els, config, signOut}) {
             h('h2', {id:'managerSnapshotTitle', text:'At a glance'})),
           h('div', {class:'mini-kpis', role:'group', 'aria-label':'Check-in summary'},
             kpi(checked, 'Checked in', 'ice'), kpi(sn.players.length, 'On the roster', 'lav'),
-            kpi(sn.players.length - checked, 'Expected', 'lime'), kpi(Math.max(0, 64 - sn.players.length), 'Roster spots left', 'butter')))),
+            kpi(awaiting ?? '—', 'Awaiting arrival', 'lime', awaitingInfo),
+            kpi(Math.max(0, 64 - sn.players.length), 'Roster spots left', 'butter')))),
       deskRegistrationCard(sn, {eligible}),
       h('section', {class:'card'}, h('h2', {text:'Arrivals and check-in'}),
         h('p', {class:'card-sub',text:`${checked} of ${sn.players.length} roster players checked in. Check in only those present.`}),
