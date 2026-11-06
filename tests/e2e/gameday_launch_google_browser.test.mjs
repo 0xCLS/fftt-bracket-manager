@@ -23,7 +23,6 @@ const idle = page => page.locator('#regSetBody[aria-busy="false"]').waitFor({tim
 
 async function launchWorld(mode = 'enabled') {
   const w = await createBrowserWorld({real: true, registration: 'google-only', google: {mode, sheets: {[SHEET]: {title: 'FFTT3 Sign-ups (fictional copy)', tabs: {[TAB]: ROWS}, shared: true}}}});
-  w.registrationEnv.REGISTRATION_EVENT_IDS = w.eventId;
   w.registrationEnv.REGISTRATION_REF_SECRET = crypto.randomBytes(32).toString('hex');
   return w;
 }
@@ -172,11 +171,11 @@ test('LAUNCH MODE access rules: scorekeepers and outsiders are refused, other ev
     assert.equal(w.google.calls.filter((c, i) => i >= before && /values/.test(c.path)).length, 0, 'diagnostic mode reads no rows');
     // The obsolete deployment allowlist no longer blocks an event with its own enabled source.
     w.registrationEnv.REGISTRATION_GOOGLE_MODE = 'enabled';
-    w.registrationEnv.REGISTRATION_EVENT_IDS = crypto.randomUUID();
+    w.registrationEnv.REGISTRATION_EVENT_IDS = crypto.randomUUID();   // obsolete setting: present but ignored
     await org.page.locator('#regLoad').click();
     await org.page.locator('.reg-row').first().waitFor({timeout: T});
-    // back to normal: reads resume
-    w.registrationEnv.REGISTRATION_EVENT_IDS = E;
+    delete w.registrationEnv.REGISTRATION_EVENT_IDS;
+    // back to normal: reads resume without any event list at all
     await org.page.locator('#regLoad').click();
     await org.page.locator('.reg-row').first().waitFor({timeout: T});
     assert.deepEqual(w.pageErrors, []);

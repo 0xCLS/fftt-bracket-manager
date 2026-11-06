@@ -80,6 +80,7 @@ jobs:
         run: |
           node --check app/view_players.mjs
           node --check app/view_registration.mjs
+          node --check app/view_desk_registration.mjs
       - name: Focused phone/desktop UI regression (no hosted requests)
         env:
           FFTT_CHROME_CHANNEL: none
@@ -200,6 +201,8 @@ jobs:
         run: node --test tests/e2e/gameday_real_event_candidate.test.mjs
       - name: Delegated event-day Bracket Manager permission and rollback proof in real disposable SQL
         run: node --test tests/e2e/gameday_event_day_delegation.test.mjs
+      - name: Bracket Manager registration desk against real SQL and the real Function (event-scoped roles, proof-verified provenance, duplicates, locks, rollback; fictional sheet, zero network)
+        run: node --test tests/e2e/bm_registration_lookup.test.mjs
       - name: In-place FFTT3 single-project migration proof on populated synthetic DB (zero hosted traffic)
         run: node --test tests/e2e/gameday_single_project_upgrade.test.mjs
       - name: Game-day server logic against the real SQL (local PostgreSQL), parity with the approved engine
@@ -218,6 +221,10 @@ jobs:
         env:
           FFTT_CHROME_CHANNEL: none
         run: node --test tests/e2e/gameday_event_day_ui_browser.test.mjs
+      - name: Bracket Manager registration desk in fictional Chrome (desktop and phone: search, one-tap check-in, review, duplicates, locked and failure states, no private data)
+        env:
+          FFTT_CHROME_CHANNEL: none
+        run: node --test tests/e2e/gameday_desk_registration_browser.test.mjs
       - name: Game-day browser failure paths (background/resume, outage, stale TV, reload, renewal, wrong password)
         env:
           FFTT_CHROME_CHANNEL: none

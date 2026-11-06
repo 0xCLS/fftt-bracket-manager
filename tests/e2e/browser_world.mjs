@@ -47,6 +47,7 @@ export async function createBrowserWorld({ttlSeconds = 3600, players = 0, regist
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_lupD9JDsWFQ_65LuwVL1Fg_O-V5Era0', REGISTRATION_SOURCE: registration,
     ...(google ? {REGISTRATION_GOOGLE_MODE: google.mode ?? 'diagnostic', ...fakeGoogleEnv} : {})} : {};
   const registrationState = createHandlerState();
+  world.registrationState = registrationState;   // tests may clear the Function's 20-second sheet cache to simulate a later outage
   world.google = google ? createFakeGoogle({sheets: google.sheets}) : null;
   const supabaseFetch = fake.clientFetch('registration-adapter');
   // the adapter's outbound network: the fake Supabase over the real SQL, the fake Google (if any), and NOTHING else. Like the
