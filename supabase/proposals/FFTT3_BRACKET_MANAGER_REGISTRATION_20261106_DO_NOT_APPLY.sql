@@ -17,8 +17,11 @@
 -- operation), check in after the Championship bracket exists, use another event, or do any of this after revocation.
 --
 -- ONE-TIME RELEASE STEP (not part of this file, never commit the value): install the shared proof secret, the same value
--- that is stored as the Cloudflare Pages secret REGISTRATION_GATE_SECRET, e.g. from psql as the database owner:
---     select fftt_private.install_registration_gate_v1(:'gate_secret');
+-- that is stored as the Cloudflare Pages secret REGISTRATION_GATE_SECRET. Install it as the database owner with
+-- tools/ops/install_registration_gate.sql, which reads the value from psql's standard input (psql ... -f that file < private
+-- file), so it is in no process argument, shell history, SQL text or server log. Never call the installer with the value
+-- typed into a -c string, a psql variable or an SQL editor. The runbook is in
+-- docs/launch/FFTT3_BRACKET_MANAGER_REGISTRATION_2026-11-06.md (Release requirements).
 -- Until it is installed (and the Function has the secret) every call below is refused: fail closed.
 begin;
 

@@ -59,7 +59,7 @@ When playing-assessment questions are missing or unrecognized, **no level and no
 | `GOOGLE_SA_EMAIL`, `GOOGLE_SA_PRIVATE_KEY` (secrets) | the read-only connection account |
 | `REGISTRATION_REF_SECRET` (≥ 32 random chars) | required for `enabled` |
 | `REGISTRATION_EVENT_IDS` | **retired by the PR #52 release; ignored.** Until that release is deployed, production still requires it as an explicit allowlist. |
-| `REGISTRATION_GATE_SECRET` (32–200 chars, same value stored in the database) | required only for Bracket Manager lookup/check-in (PR #52) |
+| `REGISTRATION_GATE_SECRET` (32–200 chars, same value stored in the database) | required only for Bracket Manager lookup/check-in (PR #52). Set on the production Staff project `fftt-staff` only, and installed in the database with `tools/ops/install_registration_gate.sql`; both read the value from a private file through standard input, never an argument ([runbook](launch/FFTT3_BRACKET_MANAGER_REGISTRATION_2026-11-06.md#release-requirements)). |
 
 Fail-closed rules: a live Google source is **never** served for a synthetic event (the database refuses to enable it too), in `off`/`diagnostic` mode, when switched off. (Before the PR #52 release it was also refused outside the deployment's event allowlist.) The old single-sheet variables (`REGISTRATION_SHEET_ID`, `REGISTRATION_SHEET_RANGE`) are gone.
 

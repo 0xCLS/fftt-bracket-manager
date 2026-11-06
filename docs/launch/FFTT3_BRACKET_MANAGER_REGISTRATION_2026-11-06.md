@@ -31,7 +31,7 @@ Status: **IMPLEMENTED AND TESTED LOCALLY; NOT RELEASED.** Source: [PR #52](https
 
 ### Retired
 
-`REGISTRATION_EVENT_IDS`. The Function ignores it (set or not, valid or not). Once the release below is verified, delete it from the Staff Cloudflare project so nobody edits it again.
+`REGISTRATION_EVENT_IDS`. The Function ignores it (set or not, valid or not). It is deleted from the Staff Cloudflare project only as a later, separately authorized cleanup (step 6 below), after the release is accepted: the previous Staff bundle, which is the rollback target, still requires it.
 
 ### Review of other rollout-era restrictions (bounded, November 6)
 
@@ -47,21 +47,80 @@ Status: **IMPLEMENTED AND TESTED LOCALLY; NOT RELEASED.** Source: [PR #52](https
 
 ## Release requirements
 
-Authorization is needed for **each** of 1–4. Do them in this order; every step is additive and reversible.
+Authorization is needed separately for **each** of steps 2–6. Steps 0–1 change nothing hosted. Every step is additive and reversible, and the order below is the safe order: if the guard in step 1 fails, nothing hosted has been touched.
 
-0. **Before anything:** green full CI on the exact release commit; a fresh private backup with disposable restore evidence ([backup and recovery](FFTT3_BACKUP_RECOVERY.md)); read-only reconfirmation that the hosted database carries the Bracket Manager role layer (`FFTT3_BRACKET_MANAGER_ROLE_20261030`) and the event-day delegation layer (`FFTT3_EVENT_DAY_DELEGATION_20261105`; the project changelog records it applied on November 5, 2026). This candidate depends on the role layer; the roster check-in and walk-in the desk also uses need the delegation layer.
-1. **Hosted SQL** (the owner, SQL editor or `psql`): run `supabase/proposals/FFTT3_BRACKET_MANAGER_REGISTRATION_20261106_DO_NOT_APPLY.sql` once (it is one transaction).
-2. **Install the proof secret** (once; never commit it, never paste it into chat). Generate a random value of 32–200 characters into a private file, for example `openssl rand -base64 48 | tr -d '\n' > ~/Documents/FFTT-private/secrets/REGISTRATION_GATE_SECRET.txt && chmod 600 ~/Documents/FFTT-private/secrets/REGISTRATION_GATE_SECRET.txt`. Install it in the database with `psql`, so the value is not in a saved SQL-editor history:
-   `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v gate_secret="$(cat ~/Documents/FFTT-private/secrets/REGISTRATION_GATE_SECRET.txt)" <<< "select fftt_private.install_registration_gate_v1(:'gate_secret');"`
-   Re-running with a new value rotates it (do the Cloudflare secret in step 3 at the same time; between the two, desk calls are refused, nothing else is affected).
-3. **Cloudflare, Staff project only** (Production): add the secret `REGISTRATION_GATE_SECRET` with the same value (`npx wrangler@4 pages secret put REGISTRATION_GATE_SECRET --project-name fftt3-staff-stg < that file`). Never set it on the Spectator project. Redeploy the Staff bundle once from the final commit (Pages applies variable changes to new deployments only). After the verification below, **delete `REGISTRATION_EVENT_IDS`**.
-4. **Staff production deploy** of the exact final commit of PR #52 (merge order per the repository's release process; PR #52's base branch must be merged or retargeted first).
+**Which project this is.** Production Staff is the Cloudflare Pages project **`fftt-staff`** (`https://fftt-staff.clslifestyle.com`, also `https://fftt-staff.pages.dev`). It is the only project that receives the registration Function, the proof secret or this bundle. These are **never** targets: `fftt3-staff-stg` (the old Staff staging project, still reachable at `fftt3-staff-stg.pages.dev`), `fftt3-games-stg` (Spectator staging), `fftt-games` (production Spectator/TV, static only) and `fftt-public` (the public homepage). Every `wrangler` command below names `--project-name fftt-staff` explicitly and is run from a clean worktree with `.wrangler/` removed, because without the flag wrangler falls back to a project name remembered in a local cache or config.
 
-Order safety: the SQL is additive, so the current Staff bundle is unaffected by step 1. A new bundle without the SQL or secrets shows "Registration lookup is not set up for this event" and leaves the roster and walk-in screens working.
+**Integration: nothing has to be merged.** Production already runs [PR #51](https://github.com/0xCLS/fftt-bracket-manager/pull/51)'s head `9f555bbdb832e35503c43101299560398affbcc3` (Staff deployment `c813b26b-39af-41eb-a2fa-8b2c1a461a1f`); PR #51 stays an unmerged draft, as the earlier releases did. PR #52 is stacked on that exact commit (it is an ancestor of PR #52's head), so the exact PR #52 commit is released the established way: a clean detached worktree of that commit, a production Staff export, a Staff-only `wrangler pages deploy` from the repository root so both Pages Functions are compiled in. No PR is merged or retargeted for the release. Checked on November 6, 2026: a clean production export of `9f555bb…` is byte-for-byte the live Staff manifest (41 files, same SHA-256 for every file), so the export recipe below reproduces what is live. The same export of PR #52's head `ecb6f9fa935b5fab187e2cc1fbf90a3348673556` differs from live in exactly these served files, plus the Function code (`server/registration/*`, not a served file):
+
+| | file |
+| --- | --- |
+| added | `app/view_desk_registration.mjs` |
+| changed | `app/app.css`, `app/staff_core.mjs`, `app/staff_ui.mjs`, `contracts/registration_client.mjs` |
+| removed | none |
+
+(If a later commit replaces `ecb6f9f…` as the release commit, regenerate this list with the guard in step 1; it prints it.)
+
+**0. Before anything (read-only).** Green full CI on the exact release commit (for `ecb6f9f…`: [run 42172180808](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/42172180808)); a fresh private backup with disposable restore evidence ([backup and recovery](FFTT3_BACKUP_RECOVERY.md)); read-only reconfirmation that the hosted database carries the Bracket Manager role layer (`FFTT3_BRACKET_MANAGER_ROLE_20261030`) and the event-day delegation layer (`FFTT3_EVENT_DAY_DELEGATION_20261105`, recorded as applied on November 5, 2026). Record, to compare afterwards: the live Staff manifest (`curl -s https://fftt-staff.clslifestyle.com/MANIFEST.json`), the Spectator manifest (`https://fftt-games.clslifestyle.com/MANIFEST.json`, commit `f6cc0d68…` on November 6) and a SHA-256 of the homepage response (`curl -s https://fftt.clslifestyle.com/ | shasum -a 256`).
+
+**1. Build the exact commit and run the target guard (local; nothing hosted changes).**
+
+```
+RELEASE=ecb6f9fa935b5fab187e2cc1fbf90a3348673556        # the full, CI-verified commit (never a branch name)
+git fetch origin && git worktree add --detach /private/tmp/fftt-release "$RELEASE"
+cd /private/tmp/fftt-release && rm -rf .wrangler && git status --short   # must print nothing
+python3 tools/staging/build_export.py --checkout . --commit "$RELEASE" --environment production \
+  --origin https://fftt-staff.clslifestyle.com --spectator-origin https://fftt-games.clslifestyle.com \
+  --target staff --out ../staff-bundle
+python3 tools/ops/staff_release_guard.py --project fftt-staff --release-commit "$RELEASE" --bundle ../staff-bundle
+```
+
+The guard must print `GUARD PASSED`. It refuses any other project name (staging, Spectator, homepage, a typo), requires `fftt-staff.clslifestyle.com` and `fftt-staff.pages.dev` to serve the same production Staff deployment, requires the bundle to be the release commit, production, Staff-only (production origin only, no `server/`, `functions/`, `supabase/`, `tests/` or `docs/` file served), and prints the add/change/remove list to compare with the table above. Also confirm the Cloudflare login and project (read-only): `npx wrangler@4 whoami` shows the expected account, and `npx wrangler@4 pages project list` shows `fftt-staff` with the domain `fftt-staff.clslifestyle.com`. Run **both** the guard and these checks again immediately before steps 4 and 5 if any time has passed.
+
+**2. Hosted SQL (the owner).** Run `supabase/proposals/FFTT3_BRACKET_MANAGER_REGISTRATION_20261106_DO_NOT_APPLY.sql` once; it is one transaction and purely additive, so the Staff bundle that is live now is unaffected. Connect with libpq settings and `~/.pgpass` (mode `0600`) or a pg service, **not** a `postgresql://user:password@…` URL on the command line, which would put the database password in the process list:
+
+```
+psql -X -v ON_ERROR_STOP=1 -f supabase/proposals/FFTT3_BRACKET_MANAGER_REGISTRATION_20261106_DO_NOT_APPLY.sql
+```
+
+**3. Install the proof secret in the database, without the value ever appearing in an argument, history, log, repository or chat.** Generate it into a private file that is outside every repository, with the value travelling only through a pipe; then install it with the same connection settings, redirecting the file into psql's standard input:
+
+```
+umask 077; mkdir -p ~/Documents/FFTT-private/secrets
+openssl rand -hex 32 | tr -d '\n' > ~/Documents/FFTT-private/secrets/REGISTRATION_GATE_SECRET.txt
+cd /private/tmp/fftt-release
+psql -X -v ON_ERROR_STOP=1 -f tools/ops/install_registration_gate.sql < ~/Documents/FFTT-private/secrets/REGISTRATION_GATE_SECRET.txt
+```
+
+It prints `installed` and the length, never the value. `tools/ops/install_registration_gate.sql` reads the value with `\copy … from pstdin` (the COPY data stream, not SQL text), so it is not in the psql or shell process arguments, not in a psql variable, not in any statement text and therefore not in a server statement log, and not in shell history (the command line holds only file paths). It refuses, before storing anything and without echoing the value, a file that is empty, has more than one line, is shorter than 32 or longer than 200 characters, or contains anything but `A-Z a-z 0-9 + / = _ . -`. Do **not** use `-c`, `\set`, a here-string, a pasted value or the Supabase SQL editor for this step. Tested on throw-away PostgreSQL 16 and 17 with `log_statement = all`: the value appears in no log, output or error (`tests/registration_gate_installer_postgres.sh`). Re-running with a new file rotates the secret: repeat step 4 and the deploy of step 5 at once (between the two, desk calls are refused and nothing else is affected).
+
+**4. Cloudflare secret, production Staff project only.** After the guard passes again:
+
+```
+cd /private/tmp/fftt-release
+npx wrangler@4 pages secret put REGISTRATION_GATE_SECRET --project-name fftt-staff --env production < ~/Documents/FFTT-private/secrets/REGISTRATION_GATE_SECRET.txt
+```
+
+Wrangler reads the value from standard input when it is not typed (it trims only trailing whitespace, and the file has none), so there is again no secret in an argument or history. The output must say `Creating the secret for the Pages project "fftt-staff" (production)`; if it names any other project or environment, stop. The same command with `--project-name` of any other project is the mistake this runbook exists to prevent: never run it for `fftt-games`, `fftt3-staff-stg`, `fftt3-games-stg` or `fftt-public`. List the secret **names** (never values) before and after (`npx wrangler@4 pages secret list --project-name fftt-staff --env production`): exactly one name, `REGISTRATION_GATE_SECRET`, is added. Do not open, print or paste the value anywhere; after step 6 keep the private file only as the owner's recovery copy (mode `0600`, outside the repository), or delete it and rotate when needed.
+
+**5. Staff production deploy of the exact commit (Staff only).** Cloudflare applies variable changes to new deployments only, so this deploy is what makes the new secret live. From the same clean worktree, at the repository root so `functions/` is compiled in (the output must say `Compiled Worker successfully` and `Uploading Functions bundle`):
+
+```
+cd /private/tmp/fftt-release
+python3 tools/ops/staff_release_guard.py --project fftt-staff --release-commit "$RELEASE" --bundle ../staff-bundle   # again: must pass
+npx wrangler@4 pages deploy ../staff-bundle --project-name fftt-staff --branch main --commit-hash "$RELEASE"
+python3 tools/ops/verify_deployment.py --bundle ../staff-bundle --base https://fftt-staff.clslifestyle.com --kind staff
+```
+
+`verify_deployment.py` must print `ALL LIVE CHECKS PASSED` (every served file's SHA-256, headers, private paths not served, `GET /api/registrations` 405, token-less `POST` 401). Also confirm the live `MANIFEST.json` reports the release commit with target `staff` and environment `production`, that Spectator (`fftt-games`) and the homepage (`fftt-public`) responses equal what step 0 recorded, and that the previous good Staff deployment `c813b26b-39af-41eb-a2fa-8b2c1a461a1f` is still listed for rollback. Keep the existing registration variables as they are; do not replace the project's configuration.
+
+**6. Later cleanup (separately authorized, not part of the release).** Only after the Organizer has accepted the release **and** a return to the previous bundle is no longer wanted, delete the obsolete `REGISTRATION_EVENT_IDS` variable from the `fftt-staff` project (dashboard: Settings → Variables and secrets → Production). The new bundle ignores it either way, and a variable change reaches only later deployments, so this is housekeeping that stops anyone editing it again, not a release step. Until then it stays: the previous bundle needs it, and leaving it is harmless to the new one.
+
+Order safety: the SQL (step 2) is additive, so the live bundle is unaffected by it. A new bundle deployed without the SQL or the secret shows "Registration lookup is not set up for this event" and leaves the roster and walk-in screens working. A secret that differs between the database and Cloudflare makes only the desk lookup and check-in answer "forbidden"; the Organizer's registration workflow does not use it.
 
 ### Verification after release (signed in as each person; use the private rehearsal event, never create or alter the live Nov 22 event for a test)
 
-* Bracket Manager of event A: **Check-in → Registered players** loads; one registered player checks in; the roster shows them at the suggested level; repeating changes nothing; the roster table's **Undo** still works.
+* Bracket Manager of event A: **Check-in → Registered players** loads; one registered player checks in; the roster shows them at the suggested level; repeating changes nothing; the roster table's **Undo** still works. (This is also the proof that the two copies of the secret match.)
 * The same Bracket Manager cannot reach event B (not assigned): refused. A Scorekeeper and an unassigned account: refused. A revoked Bracket Manager: refused with the same still-valid page.
 * The Organizer's **Players** tab, Registration settings, CSV and check-in behave as before.
 * After the Championship is built, the card reports that check-in is closed and its buttons are disabled.
@@ -70,9 +129,13 @@ Order safety: the SQL is additive, so the current Staff bundle is unaffected by 
 
 ### Rollback (reversible, deletes no event data)
 
-1. Redeploy the previous good Staff bundle (the new card disappears; the old roster/walk-in screen returns).
-2. Run `supabase/proposals/FFTT3_BRACKET_MANAGER_REGISTRATION_20261106_ROLLBACK_DO_NOT_APPLY.sql` (removes only the new functions and the stored secret; players, links and audit rows already written stay; safe to run twice; the candidate can be applied again afterwards).
-3. Remove `REGISTRATION_GATE_SECRET` from Cloudflare. Without the SQL or the secret the Function answers "not set up"; nothing else depends on them.
+Do these in this order, each with its own authorization:
+
+1. Redeploy the previous good Staff bundle **first**, so no bundle calls the functions that are about to be removed: Cloudflare dashboard → `fftt-staff` → Deployments → **Rollback to this deployment** on `c813b26b-39af-41eb-a2fa-8b2c1a461a1f` (source `9f555bbdb832e35503c43101299560398affbcc3`, immutable URL `https://c813b26b.fftt-staff.pages.dev`), or repeat steps 1 and 5 with `RELEASE=9f555bbdb832e35503c43101299560398affbcc3`. The new card disappears and the old roster/walk-in screen returns. That bundle still needs `REGISTRATION_EVENT_IDS`, which is why step 6 deletes it only after acceptance; if it was already deleted, set it again to the real event's id (plain text, `fftt-staff` Production) and redeploy before relying on the Organizer's registration loading.
+2. Run `supabase/proposals/FFTT3_BRACKET_MANAGER_REGISTRATION_20261106_ROLLBACK_DO_NOT_APPLY.sql` the same way as step 2 (it removes only the new functions and the stored secret table; players, links and audit rows already written stay; it is safe to run twice, and the candidate can be applied again afterwards).
+3. Remove `REGISTRATION_GATE_SECRET` from the `fftt-staff` project (`npx wrangler@4 pages secret delete REGISTRATION_GATE_SECRET --project-name fftt-staff --env production`, or the dashboard) and delete the private secret file if it will not be reused. Without the SQL or the secret the Function answers "not set up"; nothing else depends on them.
+
+Run the guard before any rollback command that names a project, exactly as in step 1 (with `--live-only` when no bundle is being built).
 
 ## Evidence (all fictional, all local)
 
