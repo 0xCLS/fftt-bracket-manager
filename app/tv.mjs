@@ -24,12 +24,23 @@ function games(m) {
   const t = tally(m);
   return t ? parseGames(m.scores).map((g, i) => `G${i + 1} ${g.a}–${g.b}`).join('   ·   ') : (m.scores === 'W/O' ? 'Walkover' : m.status === 'complete' && m.scores && (!m.bestOf || !m.points) ? `Recorded: ${m.scores}` : 'Game scores unavailable');
 }
+function liveGameProgress(m) {
+  if (view?.state === 'expired' || view?.state === 'invalid') return h('div', {class: 'score-pending', text: 'Progress unavailable'});
+  if (m.progress === undefined) return h('div', {class: 'score-pending', text: 'Game scores pending'});
+  if (m.progress === null) return h('div', {class: 'score-pending', text: 'Awaiting Game 1'});
+  const {games, won, decided} = m.progress;
+  return h('div', {class: 'score-pending live-game-progress'},
+    h('span', {class: 'tiny-label', text: view?.state === 'stale' ? 'LAST CONFIRMED · OUT OF DATE' : 'CONFIRMED GAMES WON'}),
+    h('strong', {text: won.join('–')}),
+    h('span', {class: 'game-lines', text: games.map((g, i) => `G${i + 1} ${g[0]}–${g[1]}`).join('  ·  ')}),
+    h('span', {class: 'tiny-label', text: decided ? 'AWAITING OFFICIAL MATCH CONFIRMATION' : `GAME ${games.length + 1} NEXT`}));
+}
 function tableCard(table) {
   const m = board.playing.find(x => x.table === table);
   return h('article', {class: 'table-card' + (m ? ' active' : '')},
     h('div', {class: 'card-top'}, h('span', {class: 'table-label', text: `TABLE ${table}`}), h('span', {class: 'status-label', text: m ? '●  NOW PLAYING' : 'AVAILABLE'})),
     m ? h('div', {class: 'match-content'}, h('div', {class: 'players'}, h('div', {class: 'player-name', text: name(m.name1)}), h('div', {class: 'versus', text: 'VS'}), h('div', {class: 'player-name', text: name(m.name2)})),
-      h('div', {class: 'score-pending', text: 'Game scores pending'}),
+      liveGameProgress(m),
       h('div', {class: 'match-meta', text: details(m, event)})) : h('div', {class: 'empty-table'}, h('strong', {text: 'Table open'}), h('span', {text: 'Waiting for the next match'})));
 }
 function matchCenter() {
