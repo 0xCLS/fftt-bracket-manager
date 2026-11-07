@@ -1,34 +1,12 @@
 name: Browser regression tests
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - index.html
-      - app/**
-      - public-site/**
-      - docs/**
-      - server/**
-      - functions/**
-      - contracts/**
-      - tools/**
-      - tests/**
-      - .github/workflows/browser-tests.yml
-      - supabase/**
-  pull_request:
-    paths:
-      - index.html
-      - app/**
-      - public-site/**
-      - docs/**
-      - server/**
-      - functions/**
-      - contracts/**
-      - tools/**
-      - tests/**
-      - .github/workflows/browser-tests.yml
-      - supabase/**
   workflow_dispatch:
+    inputs:
+      approval:
+        description: 'Type APPROVED to explicitly authorize comprehensive regression on the selected branch'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -36,7 +14,7 @@ permissions:
   actions: read
   checks: read
 
-# A newer automatic update supersedes its own stale run; manual full runs remain independent.
+# Manual-only. No pull_request/push trigger. An unapproved dispatch runs no jobs.
 concurrency:
   group: browser-regression-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -44,6 +22,7 @@ concurrency:
 jobs:
   classify:
     name: Select safe CI lane
+    if: github.event.inputs.approval == 'APPROVED'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:

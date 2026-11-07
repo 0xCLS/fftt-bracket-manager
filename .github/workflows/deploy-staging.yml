@@ -61,7 +61,7 @@ jobs:
     permissions:
       contents: read
       checks: read
-      actions: write   # start full regression only for core/unknown changes; verified visual-only releases use focused CI
+      actions: read    # evidence only; never dispatch a regression workflow
     outputs:
       superseded: ${{ steps.gate.outputs.superseded }}
     steps:
@@ -69,7 +69,7 @@ jobs:
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0   # compare ALL changes against the last full-tested live staging commit
-      - name: Wait for the approved exact-commit checks (dispatch full only when needed)
+      - name: Require already-approved exact-commit checks (never dispatch full CI)
         id: gate
         env:
           GH_TOKEN: ${{ github.token }}
