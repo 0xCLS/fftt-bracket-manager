@@ -250,7 +250,7 @@ body.tv{
 }
 footer{
   border-top-color:#29475f;color:#a9c0d2;
-  font-size:clamp(10px,.78vw,15px);
+  font-size:clamp(11px,.78vw,15px);
 }
 .dot{color:var(--tv-accent)}
 .control-hint{opacity:1;color:#a9bfd0}
