@@ -1,5 +1,6 @@
--- FFTT private backup: ONE read-only query for the Supabase SQL editor (project fftt-bracket-manager-dev). It reads every private FFTT
--- table plus the Auth identities the staff grants point to (id, email, created_at only; never password hashes or tokens) and returns
+-- FFTT private backup: ONE read-only query for the Supabase SQL editor or Management API. It reads all 14 reviewed
+-- FFTT application tables plus referenced Auth identities (id, email, created_at, is_anonymous only).
+-- EXCLUDED: fftt_private.registration_gate contains a proof secret and must not be exported. Query returns
 -- one row per table: row count, an md5 fingerprint and the rows as JSON. Save the result to a PRIVATE location outside GitHub
 -- (see docs/launch/FFTT3_BACKUP_RECOVERY.md), then prove it with: node tools/ops/restore_verify.mjs <file> --rehearse
 -- Every expected table returns exactly one group, including empty tables. Missing groups are an error.

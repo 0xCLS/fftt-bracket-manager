@@ -6,7 +6,7 @@
 Supabase Free has no downloadable managed backups, and this Mac has no `pg_dump`/`psql`/Docker (and the hosted database password is not held by the assistant). The backup therefore uses the one door that is already open and owner-controlled: a **read-only query in the Supabase SQL editor**, whose result is saved privately and **proven restorable** by loading it into a throw-away PostgreSQL (PGlite) built from the repository's SQL.
 
 ## What a backup contains (and does not)
-* All 14 private FFTT tables (`events`, `players`, `matches`, `brackets`, `event_staff`, `platform_organizers`, `score_decisions_v2`, `result_submissions`, `audit_events`, `consolation_reviews`, `doubles_finale`, `registration_links`, `registration_sources`, `deleted_events`), row for row.
+* The 14 reviewed application-data tables (explicitly **excluding** `fftt_private.registration_gate`, which holds a secret): (`events`, `players`, `matches`, `brackets`, `event_staff`, `platform_organizers`, `score_decisions_v2`, `result_submissions`, `audit_events`, `consolation_reviews`, `doubles_finale`, `registration_links`, `registration_sources`, `deleted_events`), row for row.
 * The Auth identities the staff grants refer to: **id, email, created_at, is_anonymous only** (no password hashes, tokens or secrets), so grants stay meaningful after a restore.
 * Not included: Cloudflare secrets, Google credentials, the Supabase Auth password hashes, any Google Form answer (registration answers are never stored).
 * Contains staff e-mail addresses and, for a real event, **player names and results** → it is private data. **Never commit it, never paste it in chat, never email it.**
