@@ -1252,11 +1252,11 @@ dialog .event-dialog .dlg-actions{margin-top:0}
 }
 
 /* Game-by-game scoring: compact mobile-first controls with an explicit saved/next state. */
-#app .game-tally{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid #b9d6d7;border-radius:10px;background:#edf8f6;margin:12px 0;color:#18524a}
-#app .game-tally strong{font-size:clamp(18px,2.3vw,24px);font-variant-numeric:tabular-nums}
-#app .score-game-actions{display:grid;gap:10px;max-width:100%;margin:10px 0 16px}
-#app .game-step{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:10px 12px;border:1px solid var(--line,#d9e0e5);border-radius:8px}
-#app .game-step span{font-size:14px;font-weight:650;font-variant-numeric:tabular-nums}
-#app .game-step button{min-height:40px;white-space:nowrap}
-#app .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-box}
-@media(max-width:540px){#app .score-game-actions .game-step{align-items:stretch;flex-direction:column}#app .score-game-actions .game-step button{width:100%}}
+dialog .game-tally{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid #b9d6d7;border-radius:10px;background:#edf8f6;margin:12px 0;color:#18524a}
+dialog .game-tally strong{font-size:clamp(18px,2.3vw,24px);font-variant-numeric:tabular-nums}
+dialog .score-game-actions{display:grid;gap:10px;max-width:100%;margin:10px 0 16px}
+dialog .game-step{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:10px 12px;border:1px solid var(--line,#d9e0e5);border-radius:8px}
+dialog .game-step span{font-size:14px;font-weight:650;font-variant-numeric:tabular-nums}
+dialog .game-step button{min-height:40px;white-space:nowrap}
+dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-box}
+@media(max-width:540px){dialog .score-game-actions .game-step{align-items:stretch;flex-direction:column}dialog .score-game-actions .game-step button{width:100%}}
