@@ -97,6 +97,27 @@ test('all four presentations fit both landscape viewports and can produce eviden
   }
 });
 
+
+test('TV displays only completed verified games, 1–0 or 1–1 progress, stale state and awaiting official match', {timeout:60000}, async()=>{
+  const f=fixture(), live=f[0].brackets[0].matches;
+  live[0].game_progress={games:[[11,7]],version:1,epoch:0,updated_at:'2026-11-07T12:00:00Z'};
+  live[1].game_progress={games:[[11,7],[9,11]],version:2,epoch:0,updated_at:'2026-11-07T12:00:00Z'};
+  const w=await world(f),{page}=w;
+  try{
+    assert.deepEqual(await page.locator('.table-card .live-game-progress strong').allInnerTexts(),['1–0','1–1']);
+    assert.match(await page.locator('.table-card').first().innerText(),/G1 11–7/);
+    assert.match(await page.locator('.table-card').nth(1).innerText(),/GAME 3 NEXT/);
+    assert.equal(w.requests.filter(x=>x.method==='POST' && x.url.startsWith(project)).length,0);
+    w.setMode('offline');
+    await page.clock.fastForward(21000);
+    assert.match(await page.locator('.table-card .tiny-label').first().innerText(),/OUT OF DATE/);
+    assert.match(await page.locator('#live').innerText(),/OUT OF DATE/);
+    await page.clock.fastForward(101000);
+    assert.equal(await page.locator('#live').innerText(),'NO CURRENT DATA');
+    assert.doesNotMatch(await text(page),/CONFIRMED GAMES WON/);
+  }finally{await w.close();}
+});
+
 test('fictional showcase is clearly identified on both public views', {timeout:60000}, async () => {
   const f=fixture(); f[0].event_id='9c25613c-6543-4d6c-84cf-97ba49017509';
   const w=await world(f,{width:1280,height:720}); const {page}=w;

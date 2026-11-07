@@ -1,0 +1,33 @@
+# Game-by-game scoring V6 — read-only preflight evidence
+**Recorded:** November 7, 2026  
+**Scope:** PR #59, `feat/game-by-game-scorekeeping`; no hosted DDL, deployment, score, player, permission, or event writes.
+
+## Verified application and CI
+- PR #59 head `8cddf0ad864d6125621b644dcc8e8bda1989af43` passed [all required CI jobs](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/42352293870), including disposable PostgreSQL, game-day workflows, browser foundation and security.
+- `main` subsequently advanced to `b3f63e03b09b3d2829db955b27ea7193406ab8ca` with the fictional-showcase release (PR #62). The game-progress branch has been reconciled in this update to preserve demo identification, real-event selection, public-view behavior, and interim live scores. **The merged head requires its own fresh CI check**; the prior green run must not be misrepresented as applying to this tree.
+- The independent draft Premium TV redesign PR #61 and CI routing PR #63 are **not** incorporated.
+
+## Connected Supabase access and baseline (read-only)
+- The connected FFTT project **`fftt-bracket-manager-dev`** (ref `copmkalfkkrkzheohwuc`) now holds **two real-mode and five synthetic events** (seven total; one publicly visible) according to read-only counts. The older `supabase/hosted_migration_baseline.json` labels the initial project snapshot synthetic-only and prohibits unreviewed pushes, but the project has since been upgraded to support real events. **Protect this as potentially production-critical, never as a disposable sandbox.**
+- Its migration-history listing contains six entries ending with `20261013101523` (`milestone1_durable_scoring_v2_synthetic`). However, read-only function introspection finds V3/V4 routines already in the live schema, including `v3_normalize_scores`, `v4_match_format`, `v4_normalize_scores`, `set_formats_v4` and `submit_match_result_v2`. **Migration-history entries alone do not establish the actual installed V3–V5 state.**
+- Read-only schema checks find `fftt_private.matches` with `best_of` and `points_to_win`, the baseline `public.fftt_published_matches` without `game_progress`, and **no** `fftt_private.match_game_progress` table. The V6 candidate has **not** been installed on this connected hosted project.
+- Existing `fftt_private.matches` and `audit_events` have RLS enabled and no direct `SELECT` privilege for `anon` or `authenticated`; the published match table is RLS enabled; the public tournament view is readable. This is **not** a substitute for checking the target database's privileges, view policies, and anonymous REST behavior after migration.
+- Supabase security advisor reports 15 informational `rls_enabled_no_policy` findings on existing private tables (consistent with the deny-direct-access model; must remain reviewed) and one existing leaked-password-protection warning. These findings are not evidence of V6-specific exposure.
+
+## Release status — blocked pending evidence
+1. **Match the live Staff/Spectator deployment configuration to the exact Supabase project ID.** The connected `fftt-bracket-manager-dev` has real-event records, so treat it as live until proven otherwise. Do not assume a separate production database exists, or use this hosted project for disposable rehearsal.
+2. From the actual target, obtain a read-only, non-sensitive snapshot of schema/migration history, function signatures, grants, RLS, triggers, public view and game-day V3/V4/V5 state; reconcile drift and pin an exact target revision.
+3. Establish a tested, restorable, owner-approved **pre-change database backup** and a disposable restore rehearsal. Supabase's [current backup guidance](https://supabase.com/docs/guides/platform/backups) says free-tier projects should export/off-site back up; this check did **not** establish a usable backup or restore.
+4. Obtain **explicit separate authorization** for the verified production migration and matched Staff/Spectator/TV deployment. PR review approval is not migration permission. Execute synthetic acceptance and non-destructive rollback checks on the authorized target before real use.
+
+**Decision:** CI green on prior branch; code reconciliation committed here for fresh CI. Production readiness is **NOT VERIFIED**. PR stays draft/unmerged and V6 SQL remains a DO-NOT-APPLY proposal. No database changes were made by this preflight.
+
+## November 7 — further read-only target checks and executable V6 backup drill
+- Read-only hosted catalog query confirmed seven total events, **two real-mode**, five synthetic, one visible, and **71 matches** at the time of the check. All seven expected baseline objects and all seven V6 helper dependencies were present. V6 `matches.game_progress_epoch`, private progress table and public `game_progress` column are absent. Current public view definition md5: `b55ddffadae6baeed7a8ebb233b40bb5`. The SQL read neither names nor contact data and changed no state.
+- Added **`--v6-preflight`** to the existing offline `tools/ops/restore_verify.mjs` with a fictional real-mode backup test. It loads a private pre-V6 export into pre-V6 real-mode PGlite, verifies counts, fingerprints, foreign keys and private reads **before** applying the V6 proposal there, then compares every preexisting record/field, verifies progress defaults and read permissions, and refuses a tampered export. This is *not* a production migration and does not certify hosted production parity.
+- **Unperformed, gated:** a new owner-held private export of actual hosted data, protected second backup, exact target schema fingerprint comparison, and running the offline V6 drill against that export. Do not paste private exports into GitHub, chats or CI logs. The prior October 27 restore proof does **not** certify the November 7 database contents.
+- A manually dispatched full CI run is required for this new exact PR head under CI v2. Automatic targeted checks alone intentionally do not clear its release-risk gate.
+
+## November 7 — backup inventory safety check
+- Read-only live catalog inspection finds **15** `fftt_private` tables. The JSON app-data backup intentionally includes **14**; `registration_gate` is excluded because its `secret bytea` field holds a proof credential. The backup tool verifies the full table-name inventory (metadata only) and refuses unknown additions, rather than silently omitting newly created tables. Credential recovery is separately owner-controlled.
+- The grouped read-only export SQL was validated with PostgreSQL `EXPLAIN (FORMAT JSON)`; the query plan expects **15 result groups** (14 app tables and referenced Auth users), including empty groups. This did **not** execute or retrieve any private database rows.

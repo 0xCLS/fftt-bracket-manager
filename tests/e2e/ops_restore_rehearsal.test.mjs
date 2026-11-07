@@ -8,7 +8,9 @@ import os from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {setupEvent, buildChampionship, playAllPlayable, buildConsolation} from './helpers.mjs';
+import {setupEvent, buildChampionship, playAllPlayable, buildConsolation, roster} from './helpers.mjs';
+import {createLocalDb, SQL_FILES} from './localdb.mjs';
+import {seedSlots, enginePlayers} from '../../contracts/gameday_engine.mjs';
 
 const TABLES = ['audit_events', 'brackets', 'consolation_reviews', 'deleted_events', 'doubles_finale', 'event_staff', 'events', 'matches',
   'platform_organizers', 'players', 'registration_links', 'registration_sources', 'result_submissions', 'score_decisions_v2'];
@@ -53,4 +55,58 @@ test('backup export -> disposable restore -> upgrade -> rollback, on a populated
     assert.notEqual(fail.status, 0, 'a tampered export must not verify');
     assert.match(fail.stdout, /FAIL {2}matches: fingerprint equal/);
   } finally { await ctx.db.db.close(); fs.rmSync(dir, {recursive: true, force: true}); }
+});
+
+test('a private pre-V6 real-mode backup is verified unchanged before and after the V6 proposal in a disposable clone', async () => {
+  const db = await createLocalDb({
+    sqlFiles: SQL_FILES.filter(f => !f.endsWith('/GAMEDAY_V6_GAME_PROGRESS_DO_NOT_APPLY.sql')),
+    upgraded: true,
+  });
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fftt-v6-backup-'));
+  try {
+    const org = await db.addUser('organizer-v6-backup@fftt-staging.invalid', {platformOrganizer: true});
+    const ev = await db.rpc(org, 'fftt_create_event_v3',
+      {p_name:'Fictional V6 restore rehearsal', p_date:'2026-11-22', p_table_count:2});
+    const E = ev.event_id;
+    await db.rpc(org, 'fftt_upsert_players_v3', {p_event_id:E, p_players:roster(8)});
+    let snap = await db.rpc(org, 'fftt_organizer_snapshot_v3', {p_event_id:E});
+    for (const p of snap.players)
+      await db.rpc(org, 'fftt_set_checkin_v3', {p_event_id:E, p_player_id:p.id, p_checked_in:true});
+    snap = await db.rpc(org, 'fftt_organizer_snapshot_v3', {p_event_id:E});
+    await db.rpc(org,'fftt_build_championship_v3',{
+      p_event_id:E, p_slots:seedSlots(enginePlayers(snap.players.filter(p=>p.checked_in))),
+      p_expected_generation:snap.event.generation, p_confirm:false,
+    });
+    await db.rpc(org, 'fftt_set_visibility_v3', {p_event_id:E, p_visible:true});
+    const doc = await exportDoc(db);
+    assert.ok(doc.tables.matches.count > 0 && doc.tables.players.count === 8);
+    assert.ok(doc.tables.events.rows.some(e => e.public_visible === true && e.synthetic_only === false));
+    assert.ok(doc.tables.matches.rows.every(m => !Object.hasOwn(m,'game_progress_epoch')));
+    const file = path.join(dir,'pre-v6.json');
+    fs.writeFileSync(file,JSON.stringify(doc),{mode:0o600});
+    const ok = spawnSync('node',[TOOL,file,'--v6-preflight'],{encoding:'utf8',timeout:240000});
+    assert.equal(ok.status,0,ok.stdout+'\n'+ok.stderr);
+    assert.match(ok.stdout,/V6 preserves pre-existing matches rows and fields/);
+    assert.match(ok.stdout,/V6 nullable public projection exists and anonymous save RPC is denied/);
+    assert.match(ok.stdout,/private publication flags preserved \(1 published event record\(s\)\)/);
+    assert.match(ok.stdout,/V6 preserves existing publication flags/);
+    assert.match(ok.stdout,/ALL CHECKS PASSED/);
+    const schemaBad = structuredClone(doc);
+    schemaBad.schema_fingerprint = {column:'9:deadbeefdeadbeefdeadbeefdeadbeef'};
+    const wrongSchema = path.join(dir,'wrong-schema.json');
+    fs.writeFileSync(wrongSchema,JSON.stringify(schemaBad),{mode:0o600});
+    const schemaFail=spawnSync('node',[TOOL,wrongSchema,'--v6-preflight'],
+      {encoding:'utf8',timeout:240000});
+    assert.notEqual(schemaFail.status,0,'hosted schema drift must fail before V6 DDL');
+    const bad = structuredClone(doc);
+    bad.tables.matches.rows[0].table_number = 9;
+    const badFile=path.join(dir,'tampered.json');
+    fs.writeFileSync(badFile,JSON.stringify(bad),{mode:0o600});
+    const fail=spawnSync('node',[TOOL,badFile,'--v6-preflight'],{encoding:'utf8',timeout:240000});
+    assert.notEqual(fail.status,0,'changed private match backup must fail before V6 DDL');
+    assert.match(fail.stdout,/fingerprint equal/);
+  } finally {
+    await db.db.close();
+    fs.rmSync(dir,{recursive:true,force:true});
+  }
 });

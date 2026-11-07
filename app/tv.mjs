@@ -8,7 +8,7 @@ import {parseGames} from './game_tiles.mjs';
 const wanted = new URLSearchParams(location.search).get('e');
 const durations = {match: 30000, results: 12000, championship: 18000, consolation: 18000};
 const labels = {match: 'MATCH CENTER', results: 'COMPLETED RESULTS', championship: 'CHAMPIONSHIP BRACKET', consolation: 'CONSOLATION BRACKET'};
-let view, event, board, screen = 'match', paused = false, deadline = Date.now() + durations.match, signature = '', segment = 0;
+let view, event, board, screen = 'match', paused = false, deadline = Date.now() + durations.match, signature = '', lastRenderedState = '', segment = 0;
 const bracketLabel = m => `${m.bracket === 'championship' ? 'Championship' : 'Consolation'} Bracket`;
 const roundLabel = (m, ev) => roundName(Math.max(...ev[m.bracket].map(x => x.round), 0) + 1, m.round, m.bracket);
 const details = (m, ev) => [bracketLabel(m), roundLabel(m, ev), m.bestOf && m.points ? formatLabel({bestOf: m.bestOf, points: m.points}) : null].filter(Boolean).join(' · ');
@@ -24,12 +24,23 @@ function games(m) {
   const t = tally(m);
   return t ? parseGames(m.scores).map((g, i) => `G${i + 1} ${g.a}–${g.b}`).join('   ·   ') : (m.scores === 'W/O' ? 'Walkover' : m.status === 'complete' && m.scores && (!m.bestOf || !m.points) ? `Recorded: ${m.scores}` : 'Game scores unavailable');
 }
+function liveGameProgress(m) {
+  if (view?.state === 'expired' || view?.state === 'invalid') return h('div', {class: 'score-pending', text: 'Progress unavailable'});
+  if (m.progress === undefined) return h('div', {class: 'score-pending', text: 'Game scores pending'});
+  if (m.progress === null) return h('div', {class: 'score-pending', text: 'Awaiting Game 1'});
+  const {games, won, decided} = m.progress;
+  return h('div', {class: 'score-pending live-game-progress'},
+    h('span', {class: 'tiny-label', text: view?.state === 'stale' ? 'LAST CONFIRMED · OUT OF DATE' : 'CONFIRMED GAMES WON'}),
+    h('strong', {text: won.join('–')}),
+    h('span', {class: 'game-lines', text: games.map((g, i) => `G${i + 1} ${g[0]}–${g[1]}`).join('  ·  ')}),
+    h('span', {class: 'tiny-label', text: decided ? 'AWAITING OFFICIAL MATCH CONFIRMATION' : `GAME ${games.length + 1} NEXT`}));
+}
 function tableCard(table) {
   const m = board.playing.find(x => x.table === table);
   return h('article', {class: 'table-card' + (m ? ' active' : '')},
     h('div', {class: 'card-top'}, h('span', {class: 'table-label', text: `TABLE ${table}`}), h('span', {class: 'status-label', text: m ? (isShowcase(event) ? 'SAMPLE MATCH' : '●  NOW PLAYING') : 'AVAILABLE'})),
     m ? h('div', {class: 'match-content'}, h('div', {class: 'players'}, h('div', {class: 'player-name', text: name(m.name1)}), h('div', {class: 'versus', text: 'VS'}), h('div', {class: 'player-name', text: name(m.name2)})),
-      h('div', {class: 'score-pending', text: 'Game scores pending'}),
+      liveGameProgress(m),
       h('div', {class: 'match-meta', text: details(m, event)})) : h('div', {class: 'empty-table'}, h('strong', {text: 'Table open'}), h('span', {text: 'Waiting for the next match'})));
 }
 function matchCenter() {
@@ -114,5 +125,4 @@ document.querySelectorAll('[data-screen]').forEach(b => b.addEventListener('clic
 window.addEventListener('resize', () => { document.querySelector('.bracket-connectors')?.remove(); drawConnections(); });
 document.addEventListener('keydown', e => { if (e.target.tagName === 'BUTTON') return; if (e.key === 'ArrowRight') move(1); else if (e.key === 'ArrowLeft') move(-1); else if (e.key === ' ') { e.preventDefault(); toggle(); } else if (e.key === '1') select('match'); else if (e.key === '2') select('results'); else if (e.key === '3') select('championship'); else if (e.key === '4') select('consolation'); });
 setInterval(() => { if (paused || Date.now() < deadline) return; if (screen === 'championship' || screen === 'consolation') { const ms = event?.[screen] || []; const pages = bracketWindows(ms.filter(m => m.status !== 'empty')).length;  if (segment + 1 < pages) { segment++; deadline = Date.now() + durations[screen]; render(); return; } } move(1); }, 250);
-startPublicFeed({onUpdate(next) { view = next; const picked = pickEvent(view.events, wanted); const flag = $('live'); flag.className = `feed-status ${picked ? view.state : 'empty'}`; flag.textContent = !picked ? 'NO CURRENT DATA' : view.state === 'current' ? (isShowcase(picked) ? 'DEMO DATA' : '●  LIVE') : view.state === 'stale' ? `OUT OF DATE · ${Math.round(view.ageMs / 1000)}s` : 'NO CURRENT DATA';
-  const nextSignature = JSON.stringify(picked); if (nextSignature === signature) return; signature = nextSignature; event = picked; board = event ? deriveBoard(event) : null; if (event && (screen === 'championship' || screen === 'consolation')) segment = Math.min(segment, Math.max(0, bracketWindows(event[screen].filter(m => m.status !== 'empty')).length - 1)); if (!available().includes(screen)) { screen = 'match'; segment = 0; deadline = Date.now() + durations.match; } render(); }});
+startPublicFeed({onUpdate(next) { view = next; const picked = pickEvent(view.events, wanted); const flag = $('live'); flag.className = `feed-status ${picked ? view.state : 'empty'}`; flag.textContent = !picked ? 'NO CURRENT DATA' : view.state === 'current' ? (isShowcase(picked) ? 'DEMO DATA' : '●  LIVE') : view.state === 'stale' ? `OUT OF DATE · ${Math.round(view.ageMs / 1000)}s` : 'NO CURRENT DATA'; const nextSignature = JSON.stringify(picked); if (nextSignature === signature && lastRenderedState === view.state) return; signature = nextSignature; lastRenderedState = view.state; event = picked; board = event ? deriveBoard(event) : null; if (event && (screen === 'championship' || screen === 'consolation')) segment = Math.min(segment, Math.max(0, bracketWindows(event[screen].filter(m => m.status !== 'empty')).length - 1)); if (!available().includes(screen)) { screen = 'match'; segment = 0; deadline = Date.now() + durations.match; } render(); }});

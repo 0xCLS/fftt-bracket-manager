@@ -6,7 +6,7 @@ import {createMilestone1PasswordStaffSession} from '../../contracts/milestone1_p
 import {createMilestone1StaffSessionVault} from '../../contracts/milestone1_staff_session_vault.mjs';
 import {createGamedayApi} from '../../contracts/gameday_api.mjs';
 import {createGamedayScoreTransport} from '../../contracts/gameday_score_transport.mjs';
-import {createStaffCore, createPendingLedger} from '../../app/staff_core.mjs';
+import {createStaffCore, createPendingLedger, createGamePendingLedger} from '../../app/staff_core.mjs';
 import {createRegistrationClient} from '../../contracts/registration_client.mjs';
 import {createRegistrationHandler, createHandlerState} from '../../server/registration/handler.mjs';
 
@@ -55,7 +55,7 @@ export async function createWorld({ttlSeconds = 3600} = {}) {
       const api = createGamedayApi({publishableKey: PUBLISHABLE, fetchImpl});
       const scoreTransport = createGamedayScoreTransport({publishableKey: PUBLISHABLE, fetchImpl});
       const registrationClient = createRegistrationClient({fetchImpl: registrationFetch(name)});
-      const core = createStaffCore({session, api, scoreTransport, registrationClient, ledger: createPendingLedger(storage), now, isOnline: () => online.v});
+      const core = createStaffCore({session, api, scoreTransport, registrationClient, ledger: createPendingLedger(storage), gameLedger: createGamePendingLedger(storage), now, isOnline: () => online.v});
       return {transport, session, api, scoreTransport, core};
     };
     const dev = {name, who, storage, tabStorage, online, ...build(),
