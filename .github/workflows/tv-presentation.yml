@@ -37,6 +37,9 @@ jobs:
           FFTT_CHROME_CHANNEL: none
           TV_SCREENSHOTS: tv-evidence
         run: node --test tests/e2e/tv_presentation.test.mjs
+      - name: Verify all 14 fictional screen captures exist
+        run: |
+          test "$(find tv-evidence -maxdepth 1 -name '*.png' | wc -l)" -ge 14
       - name: Preserve visual evidence
         if: always()
         uses: actions/upload-artifact@v4

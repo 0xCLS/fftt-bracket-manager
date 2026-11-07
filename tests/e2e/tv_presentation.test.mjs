@@ -23,6 +23,11 @@ async function world(data = fixture(), viewport = {width:1920,height:1080}) {
       const body = mode === 'invalid' ? [{...data[0], email:'private@example.invalid'}] : data;
       return route.fulfill({status:200, headers:{'access-control-allow-origin':'*'}, contentType:'application/json', body:JSON.stringify(body)});
     }
+    // Axe is served only inside this fictional same-origin harness, honoring TV CSP.
+    if (url.origin === host && url.pathname === '/app/__test_axe.min.js') {
+      return route.fulfill({status:200,contentType:'text/javascript',
+        body:fs.readFileSync(path.join(root,'tests/e2e/node_modules/axe-core/axe.min.js'))});
+    }
     if (url.origin === host && /^\/(app|contracts)\//.test(url.pathname)) {
       const file=path.join(root,url.pathname); if (fs.existsSync(file) && fs.statSync(file).isFile()) return route.fulfill({status:200,contentType:types[path.extname(file)] || 'application/octet-stream',body:fs.readFileSync(file)});
     }
@@ -169,10 +174,9 @@ test('Bo1, malformed final and active score states never render fabricated dots'
   } finally {await w.close();}
 });
 test('720p TV screens avoid serious WCAG A/AA violations and clipped elements', {timeout:90000}, async () => {
-  const axeSource=fs.readFileSync(path.join(root,'tests/e2e/node_modules/axe-core/axe.min.js'),'utf8');
   const w=await world(fixture(),{width:1280,height:720}), {page}=w;
   try {
-    await page.addScriptTag({content:axeSource});
+    await page.addScriptTag({url:`${host}/app/__test_axe.min.js`});
     for (const key of ['1','2','3','4']) {
       await page.keyboard.press(key);
       const report=await page.evaluate(async()=>window.axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa']}}));
