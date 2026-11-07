@@ -301,7 +301,7 @@ linear-gradient(143deg,#0a172a 0%,#080f1e 55%,#0b1b29 100%)}
 border:1px solid #416278;background:radial-gradient(ellipse 80% 66% at 105% -14%,rgba(53,192,179,.12),transparent 72%),
 linear-gradient(145deg,#213e56,#182e44 47%,#122538);
 box-shadow:inset 0 1px 0 rgba(222,246,255,.12),0 22px 45px rgba(0,0,0,.25)}
-.table-card::after{right:-12%;top:-8%;height:120%;width:42%;background:radial-gradient(circle,rgba(44,167,175,.11),transparent 69%)}
+.table-card::after{right:0;top:0;height:100%;width:30%;border-radius:0;background:radial-gradient(circle at 70% 52%,rgba(44,167,175,.11),transparent 69%)}
 .table-card.active{border-top:3px solid #70e8d7;box-shadow:inset 0 1px 0 rgba(226,255,250,.1),0 21px 55px rgba(0,0,0,.27),0 0 0 1px rgba(91,195,190,.08)}
 .table-card.active::before{content:"";position:absolute;top:0;left:0;width:38%;height:2px;background:linear-gradient(90deg,#b8fff1,transparent);pointer-events:none}
 .card-top{gap:.8vw;padding-bottom:1vh;border-bottom:1px solid rgba(154,203,213,.18)}
