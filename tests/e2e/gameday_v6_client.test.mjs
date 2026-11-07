@@ -30,6 +30,7 @@ test('mobile scorer G1/G2/G3 preserves server-confirmed scores and only final re
     assert.equal(a.scoreTransport.stats.scoreRequests-before,1);
     shot=(await a.core.readGameProgress(row.matchId)).data;
     assert.deepEqual(shot.games,[[11,7]]);
+    await b.core.refresh({force:true}); // table assignment made after B opened the desk
     const bshot=(await b.core.readGameProgress(row.matchId)).data;
     assert.ok((await score(b,row,bshot,2,8,11)).ok);
     shot=(await a.core.readGameProgress(row.matchId)).data;
@@ -53,6 +54,7 @@ test('two scorekeepers with same revision cannot overwrite the first saved game'
   try{
     await org.signIn();await stage(org);await a.signIn();await b.signIn();
     const [row,shot]=await first(org,a);
+    await b.core.refresh({force:true}); // both users see the assigned table before racing
     const other=(await b.core.readGameProgress(row.matchId)).data;
     const [x,y]=await Promise.all([score(a,row,shot,1,11,7),score(b,row,other,1,9,11)]);
     assert.equal([x,y].filter(z=>z.ok).length,1);
