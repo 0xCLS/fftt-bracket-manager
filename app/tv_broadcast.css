@@ -215,3 +215,18 @@ body.tv .tv-demo:not([hidden]){font-size:clamp(11px,.77vw,15px)}
 .consolation-path .final-feature-label strong{font-size:clamp(40px,6.45vw,105px);line-height:.91}
 .consolation-path .bracket-player{font-size:clamp(27px,3.7vw,67px)}
 .consolation-path.single-match .bracket-match,.consolation-path.featured-final .bracket-match{gap:.8vh;padding:1.1vh 3.2vw}
+
+/* Broadcast acceptance refinements: keep numbers in the curved card safe area and show only
+   two quarterfinal matches per page so longer names remain centered and fully readable. */
+.table-card.broadcast-match .card-top{padding-inline:clamp(30px,4vw,78px)}
+.cinematic-bracket .bracket-round:first-child .bracket-player{font-size:clamp(19px,1.55vw,31px);line-height:1.04}
+.cinematic-bracket .bracket-round:first-child .bracket-state{margin-bottom:.65vh}
+.cinematic-bracket .bracket-round:first-child .bracket-match{padding:clamp(12px,1.1vh,22px) clamp(12px,1vw,22px);gap:.4vh}
+.cinematic-bracket .bracket-round:first-child .bracket-table-stamp:not(:empty){left:clamp(5px,.55vw,11px);font-size:clamp(16px,1.5vw,28px)}
+.cinematic-bracket .bracket-round:first-child .bracket-match:has(.bracket-table-stamp:not(:empty)){padding-left:clamp(34px,3.2vw,62px)}
+.cinematic-results .result-card:not(.lead-result) .result-player{flex-direction:row;align-items:center;gap:clamp(5px,.5vw,12px);min-height:0}
+.cinematic-results .result-card:not(.lead-result) .result-players{gap:clamp(2px,.3vh,5px)}
+.cinematic-results .result-card:not(.lead-result) .result-player-name{font-size:clamp(15px,1.22vw,25px);line-height:1}
+.cinematic-results .result-card:not(.lead-result) .game-win-dots{min-height:8px;flex-shrink:0}
+.cinematic-results .result-card:not(.lead-result) .win-dot{width:7px;height:7px}
+@media(max-height:760px){.cinematic-bracket .bracket-round:first-child .bracket-player{font-size:clamp(16px,1.4vw,23px)}.cinematic-bracket .bracket-round:first-child .bracket-match{padding:7px 10px}}

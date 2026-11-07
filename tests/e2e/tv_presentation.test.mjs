@@ -91,11 +91,11 @@ test('large bracket advances through bounded round windows', {timeout:60000}, as
   const f=largeFixture(); f[0].brackets[1].matches = f[0].brackets[0].matches.map(m => ({...m, match_id: `cons-${m.match_id}`, bracket:'consolation'}));
   const w=await world(f); const {page}=w;
   try {
-    await page.keyboard.press('3'); assert.match(await text(page),/BRACKET SEGMENT 1 \/ 9/);
-    assert.ok(await page.locator('.bracket-round').count()<=3); assert.ok(await page.locator('.bracket-round').first().locator('.bracket-match').count()<=4);
-    await page.clock.fastForward(18000); assert.match(await text(page),/BRACKET SEGMENT 2 \/ 9/);
-    for (let i=0; i<7; i++) { await page.clock.fastForward(18000); await page.evaluate(() => window.dispatchEvent(new Event('online'))); await new Promise(resolve => setTimeout(resolve, 100)); } assert.match(await text(page),/BRACKET SEGMENT 9 \/ 9/);
-    await page.keyboard.press('4'); assert.equal(await page.locator('.single-match').count(),0); assert.match(await text(page),/BRACKET SEGMENT 1 \/ 9/); assert.ok(await page.locator('.bracket-connectors path').count() > 0);
+    await page.keyboard.press('3'); assert.match(await text(page),/BRACKET SEGMENT 1 \/ 18/);
+    assert.ok(await page.locator('.bracket-round').count()<=3); assert.ok(await page.locator('.bracket-round').first().locator('.bracket-match').count()<=2);
+    await page.clock.fastForward(18000); assert.match(await text(page),/BRACKET SEGMENT 2 \/ 18/);
+    for (let i=0; i<16; i++) { await page.clock.fastForward(18000); await page.evaluate(() => window.dispatchEvent(new Event('online'))); await new Promise(resolve => setTimeout(resolve, 100)); } assert.match(await text(page),/BRACKET SEGMENT 18 \/ 18/);
+    await page.keyboard.press('4'); assert.equal(await page.locator('.single-match').count(),0); assert.match(await text(page),/BRACKET SEGMENT 1 \/ 18/); assert.ok(await page.locator('.bracket-connectors path').count() > 0);
     if (process.env.TV_SCREENSHOTS) {
       fs.mkdirSync(process.env.TV_SCREENSHOTS,{recursive:true});
       await page.screenshot({path:path.join(process.env.TV_SCREENSHOTS,'large-multi-segment-bracket-1920.png')});

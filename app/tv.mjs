@@ -122,7 +122,7 @@ function bracketWindows(ms) {
   for (let i = 0; i < rounds.length; i += 3) {
     const group = rounds.slice(i, i + 3), first = group[0];
     const maxSlot = Math.max(...ms.filter(m => m.round === first).map(m => m.slot));
-    for (let page = 0; page <= Math.floor(maxSlot / 4); page++) windows.push({rounds: group, first, page});
+    for (let page = 0; page <= Math.floor(maxSlot / 2); page++) windows.push({rounds: group, first, page});
   }
   return windows;
 }
@@ -145,7 +145,7 @@ function bracket(kind) {
       champ ? h('strong',{text:'CHAMPION · '+champ.winner}) : null),
     h('div',{class:'bracket-columns'},rounds.map((r,idx)=>{
       const factor=2**(r-firstRound);
-      const selected=ms.filter(m=>m.round === r && m.slot>=Math.floor(page*4/factor) && m.slot<=Math.floor((page*4+3)/factor));
+      const selected=ms.filter(m=>m.round === r && m.slot>=Math.floor(page*2/factor) && m.slot<=Math.floor((page*2+1)/factor));
       const isFinal=r === totalRounds-1;
       const midFeature=kind==='championship' && !isFinal && idx>0 && selected.length === 1;
       return h('div',{class:'bracket-round' + (isFinal ? ' last-round' : '') + (midFeature ? ' mid-feature' : ''),'data-round':r},
