@@ -1,0 +1,47 @@
+name: TV broadcast visual evidence (fictional)
+on:
+  pull_request:
+    paths:
+      - app/tv.css
+      - app/tv.mjs
+      - app/tv.html
+      - tests/e2e/tv_presentation.test.mjs
+      - .github/workflows/tv-presentation.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: tv-evidence-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  tv-presentation:
+    name: Focused TV browser, contrast and screenshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
+      - name: Install test browser
+        working-directory: tests/e2e
+        run: |
+          npm ci
+          npx playwright-core install chromium
+      - name: Syntax validation
+        run: node --check app/tv.mjs && node --check tests/e2e/tv_presentation.test.mjs
+      - name: Focused fictional TV, contrast, overflow and shortcuts
+        env:
+          FFTT_CHROME_CHANNEL: none
+          TV_SCREENSHOTS: tv-evidence
+        run: node --test tests/e2e/tv_presentation.test.mjs
+      - name: Preserve visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: premium-tv-broadcast-screenshots
+          path: tv-evidence/*.png
+          if-no-files-found: warn
+          retention-days: 14

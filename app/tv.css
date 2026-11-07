@@ -284,3 +284,127 @@ footer{
 .bracket-view:has(> .bracket-columns > .bracket-round:only-of-type .bracket-matches > .bracket-match:only-child) .bracket-pending-pair span{
   font-size:clamp(15px,1.17vw,23px);
 }
+
+
+/* Premium broadcast refinement: scoreboards, legibility and visual rhythm. */
+body.tv{--tv-accent:#7de9dc;--tv-win:#aff3d0;--tv-muted:#c5d7e2;
+background:radial-gradient(ellipse 42% 52% at 2% 0%,rgba(31,117,143,.20),transparent 76%),
+radial-gradient(ellipse 40% 55% at 100% 96%,rgba(24,107,112,.11),transparent 77%),
+linear-gradient(143deg,#0a172a 0%,#080f1e 55%,#0b1b29 100%)}
+.tv-header{border-bottom-color:#365269}
+.feed-status.current{background:#124339;border-color:#58af96;color:#c6ffdf}
+.match-center{grid-template-rows:minmax(0,60fr) minmax(0,40fr);gap:2.1vh}
+.section-heading{margin-bottom:1.4vh}
+.section-heading h2{font-weight:850;letter-spacing:-.045em}
+.table-grid{gap:1.65vw}
+.table-card{isolation:isolate;overflow:hidden;border-radius:17px;padding:clamp(15px,1.35vw,26px) clamp(18px,1.6vw,32px);
+border:1px solid #416278;background:radial-gradient(ellipse 80% 66% at 105% -14%,rgba(53,192,179,.12),transparent 72%),
+linear-gradient(145deg,#213e56,#182e44 47%,#122538);
+box-shadow:inset 0 1px 0 rgba(222,246,255,.12),0 22px 45px rgba(0,0,0,.25)}
+.table-card::after{right:-12%;top:-8%;height:120%;width:42%;background:radial-gradient(circle,rgba(44,167,175,.11),transparent 69%)}
+.table-card.active{border-top:3px solid #70e8d7;box-shadow:inset 0 1px 0 rgba(226,255,250,.1),0 21px 55px rgba(0,0,0,.27),0 0 0 1px rgba(91,195,190,.08)}
+.table-card.active::before{content:"";position:absolute;top:0;left:0;width:38%;height:2px;background:linear-gradient(90deg,#b8fff1,transparent);pointer-events:none}
+.card-top{gap:.8vw;padding-bottom:1vh;border-bottom:1px solid rgba(154,203,213,.18)}
+.table-label{color:#a5fff0;font-size:clamp(12px,1vw,20px);letter-spacing:.16em}
+.status-label{font-weight:850;white-space:nowrap}
+.active .status-label{color:#b2f6d4}
+.match-content{grid-template-columns:minmax(0,1fr) minmax(112px,23%);grid-template-rows:minmax(0,1fr) auto;gap:1.1vh 1.1vw}
+.players{display:flex;flex-direction:column;justify-content:center;gap:.15vh;min-width:0;min-height:0}
+.match-player{min-width:0;padding:.2vh 0}
+.player-name{font-size:clamp(27px,2.6vw,49px);font-weight:850;line-height:1.04;letter-spacing:-.044em;overflow-wrap:anywhere;text-wrap:pretty;text-shadow:0 2px 18px rgba(0,0,0,.12)}
+.versus-line{display:flex;align-items:center;gap:1vw;margin:.35vh 0}
+.versus-line::after{content:"";height:1px;flex:1;max-width:130px;background:linear-gradient(90deg,rgba(113,205,205,.5),transparent)}
+.versus{margin:0;font-size:clamp(11px,.82vw,17px);letter-spacing:.2em;color:#a5e9e5}
+.score-pending{align-self:center;justify-self:stretch;max-width:none;min-width:0;
+font-size:clamp(12px,.88vw,17px);line-height:1.38;font-weight:750;color:#d1e3e9;letter-spacing:.015em;
+border:1px solid #50778a;background:rgba(5,17,30,.5);border-radius:13px;padding:1.4em .65em;
+box-shadow:inset 0 1px 0 rgba(219,250,255,.05)}
+.score-pending::before{content:"";display:block;width:27px;height:27px;border-radius:50%;
+border:2px solid #7db9c0;border-top-color:transparent;margin:0 auto .85em;opacity:.95}
+.match-meta{font-size:clamp(12px,.92vw,18px);color:#d0e0e8;border-top-color:rgba(164,206,216,.25);padding-top:1.2vh;line-height:1.2}
+.empty-table{background:radial-gradient(ellipse at center,rgba(72,144,161,.10),transparent 75%);border-radius:12px}
+.empty-table strong{font-size:clamp(27px,2.3vw,45px);letter-spacing:-.035em}
+.next-grid{gap:1.15vh 1.65vw}
+.next-card{border-radius:12px;padding:clamp(10px,1vw,20px) clamp(15px,1.2vw,25px);border:1px solid #38556a;
+border-left:3px solid #4da69f;background:linear-gradient(130deg,#1b3348,#142738);
+box-shadow:inset 0 1px 0 rgba(220,244,255,.04),0 8px 25px rgba(0,0,0,.12)}
+.next-names{font-size:clamp(17px,1.37vw,27px);line-height:1.16;gap:.13em .25em;letter-spacing:-.024em}
+.next-names>span:not(.next-vs){min-width:0;overflow-wrap:anywhere}
+.next-vs{color:#c8fff3;border-color:#4f8d93;background:#163c46}
+.next-meta{font-weight:650;font-size:clamp(11px,.78vw,15px);color:#c5d8e4;line-height:1.25}
+.champions{border-left-color:#6bf2c6;background:linear-gradient(105deg,#174c4a,#16353f 70%,#192d42);padding:1.1vh 1.4vw}
+.champions strong{font-weight:820}
+.results-grid{gap:1.35vh 1.6vw}
+.result-card{border-radius:14px;position:relative;overflow:hidden;border:1px solid #3c586d;border-left:3px solid #4d8891;
+background:linear-gradient(143deg,#1a344a,#13283c);padding:clamp(11px,1vw,20px) clamp(15px,1.3vw,26px);
+gap:.4vh;min-width:0;box-shadow:inset 0 1px 0 rgba(226,242,250,.055),0 10px 30px rgba(0,0,0,.15)}
+.result-card.lead-result{border-color:#6ba79f;border-left:4px solid #8ef2dc;
+background:radial-gradient(ellipse 70% 90% at 100% -20%,rgba(66,179,147,.13),transparent),
+linear-gradient(141deg,#20423f,#173248 65%,#142a3d)}
+.result-top{display:flex;align-items:center;justify-content:space-between;gap:1vw;color:#c8dbe6;
+font-size:clamp(11px,.76vw,15px);letter-spacing:.04em;line-height:1.2}
+.result-final{font-size:.85em;letter-spacing:.12em;color:#b2f4d8;font-weight:850;flex-shrink:0}
+.result-body{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1.1vw;align-items:center}
+.result-players{min-width:0;display:flex;flex-direction:column;justify-content:center;gap:.5vh;font-size:clamp(18px,1.45vw,29px);font-weight:650}
+.result-player{min-width:0;color:#b6c9d8;line-height:1.07;display:flex;flex-direction:column;gap:.28vh}
+.result-player-name{display:block;overflow-wrap:anywhere;text-wrap:pretty}
+.result-player.winner .result-player-name{color:#aeffcf;font-weight:850}
+.result-score{display:flex;flex-direction:column;align-items:center;gap:.1vh;flex-shrink:0}
+.score-caption{font-size:clamp(9px,.64vw,13px);letter-spacing:.17em;color:#b9d4db;font-weight:850}
+.result-tally{font-size:clamp(34px,3.2vw,60px);font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-.07em}
+.result-games{border-top-color:rgba(149,193,205,.29);padding-top:.65vh;color:#d3e4ed;
+font-size:clamp(11px,.8vw,16px);white-space:normal;line-height:1.25;letter-spacing:.025em}
+.game-win-dots{display:inline-flex;align-items:center;gap:clamp(4px,.43vw,8px);width:max-content;max-width:100%;min-height:10px}
+.win-dot{display:block;width:clamp(8px,.66vw,12px);height:clamp(8px,.66vw,12px);
+border:1.5px solid #7193a3;background:rgba(8,22,36,.45);border-radius:50%}
+.win-dot.earned{background:#7ce5c9;border-color:#b4ffdf;box-shadow:0 0 0 2px rgba(88,210,175,.14)}
+.bracket-caption{color:#c4d8e4;letter-spacing:.12em}
+.bracket-columns{gap:2.1vw}
+.round-heading{font-size:clamp(14px,1.02vw,20px);color:#abf2e5;font-weight:850}
+.bracket-match{min-height:clamp(82px,9.7vh,126px);border-radius:12px;
+background:linear-gradient(135deg,#1b344a,#14293d);border-color:#3b5a70;
+padding:clamp(9px,1vh,16px) clamp(11px,.93vw,19px);
+box-shadow:inset 0 1px 0 rgba(224,248,255,.06),0 9px 22px rgba(0,0,0,.13);gap:.2vh}
+.bracket-match.completed{border-left:3px solid #58b6a4}
+.bracket-match.playing{border-color:#67e6d4;box-shadow:inset 3px 0 0 #79f2db,0 10px 30px rgba(0,0,0,.18)}
+.bracket-state{color:#c7d7e1;font-size:clamp(10px,.72vw,14px);margin-bottom:.36vh}
+.bracket-match.playing .bracket-state{color:#b3ffe0}
+.bracket-player-row{min-width:0;display:flex;flex-direction:column;gap:.17vh}
+.bracket-player{font-size:clamp(16px,1.28vw,25px);line-height:1.09;font-weight:760;padding:0;overflow-wrap:anywhere;text-wrap:pretty}
+.bracket-player-row:not(.winner) .bracket-player{color:#e0e9f1}
+.bracket-player.winner{color:#aeffcf;font-weight:860}
+.bracket-player-row .game-win-dots{margin-bottom:.12vh}
+.bracket-player-row .win-dot{width:clamp(7px,.55vw,10px);height:clamp(7px,.55vw,10px)}
+.bracket-scores{margin-top:.4vh;padding-top:.6vh;color:#cfdee6;line-height:1.25;
+letter-spacing:.015em;font-size:clamp(10px,.74vw,15px);border-color:#3b5c70}
+.bracket-connectors path{stroke:#6a9ead;stroke-width:1.7}
+.bracket-view:has(> .bracket-columns > .bracket-round:only-of-type .bracket-matches > .bracket-match:only-child) .bracket-columns{
+background:radial-gradient(ellipse 43% 55% at center,rgba(40,143,138,.14),transparent 80%)}
+.bracket-view:has(> .bracket-columns > .bracket-round:only-of-type .bracket-matches > .bracket-match:only-child) .bracket-round{
+flex:0 1 71%;max-width:1010px}
+.bracket-view:has(> .bracket-columns > .bracket-round:only-of-type .bracket-matches > .bracket-match:only-child) .bracket-match{
+min-height:min(37vh,370px);border:1px solid #569a9b;border-top:3px solid #8af2dc;
+background:radial-gradient(ellipse at 80% -10%,rgba(49,174,160,.12),transparent),
+linear-gradient(143deg,#1d3d50,#142a3e);padding:clamp(23px,2.8vh,43px) clamp(28px,3vw,60px)}
+.bracket-view:has(> .bracket-columns > .bracket-round:only-of-type .bracket-matches > .bracket-match:only-child) .bracket-player{
+font-size:clamp(30px,2.8vw,55px)}
+.bracket-view:has(> .bracket-columns > .bracket-round:only-of-type .bracket-matches > .bracket-match:only-child) .game-win-dots{gap:10px;margin:.25vh 0}
+.bracket-view:has(> .bracket-columns > .bracket-round:only-of-type .bracket-matches > .bracket-match:only-child) .win-dot{width:14px;height:14px}
+.bracket-pending-pair strong{font-weight:850}
+.controls:focus-within{opacity:1;transform:translate(-50%,0)}
+.controls button:focus-visible{outline:3px solid #b2ffec;outline-offset:3px}
+@media(max-width:1400px){
+.player-name{font-size:clamp(25px,2.35vw,34px)}
+.result-players{font-size:clamp(17px,1.35vw,22px)}
+.result-tally{font-size:clamp(33px,2.9vw,42px)}
+.bracket-player{font-size:clamp(15px,1.16vw,19px)}
+.next-names{font-size:clamp(16px,1.26vw,20px)}
+.match-content{grid-template-columns:minmax(0,1fr) minmax(100px,23%)}}
+@media(max-height:780px){
+.tv-main{padding:1.25vh 0}.section-heading{margin-bottom:1vh}
+.table-card{padding-top:1.1vh;padding-bottom:1.1vh}
+.players{gap:0}.versus-line{margin:.15vh 0}.match-meta{padding-top:.85vh}
+.result-card{padding-top:.85vh;padding-bottom:.85vh}
+.bracket-match{min-height:clamp(77px,9.1vh,103px);padding-top:.6vh;padding-bottom:.6vh}
+.bracket-state{margin-bottom:.22vh}}
+@media(prefers-reduced-motion:reduce){.controls{transition:none}}

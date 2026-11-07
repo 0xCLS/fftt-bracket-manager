@@ -10,7 +10,8 @@ const host = 'https://tv-fixture.invalid';
 const project = 'https://copmkalfkkrkzheohwuc.supabase.co';
 const types = {'.html':'text/html','.mjs':'text/javascript','.css':'text/css','.webp':'image/webp'};
 async function world(data = fixture(), viewport = {width:1920,height:1080}) {
-  const browser = await chromium.launch({channel:process.env.FFTT_CHROME_CHANNEL || 'chrome'});
+  const channel = process.env.FFTT_CHROME_CHANNEL || 'chrome';
+  const browser = await chromium.launch(channel === 'none' ? {} : {channel});
   const context = await browser.newContext({viewport});
   const page = await context.newPage();
   const requests = []; let mode = 'ok';
@@ -83,10 +84,14 @@ test('large bracket advances through bounded round windows', {timeout:60000}, as
     await page.clock.fastForward(18000); assert.match(await text(page),/BRACKET SEGMENT 2 \/ 9/);
     for (let i=0; i<7; i++) { await page.clock.fastForward(18000); await page.evaluate(() => window.dispatchEvent(new Event('online'))); await new Promise(resolve => setTimeout(resolve, 100)); } assert.match(await text(page),/BRACKET SEGMENT 9 \/ 9/);
     await page.keyboard.press('4'); assert.equal(await page.locator('.single-match').count(),0); assert.match(await text(page),/BRACKET SEGMENT 1 \/ 9/); assert.ok(await page.locator('.bracket-connectors path').count() > 0);
+    if (process.env.TV_SCREENSHOTS) {
+      fs.mkdirSync(process.env.TV_SCREENSHOTS,{recursive:true});
+      await page.screenshot({path:path.join(process.env.TV_SCREENSHOTS,'large-multi-segment-bracket-1920.png')});
+    }
   } finally {await w.close();}
 });
 test('all four presentations fit both landscape viewports and can produce evidence', {timeout:60000}, async () => {
-  for (const size of [{width:1920,height:1080},{width:1280,height:720}]) {
+  for (const size of [{width:1280,height:720},{width:1600,height:900},{width:1920,height:1080}]) {
     const w=await world(fixture(),size); const {page}=w;
     try {
       for (const [key,slug] of [['1','match-center'],['2','completed-results'],['3','championship'],['4','consolation']]) {
@@ -115,5 +120,65 @@ test('a sparse undecided final becomes a focused bracket feature, not two fabric
     assert.match(await page.locator('.bracket-pending-pair').innerText(), /Finalists to be determined/);
     assert.doesNotMatch(await page.locator('.bracket-match').innerText(), /Jamie Lee|Casey Ross/);
     assert.deepEqual(await fits(page), []);
+    if (process.env.TV_SCREENSHOTS) {
+      fs.mkdirSync(process.env.TV_SCREENSHOTS,{recursive:true});
+      await page.screenshot({path:path.join(process.env.TV_SCREENSHOTS,'featured-undecided-final-1920.png')});
+    }
   } finally { await w.close(); }
+});
+
+test('final verified Bo3 2–1 and 2–0 display exactly three dots per player', {timeout:60000}, async () => {
+  const w=await world(fixture(),{width:1600,height:900}), {page}=w;
+  try {
+    assert.equal(await page.locator('.table-card .game-win-dots').count(),0,'no unverified active progress');
+    assert.deepEqual(await page.locator('.score-pending').allInnerTexts(),['Game scores pending','Game scores pending']);
+    await page.keyboard.press('2');
+    const three=page.locator('.result-card').filter({hasText:'Taylor Smith'});
+    assert.equal(await three.count(),1);
+    const players=three.locator('.result-player');
+    assert.equal(await players.nth(0).locator('.win-dot.earned').count(),2);
+    assert.equal(await players.nth(1).locator('.win-dot.earned').count(),1);
+    assert.equal(await players.nth(0).locator('.win-dot').count(),3);
+    assert.equal(await players.nth(1).locator('.win-dot').count(),3);
+    const two=page.locator('.result-card').filter({hasText:'Winner 1'}).locator('.result-player');
+    assert.equal(await two.nth(0).locator('.win-dot.earned').count(),2);
+    assert.equal(await two.nth(1).locator('.win-dot.earned').count(),0);
+    assert.equal(await two.nth(1).locator('.win-dot').count(),3);
+    await page.keyboard.press('3');
+    const bracket=page.locator('.bracket-match').filter({hasText:'Taylor Smith'});
+    assert.equal(await bracket.locator('.game-win-dots').count(),2);
+    assert.deepEqual(await fits(page),[]);
+  } finally {await w.close();}
+});
+test('Bo1, malformed final and active score states never render fabricated dots', {timeout:60000}, async () => {
+  const alt=fixture();
+  const one=alt[0].brackets[0].matches.find(m=>m.match_id==='result-1');
+  one.best_of=1; one.points_to_win=21; one.game_scores='21-15';
+  const invalid=alt[0].brackets[0].matches.find(m=>m.match_id==='result-2');
+  invalid.game_scores='11-7';
+  const w=await world(alt), page=w.page;
+  try {
+    assert.equal(await page.locator('.table-card .game-win-dots').count(),0);
+    await page.keyboard.press('2');
+    const bestOne=page.locator('.result-card').filter({hasText:'Winner 2'});
+    assert.equal(await bestOne.count(),1);
+    assert.equal(await bestOne.locator('.game-win-dots').count(),0);
+    const malformed=page.locator('.result-card').filter({hasText:'Winner 3'});
+    assert.equal(await malformed.locator('.game-win-dots').count(),0);
+    assert.match(await malformed.locator('.result-tally').innerText(),/—/);
+  } finally {await w.close();}
+});
+test('720p TV screens avoid serious WCAG A/AA violations and clipped elements', {timeout:90000}, async () => {
+  const axeSource=fs.readFileSync(path.join(root,'tests/e2e/node_modules/axe-core/axe.min.js'),'utf8');
+  const w=await world(fixture(),{width:1280,height:720}), {page}=w;
+  try {
+    await page.addScriptTag({content:axeSource});
+    for (const key of ['1','2','3','4']) {
+      await page.keyboard.press(key);
+      const report=await page.evaluate(async()=>window.axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa']}}));
+      const severe=report.violations.filter(v=>['critical','serious'].includes(v.impact));
+      assert.deepEqual(severe.map(v=>({id:v.id,targets:v.nodes.map(n=>n.target)})),[], 'no serious WCAG violations');
+      assert.deepEqual(await fits(page),[], 'no clipped or overflowed content');
+    }
+  } finally {await w.close();}
 });

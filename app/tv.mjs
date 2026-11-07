@@ -20,6 +20,19 @@ function tally(m) {
   if (!parsed?.length || !normalizeGameScores(m.scores, m.bestOf, m.winnerName === m.name1, m.points).ok) return null;
   return [parsed.filter(g => g.a > g.b).length, parsed.filter(g => g.b > g.a).length];
 }
+/**
+ * Dots reflect FINAL, contract-validated best-of-three games only. PR #59
+ * owns intermediate public progress and can later supply a verified adapter.
+ */
+function winDots(m, player) {
+  if (m.bestOf !== 3) return null;
+  const wins = tally(m);
+  if (!wins) return null;
+  const n = wins[player];
+  return h('span', {class:'game-win-dots',role:'img',
+    'aria-label': `${name(player === 0 ? m.name1 : m.name2)}: ${n} verified game win${n === 1 ? '' : 's'} in the final best-of-three result`},
+    Array.from({length:3}, (_,i)=>h('span',{class:'win-dot' + (i<n ? ' earned' : ''),'aria-hidden':'true'})));
+}
 function games(m) {
   const t = tally(m);
   return t ? parseGames(m.scores).map((g, i) => `G${i + 1} ${g.a}–${g.b}`).join('   ·   ') : (m.scores === 'W/O' ? 'Walkover' : m.status === 'complete' && m.scores && (!m.bestOf || !m.points) ? `Recorded: ${m.scores}` : 'Game scores unavailable');
@@ -28,7 +41,10 @@ function tableCard(table) {
   const m = board.playing.find(x => x.table === table);
   return h('article', {class: 'table-card' + (m ? ' active' : '')},
     h('div', {class: 'card-top'}, h('span', {class: 'table-label', text: `TABLE ${table}`}), h('span', {class: 'status-label', text: m ? '●  NOW PLAYING' : 'AVAILABLE'})),
-    m ? h('div', {class: 'match-content'}, h('div', {class: 'players'}, h('div', {class: 'player-name', text: name(m.name1)}), h('div', {class: 'versus', text: 'VS'}), h('div', {class: 'player-name', text: name(m.name2)})),
+    m ? h('div', {class: 'match-content'}, h('div', {class: 'players'},
+      h('div', {class: 'match-player'}, h('div', {class: 'player-name', text: name(m.name1)})),
+      h('div', {class: 'versus-line'}, h('span', {class: 'versus', text: 'VS'})),
+      h('div', {class: 'match-player'}, h('div', {class: 'player-name', text: name(m.name2)}))),
       h('div', {class: 'score-pending', text: 'Game scores pending'}),
       h('div', {class: 'match-meta', text: details(m, event)})) : h('div', {class: 'empty-table'}, h('strong', {text: 'Table open'}), h('span', {text: 'Waiting for the next match'})));
 }
@@ -47,7 +63,17 @@ function results() {
   const c = champion('championship'), k = champion('consolation');
   const doubles = event.finale?.status === 'complete' && event.finale.winnerTeam ? (event.finale.winnerTeam === 1 ? event.finale.team1 : event.finale.team2).join(' + ') : null;
   return h('div', {class: 'results-view'}, (c || k || doubles) ? h('div', {class: 'champions'}, c ? h('div', {}, h('span', {text: 'CHAMPIONSHIP CHAMPION'}), h('strong', {text: c.winner}), h('small', {text: `Runner-up · ${c.runner}`})) : null, k ? h('div', {}, h('span', {text: 'CONSOLATION CHAMPION'}), h('strong', {text: k.winner})) : null, doubles ? h('div', {}, h('span', {text: 'MIXED-SKILL DOUBLES WINNERS'}), h('strong', {text: doubles})) : null) : null,
-    h('div', {class: 'results-grid'}, board.recent.slice(0, 6).map(m => { const t = tally(m); return h('article', {class: 'result-card'}, h('div', {class: 'result-top', text: `${bracketLabel(m)} · ${roundLabel(m, event)}${m.table ? ` · Table ${m.table}` : ''}`}), h('div', {class: 'result-body'}, h('div', {class: 'result-players'}, h('div', {class: m.winnerName === m.name1 ? 'winner' : '', text: name(m.name1)}), h('div', {class: m.winnerName === m.name2 ? 'winner' : '', text: name(m.name2)})), h('div', {class: 'result-tally', text: t ? `${t[0]}–${t[1]}` : '—'})), h('div', {class: 'result-games', text: games(m)})); })));
+    h('div', {class: 'results-grid'}, board.recent.slice(0, 6).map(m => { const t = tally(m); return h('article', {class: 'result-card' + (board.recent[0] === m ? ' lead-result' : '')},
+      h('div', {class: 'result-top'},
+        h('span', {text: `${bracketLabel(m)} · ${roundLabel(m, event)}${m.table ? ` · Table ${m.table}` : ''}`}),
+        h('span', {class:'result-final', text:'FINAL'})),
+      h('div', {class: 'result-body'},
+        h('div', {class: 'result-players'},
+          [m.name1,m.name2].map((n,i)=>h('div', {class:'result-player' + (n && n === m.winnerName ? ' winner' : '')},
+            h('span', {class:'result-player-name',text:name(n)}),winDots(m,i)))),
+        h('div', {class:'result-score'},h('span', {class:'score-caption',text:'GAMES'}),
+          h('div', {class:'result-tally',text:t ? `${t[0]}–${t[1]}` : '—'}))),
+      h('div', {class:'result-games',text:games(m)})); })));
 }
 function bracketWindows(ms) {
   const rounds = [...new Set(ms.map(m => m.round))].sort((a, b) => a - b);
@@ -67,7 +93,10 @@ function bracket(kind) {
   const {rounds, first: firstRound, page} = windows[Math.min(segment, pages - 1)];
   const champ = champion(kind);
   return h('div', {class: 'bracket-view' + (kind === 'consolation' && ms.length === 1 ? ' single-match' : '')}, h('div', {class: 'bracket-caption'}, h('span', {text: pages > 1 ? `BRACKET SEGMENT ${segment + 1} / ${pages}` : 'TOURNAMENT PROGRESSION'}), champ ? h('strong', {text: `CHAMPION  ·  ${champ.winner}`}) : null),
-    h('div', {class: 'bracket-columns'}, rounds.map(r => { const factor = 2 ** (r - firstRound); const selected = ms.filter(m => m.round === r && m.slot >= Math.floor(page * 4 / factor) && m.slot <= Math.floor((page * 4 + 3) / factor)); return h('div', {class: 'bracket-round'}, h('div', {class: 'round-heading', text: roundName(totalRounds, r, kind)}), h('div', {class: 'bracket-matches'}, selected.map(m => h('article', {class: `bracket-match ${m.phase === 'playing' ? 'playing' : ''}`, 'data-round': m.round, 'data-slot': m.slot}, h('div', {class: 'bracket-state', text: m.status === 'bye' ? 'BYE' : m.status === 'complete' ? 'COMPLETED' : m.phase === 'playing' ? 'NOW PLAYING' : 'UPCOMING'}), m.name1 || m.name2 ? [m.name1, m.name2].map(n => h('div', {class: 'bracket-player' + (n && n === m.winnerName ? ' winner' : ''), text: name(n)})) : h('div', {class: 'bracket-pending-pair'}, h('strong', {text: r === totalRounds - 1 ? 'Finalists to be determined' : 'Matchup to be determined'}), h('span', {text: 'Players will appear as earlier matches are decided.'})), m.status === 'complete' && m.scores ? h('div', {class: 'bracket-scores', text: games(m)}) : null)))); })));
+    h('div', {class: 'bracket-columns'}, rounds.map(r => { const factor = 2 ** (r - firstRound); const selected = ms.filter(m => m.round === r && m.slot >= Math.floor(page * 4 / factor) && m.slot <= Math.floor((page * 4 + 3) / factor)); return h('div', {class: 'bracket-round'}, h('div', {class: 'round-heading', text: roundName(totalRounds, r, kind)}), h('div', {class: 'bracket-matches'}, selected.map(m => h('article', {class: `bracket-match ${m.phase === 'playing' ? 'playing' : m.status === 'complete' ? 'completed' : 'upcoming'}`, 'data-round': m.round, 'data-slot': m.slot},
+      h('div', {class: 'bracket-state',text:m.status === 'bye' ? 'BYE' : m.status === 'complete' ? 'COMPLETED' : m.phase === 'playing' ? 'NOW PLAYING' : 'UPCOMING'}),
+      m.name1 || m.name2 ? [m.name1,m.name2].map((n,i)=>h('div', {class:'bracket-player-row' + (n && n === m.winnerName ? ' winner' : '')},
+        h('div', {class:'bracket-player' + (n && n === m.winnerName ? ' winner' : ''),text:name(n)}),winDots(m,i))) : h('div', {class: 'bracket-pending-pair'}, h('strong', {text: r === totalRounds - 1 ? 'Finalists to be determined' : 'Matchup to be determined'}), h('span', {text: 'Players will appear as earlier matches are decided.'})), m.status === 'complete' && m.scores ? h('div', {class: 'bracket-scores', text: games(m)}) : null)))); })));
 }
 function drawConnections() {
   const columns = document.querySelector('.bracket-columns');
