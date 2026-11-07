@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import {spawnSync} from 'node:child_process';
-import {fileURLToPath,pathToFileURL} from 'node:url';
+import {fileURLToPath} from 'node:url';
 
 export const PROJECT_REF = 'copmkalfkkrkzheohwuc';
 export const TABLES = Object.freeze([
@@ -209,5 +209,8 @@ async function main(args=process.argv.slice(2)) {
     'Expected no arguments, --setup, or --mirror-dir /private/path');
   await createBackup({token:readToken(),mirrorDir:idx<0?(process.env.FFTT_BACKUP_MIRROR_DIR||null):args[1]});
 }
-if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href)
+// Node resolves a symlinked entry file to its real location on macOS,
+ // while argv[1] can retain /var or a symlinked TMPDIR path.
+ // Compare real filesystem paths so a temporary Git worktree never silently exits.
+if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))
   main().catch(e=>{console.error('FFTT backup failed: '+e.message);process.exitCode=1;});

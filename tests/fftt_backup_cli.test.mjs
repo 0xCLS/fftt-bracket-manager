@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 import {normalizeExport,normalizeSchema,readOnlyQuery,createBackup,readToken,verifyPrivateInventory,
   PROJECT_REF,TABLES} from '../tools/ops/fftt_backup.mjs';
 
@@ -95,4 +97,16 @@ test('refuses to store raw database exports inside a Git checkout',async()=>{
   await assert.rejects(createBackup({token:'fictional-testing-token',fetchImpl:mock,
     backupDir:path.resolve('tools'),verify:async()=>{},printer:()=>{}}),
     /outside Git|within a Git checkout/);
+});
+
+test('CLI entrypoint runs through a symlinked temporary worktree path, not silent exit',()=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'fftt-cli-symlink-'));
+  const cli=path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../tools/ops/fftt_backup.mjs');
+  try {
+    fs.symlinkSync(path.dirname(cli),path.join(dir,'ops'),'dir');
+    const res=spawnSync(process.execPath,[path.join(dir,'ops','fftt_backup.mjs'),'--help'],
+      {encoding:'utf8',timeout:15000});
+    assert.equal(res.status,0, 'CLI exit: '+res.stderr);
+    assert.match(res.stdout,/Usage: \.\/tools\/ops\/fftt-backup/);
+  } finally {fs.rmSync(dir,{recursive:true,force:true});}
 });
