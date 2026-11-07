@@ -192,7 +192,7 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
     await first.locator('select').selectOption('1');
     await waitToast(a.page, /table 1/i);
     await spec.page.locator('.board-match .tbl', {hasText: 'Table 1'}).waitFor({timeout: 15000});
-    await tv.page.locator('.tv-line .tbl', {hasText: 'Table 1'}).waitFor({timeout: 15000});
+    await tv.page.locator('.table-card.active', {hasText: 'TABLE 1'}).waitFor({timeout: 15000});
     await shot(spec, '05-spectator-now'); await shot(tv, '06-tv');
     await b.page.locator('.queue-card.playing').waitFor({timeout: 15000});   // the other scorekeeper sees the table too
     const anotherMatch = b.page.locator('.queue-card:not(.playing)').first();
@@ -290,7 +290,8 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
 
     await spec.page.locator('nav.tabs button', {hasText: 'Results'}).click();
     await spec.page.locator('.champion-banner').waitFor({timeout: 15000});
-    await tv.page.locator('.champ').first().waitFor({timeout: 15000});
+    await tv.page.keyboard.press('2'); // Completed Results is a separate rotating TV screen.
+    await tv.page.locator('.champions', {hasText: 'CHAMPIONSHIP CHAMPION'}).waitFor({timeout: 15000});
     await shot(spec, '12-spectator-final'); await shot(tv, '13-tv-final');
 
     // ---------------------------------------------------------------- privacy: nothing private reaches spectators or the TV
