@@ -72,7 +72,7 @@ test('formats: configured on Overview, applied to the bracket, shown to scorekee
     await a.page.locator('.queue-card').first().locator('select').selectOption('1');
     await toast(a.page, /table 1/i);
     await spec.page.locator('.board-match .fmt-line', {hasText: 'Best of 1 · to 21'}).first().waitFor({timeout: 20000});
-    await tv.page.locator('.tv-line .fmt', {hasText: 'Best of 1 · to 21'}).first().waitFor({timeout: 20000});
+    await tv.page.locator('.table-card.active .match-meta', {hasText: 'Best of 1 · to 21'}).first().waitFor({timeout: 20000});
     await spec.page.locator('nav.tabs button', {hasText: 'Bracket'}).click();
     await spec.page.locator('.match-head', {hasText: 'Best of 3 · to 21'}).first().waitFor({timeout: 20000});
 

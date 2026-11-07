@@ -43,6 +43,7 @@ test('TV modes, scores, controls, rotation and read-only public requests', {time
   const w=await world(); const {page}=w;
   try {
     assert.equal(await page.locator('.table-card.active').count(),2);
+    assert.match(await page.locator('.table-card.active').first().innerText(), /Best of 3 · to 11/);
     assert.equal(await page.locator('.next-card').count(),4);
     assert.match(await text(page), /Alexandria Montgomery-Fitzgerald/);
     assert.equal(await page.locator('.score-pending').count(),2);
