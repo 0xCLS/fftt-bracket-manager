@@ -48,7 +48,8 @@ async function fits(page) {
     return JSON.stringify({element:String(el.className),text:el.textContent.slice(0,45),
       bounds:[Math.round(r.left-m.left),Math.round(r.top-m.top),Math.round(r.right-m.right),Math.round(r.bottom-m.bottom)],
       overflow:[el.scrollWidth-el.clientWidth,el.scrollHeight-el.clientHeight],
-      cssOverflow:getComputedStyle(el).overflow});
+      cssOverflow:getComputedStyle(el).overflow,
+      children:[...el.children].slice(0,4).map(child=>({className:String(child.className),bottom:Math.round(child.getBoundingClientRect().bottom-r.bottom),height:Math.round(child.getBoundingClientRect().height)}))});
   }));
 }
 test('TV modes, scores, controls, rotation and read-only public requests', {timeout:60000}, async () => {

@@ -188,3 +188,22 @@ body.tv .tv-demo:not([hidden]){font-size:clamp(11px,.77vw,15px)}
 .brand:has(.tv-demo:not([hidden])) h1{font-size:clamp(20px,1.8vw,33px);line-height:.97;margin:.06em 0}
 .brand:has(.tv-demo:not([hidden])) .eyebrow{font-size:11px;line-height:1.12}
 .brand:has(.tv-demo:not([hidden])) .tv-demo:not([hidden]){font-size:11px;line-height:1;margin:-.05em 0 -.05em .5em;padding:.1em .4em}
+
+/* Grid tracks must shrink inside the fixed-height TV canvas; legibility takes precedence over oversized type. */
+.broadcast-match-center .next-section{grid-template-rows:minmax(0,1fr)}
+.broadcast-match-center .queue-banner,.broadcast-match-center .next-grid,.broadcast-match-center .next-card{min-height:0}
+.broadcast-match-center .queue-banner{padding:clamp(5px,.65vw,12px) clamp(12px,1.1vw,20px)}
+.broadcast-match-center .queue-banner strong{font-size:clamp(22px,2.2vw,43px)}
+.broadcast-match-center .next-card{padding:clamp(5px,.65vw,12px) clamp(10px,1.1vw,21px)}
+.broadcast-match-center .next-names{font-size:clamp(17px,1.3vw,28px);line-height:1.02}
+.table-card.broadcast-match{padding:clamp(8px,.95vh,16px) clamp(24px,2.2vw,42px)}
+.table-card .match-content{gap:0}
+.table-card .player-name{font-size:clamp(23px,2.5vw,52px);line-height:.96}
+.table-card .versus{width:clamp(52px,4.5vw,86px);height:clamp(52px,4.5vw,86px);font-size:clamp(22px,2.2vw,41px)}
+.table-card .card-top{min-height:0}
+@media(max-height:760px){
+  .table-card.broadcast-match{padding:clamp(6px,.65vh,10px) clamp(22px,2.2vw,33px)}
+  .table-card .player-name{font-size:clamp(21px,2.25vw,37px)}
+  .table-card .versus{width:52px;height:52px;font-size:23px}
+  .broadcast-match-center .next-names{font-size:clamp(16px,1.26vw,20px)}
+}
