@@ -207,3 +207,6 @@ body.tv .tv-demo:not([hidden]){font-size:clamp(11px,.77vw,15px)}
   .table-card .versus{width:52px;height:52px;font-size:23px}
   .broadcast-match-center .next-names{font-size:clamp(16px,1.26vw,20px)}
 }
+
+/* Keep the illuminated card outline, but remove painted pseudo-elements that inflate scrollHeight in Chromium. */
+.table-card.broadcast-match::before,.table-card.broadcast-match::after{content:none!important}

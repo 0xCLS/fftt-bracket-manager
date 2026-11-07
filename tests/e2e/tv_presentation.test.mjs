@@ -107,8 +107,9 @@ test('all four presentations fit both landscape viewports and can produce eviden
     const w=await world(fixture(),size); const {page}=w;
     try {
       for (const [key,slug] of [['1','match-center'],['2','completed-results'],['3','championship'],['4','consolation']]) {
-        await page.keyboard.press(key); assert.deepEqual(await fits(page), [], `${slug} ${size.width}`);
+        await page.keyboard.press(key);
         if (process.env.TV_SCREENSHOTS) {fs.mkdirSync(process.env.TV_SCREENSHOTS,{recursive:true}); await page.screenshot({path:path.join(process.env.TV_SCREENSHOTS,`${slug}-${size.width}.png`)});}
+        assert.deepEqual(await fits(page), [], `${slug} ${size.width}`);
       }
     } finally {await w.close();}
   }
