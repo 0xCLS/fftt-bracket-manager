@@ -265,3 +265,22 @@ footer{
 @media (prefers-reduced-motion:reduce){
   .table-card,.result-card,.next-card,.bracket-match{animation:none}
 }
+
+/* Undecided matchups, especially a lone final, read as intentional event states. */
+.bracket-pending-pair{
+  display:flex;flex-direction:column;justify-content:center;
+  gap:1.1vh;min-width:0;padding:1.2vh 0;
+}
+.bracket-pending-pair strong{
+  font-size:clamp(20px,1.65vw,32px);line-height:1.13;letter-spacing:-.035em;
+  color:#eff9ff;font-weight:790;overflow-wrap:anywhere;
+}
+.bracket-pending-pair span{
+  font-size:clamp(12px,.85vw,17px);color:#bbd0df;line-height:1.35;
+}
+.bracket-view:has(> .bracket-columns > .bracket-round:only-child .bracket-matches > .bracket-match:only-child) .bracket-pending-pair strong{
+  font-size:clamp(27px,2.7vw,52px);
+}
+.bracket-view:has(> .bracket-columns > .bracket-round:only-child .bracket-matches > .bracket-match:only-child) .bracket-pending-pair span{
+  font-size:clamp(15px,1.17vw,23px);
+}
