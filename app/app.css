@@ -1250,3 +1250,7 @@ dialog .event-dialog .dlg-actions{margin-top:0}
 @media(max-width:620px){
  dialog .event-dialog-grid{grid-template-columns:minmax(0,1fr)}
 }
+
+/* Fictional showcase identification; hidden for normal public events. */
+.showcase-notice:not([hidden]){display:inline-block;margin:.45rem 0;padding:.4rem .7rem;border:1px solid #94702b;border-radius:8px;background:#fff4d4;color:#533b0c;font-weight:800;font-size:.88rem}
+.showcase-notice span{font-weight:600;margin-left:.35rem}

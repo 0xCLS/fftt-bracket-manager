@@ -408,3 +408,35 @@ font-size:clamp(30px,2.8vw,55px)}
 .bracket-match{min-height:clamp(77px,9.1vh,103px);padding-top:.6vh;padding-bottom:.6vh}
 .bracket-state{margin-bottom:.22vh}}
 @media(prefers-reduced-motion:reduce){.controls{transition:none}}
+.tv-demo:not([hidden]){display:inline-block;margin-top:.35em;padding:.3em .55em;border:1px solid #9e8042;border-radius:5px;color:#ffe4a5;background:#3a3020;font-size:clamp(10px,.75vw,15px);font-weight:800;letter-spacing:.04em}
+
+/* Television legibility floors: secondary labels stay readable at 1280x720; large screens keep their proportional sizes. */
+footer{font-size:clamp(11px,.8vw,15px)}
+footer .control-hint{font-size:clamp(11px,.74vw,14px)}
+.card-top .status-label{font-size:clamp(11px,.85vw,16px)}
+.next-names .next-vs{font-size:max(12px,.62em)}
+.result-final,.score-caption,.bracket-state{font-size:clamp(11px,.75vw,14px)}
+.next-meta,.result-games,.bracket-scores{font-size:clamp(12px,.78vw,15px)}
+.tv-demo:not([hidden]){font-size:clamp(11px,.75vw,15px)}
+
+/* Completed Results: rows follow the result count, and the type scales up when there are few results. */
+.results-grid[data-rows="2"]{grid-template-rows:repeat(2,minmax(0,1fr))}
+.results-grid[data-rows="1"]{grid-template-rows:minmax(0,1fr);max-height:52%}
+.results-grid:not([data-rows="3"]) .result-players{font-size:clamp(24px,2.3vw,44px);gap:1vh}
+.results-grid:not([data-rows="3"]) .result-tally{font-size:clamp(46px,4.5vw,86px)}
+.results-grid:not([data-rows="3"]) .score-caption{font-size:clamp(12px,.85vw,16px)}
+.results-grid:not([data-rows="3"]) .result-top{font-size:clamp(12px,.95vw,18px)}
+.results-grid:not([data-rows="3"]) .result-final{font-size:clamp(12px,.9vw,17px)}
+.results-grid:not([data-rows="3"]) .result-games{font-size:clamp(13px,1vw,19px)}
+.results-grid:not([data-rows="3"]) .win-dot{width:clamp(11px,.9vw,16px);height:clamp(11px,.9vw,16px)}
+.results-grid:not([data-rows="3"]) .game-win-dots{gap:clamp(6px,.6vw,11px)}
+
+/* Known finalists are separated by a visible VS. */
+.bracket-vs{margin:.3vh 0}
+.bracket-vs .versus{margin:0}
+.single-match .bracket-vs{margin:.5vh 0}
+.single-match .bracket-vs .versus{font-size:clamp(13px,1vw,20px)}
+
+/* Demo label shares the date line so the premium header keeps its height (no clipping at the top edge on TVs). */
+.event-date:has(+ .tv-demo:not([hidden])){display:inline-block;vertical-align:middle}
+.tv-demo:not([hidden]){margin:-.2em 0 -.2em .9em;padding:.14em .5em;line-height:1.2;vertical-align:middle}
