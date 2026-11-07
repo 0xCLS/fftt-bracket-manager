@@ -58,7 +58,7 @@ test('long full names: no horizontal overflow or clipped names on staff, spectat
       } else {
         const tv = await w.device('tv', opts);
         await tv.open(SPECT + '/app/tv.html');
-        await tv.page.locator('.tv-line .tbl', {hasText: 'Table 1'}).waitFor({timeout: T});
+        await tv.page.locator('.table-card .table-label', {hasText: 'TABLE 1'}).waitFor({timeout: T});
         await check(tv.page, 'TV board');
         assert.ok(/Alexandria|Bartholomew|Christopherson|Dominique|Evangeline|Ferdinand|Genevieve/.test(await tv.page.locator('body').innerText()), 'the TV shows full names');
       }
