@@ -48,7 +48,7 @@ TV_JS_PROTECTED = re.compile(
 TV_CSS_PROTECTED = re.compile(
     r'@import|url\s*\(|display\s*:\s*none\b|visibility\s*:\s*hidden\b|'
     r'opacity\s*:\s*0(?:\.0*)?\s*(?:;|}|$)|'
-    r'filter\s*:\s*(?!drop-shadow\s*\()|'
+    r'filter\s*:\s*(?!\s*drop-shadow\s*\()|'
     r'clip(?:-path)?\s*:|(?:-webkit-)?mask(?:-image)?\s*:|'
     r'(?<![\w-])color\s*:\s*transparent\b', re.I)
 TV_TEST_NAME = re.compile(r"""\btest\(\s*(['"])(.*?)\1\s*,""")
