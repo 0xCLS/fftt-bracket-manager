@@ -52,7 +52,7 @@ class Decisions(unittest.TestCase):
         self.assertEqual(R.evaluate_fast_visual([run(R.FAST_CHECK, conclusion='failure'), run(R.CLASSIFY_CHECK)])[0], 'fail')
         self.assertEqual(R.evaluate_fast_visual([run(R.FAST_CHECK, status='queued', conclusion=None), run(R.CLASSIFY_CHECK)])[0], 'wait')
 
-    def test_visual_release_delta_uses_shared_allowlist_since_live_baseline(self):
+    def test_visual_release_delta_uses_release_allowlist_since_live_baseline(self):
         def fake_git(*args, **kwargs):
             if args[:2] == ('merge-base', '--is-ancestor'):
                 return subprocess.CompletedProcess(args, 0, '')
@@ -113,6 +113,33 @@ class Decisions(unittest.TestCase):
         for n in (*R.REQUIRED_CHECKS, R.CLASSIFY_CHECK):
             self.assertIn(n, names, f'{n!r} is not a job name in browser-tests.yml')
 
+    def test_gate_never_dispatches_unapproved_full_regression(self):
+        source = (ROOT / 'tools' / 'ops' / 'staging_release.py').read_text()
+        gate = source.split('def cmd_gate(a):', 1)[1].split('def wrangler_deploy(', 1)[0]
+        self.assertNotIn("gh', 'workflow', 'run", gate)
+        self.assertIn('manual', gate.lower())
+        with patch.object(R, 'visual_release_baseline', return_value=(None, 'protected delta')), \
+             patch.object(R, 'branch_tip', return_value=SHA), \
+             patch.object(R, 'check_runs', return_value=[]), \
+             patch.object(R, 'die', side_effect=RuntimeError('missing approval')), \
+             patch.object(R.subprocess, 'run', side_effect=AssertionError('no subprocess allowed')):
+            class Args:
+                commit = SHA
+                allow_old = False
+                timeout_min = 1
+                poll_sec = 0
+            with self.assertRaisesRegex(RuntimeError, 'missing approval'):
+                R.cmd_gate(Args())
+
+    def test_full_workflow_requires_explicit_approval_and_has_no_automatic_trigger(self):
+        wf = (ROOT / '.github' / 'workflows' / 'browser-tests.yml').read_text()
+        self.assertIn('workflow_dispatch:', wf)
+        self.assertNotIn('  push:', wf)
+        self.assertNotIn('  pull_request:', wf)
+        self.assertIn("github.event.inputs.approval == 'APPROVED'", wf)
+        staging = (ROOT / '.github' / 'workflows' / 'deploy-staging.yml').read_text()
+        self.assertNotIn('actions: write', staging)
+
     def test_preview_url_is_the_unique_deployment_not_the_alias(self):
         out = 'Take a peek over at https://1a2b3c4d.fftt3-staff-stg.pages.dev\nalias https://ci-verify.fftt3-staff-stg.pages.dev'
         self.assertEqual(R.preview_url(out, 'fftt3-staff-stg'), 'https://1a2b3c4d.fftt3-staff-stg.pages.dev')
@@ -161,6 +188,13 @@ class Boundaries(unittest.TestCase):
         self.assertRegex(wf, r'permissions:\s*\n\s*contents: read')
         for uses in re.findall(r'uses: (\S+)', wf):
             self.assertRegex(uses, r'@v\d+$')
+
+
+class ReleaseAllowlistIsolation(unittest.TestCase):
+    def test_development_router_cannot_expand_visual_release_allowlist(self):
+        self.assertNotIn('app/tv.css', R.RELEASE_VISUAL)
+        self.assertNotIn('app/tv.mjs', R.RELEASE_VISUAL)
+        self.assertNotIn('app/public_core.mjs', R.RELEASE_VISUAL)
 
 
 class BundleIntegrity(unittest.TestCase):

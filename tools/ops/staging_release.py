@@ -6,7 +6,7 @@ Used only by .github/workflows/deploy-staging.yml; every command also runs local
   build    build both sanitized bundles from an exact commit (tools/staging/build_export.py)
   plan     compare each bundle with what is live; write GitHub outputs staff=true|false spectator=true|false
   gate     accept focused UI checks only for a verified visual-only delta on a full-tested live baseline;
-           otherwise require full regression on the exact commit
+           otherwise require owner-authorized full regression already green on the exact commit
   release  verify bundle integrity -> PREVIEW upload + static checks -> production upload -> live checks -> auto-rollback on failure
 
 Safety properties (all enforced here, covered by tests/test_staging_release.py):
@@ -23,8 +23,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT / 'tools' / 'staging'))
-sys.path.insert(0, str(ROOT / 'tools'))
-import ci_impact  # share the conservative visual file allowlist with the PR classifier
 
 REPO = '0xCLS/fftt-bracket-manager'
 BRANCH = 'integration/milestone1-secure-foundation'
@@ -34,6 +32,13 @@ PREVIEW_BRANCH = 'ci-verify'
 APPS = {
     'staff': {'project': 'fftt3-staff-stg', 'origin': 'https://fftt3-staff-stg.pages.dev'},
     'spectator': {'project': 'fftt3-games-stg', 'origin': 'https://fftt3-games-stg.pages.dev'},
+}
+# Keep staging's exception pinned to its original narrow release allowlist.
+# CI routing may evolve independently and must never broaden this gate.
+RELEASE_VISUAL = {
+    'app/app.css', 'tests/e2e/gameday_fast_ui_browser.test.mjs',
+    'tests/e2e/gameday_polish_browser.test.mjs', 'tests/e2e/gameday_ui_audit.test.mjs',
+    'tests/e2e/gameday_fullnames_layout.test.mjs',
 }
 # Job names in browser-tests.yml. Full tests are mandatory except for verified
 # visual-only changes since an already full-tested live staging baseline.
@@ -154,7 +159,7 @@ def visual_delta_only(base, commit):
     if result.returncode != 0:
         return False
     paths = [p for p in result.stdout.splitlines() if p]
-    return bool(paths) and all(p in ci_impact.VISUAL for p in paths)
+    return bool(paths) and all(p in RELEASE_VISUAL for p in paths)
 
 
 def visual_release_baseline(commit):
@@ -304,45 +309,34 @@ def branch_tip():
 
 
 def cmd_gate(a):
+    """Read exact-SHA evidence only; never dispatch or authorize full CI."""
     deadline = time.time() + a.timeout_min * 60
     started = time.time()
-    dispatched = False
-    # A full-tested, currently deployed baseline permits *visual-only* changes
-    # to use the targeted fictional Chrome checks. Interactive JS, unknown files,
-    # unverified history and missing live manifests retain the full suite.
     base, reason = visual_release_baseline(a.commit)
     visual = base is not None
-    log(f'release CI policy: {"focused visual" if visual else "full"} — {reason}')
+    log(f'release CI policy: {"focused visual" if visual else "manual full proof"} — {reason}')
     while True:
         if not a.allow_old and branch_tip() != a.commit:
-            log('a newer commit exists on the branch; this release is superseded and will not be deployed')
+            log('a newer commit supersedes this staging release; nothing deployed')
             set_output('superseded', 'true')
             return
         runs = check_runs(a.commit)
         verdict, states = evaluate_fast_visual(runs) if visual else evaluate(runs)
-        log(f'{int(time.time() - started):>4}s  {verdict:8} ' + '; '.join(f'{k.split(" — ")[-1]}={v}' for k, v in states.items()))
+        log(f'{int(time.time() - started):>4}s  {verdict:8} ' +
+            '; '.join(f'{k.split(" — ")[-1]}={v}' for k, v in states.items()))
         if verdict == 'ready':
             set_output('superseded', 'false')
             return
         if verdict == 'fail':
-            die('required exact-commit regression FAILED; nothing is deployed')
-        if visual:
-            # A missing/failed fast lane cannot silently become a production
-            # deployment. Never start the expensive full workflow for a
-            # verified CSS-only change; an organizer must fix the focused check.
-            if time.time() - started > 600 and any(v == 'absent' for v in states.values()):
-                die('focused UI regression did not run on this commit; nothing is deployed')
-        elif verdict == 'dispatch' and not dispatched:
-            if classify_finished(runs) or time.time() - started > 180:
-                if branch_tip() != a.commit:
-                    die('the full regression has not run on this commit and it is no longer the branch tip')
-                log('core or unverified change: starting the mandatory full regression once')
-                subprocess.run(['gh', 'workflow', 'run', TEST_WORKFLOW, '--repo', REPO, '--ref', BRANCH], check=True)
-                dispatched = True
+            die('required exact-commit verification FAILED; nothing deployed')
+        if verdict == 'dispatch':
+            die('full regression evidence is missing. Owner must manually authorize and run '
+                'Browser regression tests for this exact SHA; nothing dispatched or deployed')
+        if visual and all(state == 'absent' for state in states.values()):
+            die('focused verification is missing on this exact SHA; nothing deployed')
         if time.time() > deadline:
-            die('timed out waiting for required exact-commit regression')
+            die('timed out waiting for already-authorized exact-commit checks; no tests dispatched')
         time.sleep(a.poll_sec)
-
 
 def wrangler_deploy(bundle, project, branch, commit, cwd):
     cmd = ['npx', '--yes', WRANGLER, 'pages', 'deploy', str(bundle), '--project-name', project, '--branch', branch,

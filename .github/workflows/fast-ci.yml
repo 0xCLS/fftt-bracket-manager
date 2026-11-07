@@ -1,0 +1,154 @@
+name: FFTT fast checks
+
+# One focused pass per PR head. No push-to-main replay and NO automatic full regression.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      base_sha:
+        description: 'For a manual focused check, enter the trusted base commit SHA'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  checks: read
+
+concurrency:
+  group: fftt-fast-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  select:
+    name: CI v2 — select targeted suites
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      lanes: ${{ steps.plan.outputs.lanes }}
+      manual: ${{ steps.plan.outputs.manual }}
+      needs_modules: ${{ steps.plan.outputs.needs_modules }}
+      needs_browser: ${{ steps.plan.outputs.needs_browser }}
+      bootstrap: ${{ steps.bootstrap.outputs.bootstrap }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Use trusted-base policy or verify one-time CI v2 bootstrap
+        id: bootstrap
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || inputs.base_sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test -n "$BASE_SHA" && test -n "$HEAD_SHA"
+          if git show "$BASE_SHA:tools/ci_v2.py" > "$RUNNER_TEMP/ci_v2.py" 2>/dev/null; then
+            echo 'bootstrap=false' >> "$GITHUB_OUTPUT"
+          else
+            # Initial adoption only: no trusted-base v2 exists yet.
+            # Require the cumulative PR diff to contain ONLY these nine reviewed
+            # CI/policy files. Do not trust a classifier from the proposed PR
+            # until this independent, no-secret, read-only guard has passed.
+            merge_base="$(git merge-base "$BASE_SHA" "$HEAD_SHA")"
+            test -n "$merge_base"
+            git diff --name-only --no-renames "$merge_base" "$HEAD_SHA" > "$RUNNER_TEMP/ci-v2-paths"
+            python3 - "$RUNNER_TEMP/ci-v2-paths" <<'PY'
+          import pathlib, sys
+          approved = {
+              '.github/workflows/browser-tests.yml',
+              '.github/workflows/deploy-staging.yml',
+              '.github/workflows/fast-ci.yml',
+              'docs/CI_TESTING_POLICY.md',
+              'docs/launch/FFTT3_STAGING_PIPELINE.md',
+              'tests/test_ci_v2.py',
+              'tests/test_staging_release.py',
+              'tools/ci_v2.py',
+              'tools/ops/staging_release.py',
+          }
+          actual = set(pathlib.Path(sys.argv[1]).read_text().splitlines())
+          if actual != approved:
+              raise SystemExit('CI v2 initial adoption requires the exact nine-file reviewed scope: ' +
+                               repr(sorted(actual ^ approved)))
+          print('Verified exact nine-file CI v2 bootstrap scope; no full regression dispatched')
+          PY
+            cp tools/ci_v2.py "$RUNNER_TEMP/ci_v2.py"
+            python3 -m unittest discover -s tests -p 'test_ci_v2.py' -v
+            python3 -m unittest discover -s tests -p 'test_staging_release.py' -v
+            echo 'bootstrap=true' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Select cumulative PR-impact suites
+        id: plan
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || inputs.base_sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          FFTT_CI_ROOT: ${{ github.workspace }}
+        run: python3 "$RUNNER_TEMP/ci_v2.py" plan --base "$BASE_SHA" --head "$HEAD_SHA" --github-output "$GITHUB_OUTPUT"
+
+  focused:
+    name: CI v2 — focused verification
+    needs: select
+    if: needs.select.outputs.lanes != 'none'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
+      - name: Install test-only dependencies once
+        if: needs.select.outputs.needs_modules == 'true'
+        working-directory: tests/e2e
+        run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Install Chromium only for browser suites
+        if: needs.select.outputs.needs_browser == 'true'
+        working-directory: tests/e2e
+        run: npx playwright-core install chromium
+      - name: Execute selected tests, deduplicated
+        env:
+          LANES: ${{ needs.select.outputs.lanes }}
+        run: python3 tools/ci_v2.py run --lanes "$LANES"
+
+  authorization:
+    name: CI v2 — release-risk gate
+    if: always()
+    needs: [select, focused]
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: CI v2 initial bootstrap is static-only and requires human PR review
+        if: needs.select.outputs.bootstrap == 'true'
+        run: echo 'Initial CI v2 adoption passed independent scope and offline tests; human review and branch protections still apply.'
+      - name: Require successful selection and focused checks
+        env:
+          SELECT_RESULT: ${{ needs.select.result }}
+          FOCUSED_RESULT: ${{ needs.focused.result }}
+          LANES: ${{ needs.select.outputs.lanes }}
+        run: |
+          test "$SELECT_RESULT" = success || { echo 'CI selection did not pass'; exit 1; }
+          if [ "$LANES" != none ]; then
+            test "$FOCUSED_RESULT" = success || { echo 'Focused verification did not pass'; exit 1; }
+          fi
+      - uses: actions/checkout@v4
+        if: needs.select.outputs.manual == 'true' && needs.select.outputs.bootstrap != 'true'
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Recover approved manual-proof verifier from trusted base
+        if: needs.select.outputs.manual == 'true' && needs.select.outputs.bootstrap != 'true'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || inputs.base_sha }}
+        run: git show "$BASE_SHA:tools/ci_v2.py" > "$RUNNER_TEMP/ci_v2.py"
+      - name: Verify owner-authorized comprehensive proof for high-risk changes
+        if: needs.select.outputs.manual == 'true' && needs.select.outputs.bootstrap != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          echo 'High-risk diff: manual comprehensive verification must exist for exact head SHA.'
+          python3 "$RUNNER_TEMP/ci_v2.py" verify-manual --head "$HEAD_SHA"

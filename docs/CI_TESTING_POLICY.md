@@ -1,92 +1,44 @@
-# FFTT3 CI policy — fast UI development, full release confidence
+# FFTT CI v2 — fast by default, comprehensive by approval
 
-**Approved direction, October 28, 2026:** do not rerun the 50-plus-step
-browser suite and disposable Supabase job for every cosmetic change.
+## Operating contract
 
-## Automatic checks on the draft PR
+- Only pull requests trigger automatic focused checks. A merge to `main` does **not** repeat the same test suites.
+- Cumulative PR changes are classified from a **trusted base-branch selector**, not code supplied by the PR. Superseded checks are cancelled.
+- Each selected test file runs only once. npm and Chromium are installed only when a relevant test needs them.
+- Unknown, scoring-authoritative, security, authentication, server, SQL, dependency, and CI-infrastructure changes **do not automatically start comprehensive regression**. They require a successful, separately authorized comprehensive run for the **exact PR head SHA** before the high-risk PR gate can pass.
+- The original comprehensive suites and commands are preserved in `.github/workflows/browser-tests.yml`, but that workflow is **manual-only**, requiring the `approval=APPROVED` input.
+- The staging gate can no longer launch that workflow. If the required evidence is unavailable, it blocks deployment. Production authorization and data-safety gates remain independent.
 
-The existing `.github/workflows/browser-tests.yml` has one change-impact
-classifier and three mutually exclusive execution paths:
+## Automatic checks
 
-| Route | When | What runs |
+| Changed area | Selected checks | Manual comprehensive proof |
 | --- | --- | --- |
-| Fast visual (`ui-visual`) | Incremental PR push changing only the allowed CSS/visual browser-test files | Offline syntax/privacy smoke and short **fictional** Chrome phone/desktop Players UI acceptance |
-| Focused interaction (`ui-interaction`) | Allowed organizer-view presentation changes with **no** protected action/auth/source logic edits | Fast visual checks **plus** synthetic registration/check-in and fake-Google browser workflows |
-| Full regression (`full`) | Any core, session, scoring, brackets, auth, server, Cloudflare Function, contracts, PostgreSQL, migrations, CI tooling, unknown or mixed change | Unchanged broad browser, security, SQL and disposable PostgreSQL suites |
-| Docs (`docs`) | Verified docs-only incremental PR push | Classifier; no redundant browser or SQL jobs |
+| Markdown documentation only | Selection/reporting | No |
+| TV layout, TV logic, TV presentation test | TV presentation plus public isolation/privacy | No |
+| Spectator or public-site presentation | Public UI, selection and privacy | No |
+| Allowlisted Staff visual UI | Focused Staff browser/unit | No |
+| Registration model/UI/test | Registration unit/browser | Depends on protected changes |
+| Scoring and tournament authority | Scoring plus public presentation | **Yes** |
+| Authentication, SQL, server, deployment, CI code, unknown files | Applicable focused checks (if known) | **Yes** |
 
-GitHub's `pull_request.synchronize` **before/after SHAs** are used for
-the *complete incremental push range*, not the entire historical PR and not
-only the newest commit. The classifier fails **closed to full** if either SHA
-is missing, the comparison is ambiguous, the file is not allowlisted, or an
-organizer view edit touches protected action/permissions/registration-source
-calls. PR opening/reopening, pushes to `main`, and explicit
-`workflow_dispatch` always select full. Newer PR updates cancel obsolete
-in-progress workflow runs.
+Targets, pending measurement in actual GitHub runs: under 30 seconds for static selection, and 1–3 minutes for focused browser checks. These are design budgets, not promises.
 
-All UI checks use real Chromium with fictional, intercepted, local PGlite
-data; none connect to hosted Supabase, a real Google Sheet or Cloudflare.
+## Manual full verification
 
-## Release gate — visual-only staging exception with verified baseline
+An owner-authorized operator must explicitly dispatch **Browser regression tests** on the exact feature-branch head with input `approval=APPROVED`. Only a completed **successful** manually dispatched run with all three comprehensive jobs green counts as proof. Afterward, re-run the failed `CI v2 — release-risk gate` check to re-evaluate the immutable SHA evidence, without restarting full regression.
 
-Before a staging deployment, the gate compares the **entire change from the
-currently deployed Staff AND Spectator manifests** to the exact release SHA.
-It permits the already-green focused Chrome UI check only when **all** of
-the following hold:
+The CI selector itself never dispatches tests; there is no fallback that silently turns uncertainty into an automatic full run. Required checks and branch protections must not be removed merely to get a merge through.
 
-1. Both staging sites identify the **same** verified baseline commit.
-2. That live baseline has successfully completed all three full regression jobs.
-3. Every path changed since that baseline is in the conservative
-   `ui-visual` file allowlist (CSS and visual-only browser regression tests);
-   the Git ancestor and file comparison must be provable.
-4. Both the PR's exact-commit **Select safe CI lane** and
-   **Fast UI checks (fictional Chrome)** jobs passed. Failed/pending full
-   checks for the same commit are not ignored.
-5. The normal immutable bundle, preview, security, manifest-hash, promotion
-   and live-verification gates still pass.
+## Staging and production
 
-This is **not** a blanket waiver for app code. UI interaction/JS edits,
-unknown/mixed changes, staging baselines that differ, incomplete history,
-Auth, database, server, scoring and any uncertain condition still require the
-full regression on the exact commit. For protected changes the staging gate
-reuses a full run or starts it once as before. For an eligible visual-only
-change, it does **not** dispatch a second expensive full run; if the focused
-check is missing or fails, deployment stops instead.
+`tools/ops/staging_release.py` still requires its established exact-commit proof, including the historically narrow visual-release exception. It now fails fast when full proof is missing rather than starting another workflow. Missing safety evidence blocks staging, not authorizes it. Nothing in CI v2 approves a hosted migration, release, or production rollout.
 
-Keep PR #19 draft and unmerged unless separately approved.
+## Safe activation boundary
 
-The current targeted test is
-`node --test tests/e2e/gameday_fast_ui_browser.test.mjs` (after
-`cd tests/e2e && npm ci && npx playwright-core install chromium`).
-To run the full workflow on demand, use GitHub Actions → Browser regression
-tests → Run workflow on the intended branch, verify the exact tested SHA,
-and require all three `foundation`, `test` and `Disposable synthetic PostgreSQL` jobs to pass.
+The old comprehensive workflow currently exists on `main` with PR/push triggers. **Do not open a PR for the CI v2 branch until the old workflow is disabled or the owner explicitly approves a safe cutover.** Otherwise GitHub may start exactly the unwanted old full regression. Working on the isolated branch does not trigger that workflow.
 
-## Maintenance rules
+For the **one-time initial PR**, before `ci_v2.py` exists on `main`, the new workflow independently verifies that the cumulative diff contains exactly the nine CI/policy adoption files, then runs only offline CI-v2 and staging-gate unit tests. It does not dispatch comprehensive regression. This narrow bootstrap exception does **not** apply to later PRs; normal trusted-base classification and explicit manual proof take over after adoption. Human PR review and existing branch protections remain necessary.
 
-- Do not broaden the UI allowlist to `server/`, `functions/`,
-  `contracts/`, `supabase/`, `app/session*` or unknown app files.
-- UI code is not automatically safe: changing check-in or registration
-  write calls, source configuration, access decisions or permission checks
-  requires full regression.
-- Maintain `tests/test_ci_impact.py` when editing the classifier.
-- A live Organizer visual review is still required for authenticated
-  layouts before deciding the UI release is accepted.
-- This change affects CI only; it does not modify any app release,
-  staff credentials, real registration records or tournament results.
+Retain existing branch-protection requirements. Validate the new routing with cheap local tests (`python3 -m unittest discover -s tests -p 'test_ci_v2.py' -v`), and staging safety tests (`python3 -m unittest discover -s tests -p 'test_staging_release.py' -v`). Any protected workflow change itself needs review/authorization before activation.
 
-## Verified implementation — October 28, 2026
-
-- CSS-only incremental PR commit `eebabb99cf4d05c6976eca4fd5d14c83b3817ead` triggered [GitHub Actions run 40641184551](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/40641184551): classifier **passed**, focused fictional Chromium UI check **passed**, full application job **skipped**, disposable PostgreSQL job **skipped**. This verifies the fast visual lane in the actual GitHub Actions runner.
-- An earlier exploratory fast-lane attempt failed because a legacy Python Playwright smoke script was invoked without its separate Python dependency; the redundant step was removed, and the corrected lane passed. The focused Node/Chromium fixture remains the browser acceptance gate.
-- Docs-only commit run 40640909104 completed successfully with both heavy jobs skipped; protected routing logic is exercised by `tests/test_ci_impact.py` in every classifier run.
-- The interaction-focused lane is covered by routing unit tests but has **not yet been separately exercised end-to-end** in GitHub Actions. It must still pass before relying on it for a JS UI iteration. A green targeted run does not satisfy the **mandatory full pre-deployment regression**.
-
-
-## Full-regression runtime improvement — 2026-10-28 (proposed CI branch)
-
-The broad application test job is partitioned into two independent jobs, `foundation` (Python browser/security and legacy checks) and `test` (game-day and launch-mode JavaScript/Chromium suites). Both retain their original test commands and execute concurrently with the disposable PostgreSQL job. Node npm downloads use lockfile-keyed setup-node caching. The full release gate now requires **all three** jobs green on the exact release SHA, not merely the previous two. No security or launch test is removed. The first CI run of this workflow change must itself use the full lane and must pass before adoption; runtime improvement remains unverified until then.
-
-## Automatic staging deployment — October 28, 2026
-
-`.github/workflows/deploy-staging.yml` automatically deploys the two **staging** Pages projects after either the proven visual-only exception above or a complete full regression. It never skips the security/integrity checks on the deployed bundles. See [FFTT3_STAGING_PIPELINE.md](launch/FFTT3_STAGING_PIPELINE.md).
+For the historical pre-v2 policy see prior Git history; do not restore it without explicit approval.

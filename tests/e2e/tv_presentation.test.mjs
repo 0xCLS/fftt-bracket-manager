@@ -10,7 +10,7 @@ const host = 'https://tv-fixture.invalid';
 const project = 'https://copmkalfkkrkzheohwuc.supabase.co';
 const types = {'.html':'text/html','.mjs':'text/javascript','.css':'text/css','.webp':'image/webp'};
 async function world(data = fixture(), viewport = {width:1920,height:1080}) {
-  const browser = await chromium.launch({channel:process.env.FFTT_CHROME_CHANNEL || 'chrome'});
+  const browser = await chromium.launch(process.env.FFTT_CHROME_CHANNEL === 'none' ? {} : {channel:process.env.FFTT_CHROME_CHANNEL || 'chrome'});
   const context = await browser.newContext({viewport});
   const page = await context.newPage();
   const requests = []; let mode = 'ok';

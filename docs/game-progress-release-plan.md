@@ -1,5 +1,5 @@
 # FFTT Game-by-game scoring — security review and release/rollback plan
-**Status:** DRAFT — November 7, 2026. No production database changes, deployment, or real-event write is authorized by this PR.
+**Status:** DRAFT — November 7, 2026. V6 is unapplied. The connected `fftt-bracket-manager-dev` contains two real-mode events, despite a historical synthetic baseline label: protect it as live until deployed-config identity is confirmed. No hosted schema change, deployment, or real-event write is authorized by this PR.
 
 ## What changes and what never changes
 The only match authority remains `fftt_submit_match_result_v2` → `fftt_private.submit_match_result_v1`. Interim saving does not modify `matches.status`, `winner_id`, `game_scores`, `match_version`, next-match slots, consolation eligibility, bracket status, or tournament lifecycle. The V6 trigger rejects an official gameplay result that contradicts any persisted completed-game sequence. Existing forfeit `W/O` remains organizer-authorized.
