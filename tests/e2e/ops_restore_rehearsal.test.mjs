@@ -10,6 +10,7 @@ import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {setupEvent, buildChampionship, playAllPlayable, buildConsolation, roster} from './helpers.mjs';
 import {createLocalDb, SQL_FILES} from './localdb.mjs';
+import {APPLIED_PRE_V6_LAYERS} from '../../tools/ops/restore_verify_helpers.mjs';
 import {seedSlots, enginePlayers} from '../../contracts/gameday_engine.mjs';
 
 const TABLES = ['audit_events', 'brackets', 'consolation_reviews', 'deleted_events', 'doubles_finale', 'event_staff', 'events', 'matches',
@@ -64,6 +65,8 @@ test('a private pre-V6 real-mode backup is verified unchanged before and after t
   });
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fftt-v6-backup-'));
   try {
+    for (const layer of APPLIED_PRE_V6_LAYERS)
+      await db.db.exec(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..', layer), 'utf8'));
     const org = await db.addUser('organizer-v6-backup@fftt-staging.invalid', {platformOrganizer: true});
     const ev = await db.rpc(org, 'fftt_create_event_v3',
       {p_name:'Fictional V6 restore rehearsal', p_date:'2026-11-22', p_table_count:2});
@@ -109,4 +112,28 @@ test('a private pre-V6 real-mode backup is verified unchanged before and after t
     await db.db.close();
     fs.rmSync(dir,{recursive:true,force:true});
   }
+});
+
+test('the offline pre-V6 clone reproduces Nov 7 hosted catalog fingerprints (metadata only)', {timeout:240000}, async () => {
+  const db = await createLocalDb({
+    sqlFiles: SQL_FILES.filter(f => !f.endsWith('/GAMEDAY_V6_GAME_PROGRESS_DO_NOT_APPLY.sql')),
+    upgraded:true,
+  });
+  try {
+    const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+    for (const layer of APPLIED_PRE_V6_LAYERS)
+      await db.db.exec(fs.readFileSync(path.join(root,layer), 'utf8'));
+    const actual=Object.fromEntries((await db.admin(
+      fs.readFileSync(path.join(root,'tools/ops/schema_fingerprint.sql'),'utf8')
+    )).map(r=>[r.kind,r.n+':'+r.fingerprint]));
+    const hosted={
+      column:'151:df735ac6847db1eb884dc34bea642c69',
+      constraint:'90:d3ed208a07acd25de71f56adf6c249e1',
+      function:'106:a4ca89f0d56aaeb20d6b58074996699a',
+      rls:'15:dd2d0917dbf6a868fe727c1a26db5b07',
+      trigger:'5:bcc594f6c3aa032a17f5baa91166e6f0',
+      view:'2:0af5911ec4d090918f71f4a4e02ac8b3',
+    };
+    assert.deepEqual(actual,hosted,'offline catalog differs from Nov 7 live metadata (no user data fetched)');
+  } finally {await db.db.close();}
 });

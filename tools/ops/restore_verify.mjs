@@ -50,17 +50,32 @@ const fingerprint = async (db, table) => {
 const fingerprintAll = async db => Object.fromEntries(await Promise.all(Object.keys(doc.tables).map(async t => [t, await fingerprint(db, t)])));
 const schemaFp = async db => Object.fromEntries((await db.admin(fs.readFileSync(path.join(ROOT, 'tools/ops/schema_fingerprint.sql'), 'utf8'))).map(r => [r.kind, `${r.n}:${r.fingerprint}`]));
 
+import {APPLIED_PRE_V6_LAYERS} from './restore_verify_helpers.mjs';
+
 // An owner-held pre-V6 backup must first verify against a pre-V6 *real-mode* schema.
 // Never silently normalize the source fingerprint against already-added V6 columns.
 const preV6SqlFiles = SQL_FILES.filter(f => !f.endsWith('/GAMEDAY_V6_GAME_PROGRESS_DO_NOT_APPLY.sql'));
 const db = await createLocalDb(v6Preflight ? {sqlFiles: preV6SqlFiles, upgraded: true} : {});
 try {
+  if (v6Preflight) {
+    // These three changes already exist on the hosted project. Their known SQL
+    // must be present in the disposable clone before exact catalog comparison.
+    for (const layer of APPLIED_PRE_V6_LAYERS)
+      await db.db.exec(fs.readFileSync(path.join(ROOT,layer),'utf8'));
+    // The private registration proof secret is intentionally NOT recreated.
+    const [gate] = await db.admin('select count(*)::int n from fftt_private.registration_gate');
+    check(gate.n === 0,'registration proof secret remains excluded from the clone');
+  }
   const baseSchema = await schemaFp(db);
   if (doc.schema_fingerprint) {
     const kinds = Object.keys(baseSchema).sort(), expected = Object.keys(doc.schema_fingerprint).sort();
     if (JSON.stringify(kinds) !== JSON.stringify(expected) ||
-        kinds.some(k => doc.schema_fingerprint[k] !== baseSchema[k]))
+        kinds.some(k => doc.schema_fingerprint[k] !== baseSchema[k])) {
+      const changed = kinds.filter(k => doc.schema_fingerprint[k] !== baseSchema[k]);
+      // Only schema categories are logged. No private data, function bodies or secrets.
+      console.log('FAIL  schema parity differs in categories: ' + changed.join(', '));
       throw new Error('hosted schema differs from verified disposable baseline; release blocked');
+    }
     check(true,'hosted schema fingerprint matches disposable pre-V6 baseline');
   }
   await db.admin('begin');

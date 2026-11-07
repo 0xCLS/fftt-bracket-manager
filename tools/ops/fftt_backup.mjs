@@ -196,17 +196,48 @@ export async function createBackup({token,fetchImpl=fetch,backupDir,mirrorDir,
   if (!report.mirrored) printer('Off-device mirror unverified. Configure FFTT_BACKUP_MIRROR_DIR for release readiness.');
   return report;
 }
+function reverifySavedBackup(input) {
+  const file=expand(input);
+  check(fs.existsSync(file) && fs.lstatSync(file).isFile() && !fs.lstatSync(file).isSymbolicLink(),
+    'Existing backup file is missing or is a symlink');
+  check(!(fs.lstatSync(file).mode&0o077),'Existing backup must be private (mode 600)');
+  secureDir(path.dirname(file));
+  check(file.endsWith('.json') && !file.endsWith('.report.json'),'Expected FFTT private JSON backup path');
+  const reportFile=file.slice(0,-5)+'.report.json';
+  check(fs.existsSync(reportFile) && fs.lstatSync(reportFile).isFile() &&
+    !fs.lstatSync(reportFile).isSymbolicLink(),'Original private verification report not found');
+  const bytes=fs.readFileSync(file);
+  let report;
+  try {report=JSON.parse(fs.readFileSync(reportFile,'utf8')); }
+  catch {throw new Error('Existing report is unreadable');}
+  check(report.format==='fftt-private-backup-report-v1' && report.project===PROJECT_REF &&
+    report.backup===file && report.sha256===sha256(bytes),'Backup hash or original report mismatch');
+  verifyLocal(file);
+  // Keep the original report as the chain of evidence. Write an independent
+  // new proof using a timestamp rather than pretending earlier verification passed.
+  const proof=file.slice(0,-5)+'.reverified-'+new Date().toISOString().replace(/[:.]/g,'-')+'.report.json';
+  save(proof,JSON.stringify({...report,verified:true,mirrored:false,
+    verification_time:new Date().toISOString(),result:'LOCAL_VERIFIED',
+    previous_result:report.result,verification_mode:'disposable-v6-preflight'},null,2)+'\n');
+  console.log('FFTT BACKUP: LOCAL_VERIFIED (existing private file)');
+  console.log('SHA-256: '+report.sha256);
+  console.log('Verification report: '+proof);
+  console.log('Off-device mirror remains unverified.');
+}
 async function main(args=process.argv.slice(2)) {
   if(args.length===1&&args[0]==='--help') {
-    console.log('Usage: ./tools/ops/fftt-backup [--setup | --mirror-dir /private/path]');
+    console.log('Usage: ./tools/ops/fftt-backup [--setup | --verify-existing /private/backup.json | --mirror-dir /private/path]');
     return;
   }
   if(args.length===1&&args[0]==='--setup') {
     setupToken();console.log('Read-only token stored in Mac Keychain');return;
   }
+  if(args.length===2 && args[0]==='--verify-existing') {
+    reverifySavedBackup(args[1]);return;
+  }
   const idx=args.indexOf('--mirror-dir');
   check((idx<0&&args.length===0)||(idx===0&&args.length===2),
-    'Expected no arguments, --setup, or --mirror-dir /private/path');
+    'Expected no arguments, --setup, --verify-existing /private/file.json, or --mirror-dir /private/path');
   await createBackup({token:readToken(),mirrorDir:idx<0?(process.env.FFTT_BACKUP_MIRROR_DIR||null):args[1]});
 }
 // Node resolves a symlinked entry file to its real location on macOS,
