@@ -432,6 +432,7 @@ export function createStaffUi({core, els, config, signOut}) {
     const canAdjudicate = org || isBracketManager();
     const children = [];
     if (s.pending) children.push(pendingBanner());
+    if (s.gamePending) children.push(pendingGameBanner());
     if (s.deskStatus === 'not-active') children.push(h('div', {class: 'notice warn', text: s.brief?.lifecycle === 'complete'
       ? 'Event complete. New scoring and table assignments are closed; contact the organizer if a recorded result needs correction.'
       : 'No bracket is active yet. The organizer builds it from the Championship tab.'}));
@@ -497,6 +498,25 @@ export function createStaffUi({core, els, config, signOut}) {
         h('button', {class: 'primary small', type: 'button', text: 'Check what the server recorded', disabled: s.busy, on: {click: async () => { const r = await core.checkPendingScore(); toast(r.message, r.ok ? '' : 'bad'); render(true); }}}),
         h('button', {class: 'small', type: 'button', text: 'I verified it — dismiss', on: {click: async () => {
           if (await confirmDialog('Dismiss this notice?', 'Only dismiss this after the organizer has checked the server result and paper record. If recorded, do not enter it again. If absent, ask the organizer before a fresh submission.', 'Dismiss')) core.dismissPendingScore(); }}})));
+  }
+
+  function pendingGameBanner() {
+    const p = s.gamePending;
+    return h('div', {class: 'notice warn', role: 'alert'},
+      h('b', {text: `Game ${p.gameIndex} · Unconfirmed save. `}),
+      'Do not reenter or resend this game until its server receipt is checked.',
+      h('div', {class: 'row'},
+        h('button', {type: 'button', class: 'primary small', disabled: s.busy,
+          text: 'Check saved-game receipt', on: {click: async () => {
+            const r = await core.checkPendingGame();
+            toast(r.message, r.ok ? '' : 'bad'); render(true);
+          }}}),
+        h('button', {type: 'button', class: 'small', disabled: s.busy,
+          text: 'Organizer verified · dismiss', on: {click: async () => {
+            if (await confirmDialog('Dismiss an unconfirmed game?',
+              'Ask the organizer to verify the official server record and paper scorecard first. An old request may still arrive. Never resend an uncertain score. The server checks the progress revision.',
+              'Dismiss')) core.dismissPendingGame();
+          }}})));
   }
 
   function openFormatDialog(row) {
@@ -571,6 +591,8 @@ export function createStaffUi({core, els, config, signOut}) {
         rememberFields();
         if (!tableSel.value) { status('Choose an available table before recording this game.', 'bad'); return; }
         const [a,b] = draftGames[index - 1].map(Number);
+        const correction = index <= verified.games.length;
+        const reason = correction ? (dlg.querySelector('#gameCorrectionReason')?.value ?? '') : null;
         if (draftGames[index - 1].some(v => !/^\\d{1,2}$/.test(v.trim()))) {
           status('Enter both completed-game scores, using whole numbers.', 'bad'); return;
         }
@@ -584,8 +606,6 @@ export function createStaffUi({core, els, config, signOut}) {
             active = core.state.desk.find(m => m.matchId === row.matchId);
           }
           if (!active) { status('The match changed. Reopen it.', 'bad'); return; }
-          const correction = index <= verified.games.length;
-          const reason = correction ? (dlg.querySelector('#gameCorrectionReason')?.value ?? '') : null;
           const r = await core.saveCompletedGame({matchId: row.matchId, snapshot: verified,
             gameIndex: index, player1Score: a, player2Score: b, reason});
           if (r.ok) {
@@ -598,7 +618,7 @@ export function createStaffUi({core, els, config, signOut}) {
         } finally {
           busyGame = false;
           // Do not rebuild the form after an uncertain send; preserve its warning and input values.
-          if (verified && !core.state.gamePending && !dlg.querySelector('.score-game-actions button:not([disabled])')) form();
+          if (verified && dlg.isConnected) form();
         }
       }
       function form() {
