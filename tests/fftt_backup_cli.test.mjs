@@ -6,7 +6,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {normalizeExport,normalizeSchema,readOnlyQuery,createBackup,readToken,verifyPrivateInventory,
+import {normalizeExport,normalizeSchema,readOnlyQuery,createBackup,readToken,verifyPrivateInventory,reverifySavedBackup,
   PROJECT_REF,TABLES} from '../tools/ops/fftt_backup.mjs';
 
 const md5=s=>crypto.createHash('md5').update(s).digest('hex');
@@ -109,4 +109,41 @@ test('CLI entrypoint runs through a symlinked temporary worktree path, not silen
     assert.equal(res.status,0, 'CLI exit: '+res.stderr);
     assert.match(res.stdout,/Usage: \.\/tools\/ops\/fftt-backup/);
   } finally {fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('reverifying a saved failed export keeps original bytes and failure record, with no new API calls', async()=>{
+  const parent=fs.mkdtempSync(path.join(os.tmpdir(),'fftt-reverify-'));
+  let calls=0;
+  const api=async()=>response(++calls===1?rows():calls===2?schema():inventory());
+  try {
+    await assert.rejects(createBackup({
+      token:'synthetic-test-token',fetchImpl:api,backupDir:path.join(parent,'backups'),
+      verify:async()=>{throw Error('fictional first proof rejected');},printer:()=>{}
+    }),/NOT VERIFIED/);
+    const folder=path.join(parent,'backups');
+    const filename=fs.readdirSync(folder).find(name=>name.endsWith('.json') && !name.endsWith('.report.json'));
+    const file=path.join(folder,filename);
+    const reportFile=file.slice(0,-5)+'.report.json';
+    const raw=fs.readFileSync(file);
+    const before=fs.readFileSync(reportFile);
+    let checked=0;
+    const proof=reverifySavedBackup(file,{
+      verify:input=>{checked++;assert.equal(input,file);},
+      now:new Date('2026-11-07T22:03:00Z'),printer:()=>{}
+    });
+    const outcome=JSON.parse(fs.readFileSync(proof,'utf8'));
+    assert.equal(calls,3,'no new Supabase query during reverify');
+    assert.equal(checked,1);
+    assert.equal(outcome.result,'LOCAL_VERIFIED');
+    assert.equal(outcome.previous_result,'VERIFICATION_FAILED');
+    assert.equal(outcome.mirrored,false);
+    assert.equal(outcome.sha256,crypto.createHash('sha256').update(raw).digest('hex'));
+    assert.deepEqual(fs.readFileSync(file),raw,'original private export preserved byte-for-byte');
+    assert.deepEqual(fs.readFileSync(reportFile),before,'original FAIL report preserved');
+    assert.equal(fs.statSync(proof).mode&0o777,0o600);
+    fs.appendFileSync(file,'corrupt');
+    assert.throws(()=>reverifySavedBackup(file,{verify:()=>{throw Error('should not run');},printer:()=>{}}),
+      /hash or original report mismatch/);
+    assert.equal(calls,3,'tampering must not contact hosted services');
+  } finally {fs.rmSync(parent,{recursive:true,force:true});}
 });

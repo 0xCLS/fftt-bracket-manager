@@ -203,7 +203,7 @@ export async function createBackup({token,fetchImpl=fetch,backupDir,mirrorDir,
   if (!report.mirrored) printer('Off-device mirror unverified. Configure FFTT_BACKUP_MIRROR_DIR for release readiness.');
   return report;
 }
-function reverifySavedBackup(input) {
+export function reverifySavedBackup(input,{verify=verifyLocal,printer=console.log,now=new Date()}={}) {
   const file=expand(input);
   check(fs.existsSync(file) && fs.lstatSync(file).isFile() && !fs.lstatSync(file).isSymbolicLink(),
     'Existing backup file is missing or is a symlink');
@@ -219,17 +219,18 @@ function reverifySavedBackup(input) {
   catch {throw new Error('Existing report is unreadable');}
   check(report.format==='fftt-private-backup-report-v1' && report.project===PROJECT_REF &&
     report.backup===file && report.sha256===sha256(bytes),'Backup hash or original report mismatch');
-  verifyLocal(file);
+  verify(file);
   // Keep the original report as the chain of evidence. Write an independent
   // new proof using a timestamp rather than pretending earlier verification passed.
-  const proof=file.slice(0,-5)+'.reverified-'+new Date().toISOString().replace(/[:.]/g,'-')+'.report.json';
+  const proof=file.slice(0,-5)+'.reverified-'+now.toISOString().replace(/[:.]/g,'-')+'.report.json';
   save(proof,JSON.stringify({...report,verified:true,mirrored:false,
-    verification_time:new Date().toISOString(),result:'LOCAL_VERIFIED',
+    verification_time:now.toISOString(),result:'LOCAL_VERIFIED',
     previous_result:report.result,verification_mode:'disposable-v6-preflight'},null,2)+'\n');
-  console.log('FFTT BACKUP: LOCAL_VERIFIED (existing private file)');
-  console.log('SHA-256: '+report.sha256);
-  console.log('Verification report: '+proof);
-  console.log('Off-device mirror remains unverified.');
+  printer('FFTT BACKUP: LOCAL_VERIFIED (existing private file)');
+  printer('SHA-256: '+report.sha256);
+  printer('Verification report: '+proof);
+  printer('Off-device mirror remains unverified.');
+  return proof;
 }
 async function main(args=process.argv.slice(2)) {
   if(args.length===1&&args[0]==='--help') {
