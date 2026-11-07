@@ -54,6 +54,7 @@ test('TV modes, scores, controls, rotation and read-only public requests', {time
     assert.match(await text(page),/2–1/); assert.match(await text(page),/G1 11–7.*G2 8–11.*G3 11–9/);
     await page.keyboard.press('3'); assert.equal(await label(page),'CHAMPIONSHIP BRACKET'); assert.ok(await page.locator('.bracket-connectors path').count() > 0); assert.ok(await page.locator('.bracket-state', {hasText:'COMPLETED'}).count() > 0); assert.equal(await page.locator('.bracket-state', {hasText:'FINAL'}).count(),0);
     await page.keyboard.press('4'); assert.equal(await label(page),'CONSOLATION BRACKET'); assert.equal(await page.locator('.single-match .bracket-match').count(),1);
+    assert.ok((await page.locator('.single-match .bracket-match').boundingBox()).height >= 300, 'single-match bracket uses a readable featured-card layout');
     await page.keyboard.press('ArrowLeft'); assert.equal(await label(page),'CHAMPIONSHIP BRACKET');
     await page.keyboard.press('Space'); await page.clock.fastForward(35000); assert.equal(await label(page),'CHAMPIONSHIP BRACKET');
     await page.keyboard.press('1'); await page.keyboard.press('Space'); await page.clock.fastForward(30000); assert.equal(await label(page),'COMPLETED RESULTS');
