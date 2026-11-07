@@ -1,0 +1,35 @@
+# FFTT Game-by-game scoring — security review and release/rollback plan
+**Status:** DRAFT — November 7, 2026. No production database changes, deployment, or real-event write is authorized by this PR.
+
+## What changes and what never changes
+The only match authority remains `fftt_submit_match_result_v2` → `fftt_private.submit_match_result_v1`. Interim saving does not modify `matches.status`, `winner_id`, `game_scores`, `match_version`, next-match slots, consolation eligibility, bracket status, or tournament lifecycle. The V6 trigger rejects an official gameplay result that contradicts any persisted completed-game sequence. Existing forfeit `W/O` remains organizer-authorized.
+
+The V6 proposal **adds** `matches.game_progress_epoch`, private tables `match_game_progress` and `game_progress_decisions`, event-scoped RLS-denied RPC wrappers, two match triggers, one event publish trigger, a public nullable `game_progress` field, and an allowlisted `fftt_public_tournament_v1` extension. Audit additions: `game_saved`, `game_corrected`. No existing historical scores are rewritten. Historical Best-of-five is read using existing V4 fallback.
+
+## API
+- Authenticated `fftt_game_progress_v1(event_id,match_id)`: returns current match generation/version/epoch, effective format, progress revision, verified ordered score pairs, last update and event revision; server proves staff role and event scope.
+- Authenticated `fftt_save_completed_game_v1(...)`: one completed game at a time, input score is ordered player 1 then player 2. Requires active bracket, assigned table, both players, expected generation/version/epoch/format/progress revision, valid deuce rules, server-side event lock. Organizer-only edits to previously saved games require an audit reason 10–500 characters; all existing following games must remain valid. Unique actor-scoped submission IDs produce durable, fingerprinted receipts. Stale writes are terminal rejected, never overwrite another score.
+- Authenticated `fftt_game_progress_decision_v1(event_id,submission_id)`: actor's own terminal receipt or `unconfirmed`. No automatic retry when a response is missing. Client keeps a local incident marker pending manual verification.
+- Anonymous `fftt_public_tournament_v1`: **only** when event publication is on. Each pending match has null (no game saved), or JSON `{games,version,epoch,updated_at}`; final matches have null and official final scores. No private/internal player IDs, ratings, contacts, permissions, actor IDs or submission IDs. The optional nullable field preserves old consumer compatibility.
+
+## Preconditions — do not skip
+1. Get explicit production migration + release authorization separately, *after* draft PR has passed full CI and owner acceptance. PR approval alone does not authorize SQL application or deployment.
+2. Pin the exact approved main SHA and verify PR #58's merged TV baseline. Inspect production schema migration history (V2–V5, real-mode upgrade, later migrations), RLS/grants/triggers, current public view, restoration commands, and `fftt_private.matches` counts. Resolve deviations before any DDL.
+3. Preserve immutable snapshots of database definitions (schema including functions, grants, policies and triggers), verify a restorable data backup and test restore to **disposable** PostgreSQL. Supabase Free does not imply automated backups; do not proceed without a verified owner-approved recovery path. Maintain non-sensitive counts only in the review evidence.
+4. Test first with a fictional event, never existing FFTT3 records; two different Scorekeepers, organizer correction, Bo1/Bo3, historical Bo5, stale format/epoch, revoked access, invalid score, unknown network outcome, duplicate ID, two simultaneous saves, final atomic progression, unpublished event, public field allowlist and Spectator/TV regression.
+5. Run the SQL only on an explicitly approved target with psql `ON_ERROR_STOP=1`, in a transaction (file itself begins and commits); do not link local tooling to production or substitute another environment. Test direct PostgREST RPC and real Auth after migration.
+6. Deploy Staff and public TV/Spectator *only after* the matching schema passes. Old clients continue to read the previously supported public fields; publishing of the optional field requires matching client validation. Verify public cache refresh and expiry/staleness; no credentials in public bundles.
+
+## Rollout verification
+For each synthetic save, check exact receipt and progress version, current games-won, event revision, public projection when visible, and no bracket/eligibility/result mutation. Final accepted result should supersede interim game cache atomically. Audit the recorded actor and correction reason privately. Reject cross-event/unauthorized reads and wrong-score final attempts. Confirm that player names are only those already published for that event. Run full browser, database, auth, concurrent HTTP and privacy tests.
+
+## Non-destructive rollback and incident response
+**Preferred immediate rollback** if scoring or public projection malfunctions: disable the new Staff save-game UI and TV progress rendering with the previous approved app release; public readers remain compatible because the new field is nullable and optional. Revoke the new authenticated **save RPC** execute grant as a separately reviewed emergency database operation; leave existing match result guard enabled so a final cannot contradict saved games. Stop further saves, keep immutable receipts and audit, and use the existing authorized final result workflow with organizer reconciliation of all affected matches. Do not drop interim tables, reset game revisions or match epochs, delete audit events, or alter completed results. Keep the enhanced public projection until a separately reviewed additive view-compatible rollback is authorized; removing a view column with `CREATE OR REPLACE VIEW` is not supported in-place.
+
+For a *full schema rollback*, first certify every affected match is reconciled and preserved in an authorized export, stop writers and public readers, independently restore the saved pre-migration view and exact privileges/policies, and test a fresh clean restore. Dropping the new column/tables/triggers is destructive and is expressly **not authorized** by this plan. No automatic schema rollback is scripted. Resume only after a reviewed forward fix or explicitly approved restoration.
+
+## Preflight SQL checks (disposable environment only)
+Run `tests/gameday_v6_disposable.sql` after the V6 proposal on fresh local PostgreSQL and the new `tests/e2e/gameday_v6_game_progress.test.mjs` suite in PGlite. Confirm `anon` cannot execute staff RPCs, neither `anon` nor `authenticated` can directly read or write the private tables, the public view references only allowed names and scores, and all atomicity triggers are present.
+
+## Pending release gate
+This branch can be reviewed and tested but **must remain draft/unmerged** until full CI, server/TV browser verification, production compatibility and backup/restore review, and explicit deployment/migration permission.
