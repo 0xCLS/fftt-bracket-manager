@@ -440,3 +440,4 @@ footer .control-hint{font-size:clamp(11px,.74vw,14px)}
 /* Demo label shares the date line so the premium header keeps its height (no clipping at the top edge on TVs). */
 .event-date:has(+ .tv-demo:not([hidden])){display:inline-block;vertical-align:middle}
 .tv-demo:not([hidden]){margin:-.2em 0 -.2em .9em;padding:.14em .5em;line-height:1.2;vertical-align:middle}
+.brand:has(.tv-demo:not([hidden])) h1{margin:.1em 0}
