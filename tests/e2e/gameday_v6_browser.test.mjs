@@ -11,7 +11,11 @@ const nextSaved=async (dlg, number, scores, tally) => {
   await input.nth((number-1)*2).fill(String(scores[0]));
   await input.nth((number-1)*2+1).fill(String(scores[1]));
   await dlg.locator('button',{hasText:`Save Game ${number}`}).click();
-  await dlg.locator('.game-step',{hasText:new RegExp(`Game ${number} · ${scores[0]}–${scores[1]} · Saved`)}).waitFor({timeout:TIMEOUT});
+  try {
+    await dlg.locator('.game-step',{hasText:new RegExp(`Game ${number} · ${scores[0]}–${scores[1]} · Saved`)}).waitFor({timeout:12000});
+  } catch (error) {
+    throw new Error(`Save Game ${number} lacked verified Saved state: ${(await dlg.innerText()).slice(0,2500)}`,{cause:error});
+  }
   await dlg.locator('.game-tally',{hasText:`Games won · ${tally}`}).waitFor({timeout:TIMEOUT});
 };
 
