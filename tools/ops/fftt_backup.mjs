@@ -22,7 +22,8 @@ const check = (ok,message) => { if (!ok) throw new Error(message); };
 
 export function normalizeExport(rows, project=PROJECT_REF, now=new Date()) {
   check(project === PROJECT_REF,'Refusing backup from an unknown project');
-  check(Array.isArray(rows),'Invalid read-only API result');
+  check(Array.isArray(rows) && rows.length === TABLES.length,
+    'Incomplete export: all 15 table groups are required, even if empty');
   const seen = new Map();
   for (const row of rows) {
     check(row && TABLES.includes(row.tbl) && !seen.has(row.tbl),'Unexpected or duplicate table');

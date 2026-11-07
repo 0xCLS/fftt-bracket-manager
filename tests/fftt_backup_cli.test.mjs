@@ -8,10 +8,11 @@ import {normalizeExport,normalizeSchema,readOnlyQuery,createBackup,readToken,
   PROJECT_REF,TABLES} from '../tools/ops/fftt_backup.mjs';
 
 const md5=s=>crypto.createHash('md5').update(s).digest('hex');
-const rows=()=>[
-  {tbl:'events',n:1,fp:md5('fictional-event'),data:JSON.stringify([{id:'fictional-uuid',public_visible:true}])},
-  {tbl:'platform_organizers',n:1,fp:md5('fictional-organizer'),data:JSON.stringify([{user_id:'fictional-uuid'}])}
-];
+const rows=()=>TABLES.map(tbl=>tbl==='events'?
+  {tbl,n:1,fp:md5('fictional-event'),data:JSON.stringify([{id:'fictional-uuid',public_visible:true}])}:
+  tbl==='platform_organizers'?
+  {tbl,n:1,fp:md5('fictional-organizer'),data:JSON.stringify([{user_id:'fictional-uuid'}])}:
+  {tbl,n:0,fp:md5(''),data:'[]'});
 const schema=()=>['column','constraint','function','rls','trigger','view']
   .map((kind,i)=>({kind,n:i+1,fingerprint:md5(kind)}));
 const response=(data,status=201)=>({ok:status===201,status,json:async()=>data});
@@ -25,18 +26,18 @@ test('builds a complete backup with 15 tables, including empty tables and publis
   assert.equal(Object.keys(normalizeSchema(schema())).length,6);
 });
 test('wrong project, incomplete content, and bad schema metadata fail closed',()=>{
-  assert.throws(()=>normalizeExport([]),/No events/);
+  assert.throws(()=>normalizeExport([]),/Incomplete export/);
   assert.throws(()=>normalizeExport(rows(),'another-project'),/unknown project/);
-  assert.throws(()=>normalizeExport([...rows(),rows()[0]]),/duplicate/);
-  assert.throws(()=>normalizeExport([{...rows()[0],n:2},rows()[1]]),/Incomplete/);
-  assert.throws(()=>normalizeExport([{...rows()[0],data:'not-json'},rows()[1]]),/Malformed table JSON/);
+  assert.throws(()=>normalizeExport([...rows(),rows()[0]]),/Incomplete export/);
+  assert.throws(()=>normalizeExport(rows().map((r,i)=>i===0?{...r,n:2}:r)),/Incomplete/);
+  assert.throws(()=>normalizeExport(rows().map((r,i)=>i===0?{...r,data:'not-json'}:r)),/Malformed table JSON/);
   assert.throws(()=>normalizeSchema(schema().slice(1)),/Incomplete/);
 });
 test('only calls the dedicated read-only SQL API and never exposes response details',async()=>{
   const calls=[];
   const mock=async (url,opts)=>{calls.push([url,opts]);return response(rows());};
   const sql='select many required records from fftt_private.events';
-  assert.equal((await readOnlyQuery(sql,'fictional-testing-token',{fetchImpl:mock})).length,2);
+  assert.equal((await readOnlyQuery(sql,'fictional-testing-token',{fetchImpl:mock})).length,15);
   assert.equal(calls[0][1].method,'POST');
   assert.match(calls[0][0],/\/database\/query\/read-only$/);
   assert.deepEqual(JSON.parse(calls[0][1].body),{query:sql});

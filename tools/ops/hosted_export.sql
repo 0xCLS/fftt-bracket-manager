@@ -2,7 +2,7 @@
 -- table plus the Auth identities the staff grants point to (id, email, created_at only; never password hashes or tokens) and returns
 -- one row per table: row count, an md5 fingerprint and the rows as JSON. Save the result to a PRIVATE location outside GitHub
 -- (see docs/launch/FFTT3_BACKUP_RECOVERY.md), then prove it with: node tools/ops/restore_verify.mjs <file> --rehearse
--- Tables with no rows return no row; the restore tool treats a missing table as empty.
+-- Every expected table returns exactly one group, including empty tables. Missing groups are an error.
 with t as (
   select 'audit_events' as tbl, to_jsonb(x) as j from fftt_private.audit_events x
   union all select 'brackets', to_jsonb(x) from fftt_private.brackets x
@@ -23,5 +23,15 @@ with t as (
     where u.id in (select user_id from fftt_private.event_staff union select user_id from fftt_private.platform_organizers
                    union select created_by from fftt_private.events where created_by is not null)
 )
-select tbl, count(*) as n, md5(coalesce(jsonb_agg(j order by j::text)::text, '')) as fp, coalesce(jsonb_agg(j order by j::text)::text, '[]') as data
-from t group by 1 order by 1;
+ , grouped as (
+  select tbl, count(*) as n, md5(coalesce(jsonb_agg(j order by j::text)::text, '')) as fp,
+         coalesce(jsonb_agg(j order by j::text)::text, '[]') as data
+  from t group by 1
+), expected(tbl) as (values
+  ('audit_events'),('brackets'),('consolation_reviews'),('deleted_events'),('doubles_finale'),
+  ('event_staff'),('events'),('matches'),('platform_organizers'),('players'),
+  ('registration_links'),('registration_sources'),('result_submissions'),('score_decisions_v2'),('auth_users')
+)
+select expected.tbl, coalesce(grouped.n,0) as n, coalesce(grouped.fp,md5('')) as fp,
+       coalesce(grouped.data,'[]') as data
+from expected left join grouped on grouped.tbl=expected.tbl order by expected.tbl;
