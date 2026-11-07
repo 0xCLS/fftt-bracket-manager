@@ -42,6 +42,7 @@ async function fits(page) {
 test('TV modes, scores, controls, rotation and read-only public requests', {timeout:60000}, async () => {
   const w=await world(); const {page}=w;
   try {
+    assert.equal(await page.locator('#demoBadge').isHidden(),true);
     assert.equal(await page.locator('.table-card.active').count(),2);
     assert.match(await page.locator('.table-card.active').first().innerText(), /Best of 3 · to 11/);
     assert.equal(await page.locator('.next-card').count(),4);
@@ -115,4 +116,45 @@ test('TV displays only completed verified games, 1–0 or 1–1 progress, stale 
     assert.equal(await page.locator('#live').innerText(),'NO CURRENT DATA');
     assert.doesNotMatch(await text(page),/CONFIRMED GAMES WON/);
   }finally{await w.close();}
+});
+
+test('fictional showcase is clearly identified on both public views', {timeout:60000}, async () => {
+  const f=fixture(); f[0].event_id='9c25613c-6543-4d6c-84cf-97ba49017509';
+  const w=await world(f,{width:1280,height:720}); const {page}=w;
+  try {
+    assert.match(await page.locator('#demoBadge').innerText(),/FICTIONAL TOURNAMENT/);
+    assert.equal(await page.locator('#live').innerText(),'DEMO DATA');
+    assert.match(await page.locator('main').innerText(),/Sample Matches/);
+    assert.doesNotMatch(await page.locator('.table-grid').innerText(),/NOW PLAYING/);
+    assert.deepEqual(await fits(page), []);
+    await page.keyboard.press('3'); assert.match(await page.locator('main').innerText(),/SAMPLE MATCH/);
+    assert.equal(await page.locator('#demoBadge').isVisible(),true);
+    await page.goto(`${host}/app/spectator.html?e=${f[0].event_id}`);
+    await page.locator('#live', {hasText:'Demo data'}).waitFor();
+    assert.match(await page.locator('#demoBadge').innerText(),/Players and results are invented/);
+    assert.match(await page.locator('main').innerText(),/Sample matches/);
+  } finally {await w.close();}
+});
+
+test('real event wins by default and explicit showcase selection updates both public views', {timeout:60000}, async () => {
+  const f=fixture(), demo=structuredClone(f[0]);
+  demo.event_id='9c25613c-6543-4d6c-84cf-97ba49017509'; demo.event_name='Fictional Demo'; demo.updated_at='2029-01-01T00:00:00Z';
+  f[0].event_name='Real Event'; f[0].status='complete'; f.push(demo);
+  const w=await world(f,{width:1280,height:720}); const {page}=w;
+  try {
+    assert.equal(await page.locator('#evName').innerText(),'Real Event');
+    assert.equal(await page.locator('#demoBadge').isHidden(),true);
+    await page.goto(`${host}/app/tv.html?e=${demo.event_id}`); await page.locator('#live',{hasText:'DEMO DATA'}).waitFor();
+    assert.equal(await page.locator('#evName').innerText(),'Fictional Demo');
+    const bounds = await page.evaluate(() => {const h=document.querySelector('.tv-header').getBoundingClientRect(), b=document.querySelector('#demoBadge').getBoundingClientRect(); return b.top>=h.top && b.bottom<=h.bottom && b.right<=innerWidth;});
+    assert.equal(bounds,true,'demo label remains within the TV header');
+    await page.goto(`${host}/app/spectator.html`); await page.locator('#live',{hasText:'Live'}).waitFor();
+    assert.equal(await page.locator('#evName').innerText(),'Real Event');
+    await page.locator('#evPick').selectOption(demo.event_id);
+    assert.equal(await page.locator('#live').innerText(),'Demo data'); assert.equal(await page.locator('#demoBadge').isVisible(),true);
+    await page.locator('#evPick').selectOption(f[0].event_id);
+    assert.equal(await page.locator('#live').innerText(),'Live'); assert.equal(await page.locator('#demoBadge').isHidden(),true);
+    await page.goto(`${host}/app/tv.html?e=missing`); await page.locator('#live',{hasText:'NO CURRENT DATA'}).waitFor();
+    assert.doesNotMatch(await page.locator('body').innerText(),/Fictional Demo|Real Event/);
+  } finally {await w.close();}
 });

@@ -1,6 +1,6 @@
 /** Anonymous, read-only TV presentation. The public feed remains the sole source of data. */
 import {h, fill, $} from './dom.mjs';
-import {startPublicFeed, pickEvent} from './public_core.mjs';
+import {startPublicFeed, pickEvent, isShowcase} from './public_core.mjs';
 import {deriveBoard} from '../contracts/gameday_public.mjs';
 import {roundName, normalizeGameScores, formatLabel} from '../contracts/gameday_engine.mjs';
 import {parseGames} from './game_tiles.mjs';
@@ -38,13 +38,13 @@ function liveGameProgress(m) {
 function tableCard(table) {
   const m = board.playing.find(x => x.table === table);
   return h('article', {class: 'table-card' + (m ? ' active' : '')},
-    h('div', {class: 'card-top'}, h('span', {class: 'table-label', text: `TABLE ${table}`}), h('span', {class: 'status-label', text: m ? '●  NOW PLAYING' : 'AVAILABLE'})),
+    h('div', {class: 'card-top'}, h('span', {class: 'table-label', text: `TABLE ${table}`}), h('span', {class: 'status-label', text: m ? (isShowcase(event) ? 'SAMPLE MATCH' : '●  NOW PLAYING') : 'AVAILABLE'})),
     m ? h('div', {class: 'match-content'}, h('div', {class: 'players'}, h('div', {class: 'player-name', text: name(m.name1)}), h('div', {class: 'versus', text: 'VS'}), h('div', {class: 'player-name', text: name(m.name2)})),
       liveGameProgress(m),
       h('div', {class: 'match-meta', text: details(m, event)})) : h('div', {class: 'empty-table'}, h('strong', {text: 'Table open'}), h('span', {text: 'Waiting for the next match'})));
 }
 function matchCenter() {
-  return h('div', {class: 'match-center'}, h('section', {class: 'now-section'}, h('div', {class: 'section-heading'}, h('h2', {text: 'Now Playing'}), h('span', {text: 'LIVE TABLES'})), h('div', {class: 'table-grid'}, tableCard(1), tableCard(2))),
+  return h('div', {class: 'match-center'}, h('section', {class: 'now-section'}, h('div', {class: 'section-heading'}, h('h2', {text: isShowcase(event) ? 'Sample Matches' : 'Now Playing'}), h('span', {text: isShowcase(event) ? 'DEMO TABLES' : 'LIVE TABLES'})), h('div', {class: 'table-grid'}, tableCard(1), tableCard(2))),
     h('section', {class: 'next-section'}, h('div', {class: 'section-heading'}, h('h2', {text: 'Up Next'}), h('span', {text: 'MATCH QUEUE'})),
       board.upNext.length ? h('div', {class: 'next-grid'}, board.upNext.slice(0, 4).map(m => h('article', {class: 'next-card'}, h('div', {class: 'next-names'}, h('span', {text: name(m.name1)}), h('span', {class: 'next-vs', text: 'vs'}), h('span', {text: name(m.name2)})), h('div', {class: 'next-meta', text: `${details(m, event)} · ${m.table ? `Table ${m.table}` : 'Table to be assigned'}`})))) : h('div', {class: 'next-empty', text: 'Upcoming matches will appear here when announced.'})));
 }
@@ -78,7 +78,7 @@ function bracket(kind) {
   const {rounds, first: firstRound, page} = windows[Math.min(segment, pages - 1)];
   const champ = champion(kind);
   return h('div', {class: 'bracket-view' + (kind === 'consolation' && ms.length === 1 ? ' single-match' : '')}, h('div', {class: 'bracket-caption'}, h('span', {text: pages > 1 ? `BRACKET SEGMENT ${segment + 1} / ${pages}` : 'TOURNAMENT PROGRESSION'}), champ ? h('strong', {text: `CHAMPION  ·  ${champ.winner}`}) : null),
-    h('div', {class: 'bracket-columns'}, rounds.map(r => { const factor = 2 ** (r - firstRound); const selected = ms.filter(m => m.round === r && m.slot >= Math.floor(page * 4 / factor) && m.slot <= Math.floor((page * 4 + 3) / factor)); return h('div', {class: 'bracket-round'}, h('div', {class: 'round-heading', text: roundName(totalRounds, r, kind)}), h('div', {class: 'bracket-matches'}, selected.map(m => h('article', {class: `bracket-match ${m.phase === 'playing' ? 'playing' : ''}`, 'data-round': m.round, 'data-slot': m.slot}, h('div', {class: 'bracket-state', text: m.status === 'bye' ? 'BYE' : m.status === 'complete' ? 'COMPLETED' : m.phase === 'playing' ? 'NOW PLAYING' : 'UPCOMING'}), [m.name1, m.name2].map(n => h('div', {class: 'bracket-player' + (n && n === m.winnerName ? ' winner' : ''), text: name(n)})), m.status === 'complete' && m.scores ? h('div', {class: 'bracket-scores', text: games(m)}) : null)))); })));
+    h('div', {class: 'bracket-columns'}, rounds.map(r => { const factor = 2 ** (r - firstRound); const selected = ms.filter(m => m.round === r && m.slot >= Math.floor(page * 4 / factor) && m.slot <= Math.floor((page * 4 + 3) / factor)); return h('div', {class: 'bracket-round'}, h('div', {class: 'round-heading', text: roundName(totalRounds, r, kind)}), h('div', {class: 'bracket-matches'}, selected.map(m => h('article', {class: `bracket-match ${m.phase === 'playing' ? 'playing' : ''}`, 'data-round': m.round, 'data-slot': m.slot}, h('div', {class: 'bracket-state', text: m.status === 'bye' ? 'BYE' : m.status === 'complete' ? 'COMPLETED' : m.phase === 'playing' ? (isShowcase(event) ? 'SAMPLE MATCH' : 'NOW PLAYING') : 'UPCOMING'}), [m.name1, m.name2].map(n => h('div', {class: 'bracket-player' + (n && n === m.winnerName ? ' winner' : ''), text: name(n)})), m.status === 'complete' && m.scores ? h('div', {class: 'bracket-scores', text: games(m)}) : null)))); })));
 }
 function drawConnections() {
   const columns = document.querySelector('.bracket-columns');
@@ -110,6 +110,7 @@ function available() {
 }
 function render() {
   $('screenLabel').textContent = labels[screen];
+  $('demoBadge').hidden = !isShowcase(event);
   $('evName').textContent = event?.name || 'Tournament Games';
   $('evDate').textContent = event ? new Date(`${event.date}T12:00:00Z`).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric', timeZone:'UTC'}) : '';
   if (!event) { fill($('main'), h('div', {class: 'waiting'}, h('div', {class: 'eyebrow', text: 'FFTT GAMES'}), h('h2', {text: 'The tournament board is standing by'}), h('p', {text: 'Matchups and results will appear here when available.'}))); return; }
@@ -124,5 +125,4 @@ document.querySelectorAll('[data-screen]').forEach(b => b.addEventListener('clic
 window.addEventListener('resize', () => { document.querySelector('.bracket-connectors')?.remove(); drawConnections(); });
 document.addEventListener('keydown', e => { if (e.target.tagName === 'BUTTON') return; if (e.key === 'ArrowRight') move(1); else if (e.key === 'ArrowLeft') move(-1); else if (e.key === ' ') { e.preventDefault(); toggle(); } else if (e.key === '1') select('match'); else if (e.key === '2') select('results'); else if (e.key === '3') select('championship'); else if (e.key === '4') select('consolation'); });
 setInterval(() => { if (paused || Date.now() < deadline) return; if (screen === 'championship' || screen === 'consolation') { const ms = event?.[screen] || []; const pages = bracketWindows(ms.filter(m => m.status !== 'empty')).length;  if (segment + 1 < pages) { segment++; deadline = Date.now() + durations[screen]; render(); return; } } move(1); }, 250);
-startPublicFeed({onUpdate(next) { view = next; const flag = $('live'); flag.className = `feed-status ${view.state}`; flag.textContent = view.state === 'current' ? '●  LIVE' : view.state === 'stale' ? `OUT OF DATE · ${Math.round(view.ageMs / 1000)}s` : 'NO CURRENT DATA';
-  const picked = pickEvent(view.events, wanted); const nextSignature = JSON.stringify(picked); if (nextSignature === signature && lastRenderedState === view.state) return; signature = nextSignature; lastRenderedState = view.state; event = picked; board = event ? deriveBoard(event) : null; if (event && (screen === 'championship' || screen === 'consolation')) segment = Math.min(segment, Math.max(0, bracketWindows(event[screen].filter(m => m.status !== 'empty')).length - 1)); if (!available().includes(screen)) { screen = 'match'; segment = 0; deadline = Date.now() + durations.match; } render(); }});
+startPublicFeed({onUpdate(next) { view = next; const picked = pickEvent(view.events, wanted); const flag = $('live'); flag.className = `feed-status ${picked ? view.state : 'empty'}`; flag.textContent = !picked ? 'NO CURRENT DATA' : view.state === 'current' ? (isShowcase(picked) ? 'DEMO DATA' : '●  LIVE') : view.state === 'stale' ? `OUT OF DATE · ${Math.round(view.ageMs / 1000)}s` : 'NO CURRENT DATA'; const nextSignature = JSON.stringify(picked); if (nextSignature === signature && lastRenderedState === view.state) return; signature = nextSignature; lastRenderedState = view.state; event = picked; board = event ? deriveBoard(event) : null; if (event && (screen === 'championship' || screen === 'consolation')) segment = Math.min(segment, Math.max(0, bracketWindows(event[screen].filter(m => m.status !== 'empty')).length - 1)); if (!available().includes(screen)) { screen = 'match'; segment = 0; deadline = Date.now() + durations.match; } render(); }});

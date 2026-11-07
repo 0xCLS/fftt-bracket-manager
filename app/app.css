@@ -1260,3 +1260,7 @@ dialog .game-step span{font-size:14px;font-weight:650;font-variant-numeric:tabul
 dialog .game-step button{min-height:40px;white-space:nowrap}
 dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-box}
 @media(max-width:540px){dialog .score-game-actions .game-step{align-items:stretch;flex-direction:column}dialog .score-game-actions .game-step button{width:100%}}
+
+/* Fictional showcase identification; hidden for normal public events. */
+.showcase-notice:not([hidden]){display:inline-block;margin:.45rem 0;padding:.4rem .7rem;border:1px solid #94702b;border-radius:8px;background:#fff4d4;color:#533b0c;font-weight:800;font-size:.88rem}
+.showcase-notice span{font-weight:600;margin-left:.35rem}
