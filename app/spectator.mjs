@@ -1,6 +1,6 @@
 /** Anonymous spectator view: no sign-in, no e-mail, no storage. Names, tables and results only. */
 import {h, clear, fill, $} from './dom.mjs';
-import {startPublicFeed, pickEvent} from './public_core.mjs';
+import {startPublicFeed, pickEvent, isShowcase} from './public_core.mjs';
 import {deriveBoard} from '../contracts/gameday_public.mjs';
 import {bracketView} from './bracket_view.mjs';
 import {scoreTiles} from './game_tiles.mjs';
@@ -40,7 +40,7 @@ const matchCard = m => h('div', {class: 'board-match'},
 
 function viewNow(ev, board) {
   return h('div', {},
-    h('h2', {text: 'Now playing'}),
+    h('h2', {text: isShowcase(ev) ? 'Sample matches' : 'Now playing'}),
     board.playing.length ? h('div', {class: 'now-grid'}, board.playing.map(matchCard)) : h('div', {class: 'empty-state', text: 'No matches are on a table right now.'}),
     h('h2', {text: 'Up next'}),
     board.upNext.length ? h('div', {class: 'now-grid'}, board.upNext.slice(0, 8).map(matchCard)) : h('div', {class: 'empty-state', text: 'Nothing queued yet.'}),
@@ -80,7 +80,9 @@ function render(view) {
   if (view.state === 'empty') { live.className = 'pill warn'; live.textContent = 'Waiting for the feed…'; }
   else if (view.state === 'stale') { live.className = 'pill bad'; live.textContent = `Out of date · last update ${Math.round(view.ageMs / 1000)}s ago`; }
   else if (!ev) { live.className = 'pill warn'; live.textContent = 'No public event'; }
-  else { live.className = 'pill good'; live.textContent = 'Live'; }
+  else { live.className = 'pill good'; live.textContent = isShowcase(ev) ? 'Demo data' : 'Live'; }
+  $('demoBadge').hidden = !isShowcase(ev);
+  $('brandLabel').textContent = isShowcase(ev) ? 'DEMO BRACKET' : 'LIVE BRACKET';
   const pick = $('evPick');
   pick.hidden = events.length < 2;
   const nextPickerKey = JSON.stringify([ev?.id ?? null, events.map(e => [e.id, e.name])]);
@@ -116,7 +118,7 @@ function render(view) {
     return;
   }
   $('evName').textContent = ev.name;
-  $('evMeta').textContent = `${formatEventDate(ev.date)} · ${ev.status === 'complete' ? 'Final results' : 'In progress'}`;
+  $('evMeta').textContent = `${formatEventDate(ev.date)} · ${isShowcase(ev) ? 'Fictional demonstration' : ev.status === 'complete' ? 'Final results' : 'In progress'}`;
   const board = deriveBoard(ev);
   fill(main, view.state === 'stale' ? h('div', {class: 'notice warn', text: 'The connection dropped. This is the last information received — it may be out of date.'}) : null,
     tab === 'now' ? viewNow(ev, board) : tab === 'bracket' ? viewBracket(ev) : viewResults(ev, board));
