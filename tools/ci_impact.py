@@ -26,6 +26,66 @@ PROTECTED = re.compile(r'\b(?:submit|record|correct|delete|update|insert|upsert|
 UI_PROTECTED = re.compile(r'\b\w*(?:auth|publish|score|winner|secret|token|permission|write|submit|record|advance|session|rating|email|phone|private)\w*\b|\b(computeStandings|deriveBoard|startPublicFeed|pickEvent|phase|freshness|stale|expired|event_id|window|document|location|navigator|globalThis|prototype|constructor|Reflect|Proxy|setTimeout|setInterval)\b|https?://|<script', re.I)
 CSS_PROTECTED = re.compile(r'@import|url\s*\(|display\s*:\s*none|visibility\s*:\s*hidden|opacity\s*:|filter\s*:|clip(?:-path)?\s*:|color\s*:\s*transparent|(?:live|stale|status|warn|error|security|private|demo|fictional)', re.I)
 
+
+# A narrow TV-presentational lane. This includes the known, read-only screenshot
+# workflow introduced by TV PR #61. Any different workflow blob fails closed.
+# Scoring/transport/contract/staff changes are never eligible for this lane.
+TV_PATHS = {'app/tv.css', 'app/tv.mjs',
+            'tests/e2e/tv_presentation.test.mjs',
+            '.github/workflows/tv-presentation.yml'}
+TV_EVIDENCE_BLOB = 'ab279f6950953aea18fb2052937dfd8a9be054df'
+TV_START = 'function tally(m) {'
+TV_END = 'function drawConnections() {'
+TV_JS_PROTECTED = re.compile(
+    r'\b(?:fetch|XMLHttpRequest|WebSocket|sendBeacon|eval|localStorage|'
+    r'sessionStorage|cookie|token|secret|authorization|apikey|password|'
+    r'credential|session|supabase|rpc|mutation|write|publish|permission|'
+    r'authorize|auth|submit|delete|insert|upsert|signIn|signOut|'
+    r'startPublicFeed|pickEvent|deriveBoard|document|window|globalThis|'
+    r'navigator|location|setTimeout|setInterval|import|export|async|await|'
+    r'email|phone|private|innerHTML|outerHTML|addEventListener)\b|'
+    r'\bnew\s+Function\b|https?://', re.I)
+TV_CSS_PROTECTED = re.compile(
+    r'@import|url\s*\(|display\s*:\s*none\b|visibility\s*:\s*hidden\b|'
+    r'opacity\s*:\s*0(?:\.0*)?\s*(?:;|}|$)|'
+    r'filter\s*:\s*(?!drop-shadow\s*\()|'
+    r'clip(?:-path)?\s*:|(?:-webkit-)?mask(?:-image)?\s*:|'
+    r'color\s*:\s*transparent\b', re.I)
+TV_TEST_NAME = re.compile(r"""\btest\(\s*(['"])(.*?)\1\s*,""")
+TV_TEST_ASSERT = re.compile(r'\bassert\.\w+\s*\(')
+
+
+def safe_tv_presentation(start, end, changed):
+    """Allow only the tested rendering island, preserved tests and attested workflow."""
+    if 'app/tv.mjs' in changed:
+        old = git('show', f'{start}:app/tv.mjs')
+        new = git('show', f'{end}:app/tv.mjs')
+        if any(old.count(marker) != 1 or new.count(marker) != 1
+               for marker in (TV_START, TV_END)):
+            return False, 'missing or ambiguous TV render boundaries'
+        # Imports, feed selection, subscriptions, privacy, timers and controls
+        # must remain byte-identical. Only render helpers may change.
+        if old.split(TV_START)[0] != new.split(TV_START)[0] or old.split(TV_END)[1] != new.split(TV_END)[1]:
+            return False, 'TV public feed or control boundary changed'
+        if TV_JS_PROTECTED.search(edited_lines(start, end, 'app/tv.mjs')):
+            return False, 'TV rendering edit has a protected side effect or data reference'
+    if 'app/tv.css' in changed and TV_CSS_PROTECTED.search(edited_lines(start, end, 'app/tv.css')):
+        return False, 'TV CSS might hide content or fetch resources'
+    if 'tests/e2e/tv_presentation.test.mjs' in changed:
+        path = 'tests/e2e/tv_presentation.test.mjs'
+        old, new = git('show', f'{start}:{path}'), git('show', f'{end}:{path}')
+        old_names, new_names = set(TV_TEST_NAME.findall(old)), set(TV_TEST_NAME.findall(new))
+        if (not old_names or not old_names <= new_names
+                or len(TV_TEST_ASSERT.findall(new)) < len(TV_TEST_ASSERT.findall(old))
+                or re.search(r'\b(?:test|describe)\s*\.\s*(?:skip|only|todo)\s*\(|'
+                             r'\bprocess\s*\.\s*exit\s*\(', new)):
+            return False, 'TV regression coverage deleted, skipped or unverifiable'
+    if '.github/workflows/tv-presentation.yml' in changed:
+        if git('rev-parse', f'{end}:.github/workflows/tv-presentation.yml') != TV_EVIDENCE_BLOB:
+            return False, 'unattested TV workflow modification'
+    return True, 'verified TV-only rendering, coverage and evidence workflow'
+
+
 def git(*args):
     return subprocess.check_output(('git', *args), encoding='utf-8', stderr=subprocess.DEVNULL).strip()
 
@@ -73,6 +133,9 @@ def classify(event, action, before, after, base='', head=''):
         docs = lambda p: p.startswith('docs/') and p.endswith('.md')
         if all(docs(p) for p in changed):
             return 'docs', 'documentation-only verified range'
+        if all(p in TV_PATHS or docs(p) for p in changed) and any(p in TV_PATHS for p in changed):
+            safe, reason = safe_tv_presentation(start, end, changed)
+            return ('public-ui' if safe else 'full'), reason
         for path in changed:
             if docs(path):
                 continue
