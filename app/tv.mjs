@@ -37,44 +37,82 @@ function games(m) {
   const t = tally(m);
   return t ? parseGames(m.scores).map((g, i) => `G${i + 1} ${g.a}–${g.b}`).join('   ·   ') : (m.scores === 'W/O' ? 'Walkover' : m.status === 'complete' && m.scores && (!m.bestOf || !m.points) ? `Recorded: ${m.scores}` : 'Game scores unavailable');
 }
+
+const tableWord = number => number === 1 ? 'ONE' : number === 2 ? 'TWO' : String(number);
+const matchFormat = m => m.bestOf === 3 ? 'BEST OF THREE' : m.bestOf === 1 ? 'SINGLE GAME' : m.bestOf ? 'BEST OF ' + m.bestOf : 'MATCH FORMAT PENDING';
 function tableCard(table) {
   const m = board.playing.find(x => x.table === table);
-  return h('article', {class: 'table-card' + (m ? ' active' : '')},
-    h('div', {class: 'card-top'}, h('span', {class: 'table-label', text: `TABLE ${table}`}), h('span', {class: 'status-label', text: m ? (isShowcase(event) ? 'SAMPLE MATCH' : '●  NOW PLAYING') : 'AVAILABLE'})),
-    m ? h('div', {class: 'match-content'}, h('div', {class: 'players'},
-      h('div', {class: 'match-player'}, h('div', {class: 'player-name', text: name(m.name1)})),
-      h('div', {class: 'versus-line'}, h('span', {class: 'versus', text: 'VS'})),
-      h('div', {class: 'match-player'}, h('div', {class: 'player-name', text: name(m.name2)}))),
-      h('div', {class: 'score-pending', text: 'Game scores pending'}),
-      h('div', {class: 'match-meta', text: details(m, event)})) : h('div', {class: 'empty-table'}, h('strong', {text: 'Table open'}), h('span', {text: 'Waiting for the next match'})));
+  const sample = isShowcase(event);
+  return h('article', {class:'table-card broadcast-match' + (m ? ' active' : ''), 'data-table':'0' + table},
+    h('div', {class:'card-top'},
+      h('div', {class:'table-label'}, h('strong', {class:'table-number',text:'0' + table}), h('span',{text:'TABLE ' + tableWord(table)})),
+      h('span',{class:'match-round',text:m ? bracketLabel(m) + ' · ' + roundLabel(m,event) : 'TABLE AVAILABLE'}),
+      h('span',{class:'status-label',text:m ? (sample ? '● SAMPLE MATCH' : '● NOW PLAYING') : 'AVAILABLE'})),
+    m ? h('div',{class:'match-content'},
+      h('div',{class:'players'},
+        h('div',{class:'match-player'},h('div',{class:'player-name',text:name(m.name1)})),
+        h('div',{class:'versus-line'},h('span',{class:'versus',text:'VS'})),
+        h('div',{class:'match-player'},h('div',{class:'player-name',text:name(m.name2)}))),
+      h('div',{class:'match-meta',text:matchFormat(m)}))
+    : h('div',{class:'empty-table'},h('strong',{text:'Table open'}),h('span',{text:'Waiting for the next match'})));
 }
 function matchCenter() {
-  return h('div', {class: 'match-center'}, h('section', {class: 'now-section'}, h('div', {class: 'section-heading'}, h('h2', {text: isShowcase(event) ? 'Sample Matches' : 'Now Playing'}), h('span', {text: isShowcase(event) ? 'DEMO TABLES' : 'LIVE TABLES'})), h('div', {class: 'table-grid'}, tableCard(1), tableCard(2))),
-    h('section', {class: 'next-section'}, h('div', {class: 'section-heading'}, h('h2', {text: 'Up Next'}), h('span', {text: 'MATCH QUEUE'})),
-      board.upNext.length ? h('div', {class: 'next-grid'}, board.upNext.slice(0, 4).map(m => h('article', {class: 'next-card'}, h('div', {class: 'next-names'}, h('span', {text: name(m.name1)}), h('span', {class: 'next-vs', text: 'vs'}), h('span', {text: name(m.name2)})), h('div', {class: 'next-meta', text: `${details(m, event)} · ${m.table ? `Table ${m.table}` : 'Table to be assigned'}`})))) : h('div', {class: 'next-empty', text: 'Upcoming matches will appear here when announced.'})));
+  const playing = board.playing.filter(m => m.table === 1 || m.table === 2).length;
+  return h('div',{class:'match-center broadcast-match-center'},
+    h('div',{class:'match-status-rail'},
+      h('span',{class:'section-heading'}, h('span',{text:isShowcase(event) ? 'Sample Matches' : 'MATCH CENTER'})),
+      h('span',{class:'status-count',text:isShowcase(event) ? 'FICTIONAL SHOWCASE · DEMO TABLES' : '● TWO TABLES · ' + playing + (playing === 1 ? ' MATCH' : ' MATCHES')})),
+    h('section',{class:'now-section'},h('div',{class:'table-grid'},tableCard(1),tableCard(2))),
+    h('section',{class:'next-section'},
+      h('div',{class:'queue-banner'},h('strong',{text:'UP NEXT'}),h('small',{text:'ON DECK'})),
+      board.upNext.length ? h('div',{class:'next-grid'},board.upNext.slice(0,2).map(m =>
+        h('article',{class:'next-card'},
+          h('div',{class:'next-meta',text:bracketLabel(m) + ' · ' + roundLabel(m,event)}),
+          h('div',{class:'next-names'},h('span',{text:name(m.name1)}),h('span',{class:'next-vs',text:'vs'}),h('span',{text:name(m.name2)})))))
+      : h('div',{class:'next-empty',text:'Upcoming matches will appear here when announced.'})));
 }
+
 function champion(kind) {
   const ms = event[kind]; if (!ms.length) return null;
   const lastRound = Math.max(...ms.map(m => m.round));
   const m = ms.find(x => x.round === lastRound && x.slot === 0 && x.status === 'complete' && x.winnerName && x.name1 && x.name2);
   return m ? {winner: m.winnerName, runner: m.winnerName === m.name1 ? m.name2 : m.name1} : null;
 }
+
 function results() {
-  const c = champion('championship'), k = champion('consolation');
-  const doubles = event.finale?.status === 'complete' && event.finale.winnerTeam ? (event.finale.winnerTeam === 1 ? event.finale.team1 : event.finale.team2).join(' + ') : null;
-  return h('div', {class: 'results-view'}, (c || k || doubles) ? h('div', {class: 'champions'}, c ? h('div', {}, h('span', {text: 'CHAMPIONSHIP CHAMPION'}), h('strong', {text: c.winner}), h('small', {text: `Runner-up · ${c.runner}`})) : null, k ? h('div', {}, h('span', {text: 'CONSOLATION CHAMPION'}), h('strong', {text: k.winner})) : null, doubles ? h('div', {}, h('span', {text: 'MIXED-SKILL DOUBLES WINNERS'}), h('strong', {text: doubles})) : null) : null,
-    h('div', {class: 'results-grid', 'data-rows': Math.min(3, Math.max(1, Math.ceil(Math.min(board.recent.length, 6) / 2)))}, board.recent.slice(0, 6).map(m => { const t = tally(m); return h('article', {class: 'result-card' + (board.recent[0] === m ? ' lead-result' : '')},
-      h('div', {class: 'result-top'},
-        h('span', {text: `${bracketLabel(m)} · ${roundLabel(m, event)}${m.table ? ` · Table ${m.table}` : ''}`}),
-        h('span', {class:'result-final', text:'FINAL'})),
-      h('div', {class: 'result-body'},
-        h('div', {class: 'result-players'},
-          [m.name1,m.name2].map((n,i)=>h('div', {class:'result-player' + (n && n === m.winnerName ? ' winner' : '')},
-            h('span', {class:'result-player-name',text:name(n)}),winDots(m,i)))),
-        h('div', {class:'result-score'},h('span', {class:'score-caption',text:'GAMES'}),
-          h('div', {class:'result-tally',text:t ? `${t[0]}–${t[1]}` : '—'}))),
-      h('div', {class:'result-games',text:games(m)})); })));
+  const c=champion('championship'),k=champion('consolation');
+  const doubles=event.finale?.status === 'complete' && event.finale.winnerTeam ? (event.finale.winnerTeam === 1 ? event.finale.team1 : event.finale.team2).join(' + ') : null;
+  const recent=board.recent.slice(0,4);
+  return h('div',{class:'results-view cinematic-results'},
+    h('div',{class:'broadcast-title'},
+      h('div',{},h('span',{class:'title-kicker',text:'OFFICIAL FINAL SCORES / 02'}),
+        h('h2',{},h('span',{text:'THE RESULT '}),h('em',{text:'IS IN'}))),
+      h('span',{class:'title-side',text:'RECORDED · VERIFIED · FINAL'})),
+    (c || k || doubles) ? h('div',{class:'champions'},
+      c ? h('div',{},h('span',{text:'CHAMPIONSHIP CHAMPION'}),h('strong',{text:c.winner}),h('small',{text:'Runner-up · '+c.runner})) : null,
+      k ? h('div',{},h('span',{text:'CONSOLATION CHAMPION'}),h('strong',{text:k.winner})) : null,
+      doubles ? h('div',{},h('span',{text:'MIXED-SKILL DOUBLES WINNERS'}),h('strong',{text:doubles})) : null) : null,
+    h('div',{class:'results-grid','data-rows':Math.min(3,Math.max(1,Math.ceil(recent.length/2)))},
+      recent.map((m,i)=>{
+        const t=tally(m);
+        return h('article',{class:'result-card' + (i === 0 ? ' lead-result' : '')},
+          h('div',{class:'result-top'},
+            h('span',{text:i === 0 ? '✓ JUST FINISHED · ' + bracketLabel(m) + ' · ' + roundLabel(m,event) : bracketLabel(m) + ' · ' + roundLabel(m,event)}),
+            h('span',{class:'result-final',text:'FINAL'})),
+          h('div',{class:'result-body'},
+            h('div',{class:'result-players'},
+              [m.name1,m.name2].map((n,index)=>
+                h('div',{class:'result-player' + (n && n === m.winnerName ? ' winner' : '')},
+                  i === 0 ? h('span',{class:'result-role',text:n && n === m.winnerName ? 'WINNER' : 'RUNNER-UP'}) : null,
+                  h('span',{class:'result-player-name',text:name(n)}),
+                  winDots(m,index)))),
+            h('div',{class:'result-score'},
+              h('span',{class:'score-caption',text:i === 0 ? 'FINAL · BEST OF ' + (m.bestOf || '—') : 'GAMES'}),
+              h('div',{class:'result-tally',text:t ? t[0] + '–' + t[1] : '—'}))),
+          h('div',{class:'result-games',text:games(m)}));
+      })));
 }
+
 function bracketWindows(ms) {
   const rounds = [...new Set(ms.map(m => m.round))].sort((a, b) => a - b);
   const windows = [];
@@ -85,20 +123,48 @@ function bracketWindows(ms) {
   }
   return windows;
 }
+
 function bracket(kind) {
-  const ms = event[kind].filter(m => m.status !== 'empty');
-  const totalRounds = Math.max(...ms.map(m => m.round)) + 1;
-  // Window each group of rounds independently, avoiding repeated final rounds in large brackets.
-  const windows = bracketWindows(ms), pages = windows.length;
-  const {rounds, first: firstRound, page} = windows[Math.min(segment, pages - 1)];
-  const champ = champion(kind);
-  return h('div', {class: 'bracket-view' + (kind === 'consolation' && ms.length === 1 ? ' single-match' : '')}, h('div', {class: 'bracket-caption'}, h('span', {text: pages > 1 ? `BRACKET SEGMENT ${segment + 1} / ${pages}` : 'TOURNAMENT PROGRESSION'}), champ ? h('strong', {text: `CHAMPION  ·  ${champ.winner}`}) : null),
-    h('div', {class: 'bracket-columns'}, rounds.map(r => { const factor = 2 ** (r - firstRound); const selected = ms.filter(m => m.round === r && m.slot >= Math.floor(page * 4 / factor) && m.slot <= Math.floor((page * 4 + 3) / factor)); return h('div', {class: 'bracket-round'}, h('div', {class: 'round-heading', text: roundName(totalRounds, r, kind)}), h('div', {class: 'bracket-matches'}, selected.map(m => h('article', {class: `bracket-match ${m.phase === 'playing' ? 'playing' : m.status === 'complete' ? 'completed' : 'upcoming'}`, 'data-round': m.round, 'data-slot': m.slot},
-      h('div', {class: 'bracket-state',text:m.status === 'bye' ? 'BYE' : m.status === 'complete' ? 'COMPLETED' : m.phase === 'playing' ? (isShowcase(event) ? 'SAMPLE MATCH' : 'NOW PLAYING') : 'UPCOMING'}),
-      m.name1 || m.name2 ? [m.name1,m.name2].flatMap((n,i)=>{ const row=h('div', {class:'bracket-player-row' + (n && n === m.winnerName ? ' winner' : '')},
-        h('div', {class:'bracket-player' + (n && n === m.winnerName ? ' winner' : ''),text:name(n)}),winDots(m,i));
-        return i === 0 && m.name1 && m.name2 && r === totalRounds - 1 ? [row, h('div', {class:'versus-line bracket-vs','aria-hidden':'true'}, h('span', {class:'versus', text:'VS'}))] : [row]; }) : h('div', {class: 'bracket-pending-pair'}, h('strong', {text: r === totalRounds - 1 ? 'Finalists to be determined' : 'Matchup to be determined'}), h('span', {text: 'Players will appear as earlier matches are decided.'})), m.status === 'complete' && m.scores ? h('div', {class: 'bracket-scores', text: games(m)}) : null)))); })));
+  const ms=event[kind].filter(m=>m.status !== 'empty');
+  const totalRounds=Math.max(...ms.map(m=>m.round))+1;
+  const windows=bracketWindows(ms),pages=windows.length;
+  const {rounds,first:firstRound,page}=windows[Math.min(segment,pages-1)];
+  const champ=champion(kind);
+  const solitary=ms.length === 1;
+  const featuredFinal=rounds.length === 1 && rounds[0] === totalRounds-1;
+  return h('div',{class:'bracket-view cinematic-bracket ' + (kind==='championship' ? 'championship-path' : 'consolation-path') + (solitary ? ' single-match' : '') + (featuredFinal ? ' featured-final' : '')},
+    h('div',{class:'broadcast-title'},
+      h('div',{},h('span',{class:'title-kicker',text:kind==='championship' ? 'THE ROAD TO THE TITLE / 03' : 'THE FINAL SHOWDOWN / 04'}),
+        h('h2',{},kind==='championship' ? [h('span',{text:'THE ROAD '}),h('em',{text:'TO THE FINAL'})] : [h('span',{text:'CONSOLATION '}),h('em',{text:'FINAL'})])),
+      h('span',{class:'title-side',text:kind==='championship' ? 'CHAMPIONSHIP · FEATURED BRACKET PATH' : 'FEATURED MATCHUP'})),
+    h('div',{class:'bracket-caption'},
+      h('span',{text:pages>1 ? 'BRACKET SEGMENT '+(segment+1)+' / '+pages : 'TOURNAMENT PROGRESSION'}),
+      champ ? h('strong',{text:'CHAMPION · '+champ.winner}) : null),
+    h('div',{class:'bracket-columns'},rounds.map((r,idx)=>{
+      const factor=2**(r-firstRound);
+      const selected=ms.filter(m=>m.round === r && m.slot>=Math.floor(page*4/factor) && m.slot<=Math.floor((page*4+3)/factor));
+      const isFinal=r === totalRounds-1;
+      const midFeature=kind==='championship' && !isFinal && idx>0 && selected.length === 1;
+      return h('div',{class:'bracket-round' + (isFinal ? ' last-round' : '') + (midFeature ? ' mid-feature' : ''),'data-round':r},
+        h('div',{class:'round-heading',text:(idx+1<10?'0'+(idx+1):idx+1)+' / '+roundName(totalRounds,r,kind)}),
+        h('div',{class:'bracket-matches'},selected.map(m=>
+          h('article',{class:'bracket-match ' + (m.phase==='playing' ? 'playing' : m.status==='complete' ? 'completed' : 'upcoming'),'data-round':m.round,'data-slot':m.slot},
+            isFinal ? h('div',{class:'final-feature-label','aria-hidden':'true'},h('span',{class:'final-star',text:'★'}),h('strong',{},h('span',{text:kind === 'consolation' ? 'ONE MORE' : 'ONE MATCH.'}),h('em',{text:kind === 'consolation' ? 'MATCH' : 'ONE CHAMPION.'}))) : null,
+            midFeature ? h('div',{class:'semifinal-feature-label','aria-hidden':'true'},h('span',{text:'THE NEXT SHOWDOWN'}),h('strong',{},h('span',{text:'ONE STEP'}),h('em',{text:'CLOSER.'}))) : null,
+            h('span',{class:'bracket-table-stamp',text:m.table ? '0' + m.table : ''}),
+            h('div',{class:'bracket-state',text:m.status==='bye'?'BYE':m.status==='complete'?'COMPLETED':m.phase==='playing'?(isShowcase(event)?'SAMPLE MATCH':'NOW PLAYING'):'UPCOMING'}),
+            m.name1||m.name2 ? [m.name1,m.name2].flatMap((n,i)=>{
+              const row=h('div',{class:'bracket-player-row'+(n&&n===m.winnerName?' winner':'')},
+                h('div',{class:'bracket-player'+(n&&n===m.winnerName?' winner':''),text:name(n)}),winDots(m,i));
+              return i === 0 && m.name1 && m.name2 && isFinal ? [row,h('div',{class:'versus-line bracket-vs','aria-hidden':'true'},h('span',{class:'versus',text:'VS'}))] : [row];
+            }) : h('div',{class:'bracket-pending-pair'},
+              h('strong',{text:isFinal?'Finalists to be determined':'Matchup to be determined'}),
+              h('span',{text:'Players will appear as earlier matches are decided.'})),
+            m.status==='complete'&&m.scores ? h('div',{class:'bracket-scores',text:games(m)}) : null))));
+    })),
+    kind==='championship' ? h('div',{class:'bracket-progress'},h('strong',{text:'QUARTERFINALS'}),h('span',{text:'—'}),h('strong',{text:'SEMIFINALS'}),h('span',{text:'—'}),h('strong',{text:'CHAMPIONSHIP FINAL'})) : null);
 }
+
 function drawConnections() {
   const columns = document.querySelector('.bracket-columns');
   if (!columns) return;
@@ -129,6 +195,7 @@ function available() {
 }
 function render() {
   $('screenLabel').textContent = labels[screen];
+  document.body.dataset.broadcastScreen = screen;
   $('demoBadge').hidden = !isShowcase(event);
   $('evName').textContent = event?.name || 'Tournament Games';
   $('evDate').textContent = event ? new Date(`${event.date}T12:00:00Z`).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric', timeZone:'UTC'}) : '';

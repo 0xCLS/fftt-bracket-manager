@@ -50,11 +50,10 @@ test('TV modes, scores, controls, rotation and read-only public requests', {time
   try {
     assert.equal(await page.locator('#demoBadge').isHidden(),true);
     assert.equal(await page.locator('.table-card.active').count(),2);
-    assert.match(await page.locator('.table-card.active').first().innerText(), /Best of 3 · to 11/);
-    assert.equal(await page.locator('.next-card').count(),4);
+    assert.match(await page.locator('.table-card.active').first().innerText(), /BEST OF THREE/);
+    assert.equal(await page.locator('.next-card').count(),2);
     assert.match(await text(page), /Alexandria Montgomery-Fitzgerald/);
-    assert.equal(await page.locator('.score-pending').count(),2);
-    assert.deepEqual(await page.locator('.score-pending').allInnerTexts(), ['Game scores pending', 'Game scores pending']);
+    assert.equal(await page.locator('.score-pending').count(),0,'no unsupported live-score placeholders');
     assert.doesNotMatch(await page.locator('.table-grid').innerText(),/11[–-]7|1\s*[–:]\s*1/);
     assert.deepEqual(await fits(page), []);
     await page.keyboard.press('ArrowRight'); assert.equal(await label(page),'COMPLETED RESULTS');
@@ -138,7 +137,7 @@ test('final verified Bo3 2–1 and 2–0 display exactly three dots per player',
   const w=await world(fixture(),{width:1600,height:900}), {page}=w;
   try {
     assert.equal(await page.locator('.table-card .game-win-dots').count(),0,'no unverified active progress');
-    assert.deepEqual(await page.locator('.score-pending').allInnerTexts(),['Game scores pending','Game scores pending']);
+    assert.equal(await page.locator('.score-pending').count(),0,'unverified active results stay absent');
     await page.keyboard.press('2');
     const three=page.locator('.result-card').filter({hasText:'Taylor Smith'});
     assert.equal(await three.count(),1);
@@ -250,4 +249,34 @@ test('720p keeps secondary text at 11px or larger and a few results fill the scr
     const fill=await page.evaluate(()=>{const m=document.querySelector('main').getBoundingClientRect(), g=[...document.querySelectorAll('.result-card')].map(c=>c.getBoundingClientRect().bottom); return (Math.max(...g)-m.top)/m.height;});
     assert.ok(fill > 0.9, `four results use the available height (${fill.toFixed(2)})`);
   } finally {await w.close();}
+});
+
+
+test('approved cinematic hierarchy keeps two balanced match panels, featured results, and truthful bracket messaging', {timeout:60000},async()=>{
+  const w=await world(fixture(),{width:1280,height:720}); const {page}=w;
+  try{
+    assert.equal(await page.locator('.broadcast-match').count(),2);
+    assert.equal(await page.locator('.broadcast-match .versus').count(),2);
+    assert.equal(await page.locator('.broadcast-match .match-meta').count(),2);
+    assert.equal(await page.locator('.broadcast-match .score-pending').count(),0);
+    assert.match(await page.locator('.queue-banner').innerText(),/UP NEXT/);
+    const geometry=await page.evaluate(()=>{
+      const cards=[...document.querySelectorAll('.broadcast-match')].map(e=>e.getBoundingClientRect());
+      return {gap:cards[1].top-cards[0].bottom,radius:getComputedStyle(document.querySelector('.broadcast-match')).borderTopLeftRadius};
+    });
+    assert.ok(geometry.gap>=15,'match panels retain breathing room');
+    assert.notEqual(geometry.radius,'0px','match panels retain approved rounded contours');
+    assert.deepEqual(await fits(page),[]);
+    await page.keyboard.press('2');
+    assert.equal(await page.locator('.lead-result').count(),1);
+    assert.match(await page.locator('.lead-result').innerText(),/Taylor Smith/);
+    assert.match(await page.locator('.lead-result .result-tally').innerText(),/2–1/);
+    await page.keyboard.press('3');
+    assert.match(await page.locator('.broadcast-title').innerText(),/THE ROAD TO THE FINAL/);
+    assert.ok(await page.locator('.last-round .final-feature-label').count()>0);
+    await page.keyboard.press('4');
+    assert.match(await page.locator('.consolation-path .final-feature-label').innerText(),/ONE MORE/);
+    assert.ok(await page.locator('.single-match .bracket-match').count()===1);
+    assert.deepEqual(await fits(page),[]);
+  }finally{await w.close();}
 });

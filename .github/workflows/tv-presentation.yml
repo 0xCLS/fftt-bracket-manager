@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - app/tv.css
+      - app/tv_broadcast.css
       - app/tv.mjs
       - app/tv.html
       - tests/e2e/tv_presentation.test.mjs
