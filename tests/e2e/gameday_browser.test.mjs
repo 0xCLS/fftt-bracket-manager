@@ -192,7 +192,12 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
     await first.locator('select').selectOption('1');
     await waitToast(a.page, /table 1/i);
     await spec.page.locator('.board-match .tbl', {hasText: 'Table 1'}).waitFor({timeout: 15000});
-    await tv.page.locator('.table-card.active', {hasText: 'TABLE 1'}).waitFor({timeout: 15000});
+    const tvTable = tv.page.locator('.table-card.active[data-table="01"]');
+    await tvTable.waitFor({timeout: 15000});
+    const assignedPlayers = firstText.split('\n').map(s => s.trim()).filter(s => s && s !== 'vs');
+    assert.equal(assignedPlayers.length, 2);
+    assert.deepEqual(await tvTable.locator('.player-name').allTextContents(), assignedPlayers,
+      'TV table one shows the assigned match');
     await shot(spec, '05-spectator-now'); await shot(tv, '06-tv');
     await b.page.locator('.queue-card.playing').waitFor({timeout: 15000});   // the other scorekeeper sees the table too
     const anotherMatch = b.page.locator('.queue-card:not(.playing)').first();
