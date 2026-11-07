@@ -46,12 +46,13 @@ test('TV modes, scores, controls, rotation and read-only public requests', {time
     assert.equal(await page.locator('.next-card').count(),4);
     assert.match(await text(page), /Alexandria Montgomery-Fitzgerald/);
     assert.equal(await page.locator('.score-pending').count(),2);
+    assert.deepEqual(await page.locator('.score-pending').allInnerTexts(), ['Game scores pending', 'Game scores pending']);
     assert.doesNotMatch(await page.locator('.table-grid').innerText(),/11[–-]7|1\s*[–:]\s*1/);
     assert.deepEqual(await fits(page), []);
     await page.keyboard.press('ArrowRight'); assert.equal(await label(page),'COMPLETED RESULTS');
     assert.match(await text(page),/2–1/); assert.match(await text(page),/G1 11–7.*G2 8–11.*G3 11–9/);
-    await page.keyboard.press('3'); assert.equal(await label(page),'CHAMPIONSHIP BRACKET'); assert.ok(await page.locator('.bracket-connectors path').count() > 0);
-    await page.keyboard.press('4'); assert.equal(await label(page),'CONSOLATION BRACKET');
+    await page.keyboard.press('3'); assert.equal(await label(page),'CHAMPIONSHIP BRACKET'); assert.ok(await page.locator('.bracket-connectors path').count() > 0); assert.ok(await page.locator('.bracket-state', {hasText:'COMPLETED'}).count() > 0); assert.equal(await page.locator('.bracket-state', {hasText:'FINAL'}).count(),0);
+    await page.keyboard.press('4'); assert.equal(await label(page),'CONSOLATION BRACKET'); assert.equal(await page.locator('.single-match .bracket-match').count(),1);
     await page.keyboard.press('ArrowLeft'); assert.equal(await label(page),'CHAMPIONSHIP BRACKET');
     await page.keyboard.press('Space'); await page.clock.fastForward(35000); assert.equal(await label(page),'CHAMPIONSHIP BRACKET');
     await page.keyboard.press('1'); await page.keyboard.press('Space'); await page.clock.fastForward(30000); assert.equal(await label(page),'COMPLETED RESULTS');
@@ -72,12 +73,14 @@ test('empty tables and missing modes, invalid response, stale and expired data r
   } finally {await w.close();}
 });
 test('large bracket advances through bounded round windows', {timeout:60000}, async () => {
-  const w=await world(largeFixture()); const {page}=w;
+  const f=largeFixture(); f[0].brackets[1].matches = f[0].brackets[0].matches.map(m => ({...m, match_id: `cons-${m.match_id}`, bracket:'consolation'}));
+  const w=await world(f); const {page}=w;
   try {
     await page.keyboard.press('3'); assert.match(await text(page),/BRACKET SEGMENT 1 \/ 9/);
     assert.ok(await page.locator('.bracket-round').count()<=3); assert.ok(await page.locator('.bracket-round').first().locator('.bracket-match').count()<=4);
     await page.clock.fastForward(18000); assert.match(await text(page),/BRACKET SEGMENT 2 \/ 9/);
     for (let i=0; i<7; i++) { await page.clock.fastForward(18000); await page.evaluate(() => window.dispatchEvent(new Event('online'))); await new Promise(resolve => setTimeout(resolve, 100)); } assert.match(await text(page),/BRACKET SEGMENT 9 \/ 9/);
+    await page.keyboard.press('4'); assert.equal(await page.locator('.single-match').count(),0); assert.match(await text(page),/BRACKET SEGMENT 1 \/ 9/); assert.ok(await page.locator('.bracket-connectors path').count() > 0);
   } finally {await w.close();}
 });
 test('all four presentations fit both landscape viewports and can produce evidence', {timeout:60000}, async () => {

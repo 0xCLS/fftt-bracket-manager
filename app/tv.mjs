@@ -29,7 +29,7 @@ function tableCard(table) {
   return h('article', {class: 'table-card' + (m ? ' active' : '')},
     h('div', {class: 'card-top'}, h('span', {class: 'table-label', text: `TABLE ${table}`}), h('span', {class: 'status-label', text: m ? '●  NOW PLAYING' : 'AVAILABLE'})),
     m ? h('div', {class: 'match-content'}, h('div', {class: 'players'}, h('div', {class: 'player-name', text: name(m.name1)}), h('div', {class: 'versus', text: 'VS'}), h('div', {class: 'player-name', text: name(m.name2)})),
-      h('div', {class: 'score-pending'}, h('span', {class: 'tiny-label', text: 'GAMES WON'}), h('strong', {text: '—  :  —'}), h('span', {text: 'Awaiting published scores'})),
+      h('div', {class: 'score-pending', text: 'Game scores pending'}),
       h('div', {class: 'match-meta', text: details(m, event)})) : h('div', {class: 'empty-table'}, h('strong', {text: 'Table open'}), h('span', {text: 'Waiting for the next match'})));
 }
 function matchCenter() {
@@ -66,8 +66,8 @@ function bracket(kind) {
   const windows = bracketWindows(ms), pages = windows.length;
   const {rounds, first: firstRound, page} = windows[Math.min(segment, pages - 1)];
   const champ = champion(kind);
-  return h('div', {class: 'bracket-view'}, h('div', {class: 'bracket-caption'}, h('span', {text: pages > 1 ? `BRACKET SEGMENT ${segment + 1} / ${pages}` : 'TOURNAMENT PROGRESSION'}), champ ? h('strong', {text: `CHAMPION  ·  ${champ.winner}`}) : null),
-    h('div', {class: 'bracket-columns'}, rounds.map(r => { const factor = 2 ** (r - firstRound); const selected = ms.filter(m => m.round === r && m.slot >= Math.floor(page * 4 / factor) && m.slot <= Math.floor((page * 4 + 3) / factor)); return h('div', {class: 'bracket-round'}, h('div', {class: 'round-heading', text: roundName(totalRounds, r, kind)}), h('div', {class: 'bracket-matches'}, selected.map(m => h('article', {class: `bracket-match ${m.phase === 'playing' ? 'playing' : ''}`, 'data-round': m.round, 'data-slot': m.slot}, h('div', {class: 'bracket-state', text: m.status === 'bye' ? 'BYE' : m.status === 'complete' ? 'FINAL' : m.phase === 'playing' ? 'NOW PLAYING' : 'UPCOMING'}), [m.name1, m.name2].map(n => h('div', {class: 'bracket-player' + (n && n === m.winnerName ? ' winner' : ''), text: name(n)})), m.status === 'complete' && m.scores ? h('div', {class: 'bracket-scores', text: games(m)}) : null)))); })));
+  return h('div', {class: 'bracket-view' + (kind === 'consolation' && ms.length === 1 ? ' single-match' : '')}, h('div', {class: 'bracket-caption'}, h('span', {text: pages > 1 ? `BRACKET SEGMENT ${segment + 1} / ${pages}` : 'TOURNAMENT PROGRESSION'}), champ ? h('strong', {text: `CHAMPION  ·  ${champ.winner}`}) : null),
+    h('div', {class: 'bracket-columns'}, rounds.map(r => { const factor = 2 ** (r - firstRound); const selected = ms.filter(m => m.round === r && m.slot >= Math.floor(page * 4 / factor) && m.slot <= Math.floor((page * 4 + 3) / factor)); return h('div', {class: 'bracket-round'}, h('div', {class: 'round-heading', text: roundName(totalRounds, r, kind)}), h('div', {class: 'bracket-matches'}, selected.map(m => h('article', {class: `bracket-match ${m.phase === 'playing' ? 'playing' : ''}`, 'data-round': m.round, 'data-slot': m.slot}, h('div', {class: 'bracket-state', text: m.status === 'bye' ? 'BYE' : m.status === 'complete' ? 'COMPLETED' : m.phase === 'playing' ? 'NOW PLAYING' : 'UPCOMING'}), [m.name1, m.name2].map(n => h('div', {class: 'bracket-player' + (n && n === m.winnerName ? ' winner' : ''), text: name(n)})), m.status === 'complete' && m.scores ? h('div', {class: 'bracket-scores', text: games(m)}) : null)))); })));
 }
 function drawConnections() {
   const columns = document.querySelector('.bracket-columns');
