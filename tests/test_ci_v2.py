@@ -2,6 +2,9 @@
 import importlib.util
 from pathlib import Path
 import unittest
+import tempfile
+import subprocess
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location('ci_v2', ROOT/'tools/ci_v2.py')
@@ -52,6 +55,29 @@ class RoutingTests(unittest.TestCase):
         self.assertFalse(ci.proof_from_runs([dict(good, event='pull_request')], lambda _: jobs, sha))
         self.assertFalse(ci.proof_from_runs([good], lambda _: jobs[:-1], sha))
         self.assertFalse(ci.proof_from_runs([dict(good, conclusion='cancelled')], lambda _: jobs, sha))
+
+    def test_real_git_merge_base_diff_and_no_spurious_full(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / 'app').mkdir()
+            (root / 'app/tv.css').write_text('.score { color: white; }\n')
+            def git(*args):
+                return subprocess.check_output(['git', '-C', folder, *args], text=True, stderr=subprocess.DEVNULL).strip()
+            git('init')
+            git('config', 'user.name', 'CI Fixture')
+            git('config', 'user.email', 'ci@example.invalid')
+            git('add', '.')
+            git('commit', '-m', 'base')
+            base = git('rev-parse', 'HEAD')
+            (root / 'app/tv.css').write_text('.score { color: cyan; }\n')
+            git('add', '.')
+            git('commit', '-m', 'visual')
+            head = git('rev-parse', 'HEAD')
+            with patch.object(ci, 'ROOT', root):
+                self.assertEqual(ci.changed_paths(base, head), ['app/tv.css'])
+                self.assertFalse(ci.select(ci.changed_paths(base, head))['manual'])
+                with self.assertRaises(ValueError):
+                    ci.changed_paths(head, base)
 
     def test_invalid_git_history_is_not_an_automatic_full_trigger(self):
         with self.assertRaises(ValueError):
