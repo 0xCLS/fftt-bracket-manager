@@ -11,7 +11,7 @@ const labels = {match: 'MATCH CENTER', results: 'COMPLETED RESULTS', championshi
 let view, event, board, screen = 'match', paused = false, deadline = Date.now() + durations.match, signature = '', lastRenderedState = '', segment = 0;
 const bracketLabel = m => `${m.bracket === 'championship' ? 'Championship' : 'Consolation'} Bracket`;
 const roundLabel = (m, ev) => roundName(Math.max(...ev[m.bracket].map(x => x.round), 0) + 1, m.round, m.bracket);
-const details = (m, ev) => [bracketLabel(m), roundLabel(m, ev), m.bestOf ? `Best of ${m.bestOf}` : null].filter(Boolean).join(' · ');
+const details = (m, ev) => [bracketLabel(m), roundLabel(m, ev), m.bestOf ? `Best of ${m.bestOf}` : null, m.points ? `to ${m.points}` : null].filter(Boolean).join(' · ');
 const name = n => n || 'To be determined';
 function tally(m) {
   // This contract only publishes final results. Never treat a pending score as live progress.
