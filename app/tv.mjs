@@ -35,27 +35,40 @@ function winDots(m, player) {
 }
 function games(m) {
   const t = tally(m);
-  return t ? parseGames(m.scores).map((g, i) => `G${i + 1} ${g.a}–${g.b}`).join('   ·   ') : (m.scores === 'W/O' ? 'Walkover' : m.status === 'complete' && m.scores && (!m.bestOf || !m.points) ? `Recorded: ${m.scores}` : 'Game scores unavailable');
+  return t ? parseGames(m.scores).map((g, i) => `G${i + 1} ${g.a} - ${g.b}`).join('   ·   ') : (m.scores === 'W/O' ? 'Walkover' : m.status === 'complete' && m.scores && (!m.bestOf || !m.points) ? `Recorded: ${m.scores}` : 'Game scores unavailable');
 }
 
 const tableWord = number => number === 1 ? 'ONE' : number === 2 ? 'TWO' : String(number);
 const matchFormat = m => m.bestOf === 3 ? 'BEST OF THREE' : m.bestOf === 1 ? 'SINGLE GAME' : m.bestOf ? 'BEST OF ' + m.bestOf : 'MATCH FORMAT PENDING';
-function tableCard(table) {
-  const m = board.playing.find(x => x.table === table);
-  const sample = isShowcase(event);
-  return h('article', {class:'table-card broadcast-match' + (m ? ' active' : ''), 'data-table':'0' + table},
-    h('div', {class:'card-top'},
-      h('div', {class:'table-label'}, h('strong', {class:'table-number',text:'0' + table}), h('span',{text:'TABLE ' + tableWord(table)})),
-      h('span',{class:'match-round',text:m ? bracketLabel(m) + ' · ' + roundLabel(m,event) : 'TABLE AVAILABLE'}),
-      h('span',{class:'status-label',text:m ? (sample ? '● SAMPLE MATCH' : '● NOW PLAYING') : 'AVAILABLE'})),
-    m ? h('div',{class:'match-content'},
-      h('div',{class:'players'},
-        h('div',{class:'match-player'},h('div',{class:'player-name',text:name(m.name1)})),
-        h('div',{class:'versus-line'},h('span',{class:'versus',text:'VS'})),
-        h('div',{class:'match-player'},h('div',{class:'player-name',text:name(m.name2)}))),
-      h('div',{class:'match-meta',text:matchFormat(m)}))
-    : h('div',{class:'empty-table'},h('strong',{text:'Table open'}),h('span',{text:'Waiting for the next match'})));
+
+function tablePlayerName(raw) {
+  const full=name(raw), parts=full.trim().split(/\s+/);
+  const stacked=parts.length>1 && raw && !/^to be determined$/i.test(full);
+  return h('div',{class:'player-name'+(stacked?' stacked':''),'aria-label':full},
+    stacked
+      ? [h('span',{class:'player-first',text:parts[0]+' '}),h('span',{class:'player-last',text:parts.slice(1).join(' ')})]
+      : h('span',{class:'player-full',text:full}));
 }
+function tableCard(table) {
+  const m=board.playing.find(x=>x.table===table), sample=isShowcase(event);
+  const outLabel=h('div',{class:'table-outside-label','aria-label':'Table '+table},
+    h('strong',{class:'table-outside-number',text:'0'+table}),
+    h('span',{class:'table-outside-word',text:'TABLE '+tableWord(table)}));
+  const panel=h('article',{class:'table-card broadcast-match'+(m?' active':''),'data-table':'0'+table},
+    h('div',{class:'card-top'},
+      h('span',{class:'match-round',text:m?bracketLabel(m)+' · '+roundLabel(m,event):'TABLE AVAILABLE'}),
+      h('span',{class:'status-label',text:m?(sample?'● SAMPLE MATCH':'● NOW PLAYING'):'AVAILABLE'})),
+    m?h('div',{class:'match-content'},
+      h('div',{class:'players'},
+        h('div',{class:'match-player'},tablePlayerName(m.name1)),
+        h('div',{class:'versus-line'},h('span',{class:'versus',text:'VS'})),
+        h('div',{class:'match-player'},tablePlayerName(m.name2))),
+      h('div',{class:'match-meta',text:matchFormat(m)}))
+    :h('div',{class:'empty-table'},h('strong',{text:'Table open'}),h('span',{text:'Waiting for the next match'})));
+  return h('div',{class:'table-stage table-stage-'+table},
+    ...(table===1?[outLabel,panel]:[panel,outLabel]));
+}
+
 function matchCenter() {
   const playing = board.playing.filter(m => m.table === 1 || m.table === 2).length;
   return h('div',{class:'match-center broadcast-match-center'},
@@ -111,7 +124,7 @@ function results() {
                   winDots(m,index)))),
             h('div',{class:'result-score'},
               h('span',{class:'score-caption',text:i === 0 ? 'FINAL · BEST OF ' + (m.bestOf || '—') : 'GAMES'}),
-              h('div',{class:'result-tally',text:t ? t[0] + '–' + t[1] : '—'}))),
+              h('div',{class:'result-tally',text:t ? t[0] + ' - ' + t[1] : '—'}))),
           h('div',{class:'result-games',text:games(m)}));
       })));
 }

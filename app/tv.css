@@ -963,3 +963,270 @@ body.tv footer>span:first-child{
   body.tv .controls button{min-height:29px}
   body.tv .controls #prev,body.tv .controls #next,body.tv .controls #pause{min-height:29px}
 }
+
+/* Cross-computer legibility and organizer-directed compact layout, Nov 7.
+   Keep display headlines condensed; use widely available readable sans-serif for people. */
+:root{--tv-player-type:Arial,"Helvetica Neue",Helvetica,sans-serif}
+body.tv .broadcast-match-center{
+  grid-template-rows:minmax(24px,5%) minmax(0,1fr) clamp(84px,18%,166px);
+  row-gap:clamp(12px,1.9vh,24px);
+}
+body.tv .broadcast-match-center .table-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-rows:minmax(0,1fr);
+  gap:clamp(20px,2vw,48px);
+  align-items:center;
+  height:100%;
+}
+body.tv .broadcast-match-center .table-stage{
+  display:grid;
+  grid-template-columns:clamp(65px,6.3vw,112px) minmax(0,1fr);
+  align-items:center;
+  min-width:0;
+  height:clamp(250px,42vh,420px);
+  max-height:100%;
+}
+body.tv .broadcast-match-center .table-stage-2{
+  grid-template-columns:minmax(0,1fr) clamp(65px,6.3vw,112px);
+}
+body.tv .broadcast-match-center .table-outside-label{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:clamp(5px,.65vh,11px);
+  min-width:0;
+  text-align:center;
+  color:var(--bc-cyan);
+}
+body.tv .broadcast-match-center .table-stage-2 .table-outside-label{color:var(--bc-yellow)}
+body.tv .broadcast-match-center .table-outside-number{
+  font:900 clamp(40px,4.3vw,75px)/.85 var(--bc-head);
+  letter-spacing:.01em;
+}
+body.tv .broadcast-match-center .table-outside-word{
+  max-width:90px;
+  font:800 clamp(11px,.92vw,17px)/1.22 var(--tv-player-type);
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:#d8e9f2;
+}
+body.tv .broadcast-match-center .table-card.broadcast-match{
+  min-width:0;
+  width:100%;
+  height:100%;
+  padding:clamp(16px,1.65vw,30px);
+  border-radius:clamp(16px,1.7vw,30px);
+  border-width:1.5px;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  box-shadow:inset 0 1px 0 rgba(185,244,239,.07),
+    0 14px 42px rgba(0,0,0,.19),0 0 34px rgba(30,206,201,.07);
+}
+body.tv .broadcast-match-center .table-stage-2 .table-card.broadcast-match{
+  box-shadow:inset 0 1px 0 rgba(255,235,153,.05),
+    0 14px 42px rgba(0,0,0,.19),0 0 34px rgba(247,221,84,.045);
+}
+body.tv .broadcast-match-center .card-top{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:clamp(8px,1vh,15px);
+  min-height:0;
+  padding:0;
+  text-align:center;
+}
+body.tv .broadcast-match-center .match-round{
+  font:800 clamp(12px,1.04vw,18px)/1.18 var(--tv-player-type);
+  letter-spacing:.07em;
+  white-space:normal;
+  text-align:center;
+  color:#e3f1f9;
+}
+body.tv .broadcast-match-center .status-label{
+  font:800 clamp(11px,.86vw,15px)/1.1 var(--tv-player-type);
+  letter-spacing:.14em;
+  color:var(--bc-cyan);
+}
+body.tv .broadcast-match-center .match-content{
+  flex:1;
+  justify-content:center;
+  gap:clamp(12px,1.4vh,21px);
+}
+body.tv .broadcast-match-center .players{
+  flex:1;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) clamp(46px,4.5vw,70px) minmax(0,1fr);
+  align-items:center;
+  gap:clamp(8px,.8vw,18px);
+  min-width:0;
+  width:100%;
+}
+body.tv .broadcast-match-center .match-player{min-width:0}
+body.tv .broadcast-match-center .player-name{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  min-width:0;
+  width:100%;
+  font-family:var(--tv-player-type);
+  font-size:clamp(22px,2.1vw,41px);
+  font-weight:800;
+  line-height:1.08;
+  letter-spacing:-.025em;
+  overflow-wrap:anywhere;
+  text-wrap:balance;
+  text-align:center;
+  text-transform:uppercase;
+}
+body.tv .broadcast-match-center .player-name span{
+  display:block;
+  max-width:100%;
+  overflow-wrap:anywhere;
+}
+body.tv .broadcast-match-center .player-name .player-first{
+  color:#c3d8e4;
+  font-size:.79em;
+  font-weight:700;
+  letter-spacing:.055em;
+}
+body.tv .broadcast-match-center .player-name .player-last{
+  color:#fff;
+  font-size:1em;
+  margin-top:.13em;
+}
+body.tv .broadcast-match-center .versus{
+  width:clamp(46px,4.25vw,72px);
+  height:clamp(46px,4.25vw,72px);
+  font-size:clamp(21px,2.1vw,36px);
+}
+body.tv .broadcast-match-center .versus-line:before,
+body.tv .broadcast-match-center .versus-line:after{width:7px}
+body.tv .broadcast-match-center .match-meta{
+  font:800 clamp(12px,.96vw,18px)/1.15 var(--tv-player-type);
+  letter-spacing:.20em;
+  color:#cfe0e9;
+  padding-top:clamp(4px,.5vh,9px);
+}
+body.tv .broadcast-match-center .next-names{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  gap:clamp(3px,.32vw,7px);
+  font:800 clamp(16px,1.32vw,25px)/1.1 var(--tv-player-type);
+  letter-spacing:-.025em;
+}
+body.tv .broadcast-match-center .next-vs{
+  color:var(--bc-yellow);
+  margin:0 .1em;
+  font:800 .82em/1 var(--tv-player-type);
+}
+body.tv .broadcast-match-center .next-meta{
+  font-family:var(--tv-player-type);
+  letter-spacing:.045em;
+}
+
+/* Brackets: tighter physical cards with breathing room around names and dots. */
+body.tv .cinematic-bracket .bracket-matches{
+  justify-content:center;
+  gap:clamp(12px,1.8vh,28px);
+}
+body.tv .cinematic-bracket .bracket-round:not(.mid-feature):not(.last-round) .bracket-match,
+body.tv .cinematic-bracket .bracket-round:first-child .bracket-match{
+  flex:0 0 auto;
+  min-height:clamp(126px,18.5vh,194px);
+  max-height:clamp(152px,23vh,232px);
+  padding:clamp(12px,1.3vh,22px) clamp(12px,1vw,22px);
+  gap:clamp(4px,.6vh,10px);
+}
+body.tv .cinematic-bracket .bracket-player{
+  font-family:var(--tv-player-type);
+  font-size:clamp(19px,2.08vw,38px);
+  font-weight:800;
+  line-height:1.10;
+  letter-spacing:-.035em;
+  overflow-wrap:anywhere;
+  text-wrap:balance;
+}
+body.tv .cinematic-bracket .bracket-round:first-child .bracket-player{
+  font-size:clamp(18px,1.65vw,30px);
+}
+body.tv .cinematic-bracket .bracket-player-row{
+  gap:clamp(7px,.92vh,14px);
+}
+body.tv .cinematic-bracket .bracket-player-row + .bracket-player-row{
+  margin-top:clamp(9px,1.25vh,17px);
+}
+body.tv .cinematic-bracket .game-win-dots{
+  display:flex;
+  width:max-content;
+  gap:clamp(7px,.55vw,11px);
+  margin:clamp(2px,.25vh,5px) 0;
+}
+body.tv .cinematic-bracket .win-dot{
+  width:clamp(9px,.72vw,13px);
+  height:clamp(9px,.72vw,13px);
+}
+body.tv .cinematic-bracket .bracket-scores{
+  margin-top:clamp(7px,.9vh,14px);
+  font:750 clamp(11px,.82vw,15px)/1.15 var(--tv-player-type);
+  letter-spacing:.02em;
+}
+body.tv .cinematic-bracket .bracket-state{
+  font:800 clamp(11px,.88vw,16px)/1.15 var(--tv-player-type);
+  letter-spacing:.09em;
+  margin-bottom:clamp(5px,.7vh,12px);
+}
+body.tv .cinematic-bracket .bracket-round.mid-feature .bracket-match{
+  flex:0 0 auto;
+  min-height:clamp(270px,40vh,385px);
+  max-height:clamp(285px,46vh,410px);
+  gap:clamp(9px,1.1vh,16px);
+}
+body.tv .cinematic-bracket .bracket-round.mid-feature .bracket-player{
+  font-size:clamp(21px,1.9vw,34px);
+}
+body.tv .cinematic-bracket .bracket-round.mid-feature .bracket-player-row{
+  gap:clamp(7px,1vh,15px);
+}
+
+/* Consolation preliminary cards stay restrained; the actual Final remains a feature. */
+body.tv .consolation-path:not(.featured-final):not(.single-match) .bracket-round:not(.last-round) .bracket-match{
+  flex:0 0 auto;
+  min-height:clamp(145px,22vh,225px);
+  max-height:clamp(158px,25vh,245px);
+}
+body.tv .consolation-path:not(.featured-final):not(.single-match) .bracket-round:not(.last-round) .bracket-player{
+  font-family:var(--tv-player-type);
+  font-size:clamp(19px,2.0vw,35px);
+}
+
+/* Scores: familiar hyphen separated by visible space, never a cramped en dash. */
+body.tv .cinematic-results .lead-result .result-tally{
+  font-size:clamp(70px,9vw,174px);
+  letter-spacing:.015em;
+  white-space:nowrap;
+}
+body.tv .cinematic-results .result-card:not(.lead-result) .result-tally{
+  font-size:clamp(26px,2.35vw,43px);
+  letter-spacing:.015em;
+}
+body.tv .cinematic-results .result-games{
+  letter-spacing:.055em;
+  word-spacing:.10em;
+}
+@media(max-height:760px){
+  body.tv .broadcast-match-center .table-stage{height:clamp(235px,40vh,295px)}
+  body.tv .broadcast-match-center .table-outside-number{font-size:clamp(37px,3.65vw,55px)}
+  body.tv .broadcast-match-center .table-card.broadcast-match{padding:clamp(12px,1.2vw,18px)}
+  body.tv .broadcast-match-center .player-name{font-size:clamp(21px,1.7vw,30px)}
+  body.tv .broadcast-match-center .card-top{gap:5px}
+  body.tv .broadcast-match-center .match-content{gap:8px}
+  body.tv .cinematic-bracket .bracket-player-row + .bracket-player-row{margin-top:8px}
+  body.tv .cinematic-bracket .bracket-round:first-child .bracket-player{font-size:clamp(17px,1.45vw,25px)}
+}

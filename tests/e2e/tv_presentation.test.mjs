@@ -59,12 +59,12 @@ test('TV modes, scores, controls, rotation and read-only public requests', {time
     assert.equal(await page.locator('.table-card.active').count(),2);
     assert.match(await page.locator('.table-card.active').first().innerText(), /BEST OF THREE/);
     assert.equal(await page.locator('.next-card').count(),2);
-    assert.match(await text(page), /Alexandria Montgomery-Fitzgerald/i);
+    assert.match(await text(page), /Alexandria\s+Montgomery-Fitzgerald/i);
     assert.equal(await page.locator('.score-pending').count(),0,'no unsupported live-score placeholders');
     assert.doesNotMatch(await page.locator('.table-grid').innerText(),/11[–-]7|1\s*[–:]\s*1/);
     assert.deepEqual(await fits(page), []);
     await page.keyboard.press('ArrowRight'); assert.equal(await label(page),'COMPLETED RESULTS');
-    assert.match(await text(page),/2–1/); assert.match(await text(page),/G1 11–7.*G2 8–11.*G3 11–9/);
+    assert.match(await text(page),/2\s*-\s*1/); assert.match(await text(page),/G1 11 - 7.*G2 8 - 11.*G3 11 - 9/);
     await page.keyboard.press('3'); assert.equal(await label(page),'CHAMPIONSHIP BRACKET'); assert.equal(await page.locator('.bracket-vs').count(),0,'undecided final has no VS'); assert.ok(await page.locator('.bracket-connectors path').count() > 0); assert.ok(await page.locator('.bracket-state', {hasText:'COMPLETED'}).count() > 0); assert.equal(await page.locator('.bracket-state', {hasText:'FINAL'}).count(),0);
     await page.keyboard.press('4'); assert.equal(await label(page),'CONSOLATION BRACKET'); assert.equal(await page.locator('.single-match .bracket-match').count(),1); assert.equal(await page.locator('.bracket-vs').count(),1,'known finalists are separated by VS');
     assert.ok((await page.locator('.single-match .bracket-match').boundingBox()).height >= 300, 'single-match bracket uses a readable featured-card layout');
@@ -278,7 +278,7 @@ test('approved cinematic hierarchy keeps two balanced match panels, featured res
     await page.keyboard.press('2');
     assert.equal(await page.locator('.lead-result').count(),1);
     assert.match(await page.locator('.lead-result').innerText(),/Taylor Smith/i);
-    assert.match(await page.locator('.lead-result .result-tally').innerText(),/2–1/);
+    assert.match(await page.locator('.lead-result .result-tally').innerText(),/2\s*-\s*1/);
     await page.keyboard.press('3');
     assert.match(await page.locator('.broadcast-title').innerText(),/THE ROAD TO THE FINAL/);
     assert.ok(await page.locator('.last-round .final-feature-label').count()>0);
@@ -380,4 +380,64 @@ test('premium transport stays within the footer and never covers the broadcast c
       assert.deepEqual(await fits(page),[]);
     }finally{await w.close();}
   }
+});
+
+
+test('side-by-side Match Center uses stacked names and external table numbers at three display sizes', {timeout:60000},async()=>{
+  for(const vp of [{width:1280,height:720},{width:1600,height:900},{width:1920,height:1080}]){
+    const w=await world(fixture(),vp),{page}=w;
+    try{
+      assert.equal(await page.locator('.table-stage').count(),2);
+      assert.equal(await page.locator('.table-stage .table-outside-number').count(),2);
+      assert.equal(await page.locator('.table-stage .player-first').count(),4);
+      const g=await page.evaluate(()=>{
+        const rect=selector=>document.querySelector(selector).getBoundingClientRect();
+        const a=rect('.table-stage-1 .table-card'),b=rect('.table-stage-2 .table-card');
+        const one=rect('.table-stage-1 .table-outside-label'),two=rect('.table-stage-2 .table-outside-label');
+        const names=[...document.querySelectorAll('.table-stage .player-name')];
+        return {parallel:Math.abs(a.top-b.top)<15,disjoint:a.right<b.left,
+          outsideLeft:one.right<=a.left+2,outsideRight:two.left>=b.right-2,
+          compact:a.height<window.innerHeight*.57&&b.height<window.innerHeight*.57,
+          labelReadable:names.every(n=>getComputedStyle(n).fontFamily.includes('Arial')),
+          stacked:names.every(n=>n.querySelector('.player-first')?.getBoundingClientRect().top <
+            n.querySelector('.player-last')?.getBoundingClientRect().top)};
+      });
+      assert.deepEqual(g,{parallel:true,disjoint:true,outsideLeft:true,outsideRight:true,compact:true,labelReadable:true,stacked:true},'responsive Match Center '+vp.width);
+      assert.deepEqual(await fits(page),[],'Match Center visible layout '+vp.width);
+    }finally{await w.close();}
+  }
+});
+
+test('bracket cards leave separate room for names and verified dots and avoid giant empty match boxes', {timeout:60000},async()=>{
+  for(const vp of [{width:1280,height:720},{width:1600,height:900}]){
+    const w=await world(fixture(),vp),{page}=w;
+    try{
+      await page.keyboard.press('3');
+      const sizes=await page.evaluate(()=>({
+        heights:[...document.querySelectorAll('.bracket-round:not(.mid-feature):not(.last-round) .bracket-match')].map(x=>x.getBoundingClientRect().height),
+        dots:[...document.querySelectorAll('.bracket-player-row')].filter(x=>x.querySelector('.game-win-dots')).map(x=>{
+          const n=x.querySelector('.bracket-player').getBoundingClientRect(),d=x.querySelector('.game-win-dots').getBoundingClientRect();
+          return d.top-n.bottom;
+        })
+      }));
+      assert.ok(sizes.heights.length>0&&sizes.heights.every(v=>v<Math.min(255,vp.height*.38)),
+        'no oversized preliminary cards: '+JSON.stringify(sizes.heights));
+      assert.ok(sizes.dots.length>0&&sizes.dots.every(v=>v>=3),'game dots visibly separated from names');
+      assert.deepEqual(await fits(page),[],'bracket card fit '+vp.width);
+      await page.keyboard.press('4');
+      assert.deepEqual(await fits(page),[],'consolation card fit '+vp.width);
+    }finally{await w.close();}
+  }
+});
+
+test('Results uses a spaced hyphen for games and match tallies', {timeout:60000},async()=>{
+  const w=await world(fixture(),{width:1600,height:900}),{page}=w;
+  try{
+    await page.keyboard.press('2');
+    const tally=await page.locator('.lead-result .result-tally').innerText();
+    assert.match(tally,/2\s+-\s+1/);
+    assert.doesNotMatch(tally,/[–—]/);
+    assert.match(await page.locator('.lead-result .result-games').innerText(),/G1\s+11 - 7/);
+    assert.deepEqual(await fits(page),[]);
+  }finally{await w.close();}
 });
