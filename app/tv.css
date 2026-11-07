@@ -18,3 +18,5 @@
   .next-meta{line-height:1.2}
   .control-hint{font-size:.85em}
 }
+
+.tv-demo:not([hidden]){display:inline-block;margin-top:.35em;padding:.3em .55em;border:1px solid #9e8042;border-radius:5px;color:#ffe4a5;background:#3a3020;font-size:clamp(10px,.75vw,15px);font-weight:800;letter-spacing:.04em}

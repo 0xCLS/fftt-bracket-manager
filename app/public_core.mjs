@@ -19,9 +19,15 @@ export function startPublicFeed({onUpdate, fetchImpl = (u, i) => fetch(u, i), no
   return Object.freeze({display, stop() { clearInterval(timer); display.stop(); }});
 }
 
-/** Which event to show: ?e=<id>, else the most recently updated active event, else the latest complete. */
+/** The permanent public showcase is identified by public ID, never by a player or event name. */
+export const SHOWCASE_EVENT_ID = '9c25613c-6543-4d6c-84cf-97ba49017509';
+export const isShowcase = event => event?.id === SHOWCASE_EVENT_ID;
+
+/** Explicit public links win; otherwise prefer any real published event over the showcase. */
 export function pickEvent(events, wanted) {
-  if (wanted) { const e = events.find(x => x.id === wanted); if (e) return e; }
+  if (wanted) return events.find(x => x.id === wanted) ?? null;
+  const real = events.filter(e => !isShowcase(e));
+  const candidates = real.length ? real : events;
   const rank = e => (e.status === 'active' ? 1 : 0);
-  return [...events].sort((a, b) => rank(b) - rank(a) || b.updatedAt.localeCompare(a.updatedAt))[0] ?? null;
+  return [...candidates].sort((a, b) => rank(b) - rank(a) || b.updatedAt.localeCompare(a.updatedAt))[0] ?? null;
 }
