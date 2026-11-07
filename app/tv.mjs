@@ -82,7 +82,10 @@ function champion(kind) {
 function results() {
   const c=champion('championship'),k=champion('consolation');
   const doubles=event.finale?.status === 'complete' && event.finale.winnerTeam ? (event.finale.winnerTeam === 1 ? event.finale.team1 : event.finale.team2).join(' + ') : null;
-  const recent=board.recent.slice(0,4);
+  const ordered=board.recent.slice(0,4);
+  // Prefer a verified close final for the featured broadcast story; do not imply recency.
+  const featured=ordered.find(m=>{const t=tally(m);return m.bestOf===3 && t && t[0]+t[1]===3;}) || ordered[0];
+  const recent=featured ? [featured,...ordered.filter(m=>m!==featured)] : ordered;
   return h('div',{class:'results-view cinematic-results'},
     h('div',{class:'broadcast-title'},
       h('div',{},h('span',{class:'title-kicker',text:'OFFICIAL FINAL SCORES / 02'}),
@@ -97,7 +100,7 @@ function results() {
         const t=tally(m);
         return h('article',{class:'result-card' + (i === 0 ? ' lead-result' : '')},
           h('div',{class:'result-top'},
-            h('span',{text:i === 0 ? '✓ JUST FINISHED · ' + bracketLabel(m) + ' · ' + roundLabel(m,event) : bracketLabel(m) + ' · ' + roundLabel(m,event)}),
+            h('span',{text:i === 0 ? (m === board.recent[0] ? '✓ JUST FINISHED · ' : '★ FEATURED FINAL · ') + bracketLabel(m) + ' · ' + roundLabel(m,event) : bracketLabel(m) + ' · ' + roundLabel(m,event)}),
             h('span',{class:'result-final',text:'FINAL'})),
           h('div',{class:'result-body'},
             h('div',{class:'result-players'},

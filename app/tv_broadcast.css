@@ -210,3 +210,8 @@ body.tv .tv-demo:not([hidden]){font-size:clamp(11px,.77vw,15px)}
 
 /* Keep the illuminated card outline, but remove painted pseudo-elements that inflate scrollHeight in Chromium. */
 .table-card.broadcast-match::before,.table-card.broadcast-match::after{content:none!important}
+
+/* Final-stage proportions: preserve dramatic type without clipping 1600×900. */
+.consolation-path .final-feature-label strong{font-size:clamp(40px,6.45vw,105px);line-height:.91}
+.consolation-path .bracket-player{font-size:clamp(27px,3.7vw,67px)}
+.consolation-path.single-match .bracket-match,.consolation-path.featured-final .bracket-match{gap:.8vh;padding:1.1vh 3.2vw}
