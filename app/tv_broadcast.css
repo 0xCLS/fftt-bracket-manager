@@ -182,3 +182,9 @@ body.tv .tv-demo:not([hidden]){font-size:clamp(11px,.77vw,15px)}
 .cinematic-bracket.bracket-view:has(> .bracket-columns > .bracket-round:only-of-type .bracket-matches > .bracket-match:only-child) .bracket-match{height:auto;min-height:0;max-height:none;padding:1.7vh 4vw;background:radial-gradient(ellipse at center,rgba(20,80,98,.35),transparent 83%);border:1px solid #3e74825a;border-radius:0}
 .cinematic-bracket.bracket-view:has(> .bracket-columns > .bracket-round:only-of-type .bracket-matches > .bracket-match:only-child) .bracket-player{font-size:clamp(28px,4.3vw,80px)}
 @media(max-height:760px){.cinematic-bracket .bracket-round:first-child .bracket-player{font-size:clamp(13px,1.22vw,20px)}.cinematic-bracket .bracket-round:first-child .bracket-state{font-size:11px}.cinematic-bracket .bracket-round:first-child .bracket-match{padding:.4vh .5vw}}
+
+/* CI-verified layout corrections: contain decorative watermark, avoid showcase top-edge crowding. */
+.table-card.broadcast-match::before{top:50%;transform:translateY(-50%);font-size:clamp(85px,9.1vw,165px);line-height:1;right:4%}
+.brand:has(.tv-demo:not([hidden])) h1{font-size:clamp(20px,1.8vw,33px);line-height:.97;margin:.06em 0}
+.brand:has(.tv-demo:not([hidden])) .eyebrow{font-size:11px;line-height:1.12}
+.brand:has(.tv-demo:not([hidden])) .tv-demo:not([hidden]){font-size:11px;line-height:1;margin:-.05em 0 -.05em .5em;padding:.1em .4em}

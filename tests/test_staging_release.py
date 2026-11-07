@@ -113,6 +113,33 @@ class Decisions(unittest.TestCase):
         for n in (*R.REQUIRED_CHECKS, R.CLASSIFY_CHECK):
             self.assertIn(n, names, f'{n!r} is not a job name in browser-tests.yml')
 
+    def test_gate_never_dispatches_unapproved_full_regression(self):
+        source = (ROOT / 'tools' / 'ops' / 'staging_release.py').read_text()
+        gate = source.split('def cmd_gate(a):', 1)[1].split('def wrangler_deploy(', 1)[0]
+        self.assertNotIn("gh', 'workflow', 'run", gate)
+        self.assertIn('manual', gate.lower())
+        with patch.object(R, 'visual_release_baseline', return_value=(None, 'protected delta')), \
+             patch.object(R, 'branch_tip', return_value=SHA), \
+             patch.object(R, 'check_runs', return_value=[]), \
+             patch.object(R, 'die', side_effect=RuntimeError('missing approval')), \
+             patch.object(R.subprocess, 'run', side_effect=AssertionError('no subprocess allowed')):
+            class Args:
+                commit = SHA
+                allow_old = False
+                timeout_min = 1
+                poll_sec = 0
+            with self.assertRaisesRegex(RuntimeError, 'missing approval'):
+                R.cmd_gate(Args())
+
+    def test_full_workflow_requires_explicit_approval_and_has_no_automatic_trigger(self):
+        wf = (ROOT / '.github' / 'workflows' / 'browser-tests.yml').read_text()
+        self.assertIn('workflow_dispatch:', wf)
+        self.assertNotIn('  push:', wf)
+        self.assertNotIn('  pull_request:', wf)
+        self.assertIn("github.event.inputs.approval == 'APPROVED'", wf)
+        staging = (ROOT / '.github' / 'workflows' / 'deploy-staging.yml').read_text()
+        self.assertNotIn('actions: write', staging)
+
     def test_preview_url_is_the_unique_deployment_not_the_alias(self):
         out = 'Take a peek over at https://1a2b3c4d.fftt3-staff-stg.pages.dev\nalias https://ci-verify.fftt3-staff-stg.pages.dev'
         self.assertEqual(R.preview_url(out, 'fftt3-staff-stg'), 'https://1a2b3c4d.fftt3-staff-stg.pages.dev')

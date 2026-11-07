@@ -43,7 +43,13 @@ async function fits(page) {
   return page.evaluate(() => [...document.querySelectorAll('main, main *')].filter(el => {
     const r=el.getBoundingClientRect(), main=document.querySelector('main').getBoundingClientRect();
     return r.width && r.height && (r.left < main.left - 2 || r.right > main.right + 2 || r.top < main.top - 2 || r.bottom > main.bottom + 2 || (['hidden','clip'].includes(getComputedStyle(el).overflow) && (el.scrollWidth > el.clientWidth + 2 || el.scrollHeight > el.clientHeight + 2)));
-  }).map(el => `${el.className}: ${el.textContent.slice(0,60)}`));
+  }).map(el => {
+    const r=el.getBoundingClientRect(), m=document.querySelector('main').getBoundingClientRect();
+    return JSON.stringify({element:String(el.className),text:el.textContent.slice(0,45),
+      bounds:[Math.round(r.left-m.left),Math.round(r.top-m.top),Math.round(r.right-m.right),Math.round(r.bottom-m.bottom)],
+      overflow:[el.scrollWidth-el.clientWidth,el.scrollHeight-el.clientHeight],
+      cssOverflow:getComputedStyle(el).overflow});
+  }));
 }
 test('TV modes, scores, controls, rotation and read-only public requests', {timeout:60000}, async () => {
   const w=await world(); const {page}=w;
@@ -52,7 +58,7 @@ test('TV modes, scores, controls, rotation and read-only public requests', {time
     assert.equal(await page.locator('.table-card.active').count(),2);
     assert.match(await page.locator('.table-card.active').first().innerText(), /BEST OF THREE/);
     assert.equal(await page.locator('.next-card').count(),2);
-    assert.match(await text(page), /Alexandria Montgomery-Fitzgerald/);
+    assert.match(await text(page), /Alexandria Montgomery-Fitzgerald/i);
     assert.equal(await page.locator('.score-pending').count(),0,'no unsupported live-score placeholders');
     assert.doesNotMatch(await page.locator('.table-grid').innerText(),/11[–-]7|1\s*[–:]\s*1/);
     assert.deepEqual(await fits(page), []);
@@ -122,7 +128,7 @@ test('a sparse undecided final becomes a focused bracket feature, not two fabric
     await page.clock.fastForward(18000);
     assert.equal(await page.locator('.bracket-round').count(), 1);
     assert.equal(await page.locator('.bracket-match').count(), 1);
-    assert.match(await page.locator('.bracket-pending-pair').innerText(), /Finalists to be determined/);
+    assert.match(await page.locator('.bracket-pending-pair').innerText(), /Finalists to be determined/i);
     assert.doesNotMatch(await page.locator('.bracket-match').innerText(), /Jamie Lee|Casey Ross/);
     assert.equal(await page.locator('.bracket-vs').count(), 0);
     assert.deepEqual(await fits(page), []);
@@ -217,14 +223,14 @@ test('real event wins by default and explicit showcase selection updates both pu
   f[0].event_name='Real Event'; f[0].status='complete'; f.push(demo);
   const w=await world(f,{width:1280,height:720}); const {page}=w;
   try {
-    assert.equal(await page.locator('#evName').innerText(),'Real Event');
+    assert.equal(await page.locator('#evName').textContent(),'Real Event');
     assert.equal(await page.locator('#demoBadge').isHidden(),true);
     await page.goto(`${host}/app/tv.html?e=${demo.event_id}`); await page.locator('#live',{hasText:'DEMO DATA'}).waitFor();
-    assert.equal(await page.locator('#evName').innerText(),'Fictional Demo');
+    assert.equal(await page.locator('#evName').textContent(),'Fictional Demo');
     const bounds = await page.evaluate(() => {const h=document.querySelector('.tv-header').getBoundingClientRect(), b=document.querySelector('#demoBadge').getBoundingClientRect(); return b.top>=h.top && b.bottom<=h.bottom && b.right<=innerWidth;});
     assert.equal(bounds,true,'demo label remains within the TV header');
     await page.goto(`${host}/app/spectator.html`); await page.locator('#live',{hasText:'Live'}).waitFor();
-    assert.equal(await page.locator('#evName').innerText(),'Real Event');
+    assert.equal(await page.locator('#evName').textContent(),'Real Event');
     await page.locator('#evPick').selectOption(demo.event_id);
     assert.equal(await page.locator('#live').innerText(),'Demo data'); assert.equal(await page.locator('#demoBadge').isVisible(),true);
     await page.locator('#evPick').selectOption(f[0].event_id);
@@ -269,7 +275,7 @@ test('approved cinematic hierarchy keeps two balanced match panels, featured res
     assert.deepEqual(await fits(page),[]);
     await page.keyboard.press('2');
     assert.equal(await page.locator('.lead-result').count(),1);
-    assert.match(await page.locator('.lead-result').innerText(),/Taylor Smith/);
+    assert.match(await page.locator('.lead-result').innerText(),/Taylor Smith/i);
     assert.match(await page.locator('.lead-result .result-tally').innerText(),/2–1/);
     await page.keyboard.press('3');
     assert.match(await page.locator('.broadcast-title').innerText(),/THE ROAD TO THE FINAL/);
