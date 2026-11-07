@@ -674,3 +674,33 @@ body.tv .tv-demo:not([hidden]){font-size:clamp(11px,.77vw,15px)}
 .cinematic-results .result-card:not(.lead-result) .game-win-dots{min-height:8px;flex-shrink:0}
 .cinematic-results .result-card:not(.lead-result) .win-dot{width:7px;height:7px}
 @media(max-height:760px){.cinematic-bracket .bracket-round:first-child .bracket-player{font-size:clamp(16px,1.4vw,23px)}.cinematic-bracket .bracket-round:first-child .bracket-match{padding:7px 10px}}
+
+/* TV release preview: use a shared grid instead of fixed right offsets.
+   Keep hover/focus reveal; arrow/Pause hit targets must never intersect. */
+body.tv .controls {
+  display:grid;
+  grid-template-columns:repeat(4,max-content);
+  grid-template-rows:auto auto;
+  column-gap:clamp(6px,.55vw,12px);
+  row-gap:clamp(4px,.55vh,10px);
+  align-items:center;
+}
+body.tv .controls #prev,
+body.tv .controls #pause,
+body.tv .controls #next {
+  position:static;
+  right:auto;
+  bottom:auto;
+  grid-row:1;
+  justify-self:end;
+  width:clamp(44px,3.25vw,62px);
+  min-height:36px;
+  text-align:center;
+}
+body.tv .controls #prev {grid-column:2}
+body.tv .controls #pause {grid-column:3}
+body.tv .controls #next {grid-column:4}
+body.tv .controls button[data-screen="match"] {grid-column:1;grid-row:2}
+body.tv .controls button[data-screen="results"] {grid-column:2;grid-row:2}
+body.tv .controls button[data-screen="championship"] {grid-column:3;grid-row:2}
+body.tv .controls button[data-screen="consolation"] {grid-column:4;grid-row:2}

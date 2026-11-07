@@ -288,3 +288,35 @@ test('approved cinematic hierarchy keeps two balanced match panels, featured res
     assert.deepEqual(await fits(page),[]);
   }finally{await w.close();}
 });
+
+test('TV transport buttons have non-overlapping hit targets and work by pointer at broadcast widths', {timeout:60000}, async () => {
+  for (const viewport of [{width:1280,height:720},{width:1600,height:900},{width:1920,height:1080}]) {
+    const w=await world(fixture(),viewport), {page}=w;
+    try {
+      await page.locator('nav.controls').hover();
+      const geometry=await page.evaluate(()=>{
+        const buttons=[...document.querySelectorAll('nav.controls button')].filter(el=>getComputedStyle(el).display!=='none');
+        const hitBoxes=buttons.map(el=>({id:el.id||el.dataset.screen,
+          rect:el.getBoundingClientRect().toJSON()}));
+        const overlaps=[];
+        for (let i=0;i<hitBoxes.length;i++) for (let j=i+1;j<hitBoxes.length;j++) {
+          const a=hitBoxes[i],b=hitBoxes[j];
+          if (Math.min(a.rect.right,b.rect.right)-Math.max(a.rect.left,b.rect.left)>0 &&
+              Math.min(a.rect.bottom,b.rect.bottom)-Math.max(a.rect.top,b.rect.top)>0)
+            overlaps.push(a.id+' / '+b.id);
+        }
+        return {hitBoxes,overlaps};
+      });
+      assert.equal(geometry.hitBoxes.length,7,'all seven navigation controls are accessible on hover');
+      assert.deepEqual(geometry.overlaps,[],'non-overlapping TV controls at '+viewport.width+'px');
+      await page.locator('#next').click();
+      assert.equal(await label(page),'COMPLETED RESULTS');
+      await page.locator('#prev').click();
+      assert.equal(await label(page),'MATCH CENTER');
+      await page.locator('#pause').click();
+      assert.equal(await page.locator('#pause').textContent(),'Resume');
+      await page.locator('#pause').click();
+      assert.equal(await page.locator('#pause').textContent(),'Pause');
+    } finally {await w.close();}
+  }
+});
