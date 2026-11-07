@@ -636,7 +636,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
       const data = await session.authorized(ctx =>
         scoreTransport.readGameProgress(ctx.token, {eventId: ctx.eventId, matchId}), {wait: false});
       const row = s.desk.find(m => m.matchId === matchId);
-      if (!row || data.generation !== row.generation || data.matchVersion !== row.version
+      if (!row || data.generation !== row.generation || data.match_version !== row.version
         || data.best_of !== row.bestOf || data.points_to_win !== row.points || data.match_status !== 'pending'
         || !summarizeGameProgress(data.games, row.bestOf, row.points).ok) {
         return {ok: false, message: 'The match changed. Refresh and reopen it.'};

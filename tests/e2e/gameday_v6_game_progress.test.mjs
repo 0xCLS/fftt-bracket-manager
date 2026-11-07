@@ -60,7 +60,7 @@ test('G1 G2 deciding G3: saves never advance; public shows verified tally; only 
     assert.equal(pending.matches.find(m=>m.id===row.match_id).winner_id,null);
     assert.equal(pending.consolation_candidates.length,0);
     await ctx.db.rpc(ctx.org,'fftt_set_visibility_v3',{p_event_id:ctx.E,p_visible:true});
-    const pub=projectPublicTournaments(await ctx.db.publicTournaments())[0];
+    const pub=projectPublicTournaments(JSON.parse(JSON.stringify(await ctx.db.publicTournaments())))[0];
     const playing=pub.championship.find(m=>m.progress?.games.length===3);
     assert.ok(playing);
     assert.deepEqual(playing.progress.won,[2,1]);
@@ -74,7 +74,7 @@ test('G1 G2 deciding G3: saves never advance; public shows verified tally; only 
     assert.equal(await resultsCount(ctx),1);
     assert.equal((await ctx.db.admin('select count(*)::int as n from fftt_private.match_game_progress where event_id=$1',[ctx.E]))[0].n,0,
       'final result clears superseded interim scores in same transaction');
-    const published=projectPublicTournaments(await ctx.db.publicTournaments())[0];
+    const published=projectPublicTournaments(JSON.parse(JSON.stringify(await ctx.db.publicTournaments())))[0];
     const done=published.championship.find(m=>m.status==='complete' && m.scores==='11-7, 8-11, 11-9');
     assert.equal(done.progress,null,'official result supersedes interim public projection');
   } finally {await ctx.db.db.close();}

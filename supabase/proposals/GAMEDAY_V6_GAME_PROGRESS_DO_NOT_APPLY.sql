@@ -206,7 +206,7 @@ begin
     if p_reason is null or length(btrim(p_reason)) not between 10 and 500 then
       perform fftt_private.v3_err('validation','correction-reason');
     end if;
-    v_games := pg_catalog.jsonb_set(v_games,pg_catalog.array[(p_game_index-1)::text],
+    v_games := pg_catalog.jsonb_set(v_games,array[(p_game_index-1)::text],
       pg_catalog.jsonb_build_array(p_player_1_score,p_player_2_score),false);
   else
     if p_reason is not null then perform fftt_private.v3_err('validation','reason'); end if;
