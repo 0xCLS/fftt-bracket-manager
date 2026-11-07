@@ -5,6 +5,7 @@ import {deriveBoard} from '../contracts/gameday_public.mjs';
 import {bracketView} from './bracket_view.mjs';
 import {scoreTiles} from './game_tiles.mjs';
 import {computeStandings} from '../contracts/gameday_engine.mjs';
+import {formatEventDate} from './date_format.mjs';
 
 let tab = 'now', last = null, wanted = new URLSearchParams(location.search).get('e');
 // The feed reports freshness every second. Do not replace a spectator's bracket DOM
@@ -115,7 +116,7 @@ function render(view) {
     return;
   }
   $('evName').textContent = ev.name;
-  $('evMeta').textContent = `${ev.date} · ${ev.status === 'complete' ? 'Final results' : 'In progress'}`;
+  $('evMeta').textContent = `${formatEventDate(ev.date)} · ${ev.status === 'complete' ? 'Final results' : 'In progress'}`;
   const board = deriveBoard(ev);
   fill(main, view.state === 'stale' ? h('div', {class: 'notice warn', text: 'The connection dropped. This is the last information received — it may be out of date.'}) : null,
     tab === 'now' ? viewNow(ev, board) : tab === 'bracket' ? viewBracket(ev) : viewResults(ev, board));
