@@ -575,7 +575,7 @@ export function createStaffUi({core, els, config, signOut}) {
           if (old?.epoch === verified.epoch && old?.revision === verified.revision
             && Array.isArray(old.games) && old.games.length === best) {
             old.games.forEach((g, i) => {
-              if (Array.isArray(g) && g.length === 2 && g.every(v => typeof v === 'string' && /^\\d{0,2}$/.test(v)))
+              if (Array.isArray(g) && g.length === 2 && g.every(v => typeof v === 'string' && /^\d{0,2}$/.test(v)))
                 draftGames[i] = [...g];
             });
           } else clearDraft();
@@ -593,7 +593,7 @@ export function createStaffUi({core, els, config, signOut}) {
         const [a,b] = draftGames[index - 1].map(Number);
         const correction = index <= verified.games.length;
         const reason = correction ? (dlg.querySelector('#gameCorrectionReason')?.value ?? '') : null;
-        if (draftGames[index - 1].some(v => !/^\\d{1,2}$/.test(v.trim()))) {
+        if (draftGames[index - 1].some(v => !/^\d{1,2}$/.test(v.trim()))) {
           status('Enter both completed-game scores, using whole numbers.', 'bad'); return;
         }
         let active = core.state.desk.find(m => m.matchId === row.matchId);
@@ -671,7 +671,7 @@ export function createStaffUi({core, els, config, signOut}) {
               checked: winnerId === p.id, disabled: !!verified && count > 0,
               on: {change: () => { winnerId = p.id; }}}), h('span', {text: `${p.name} won`})))),
           h('label', {for: 'scTable', text: 'Table'}), tableSel,
-          noFreeTable ? h('p', {class: 'notice warn', id: 'scNoFreeTable', role: 'status', text: 'All tables are occupied. No game can be saved until a table becomes available.'}) : null,
+          ...(noFreeTable ? [h('p', {class: 'notice warn', id: 'scNoFreeTable', role: 'status', text: 'All tables are occupied. No game can be saved until a table becomes available.'})] : []),
           msg,
           h('div', {class: 'dlg-actions'}, h('button', {type: 'button', text: 'Cancel', on: {click: close}}),
             h('button', {type: 'button', class: 'primary', text: 'Review result',
