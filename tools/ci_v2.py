@@ -43,6 +43,7 @@ SUITES = {
              'tests/milestone1_password_auth.test.mjs'),
     'database': ('tests/e2e/gameday_real_event_candidate.test.mjs',
                  'tests/fftt_backup_cli.test.mjs',
+                 'tests/fftt_cloud_copy.test.mjs',
                  'tests/e2e/ops_restore_rehearsal.test.mjs'),
 }
 

@@ -73,6 +73,44 @@ hosted schema comparison therefore failed before restored rows were loaded.
 The updated verifier applies these three reviewed SQL files only to the
 disposable clone. It never copies or synthesizes the registration proof secret.
 
+## Google Drive for desktop — encrypted private copy
+
+If Google Drive already appears in Finder on macOS, run the separate offline
+helper from the reviewed PR #59 checkout:
+
+`./tools/ops/fftt-cloud-copy --backup /absolute/private/verified-export.json`
+
+The helper will first require an existing **LOCAL_VERIFIED** restore report and
+confirm its SHA-256 against the original JSON; it will **not query Supabase**.
+It detects exactly one Google Drive File Provider account in
+`~/Library/CloudStorage` (or the usual legacy Google Drive mount) or refuses
+ambiguity. With multiple Drive accounts, use `--drive-root "/Finder/My Drive/path"`.
+
+macOS `hdiutil` creates an **AES-256** encrypted, compressed, read-only `.dmg`
+containing only the verified export JSON and its verified report. It prompts
+interactively for a **separate, strong archive passphrase**, never in a command
+argument, GitHub file or chat. Store that passphrase in your password manager,
+independent of Google Drive; without it recovery is impossible.
+
+Only after `hdiutil isencrypted` and `hdiutil verify` pass does the tool
+copy the **encrypted `.dmg` only** into Drive's `FFTT Private Backups`
+folder and read both local hashes back. The original JSON and original
+verification proof stay untouched in their private folder.
+
+`FFTT ENCRYPTED COPY: LOCAL HASH VERIFIED` certifies the encrypted file
+was copied intact into the **local** Google Drive mount. It explicitly
+prints **`CLOUD SYNC: UNCONFIRMED`** because Drive for desktop can take
+additional time to upload. Confirm the actual `.dmg` appears in the
+Google Drive website and Google Drive for desktop reports synchronization
+completed. Keep multiple dated encrypted copies. Never move the raw JSON,
+password or unencrypted `.zip` into Google Drive.
+
+Apple documents the `hdiutil -encryption AES-256 -stdinpass` options; its
+image integrity check does not by itself demonstrate that the owner remembers
+the passphrase. After cloud sync, perform an owner-controlled recovery test
+by opening a **copy** of the encrypted `.dmg` and comparing the contained
+JSON's SHA-256 against the original report.
+
 ## Legacy manual backup (fallback)
 1. Open the SQL editor of `fftt-bracket-manager-dev`, paste the contents of `tools/ops/hosted_export.sql`, **Run**. (Read-only; it changes nothing.)
 2. Copy the result into one JSON document (`format: "fftt-hosted-export-v1"`, `tables: {name: {count, fingerprint, rows}}`) and save it as a **mode-600 file in a private folder outside any Git repository**, e.g. `~/Documents/FFTT-private/backups/hosted-export-<purpose>-<UTC-timestamp>.json` (folder mode 700). Record its `shasum -a 256`.
