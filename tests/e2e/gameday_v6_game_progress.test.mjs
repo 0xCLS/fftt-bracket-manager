@@ -171,6 +171,8 @@ test('historical best-of-five match remains supported without enabling best-of-f
   const ctx=await fresh(2);
   try{
     const row=(await deskOf(ctx,ctx.skA))[0];
+    // Reproduce a pre-V4 championship-final event default (5 games), not a new configurable format.
+    await ctx.db.admin('update fftt_private.events set championship_final_best_of=5 where id=$1',[ctx.E]);
     await ctx.db.admin('update fftt_private.matches set best_of=null,points_to_win=null where event_id=$1 and id=$2',[ctx.E,row.match_id]);
     await assign(ctx,row);
     let shot=await read(ctx,row);
