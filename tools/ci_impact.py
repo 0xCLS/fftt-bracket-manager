@@ -50,7 +50,7 @@ TV_CSS_PROTECTED = re.compile(
     r'opacity\s*:\s*0(?:\.0*)?\s*(?:;|}|$)|'
     r'filter\s*:\s*(?!drop-shadow\s*\()|'
     r'clip(?:-path)?\s*:|(?:-webkit-)?mask(?:-image)?\s*:|'
-    r'color\s*:\s*transparent\b', re.I)
+    r'(?<![\w-])color\s*:\s*transparent\b', re.I)
 TV_TEST_NAME = re.compile(r"""\btest\(\s*(['"])(.*?)\1\s*,""")
 TV_TEST_ASSERT = re.compile(r'\bassert\.\w+\s*\(')
 
