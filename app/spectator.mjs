@@ -46,7 +46,7 @@ function viewNow(ev, board) {
     ev.finale ? finaleCard(ev.finale) : null);
 }
 function finaleCard(f) {
-  return h('div', {class: 'card'}, h('h2', {text: 'Mixed-Skill Doubles finale'}),
+  return h('div', {class: 'card spectator-finale'}, h('h2', {text: 'Mixed-Skill Doubles finale'}),
     h('div', {class: 'grid two'}, h('div', {class: 'stat ice'}, h('b', {text: 'Team A'}), h('span', {text: f.team1.join(' + ')})), h('div', {class: 'stat lav'}, h('b', {text: 'Team B'}), h('span', {text: f.team2.join(' + ')}))),
     f.bestOf && f.points ? h('p', {class: 'fmt-line', text: `Best of ${f.bestOf} · to ${f.points}`}) : null,
     f.winnerTeam ? h('div', {class: 'notice good'}, h('p', {text: `Winners: ${(f.winnerTeam === 1 ? f.team1 : f.team2).join(' + ')}`}),
@@ -65,10 +65,10 @@ function viewResults(ev, board) {
   const st = standings(ev);
   return h('div', {},
     st.champion ? h('div', {class: 'champion-banner'}, h('h2', {text: `Champion: ${st.champion}`}), h('p', {text: `Runner-up: ${st.runnerUp}`}),
-      st.consolationChampion ? h('p', {text: `Consolation champion: ${st.consolationChampion}`}) : null,
+      st.consolationChampion ? h('p', {text: `Consolation bracket champion: ${st.consolationChampion}`}) : null,
       st.doubles ? h('p', {text: `Doubles winners: ${st.doubles.winners.join(' + ')}`}) : null) : null,
     h('div', {class: 'card'}, h('h2', {text: 'Completed matches'}),
-      board.recent.length ? h('table', {}, h('tbody', {}, board.recent.map(m => h('tr', {}, h('td', {text: m.bracket === 'championship' ? 'Champ.' : 'Cons.'}),
+      board.recent.length ? h('table', {}, h('tbody', {}, board.recent.map(m => h('tr', {}, h('td', {text: m.bracket === 'championship' ? 'Championship Bracket' : 'Consolation Bracket'}),
         h('td', {text: `${m.name1} vs ${m.name2}`}), h('td', {text: `${m.winnerName} won`}), h('td', {class: 'scores-cell'}, scoreTiles(m.scores, {left: m.name1, right: m.name2, caption: false})))))) : h('div', {class: 'empty-state', text: 'No results yet.'})));
 }
 
