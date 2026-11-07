@@ -1,5 +1,7 @@
 # FFTT3 — hosted cutover runbook (single project, in place)
 
+> **Historical release procedure — not current activation instructions (November 6, 2026).** The hosted upgrade, real events, event-scoped registration and production Staff/Spectator domains are already live following separately approved releases. Current accepted Staff source: `5b0a3571a29accf6c348d41fbfdbbf23fb4734a3` (deployment `4bb1cd48-984d-4af1-8f7b-1b95c1a2d599`). **Do not rerun** the one-time SQL upgrade, recreate FFTT3 or the rehearsal event, repeat original deployment steps or substitute historical rollback references. This document remains as historical provenance; consult current manifests and the canonical project changelog.
+
 **Status:** ready to run after the organizer's ONE consolidated approval. Nothing here has been run against the hosted project except read-only queries. Existing infrastructure only: Supabase `fftt-bracket-manager-dev` (`copmkalfkkrkzheohwuc`), Cloudflare Pages `fftt3-staff-stg` and `fftt3-games-stg`. No new project, repository or paid resource.
 
 ## What the approval covers
