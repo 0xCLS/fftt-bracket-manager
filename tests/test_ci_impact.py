@@ -37,7 +37,7 @@ class ImpactTests(unittest.TestCase):
         self.assertEqual(route(['app/app.css']),'ui-visual')
         self.assertEqual(route(['app/app.css'],action='synchronize'),'ui-visual')
     def test_public_and_organizer(self):
-        self.assertEqual(route(['app/tv.mjs'],{'app/tv.mjs':'+ h("span", {text: "Welcome"})'}),'public-ui')
+        self.assertEqual(route(['app/tv.mjs'],{'app/tv.mjs':'+ h("span", {text: "Welcome"})'}, sources={'app/tv.mjs': (TV_OLD, TV_NEW)}),'public-ui')
         self.assertEqual(route(['app/tv.css']),'public-ui')
         self.assertEqual(route(['app/assets/emblem.webp']),'ui-visual')
         self.assertEqual(route(['app/view_players.mjs'],{'app/view_players.mjs':'+ h("span", {text: "Players"})'}),'organizer-ui')
