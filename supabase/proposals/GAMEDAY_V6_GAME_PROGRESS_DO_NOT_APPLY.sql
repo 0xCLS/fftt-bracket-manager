@@ -166,7 +166,8 @@ begin
   select * into m from fftt_private.matches where event_id=p_event_id and id=p_match_id
     and generation=e.bracket_generation for update;
   if not found then perform fftt_private.v3_err('notfound','match'); end if;
-  if m.status <> 'pending' or m.player_1_id is null or m.player_2_id is null then
+  if m.status <> 'pending' or m.player_1_id is null or m.player_2_id is null
+    or m.table_number is null then
     perform fftt_private.v3_err('conflict','match-not-playable');
   end if;
   if not exists (select 1 from fftt_private.brackets b where b.id=m.bracket_id and b.event_id=e.id
