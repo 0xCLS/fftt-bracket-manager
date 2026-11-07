@@ -1,25 +1,42 @@
-# CI routing and release policy
+# FFTT CI v2 — fast by default, comprehensive by approval
 
-The browser regression workflow selects the least expensive **verified** lane. Unknown paths, invalid history and ambiguous UI edits fail closed to the full suite. The router and workflow changes themselves are full-risk and require comprehensive CI before adoption.
+## Operating contract
 
-| Lane | Scope | Checks |
+- Only pull requests trigger automatic focused checks. A merge to `main` does **not** repeat the same test suites.
+- Cumulative PR changes are classified from a **trusted base-branch selector**, not code supplied by the PR. Superseded checks are cancelled.
+- Each selected test file runs only once. npm and Chromium are installed only when a relevant test needs them.
+- Unknown, scoring-authoritative, security, authentication, server, SQL, dependency, and CI-infrastructure changes **do not automatically start comprehensive regression**. They require a successful, separately authorized comprehensive run for the **exact PR head SHA** before the high-risk PR gate can pass.
+- The original comprehensive suites and commands are preserved in `.github/workflows/browser-tests.yml`, but that workflow is **manual-only**, requiring the `approval=APPROVED` input.
+- The staging gate can no longer launch that workflow. If the required evidence is unavailable, it blocks deployment. Production authorization and data-safety gates remain independent.
+
+## Automatic checks
+
+| Changed area | Selected checks | Manual comprehensive proof |
 | --- | --- | --- |
-| `ui-visual` | Allowlisted, non-sensitive shared CSS | Fictional Staff UI plus public TV/Spectator browser, selection and privacy checks |
-| `public-ui` | Allowlisted public presentation and narrowly bounded event-selection changes | Fictional TV and Spectator browsers at desktop, phone and TV sizes; event selection, public projection, freshness and privacy tests |
-| `organizer-ui` | Allowlisted Staff presentation changes that do not touch protected actions or permissions | Fictional Staff UI, registration and check-in workflows |
-| `docs` | Documentation-only verified ranges | Classifier tests |
-| `full` | Scoring, bracket logic, data writes, authorization, authentication, permissions, secrets, SQL, server/Functions, contracts, CI/test changes, unknown or ambiguous changes | All three existing full regression jobs, including disposable PostgreSQL |
+| Markdown documentation only | Selection/reporting | No |
+| TV layout, TV logic, TV presentation test | TV presentation plus public isolation/privacy | No |
+| Spectator or public-site presentation | Public UI, selection and privacy | No |
+| Allowlisted Staff visual UI | Focused Staff browser/unit | No |
+| Registration model/UI/test | Registration unit/browser | Depends on protected changes |
+| Scoring and tournament authority | Scoring plus public presentation | **Yes** |
+| Authentication, SQL, server, deployment, CI code, unknown files | Applicable focused checks (if known) | **Yes** |
 
-Public/organizer JavaScript is not automatically trusted. The router rejects changed imports, network/storage/auth/write operations and other protected or ambiguous UI edits; public feed wiring must remain byte-identical for the limited event-selection exception. Display or test edits that cannot be proven safe go through full CI. CSS that may hide status or load external resources is full-risk. Test, dependency and CI changes always use full CI. Maintain the allowlists and tests together; never add server, contract, database, auth or scoring code to a focused lane.
+Targets, pending measurement in actual GitHub runs: under 30 seconds for static selection, and 1–3 minutes for focused browser checks. These are design budgets, not promises.
 
-For opened and reopened PRs, the classifier verifies the base, head, checkout and merge base, then classifies the **whole merge-base-to-head diff**. Synchronize events additionally verify the before/after SHAs and ancestry, but still classify the cumulative PR diff. Earlier sensitive work therefore cannot escape because a prior check failed, was cancelled, or never completed. Force pushes, missing commits, mismatched checkouts and empty or unprovable ranges require full CI. For main pushes, the entire verified before/after range is classified. A manual workflow dispatch always runs full regression. Automatic runs cancel superseded runs for the same PR or branch; manual full runs have independent concurrency groups.
+## Manual full verification
 
-A main push may avoid repeating a **completed full PR regression** only when the previous trusted router verifies the GitHub merged PR, the tested PR base matching the prior main commit and being an ancestor of the head, exact PR-head and merge-result tree equality, and success of all three full jobs in the same successful PR workflow run. CI, test, tool and dependency changes are ineligible. Missing, failed or incomplete proof falls back to normal classification and cannot waive full checks. The workflow reports `reused` explicitly; it does not manufacture an exact-commit full check.
+An owner-authorized operator must explicitly dispatch **Browser regression tests** on the exact feature-branch head with input `approval=APPROVED`. Only a completed **successful** manually dispatched run with all three comprehensive jobs green counts as proof. Afterward, re-run the failed `CI v2 — release-risk gate` check to re-evaluate the immutable SHA evidence, without restarting full regression.
 
-The classifier for an event is loaded from the trusted base/before commit, not from the PR under test. Protect the workflow and branch through repository review and branch-protection rules; the classifier is not a substitute for those controls.
+The CI selector itself never dispatches tests; there is no fallback that silently turns uncertainty into an automatic full run. Required checks and branch protections must not be removed merely to get a merge through.
 
-## Staging and production release safety
+## Staging and production
 
-CI routing does **not** authorize deployment. The staging gate still requires successful full jobs on the exact release commit except for its existing narrowly pinned visual-only exception: matching full-tested live staging baselines, an allowed cumulative visual delta, successful exact-commit classifier and focused job, and all bundle, preview and live verification. Its allowlist is independent of the development router and cannot expand merely because a new CI lane is added. Public UI and organizer interaction lanes do not satisfy this exception. A reused PR run is not an exact-commit full release check; when the full gate applies it must run on the release SHA. Cloudflare production authorization, security checks and Supabase safeguards are unchanged.
+`tools/ops/staging_release.py` still requires its established exact-commit proof, including the historically narrow visual-release exception. It now fails fast when full proof is missing rather than starting another workflow. Missing safety evidence blocks staging, not authorizes it. Nothing in CI v2 approves a hosted migration, release, or production rollout.
 
-Run `python3 -m unittest discover -s tests -p 'test_ci_impact.py' -v` for routing and proof tests, and `python3 -m unittest discover -s tests -p 'test_staging_release.py' -v` for staging safeguards. Focused browser fixtures use intercepted fictional data. Manual full CI is available through **Browser regression tests → Run workflow** on the intended commit/branch; verify its exact SHA and all three full jobs before relying on it for a release.
+## Safe activation boundary
+
+The old comprehensive workflow currently exists on `main` with PR/push triggers. **Do not open a PR for the CI v2 branch until the old workflow is disabled or the owner explicitly approves a safe cutover.** Otherwise GitHub may start exactly the unwanted old full regression. Working on the isolated branch does not trigger that workflow.
+
+Retain existing branch-protection requirements. Validate the new routing with cheap local tests (`python3 -m unittest discover -s tests -p 'test_ci_v2.py' -v`), and staging safety tests (`python3 -m unittest discover -s tests -p 'test_staging_release.py' -v`). Any protected workflow change itself needs review/authorization before activation.
+
+For the historical pre-v2 policy see prior Git history; do not restore it without explicit approval.
