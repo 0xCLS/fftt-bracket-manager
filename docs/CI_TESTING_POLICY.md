@@ -37,6 +37,8 @@ The CI selector itself never dispatches tests; there is no fallback that silentl
 
 The old comprehensive workflow currently exists on `main` with PR/push triggers. **Do not open a PR for the CI v2 branch until the old workflow is disabled or the owner explicitly approves a safe cutover.** Otherwise GitHub may start exactly the unwanted old full regression. Working on the isolated branch does not trigger that workflow.
 
+For the **one-time initial PR**, before `ci_v2.py` exists on `main`, the new workflow independently verifies that the cumulative diff contains exactly the nine CI/policy adoption files, then runs only offline CI-v2 and staging-gate unit tests. It does not dispatch comprehensive regression. This narrow bootstrap exception does **not** apply to later PRs; normal trusted-base classification and explicit manual proof take over after adoption. Human PR review and existing branch protections remain necessary.
+
 Retain existing branch-protection requirements. Validate the new routing with cheap local tests (`python3 -m unittest discover -s tests -p 'test_ci_v2.py' -v`), and staging safety tests (`python3 -m unittest discover -s tests -p 'test_staging_release.py' -v`). Any protected workflow change itself needs review/authorization before activation.
 
 For the historical pre-v2 policy see prior Git history; do not restore it without explicit approval.
