@@ -101,7 +101,7 @@ test('spectator and TV: stale information is labelled, and live reads resume wit
     w.fake.setOffline('tv', true); w.fake.setOffline('spec', true);
     await tv.page.locator('#live', {hasText: 'OUT OF DATE'}).waitFor({timeout: 45000});
     await spec.page.locator('#live', {hasText: 'Out of date'}).waitFor({timeout: 45000});
-    assert.ok(await tv.page.locator('.next-card').count() > 0, 'the last public matchups stay visible but are labelled out of date');
+    assert.ok(await tv.page.locator('.table-grid .table-card', {hasText: 'TABLE 1'}).count() > 0, 'the last information is kept but labelled');
     w.fake.setOffline('tv', false); w.fake.setOffline('spec', false);
     await tv.page.locator('#live', {hasText: 'LIVE'}).waitFor({timeout: 45000});
     await spec.page.locator('#live', {hasText: /^Live$/}).waitFor({timeout: 45000});
