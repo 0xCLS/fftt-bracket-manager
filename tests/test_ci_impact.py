@@ -49,6 +49,8 @@ class ImpactTests(unittest.TestCase):
             self.assertEqual(route([path]),'full',path)
         self.assertEqual(route(['app/tv.mjs'],{'app/tv.mjs':'+ fetch("/x")'}),'full')
         self.assertEqual(route(['app/tv.mjs'],{'app/tv.mjs':'+ submitResult()'}),'full')
+        self.assertEqual(route(['app/tv.mjs'],{'app/tv.mjs':'+ canPublish = true;'}),'full')
+        self.assertEqual(route(['app/tv.mjs'],{'app/tv.mjs':'+ m.winnerName = other;'}),'full')
         self.assertEqual(route(['app/app.css'],{'app/app.css':'+ .live {display:none}'}),'full')
     def test_invalid_ranges_force_full(self):
         for kw in ({'base':''},{'head':'0'*39},{'checkout':BEFORE},{'action':'synchronize','before':''},{'action':'synchronize','after':BASE},{'action':'synchronize','ancestor':False}):

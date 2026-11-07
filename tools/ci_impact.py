@@ -23,7 +23,7 @@ ORGANIZER = {'app/view_players.mjs', 'app/view_registration.mjs',
 # Do not expedite edits touching data access, scoring, auth, permissions, imports,
 # publication or staff writes. Unknown paths remain full regardless of content.
 PROTECTED = re.compile(r'\b(?:submit|record|correct|delete|update|insert|upsert|publish|assign|advance|save|clear|remove)\w*\s*\(|\b(import|export|fetch|XMLHttpRequest|WebSocket|sendBeacon|eval|Function|localStorage|sessionStorage|cookie|token|secret|authorization|apikey|password|credential|session|supabase|rpc|mutation|write|publish|permission|authorize|auth|submit|delete|insert|upsert|signIn|signOut)\b|core\s*\.|\.actions\b|\b(?:window|globalThis|navigator|document)\s*\[', re.I)
-UI_PROTECTED = re.compile(r'\b(winner|scores|scoreTiles|parseGames|normalizeGameScores|computeStandings|deriveBoard|startPublicFeed|pickEvent|phase|freshness|stale|expired|event_id|window|document|location|navigator|globalThis|prototype|constructor|Reflect|Proxy|setTimeout|setInterval)\b|https?://|<script', re.I)
+UI_PROTECTED = re.compile(r'\b\w*(?:auth|publish|score|winner|secret|token|permission|write|submit|record|advance|session|rating|email|phone|private)\w*\b|\b(computeStandings|deriveBoard|startPublicFeed|pickEvent|phase|freshness|stale|expired|event_id|window|document|location|navigator|globalThis|prototype|constructor|Reflect|Proxy|setTimeout|setInterval)\b|https?://|<script', re.I)
 CSS_PROTECTED = re.compile(r'@import|url\s*\(|display\s*:\s*none|visibility\s*:\s*hidden|opacity\s*:|filter\s*:|clip(?:-path)?\s*:|color\s*:\s*transparent|(?:live|stale|status|warn|error|security|private|demo|fictional)', re.I)
 
 def git(*args):
