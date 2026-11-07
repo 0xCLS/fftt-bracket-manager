@@ -213,6 +213,8 @@ jobs:
         run: node --test tests/e2e/gameday_core.test.mjs
       - name: V6 game-by-game scoring (fictional SQL, authorization, revisions, audit and anonymous TV projection)
         run: node --test tests/e2e/gameday_v6_game_progress.test.mjs tests/e2e/gameday_v6_client.test.mjs
+      - name: V6 mobile completed-game saving and verified TV progress (fictional Chromium)
+        run: node --test tests/e2e/gameday_v6_browser.test.mjs
       - name: V4 server logic against the real SQL (formats incl. historical Bo5, registration, restore, guarded deletion)
         run: node --test tests/e2e/gameday_v4_server.test.mjs
       - name: V4 real client stack (stale formats, duplicate sends, registration privacy lifecycle, events) and adapter authorization against the real SQL
