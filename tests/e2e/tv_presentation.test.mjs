@@ -270,9 +270,9 @@ test('approved cinematic hierarchy keeps two balanced match panels, featured res
     assert.match(await page.locator('.queue-banner').innerText(),/UP NEXT/);
     const geometry=await page.evaluate(()=>{
       const cards=[...document.querySelectorAll('.broadcast-match')].map(e=>e.getBoundingClientRect());
-      return {gap:cards[1].top-cards[0].bottom,radius:getComputedStyle(document.querySelector('.broadcast-match')).borderTopLeftRadius};
+      return {gap:cards[1].left-cards[0].right,aligned:Math.abs(cards[1].top-cards[0].top)<15,radius:getComputedStyle(document.querySelector('.broadcast-match')).borderTopLeftRadius};
     });
-    assert.ok(geometry.gap>=15,'match panels retain breathing room');
+    assert.ok(geometry.gap>=15&&geometry.aligned,'side-by-side match panels retain horizontal breathing room');
     assert.notEqual(geometry.radius,'0px','match panels retain approved rounded contours');
     assert.deepEqual(await fits(page),[]);
     await page.keyboard.press('2');
