@@ -20,6 +20,7 @@ export const SQL_FILES = [
   'supabase/proposals/GAMEDAY_TOURNAMENT_V3_STAGING.sql',
   'supabase/proposals/GAMEDAY_TOURNAMENT_V4_STAGING.sql',
   'supabase/proposals/GAMEDAY_TOURNAMENT_V5_STAGING.sql',
+  'supabase/proposals/GAMEDAY_V6_GAME_PROGRESS_DO_NOT_APPLY.sql',
 ];
 
 const AUTH_STUB = `
