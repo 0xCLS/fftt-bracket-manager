@@ -211,6 +211,8 @@ jobs:
         run: node --test tests/e2e/gameday_server.test.mjs
       - name: Game-day real client stack (session, API, score transport, core) against the real SQL
         run: node --test tests/e2e/gameday_core.test.mjs
+      - name: V6 game-by-game scoring (fictional SQL, authorization, revisions, audit and anonymous TV projection)
+        run: node --test tests/e2e/gameday_v6_game_progress.test.mjs
       - name: V4 server logic against the real SQL (formats incl. historical Bo5, registration, restore, guarded deletion)
         run: node --test tests/e2e/gameday_v4_server.test.mjs
       - name: V4 real client stack (stale formats, duplicate sends, registration privacy lifecycle, events) and adapter authorization against the real SQL
@@ -356,6 +358,18 @@ jobs:
         run: |
           psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres \
             -f supabase/proposals/GAMEDAY_TOURNAMENT_V5_STAGING.sql
+      - name: Apply game-by-game V6 candidate ONLY to ephemeral local PostgreSQL
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres \
+            -f supabase/proposals/GAMEDAY_V6_GAME_PROGRESS_DO_NOT_APPLY.sql
+      - name: Assert V6 database grants and public projection privacy (local PostgreSQL only)
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres \
+            -f tests/gameday_v6_disposable.sql
       - name: Independently test real-only candidate on disposable local PostgreSQL (fictional users only)
         env:
           PGPASSWORD: postgres
