@@ -100,6 +100,7 @@ class TvRoutingTests(unittest.TestCase):
     def test_unmodified_visual_css_does_not_force_full_ci(self):
         self.assertEqual(route(['app/tv.css'], patches={'app/tv.css':"+ .score {color: #fff;}"}), 'public-ui')
         self.assertEqual(route(['app/tv.css'], event='push', patches={'app/tv.css':"+ .score {color: #fff;}"}), 'public-ui')
+        self.assertEqual(route(['app/tv.css'], patches={'app/tv.css':"+ .spinner {border-top-color:transparent}"}), 'public-ui')
 
     def test_tv_hiding_resources_or_live_status_is_full(self):
         for css in ('+ .feed-status{display:none}', '+ .badge{visibility:hidden}',
