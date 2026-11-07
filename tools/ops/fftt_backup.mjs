@@ -16,6 +16,7 @@ export const TABLES = Object.freeze([
 const KINDS = ['column','constraint','function','rls','trigger','view'];
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const MD5 = /^[a-f0-9]{32}$/i;
+const EXCLUDED_SECRET_TABLE = 'registration_gate';
 const EMPTY_FP = crypto.createHash('md5').update('').digest('hex');
 const ACCOUNT = 'fftt-backup', SERVICE = 'FFTT-Supabase-ReadOnly';
 const check = (ok,message) => { if (!ok) throw new Error(message); };
@@ -80,6 +81,13 @@ export async function readOnlyQuery(query,token,{fetchImpl=fetch,project=PROJECT
   check(Array.isArray(rows),'Unexpected read-only API payload');
   return rows;
 }
+export function verifyPrivateInventory(rows) {
+  check(Array.isArray(rows),'Cannot verify private table inventory');
+  const expected=[...TABLES.filter(t=>t!=='auth_users'),EXCLUDED_SECRET_TABLE].sort();
+  const actual=rows.map(r=>r?.relname).sort();
+  check(JSON.stringify(expected)===JSON.stringify(actual),
+    'Unexpected or missing private table: update protected backup allowlist before proceeding');
+}
 function expand(p) {return path.resolve(p.startsWith('~/')?path.join(os.homedir(),p.slice(2)):p);}
 function secureDir(p) {
   const dir=expand(p),relative=path.relative(ROOT,dir);
@@ -143,8 +151,14 @@ export async function createBackup({token,fetchImpl=fetch,backupDir,mirrorDir,
   const schemaSql=fs.readFileSync(path.join(ROOT,'tools/ops/schema_fingerprint.sql'),'utf8');
   const rows=await readOnlyQuery(exportSql,token,{fetchImpl});
   const schema=await readOnlyQuery(schemaSql,token,{fetchImpl});
+  // Metadata only: never read the registration_gate.secret bytea proof.
+  const inventorySql="select c.relname from pg_catalog.pg_class c "+
+    "join pg_catalog.pg_namespace n on n.oid=c.relnamespace "+
+    "where n.nspname='fftt_private' and c.relkind='r' order by c.relname";
+  verifyPrivateInventory(await readOnlyQuery(inventorySql,token,{fetchImpl}));
   const doc=normalizeExport(rows,PROJECT_REF,now);
   doc.schema_fingerprint=normalizeSchema(schema);
+  doc.excluded_private_tables=[EXCLUDED_SECRET_TABLE];
   const dir=secureDir(backupDir??path.join(os.homedir(),'Documents/FFTT-private/backups'));
   const stem='fftt-pre-v6-'+now.toISOString().replace(/[:.]/g,'-')+'-'+crypto.randomBytes(4).toString('hex');
   const file=path.join(dir,stem+'.json'),reportFile=path.join(dir,stem+'.report.json');

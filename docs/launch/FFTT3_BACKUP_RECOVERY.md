@@ -42,6 +42,17 @@ re-reviewed in recovery). The Management API's dedicated read-only endpoint
 is currently Beta; a permission failure or missing endpoint blocks the
 automation rather than falling back to write-capable SQL.
 
+## Explicit secret exclusion and future schema changes
+
+The live schema currently has 15 private tables: 14 application tables
+in this JSON export, plus `fftt_private.registration_gate`.
+The latter contains a `secret bytea` proof credential and is deliberately
+**not exported**. Its key must be protected or re-established using a
+separate owner-controlled procedure if the hosted database is ever rebuilt.
+The backup tool checks an unprivileged read-only inventory of all private
+tables and refuses success if an unfamiliar table appears. This is **not**
+a full Supabase Auth, Cloudflare or proof-secret disaster-recovery export.
+
 ## Legacy manual backup (fallback)
 1. Open the SQL editor of `fftt-bracket-manager-dev`, paste the contents of `tools/ops/hosted_export.sql`, **Run**. (Read-only; it changes nothing.)
 2. Copy the result into one JSON document (`format: "fftt-hosted-export-v1"`, `tables: {name: {count, fingerprint, rows}}`) and save it as a **mode-600 file in a private folder outside any Git repository**, e.g. `~/Documents/FFTT-private/backups/hosted-export-<purpose>-<UTC-timestamp>.json` (folder mode 700). Record its `shasum -a 256`.

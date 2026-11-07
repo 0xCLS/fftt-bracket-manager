@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import {normalizeExport,normalizeSchema,readOnlyQuery,createBackup,readToken,
+import {normalizeExport,normalizeSchema,readOnlyQuery,createBackup,readToken,verifyPrivateInventory,
   PROJECT_REF,TABLES} from '../tools/ops/fftt_backup.mjs';
 
 const md5=s=>crypto.createHash('md5').update(s).digest('hex');
@@ -13,6 +13,7 @@ const rows=()=>TABLES.map(tbl=>tbl==='events'?
   tbl==='platform_organizers'?
   {tbl,n:1,fp:md5('fictional-organizer'),data:JSON.stringify([{user_id:'fictional-uuid'}])}:
   {tbl,n:0,fp:md5(''),data:'[]'});
+const inventory=()=>[...TABLES.filter(t=>t!=='auth_users'),'registration_gate'].map(relname=>({relname}));
 const schema=()=>['column','constraint','function','rls','trigger','view']
   .map((kind,i)=>({kind,n:i+1,fingerprint:md5(kind)}));
 const response=(data,status=201)=>({ok:status===201,status,json:async()=>data});
@@ -24,6 +25,7 @@ test('builds a complete backup with 15 tables, including empty tables and publis
   assert.equal(doc.tables.matches.fingerprint,md5(''));
   assert.equal(doc.taken_at,'2026-11-07T00:00:00.000Z');
   assert.equal(Object.keys(normalizeSchema(schema())).length,6);
+  assert.doesNotThrow(()=>verifyPrivateInventory(inventory()));
 });
 test('wrong project, incomplete content, and bad schema metadata fail closed',()=>{
   assert.throws(()=>normalizeExport([]),/Incomplete export/);
@@ -32,6 +34,8 @@ test('wrong project, incomplete content, and bad schema metadata fail closed',()
   assert.throws(()=>normalizeExport(rows().map((r,i)=>i===0?{...r,n:2}:r)),/Incomplete/);
   assert.throws(()=>normalizeExport(rows().map((r,i)=>i===0?{...r,data:'not-json'}:r)),/Malformed table JSON/);
   assert.throws(()=>normalizeSchema(schema().slice(1)),/Incomplete/);
+  assert.throws(()=>verifyPrivateInventory(inventory().slice(1)),/Unexpected or missing/);
+  assert.throws(()=>verifyPrivateInventory([...inventory(),{relname:'new_unknown_table'}]),/Unexpected or missing/);
 });
 test('only calls the dedicated read-only SQL API and never exposes response details',async()=>{
   const calls=[];
@@ -54,14 +58,14 @@ test('writes private verified local and mirrored copies, with matching SHA-256',
   const parent=fs.mkdtempSync(path.join(os.tmpdir(),'fftt-backup-test-'));
   const backupDir=path.join(parent,'backups'),mirrorDir=path.join(parent,'mirror');
   let requests=0,verified=0;
-  const mock=async()=>response(++requests===1?rows():schema());
+  const mock=async()=>response(++requests===1?rows():requests===2?schema():inventory());
   try {
     const report=await createBackup({token:'fictional-testing-token',fetchImpl:mock,
       backupDir,mirrorDir,verify:async file=>{
         verified++;
         assert.equal(JSON.parse(fs.readFileSync(file,'utf8')).tables.events.count,1);
       },now:new Date('2026-11-07T00:00:00Z'),printer:()=>{}});
-    assert.equal(requests,2);assert.equal(verified,1);
+    assert.equal(requests,3);assert.equal(verified,1);
     assert.equal(report.result,'VERIFIED_AND_MIRRORED');
     assert.equal(fs.statSync(report.backup).mode&0o777,0o600);
     assert.equal(fs.statSync(backupDir).mode&0o777,0o700);
@@ -72,7 +76,7 @@ test('writes private verified local and mirrored copies, with matching SHA-256',
 test('failure retains an explicitly UNVERIFIED private backup and never creates a mirror',async()=>{
   const parent=fs.mkdtempSync(path.join(os.tmpdir(),'fftt-backup-failure-'));
   let requests=0;
-  const mock=async()=>response(++requests===1?rows():schema());
+  const mock=async()=>response(++requests===1?rows():requests===2?schema():inventory());
   try {
     await assert.rejects(createBackup({token:'fictional-testing-token',fetchImpl:mock,
       backupDir:path.join(parent,'backups'),mirrorDir:path.join(parent,'mirror'),
@@ -87,7 +91,7 @@ test('failure retains an explicitly UNVERIFIED private backup and never creates 
 });
 test('refuses to store raw database exports inside a Git checkout',async()=>{
   let requests=0;
-  const mock=async()=>response(++requests===1?rows():schema());
+  const mock=async()=>response(++requests===1?rows():requests===2?schema():inventory());
   await assert.rejects(createBackup({token:'fictional-testing-token',fetchImpl:mock,
     backupDir:path.resolve('tools'),verify:async()=>{},printer:()=>{}}),
     /outside Git|within a Git checkout/);
