@@ -39,6 +39,7 @@ const ORDER = ['platform_organizers', 'events', 'event_staff', 'players', 'brack
   'registration_links', 'registration_sources', 'result_submissions', 'score_decisions_v2', 'audit_events', 'deleted_events'];
 
 let failures = 0;
+let stage = 'prepare disposable database';
 const check = (ok, label, extra = '') => { if (!ok) failures++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}${extra ? '  ' + extra : ''}`); };
 
 const fingerprint = async (db, table) => {
@@ -57,6 +58,7 @@ import {APPLIED_PRE_V6_LAYERS} from './restore_verify_helpers.mjs';
 const preV6SqlFiles = SQL_FILES.filter(f => !f.endsWith('/GAMEDAY_V6_GAME_PROGRESS_DO_NOT_APPLY.sql'));
 const db = await createLocalDb(v6Preflight ? {sqlFiles: preV6SqlFiles, upgraded: true} : {});
 try {
+  stage = 'replay approved hosted pre-V6 schema layers';
   if (v6Preflight) {
     // These three changes already exist on the hosted project. Their known SQL
     // must be present in the disposable clone before exact catalog comparison.
@@ -66,6 +68,7 @@ try {
     const [gate] = await db.admin('select count(*)::int n from fftt_private.registration_gate');
     check(gate.n === 0,'registration proof secret remains excluded from the clone');
   }
+  stage = 'compare approved schema fingerprints';
   const baseSchema = await schemaFp(db);
   if (doc.schema_fingerprint) {
     const kinds = Object.keys(baseSchema).sort(), expected = Object.keys(doc.schema_fingerprint).sort();
@@ -78,6 +81,7 @@ try {
     }
     check(true,'hosted schema fingerprint matches disposable pre-V6 baseline');
   }
+  stage = 'restore private application records';
   await db.admin('begin');
   await db.admin(`set local session_replication_role = replica`);
   for (const u of doc.tables.auth_users.rows) {
@@ -91,12 +95,14 @@ try {
   await db.admin('commit');
 
   console.log(`Restore of ${path.basename(file)} (taken ${doc.taken_at}) into a disposable database`);
+  stage = 'verify data fingerprints';
   const restored = await fingerprintAll(db);
   for (const [t, v] of Object.entries(doc.tables)) {
     check(restored[t].n === v.count, `${t}: ${v.count} rows`, `restored ${restored[t].n}`);
     if (v.count) check(restored[t].fp === v.fingerprint, `${t}: fingerprint equal`);
   }
 
+  stage = 'verify foreign keys and API visibility';
   // referential integrity, generically over every foreign key of the private schema
   const fks = await db.admin(`select c.conrelid::regclass::text tbl, c.confrelid::regclass::text ref, c.conname,
       (select string_agg(a.attname, ', ' order by k.ord) from unnest(c.conkey) with ordinality k(attnum, ord) join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k.attnum) cols,
@@ -134,6 +140,7 @@ try {
   check((await db.publicTournaments()).length === 0,
     'no public cache is repopulated by private-only restoration');
 
+  stage = 'verify V6 proposal in disposable copy';
   if (v6Preflight) {
     // This is the ONLY permitted place for V6 in the backup rehearsal: a disposable
     // restored clone with baseline fingerprints already verified. Never contacts Supabase.
@@ -219,7 +226,7 @@ try {
       check((await schemaFp(db)).function === upSchema.function, 'refused rollback changed nothing');
     } finally { fs.rmSync(tmp, {recursive: true, force: true}); }
   }
-} catch (e) { failures++; console.log('FAIL  private restore or clone check failed (details withheld from shared logs)'); }
+} catch (e) { failures++; console.log('FAIL  safe verification stage: ' + stage); }
 finally { await db.db.close(); }
 
 async function assertRejects(promise, label, re = null) {

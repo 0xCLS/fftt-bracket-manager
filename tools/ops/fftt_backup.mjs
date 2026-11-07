@@ -141,8 +141,15 @@ function verifyLocal(file) {
   delete env.SUPABASE_DB_PASSWORD;
   const r=spawnSync(process.execPath,[path.join(ROOT,'tools/ops/restore_verify.mjs'),file,'--v6-preflight'],
     {cwd:ROOT,env,encoding:'utf8',timeout:240000,maxBuffer:4*1024*1024});
+  const safeStage = (r.stdout ?? '').split(/\r?\n/).find(line =>
+    /^FAIL  safe verification stage: (?:prepare disposable database|replay approved hosted pre-V6 schema layers|compare approved schema fingerprints|restore private application records|verify data fingerprints|verify foreign keys and API visibility|verify V6 proposal in disposable copy)$/.test(line));
+  const safeSchema = (r.stdout ?? '').split(/\r?\n/).find(line =>
+    /^FAIL  schema parity differs in categories: (?:column|constraint|function|rls|trigger|view|,| )+$/.test(line));
   check(r.status===0 && r.stdout?.includes('ALL CHECKS PASSED'),
-    'Disposable V6 restore proof failed; no private details printed');
+    'Disposable V6 restore proof failed' +
+    (safeStage ? ' [' + safeStage + ']' : '') +
+    (safeSchema ? ' [' + safeSchema + ']' : '') +
+    '; no private records printed');
 }
 export async function createBackup({token,fetchImpl=fetch,backupDir,mirrorDir,
   verify=verifyLocal,now=new Date(),printer=console.log}={}) {

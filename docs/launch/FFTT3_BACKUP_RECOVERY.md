@@ -53,6 +53,26 @@ The backup tool checks an unprivileged read-only inventory of all private
 tables and refuses success if an unfamiliar table appears. This is **not**
 a full Supabase Auth, Cloudflare or proof-secret disaster-recovery export.
 
+## Reverify an already saved backup after an offline verifier fix
+
+If the export succeeded but verification failed, **do not export or paste it
+again**. After updating the same private Mac worktree to a reviewed verifier
+commit, run `./tools/ops/fftt-backup --verify-existing /absolute/private/path.json`.
+The command reuses the original file and checks its SHA-256 against the original
+private report; it does not query Supabase, require another access token, write to
+the hosted database, or modify the source backup. Only after a successful
+disposable restore and V6 rehearsal does it write a new independent
+`.reverified-<timestamp>.report.json` with `LOCAL_VERIFIED`. The original
+failure report is retained. If verification still fails, it emits only a
+predefined safe stage and schema category (never player rows or secret values).
+A local verified file **still needs a separate encrypted/off-device copy**.
+
+The November 7 verifier initially omitted the already-deployed Bracket Manager
+role, event-day delegation, and registration-gate schema additions; an exact
+hosted schema comparison therefore failed before restored rows were loaded.
+The updated verifier applies these three reviewed SQL files only to the
+disposable clone. It never copies or synthesizes the registration proof secret.
+
 ## Legacy manual backup (fallback)
 1. Open the SQL editor of `fftt-bracket-manager-dev`, paste the contents of `tools/ops/hosted_export.sql`, **Run**. (Read-only; it changes nothing.)
 2. Copy the result into one JSON document (`format: "fftt-hosted-export-v1"`, `tables: {name: {count, fingerprint, rows}}`) and save it as a **mode-600 file in a private folder outside any Git repository**, e.g. `~/Documents/FFTT-private/backups/hosted-export-<purpose>-<UTC-timestamp>.json` (folder mode 700). Record its `shasum -a 256`.
