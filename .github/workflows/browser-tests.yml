@@ -6,6 +6,8 @@ on:
     paths:
       - index.html
       - app/**
+      - public-site/**
+      - docs/**
       - server/**
       - functions/**
       - contracts/**
@@ -17,6 +19,8 @@ on:
     paths:
       - index.html
       - app/**
+      - public-site/**
+      - docs/**
       - server/**
       - functions/**
       - contracts/**
@@ -26,9 +30,15 @@ on:
       - supabase/**
   workflow_dispatch:
 
-# A newer PR update supersedes stale in-progress UI or full checks.
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
+  checks: read
+
+# A newer automatic update supersedes its own stale run; manual full runs remain independent.
 concurrency:
-  group: browser-regression-${{ github.event.pull_request.number || github.ref }}
+  group: browser-regression-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -46,18 +56,35 @@ jobs:
           fetch-depth: 0
       - name: Test CI routing safeguards (no network)
         run: python3 -m unittest discover -s tests -p 'test_ci_impact.py' -v
-      - name: Classify the complete incremental push (fail closed)
+      - name: Classify the verified cumulative change (fail closed)
         id: impact
         env:
           EVENT_ACTION: ${{ github.event.action }}
           SYNC_BEFORE: ${{ github.event.before }}
           SYNC_AFTER: ${{ github.event.after }}
-        run: python3 tools/ci_impact.py
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          POLICY_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            echo 'lane=full' >> "$GITHUB_OUTPUT"
+          elif [[ "$POLICY_SHA" =~ ^[0-9a-f]{40}$ ]] && git show "$POLICY_SHA:tools/ci_impact.py" > "$RUNNER_TEMP/ci-impact.py"; then
+            if [[ "$GITHUB_EVENT_NAME" == push ]] && git show "$POLICY_SHA:tools/ci_reuse.py" > "$RUNNER_TEMP/ci-reuse.py" 2>/dev/null; then
+              python3 "$RUNNER_TEMP/ci-reuse.py"
+            fi
+            if ! grep -qx 'lane=reused' "$GITHUB_OUTPUT"; then
+              python3 "$RUNNER_TEMP/ci-impact.py" || { echo 'lane=full' >> "$GITHUB_OUTPUT"; }
+            fi
+          else
+            echo 'lane=full' >> "$GITHUB_OUTPUT"
+          fi
 
   ui-targeted:
     name: Fast UI checks (fictional Chrome)
     needs: classify
-    if: needs.classify.outputs.lane == 'ui-visual' || needs.classify.outputs.lane == 'ui-interaction'
+    if: needs.classify.outputs.lane == 'ui-visual' || needs.classify.outputs.lane == 'organizer-ui'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -86,15 +113,49 @@ jobs:
           FFTT_CHROME_CHANNEL: none
         run: node --test tests/e2e/gameday_fast_ui_browser.test.mjs
       - name: Registration and check-in workflow (when organizer UI code changes)
-        if: needs.classify.outputs.lane == 'ui-interaction'
+        if: needs.classify.outputs.lane == 'organizer-ui'
         env:
           FFTT_CHROME_CHANNEL: none
         run: node --test tests/e2e/gameday_registration_browser.test.mjs
       - name: Google mapping and privacy workflow (when organizer UI code changes)
-        if: needs.classify.outputs.lane == 'ui-interaction'
+        if: needs.classify.outputs.lane == 'organizer-ui'
         env:
           FFTT_CHROME_CHANNEL: none
         run: node --test tests/e2e/gameday_launch_google_browser.test.mjs
+
+      - name: Public presentation and isolation (shared visual CSS)
+        env:
+          FFTT_CHROME_CHANNEL: none
+        run: |
+          node --test tests/milestone1_public_results.test.mjs tests/milestone1_public_spectator_isolation.test.mjs tests/public_event_selection.test.mjs
+          node --test tests/e2e/tv_presentation.test.mjs tests/e2e/public_presentation.test.mjs
+
+  public-ui:
+    name: Public presentation and privacy (fictional Chrome)
+    needs: classify
+    if: needs.classify.outputs.lane == 'public-ui'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
+      - name: Install isolated browser fixtures
+        working-directory: tests/e2e
+        run: |
+          npm ci
+          npx playwright-core install chromium
+      - name: Public display, selection and privacy
+        run: node --test tests/milestone1_public_display.test.mjs tests/milestone1_public_results.test.mjs tests/milestone1_public_spectator_isolation.test.mjs tests/spectator_presentation.test.mjs tests/public_event_selection.test.mjs
+      - name: TV and Spectator in fictional Chromium
+        env:
+          FFTT_CHROME_CHANNEL: none
+        run: node --test tests/e2e/tv_presentation.test.mjs tests/e2e/public_presentation.test.mjs
 
   foundation:
     name: Full regression — browser and security foundation
@@ -199,6 +260,12 @@ jobs:
         run: |
           npm ci
           npx playwright-core install chromium
+      - name: Public presentation and event-selection lane (fictional Chrome)
+        env:
+          FFTT_CHROME_CHANNEL: none
+        run: |
+          node --test tests/public_event_selection.test.mjs tests/spectator_presentation.test.mjs
+          node --test tests/e2e/tv_presentation.test.mjs tests/e2e/public_presentation.test.mjs
       - name: Verify offline real-event SQL candidate in separate PGlite instance (fictional only, never deployed)
         run: node --test tests/e2e/gameday_real_event_candidate.test.mjs
       - name: Delegated event-day Bracket Manager permission and rollback proof in real disposable SQL

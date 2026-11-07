@@ -23,8 +23,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT / 'tools' / 'staging'))
-sys.path.insert(0, str(ROOT / 'tools'))
-import ci_impact  # share the conservative visual file allowlist with the PR classifier
 
 REPO = '0xCLS/fftt-bracket-manager'
 BRANCH = 'integration/milestone1-secure-foundation'
@@ -34,6 +32,13 @@ PREVIEW_BRANCH = 'ci-verify'
 APPS = {
     'staff': {'project': 'fftt3-staff-stg', 'origin': 'https://fftt3-staff-stg.pages.dev'},
     'spectator': {'project': 'fftt3-games-stg', 'origin': 'https://fftt3-games-stg.pages.dev'},
+}
+# Keep staging's exception pinned to its original narrow release allowlist.
+# CI routing may evolve independently and must never broaden this gate.
+RELEASE_VISUAL = {
+    'app/app.css', 'tests/e2e/gameday_fast_ui_browser.test.mjs',
+    'tests/e2e/gameday_polish_browser.test.mjs', 'tests/e2e/gameday_ui_audit.test.mjs',
+    'tests/e2e/gameday_fullnames_layout.test.mjs',
 }
 # Job names in browser-tests.yml. Full tests are mandatory except for verified
 # visual-only changes since an already full-tested live staging baseline.
@@ -154,7 +159,7 @@ def visual_delta_only(base, commit):
     if result.returncode != 0:
         return False
     paths = [p for p in result.stdout.splitlines() if p]
-    return bool(paths) and all(p in ci_impact.VISUAL for p in paths)
+    return bool(paths) and all(p in RELEASE_VISUAL for p in paths)
 
 
 def visual_release_baseline(commit):

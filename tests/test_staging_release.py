@@ -52,7 +52,7 @@ class Decisions(unittest.TestCase):
         self.assertEqual(R.evaluate_fast_visual([run(R.FAST_CHECK, conclusion='failure'), run(R.CLASSIFY_CHECK)])[0], 'fail')
         self.assertEqual(R.evaluate_fast_visual([run(R.FAST_CHECK, status='queued', conclusion=None), run(R.CLASSIFY_CHECK)])[0], 'wait')
 
-    def test_visual_release_delta_uses_shared_allowlist_since_live_baseline(self):
+    def test_visual_release_delta_uses_release_allowlist_since_live_baseline(self):
         def fake_git(*args, **kwargs):
             if args[:2] == ('merge-base', '--is-ancestor'):
                 return subprocess.CompletedProcess(args, 0, '')
@@ -161,6 +161,13 @@ class Boundaries(unittest.TestCase):
         self.assertRegex(wf, r'permissions:\s*\n\s*contents: read')
         for uses in re.findall(r'uses: (\S+)', wf):
             self.assertRegex(uses, r'@v\d+$')
+
+
+class ReleaseAllowlistIsolation(unittest.TestCase):
+    def test_development_router_cannot_expand_visual_release_allowlist(self):
+        self.assertNotIn('app/tv.css', R.RELEASE_VISUAL)
+        self.assertNotIn('app/tv.mjs', R.RELEASE_VISUAL)
+        self.assertNotIn('app/public_core.mjs', R.RELEASE_VISUAL)
 
 
 class BundleIntegrity(unittest.TestCase):
