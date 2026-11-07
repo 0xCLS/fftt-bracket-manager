@@ -95,3 +95,24 @@ test('all four presentations fit both landscape viewports and can produce eviden
     } finally {await w.close();}
   }
 });
+
+test('a sparse undecided final becomes a focused bracket feature, not two fabricated competitors', {timeout:60000}, async () => {
+  const data = fixture(), original = data[0].brackets[1].matches[0];
+  data[0].brackets[1].matches = Array.from({length:4}, (_, round) => ({
+    ...original,
+    match_id: `pending-consolation-${round}`,
+    round, slot:0,
+    player_1_name:round === 3 ? null : 'Jamie Lee',
+    player_2_name:round === 3 ? null : 'Casey Ross',
+  }));
+  const w = await world(data), {page} = w;
+  try {
+    await page.keyboard.press('4');
+    await page.clock.fastForward(18000);
+    assert.equal(await page.locator('.bracket-round').count(), 1);
+    assert.equal(await page.locator('.bracket-match').count(), 1);
+    assert.match(await page.locator('.bracket-pending-pair').innerText(), /Finalists to be determined/);
+    assert.doesNotMatch(await page.locator('.bracket-match').innerText(), /Jamie Lee|Casey Ross/);
+    assert.deepEqual(await fits(page), []);
+  } finally { await w.close(); }
+});
