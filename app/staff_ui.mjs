@@ -10,6 +10,7 @@ import {createDeskRegistration} from './view_desk_registration.mjs';
 import {createEventsView} from './view_events.mjs';
 import {createStaffPeopleView} from './view_staff_people.mjs';
 import {scoreTiles} from './game_tiles.mjs';
+import {summarizeGameProgress} from '../contracts/gameday_game_progress.mjs';
 
 const ORGANIZER_TABS = [['overview', 'Overview'], ['players', 'Players'], ['championship', 'Championship'],
   ['consolation', 'Consolation'], ['desk', 'Match Desk'], ['finale', 'Doubles Finale'], ['results', 'Results & Export'], ['staff', 'Staff']];
@@ -516,18 +517,21 @@ export function createStaffUi({core, els, config, signOut}) {
   }
 
   function openScoreDialog(row, tables) {
-    const fmt = formatOf(row);
-    const best = fmt.bestOf;
-    let winnerId = null, prepared = null;
+    const fmt = formatOf(row), best = fmt.bestOf;
     const draftGames = Array.from({length: best}, () => ['', '']);
+    let winnerId = null, prepared = null, verified = null, busyGame = false, correctionIndex = null;
+    const storageKey = `fftt.game-draft.v1.${s.eventId}.${row.matchId}`;
+    const loadDraft = () => { try { return JSON.parse(sessionStorage.getItem(storageKey) ?? 'null'); } catch { return null; } };
+    const clearDraft = () => { try { sessionStorage.removeItem(storageKey); } catch { /* optional */ } };
+    const persistDraft = () => { if (!verified) return; try {
+      sessionStorage.setItem(storageKey, JSON.stringify({epoch: verified.epoch, revision: verified.revision, games: draftGames}));
+    } catch { /* optional */ } };
     openDialog((dlg, close) => {
-      const body = h('div', {class: 'dlg'});
-      dlg.append(body);
-      const msg = h('p', {class: 'status bad', role: 'alert'});
+      const body = h('div', {class: 'dlg'}); dlg.append(body);
+      const msg = h('p', {class: 'status', role: 'status', 'aria-live': 'polite'});
       const gameInputs = [];
       const available = Array.from({length: tables}, (_, i) => i + 1).filter(n => !occupiedByOtherMatch(row, n));
-      const initial = row.table ?? available[0] ?? null;
-      const noFreeTable = initial === null;
+      const initial = row.table ?? available[0] ?? null, noFreeTable = initial === null;
       const tableSel = h('select', {id: 'scTable', 'aria-describedby': noFreeTable ? 'scNoFreeTable' : undefined, disabled: noFreeTable},
         initial === null ? h('option', {value: '', text: 'No free table', disabled: true, selected: true}) : null,
         Array.from({length: tables}, (_, i) => {
@@ -535,48 +539,159 @@ export function createStaffUi({core, els, config, signOut}) {
           return h('option', {value: n, text: occupied ? `Table ${n} · occupied` : `Table ${n}`,
             disabled: occupied, selected: n === initial});
         }));
+      const status = (text, kind = '') => {
+        msg.textContent = text; msg.className = 'status' + (kind ? ' ' + kind : '');
+      };
+      const rememberFields = () => {
+        gameInputs.forEach(([a,b], i) => { draftGames[i] = [a.value, b.value]; });
+        persistDraft();
+      };
+      async function reloadProgress({initialLoad = false} = {}) {
+        const r = await core.readGameProgress(row.matchId);
+        if (!r.ok) { verified = null; form(); status(r.message, 'bad'); return false; }
+        verified = r.data;
+        if (initialLoad) {
+          const old = loadDraft();
+          if (old?.epoch === verified.epoch && old?.revision === verified.revision
+            && Array.isArray(old.games) && old.games.length === best) {
+            old.games.forEach((g, i) => {
+              if (Array.isArray(g) && g.length === 2 && g.every(v => typeof v === 'string' && /^\\d{0,2}$/.test(v)))
+                draftGames[i] = [...g];
+            });
+          } else clearDraft();
+        }
+        verified.games.forEach((g, i) => { draftGames[i] = g.map(String); });
+        const summary = summarizeGameProgress(verified.games, best, fmt.points);
+        if (summary.ok && summary.decided) winnerId = row.players[summary.winnerIndex].id;
+        correctionIndex = null; form();
+        return true;
+      }
+      async function saveGame(index) {
+        if (busyGame || s.gamePending || !verified) return;
+        rememberFields();
+        if (!tableSel.value) { status('Choose an available table before recording this game.', 'bad'); return; }
+        const [a,b] = draftGames[index - 1].map(Number);
+        if (draftGames[index - 1].some(v => !/^\\d{1,2}$/.test(v.trim()))) {
+          status('Enter both completed-game scores, using whole numbers.', 'bad'); return;
+        }
+        let active = core.state.desk.find(m => m.matchId === row.matchId);
+        if (!active) { status('This match is no longer playable. Reopen it.', 'bad'); return; }
+        busyGame = true; form(); status(`Saving Game ${index}…`);
+        try {
+          if (active.table !== Number(tableSel.value)) {
+            const assigned = await core.actions.assignTable(row.matchId, Number(tableSel.value));
+            if (!assigned.ok) { status(assigned.message, 'bad'); return; }
+            active = core.state.desk.find(m => m.matchId === row.matchId);
+          }
+          if (!active) { status('The match changed. Reopen it.', 'bad'); return; }
+          const correction = index <= verified.games.length;
+          const reason = correction ? (dlg.querySelector('#gameCorrectionReason')?.value ?? '') : null;
+          const r = await core.saveCompletedGame({matchId: row.matchId, snapshot: verified,
+            gameIndex: index, player1Score: a, player2Score: b, reason});
+          if (r.ok) {
+            clearDraft();
+            const loaded = await reloadProgress();
+            status(loaded ? `Game ${index} saved and confirmed by the server.` : 'Game saved on the server; refresh to check the current games.', loaded ? 'good' : '');
+          } else {
+            status(r.message, r.unknown ? 'warn' : 'bad');
+          }
+        } finally {
+          busyGame = false;
+          // Do not rebuild the form after an uncertain send; preserve its warning and input values.
+          if (verified && !core.state.gamePending && !dlg.querySelector('.score-game-actions button:not([disabled])')) form();
+        }
+      }
       function form() {
         gameInputs.length = 0;
+        const summary = verified ? summarizeGameProgress(verified.games, best, fmt.points) : null;
+        const count = verified?.games.length ?? 0;
+        const nextGame = summary?.nextGame ?? 1;
         const grid = h('div', {class: 'games'}, h('span'), h('b', {text: row.players[0].name}), h('span'), h('b', {text: row.players[1].name}));
         for (let g = 1; g <= best; g++) {
-          const a = h('input', {type: 'text', inputmode: 'numeric', maxlength: 2, 'aria-label': `Game ${g}, ${row.players[0].name}`, pattern: '[0-9]*', value: draftGames[g - 1][0]});
-          const b = h('input', {type: 'text', inputmode: 'numeric', maxlength: 2, 'aria-label': `Game ${g}, ${row.players[1].name}`, pattern: '[0-9]*', value: draftGames[g - 1][1]});
-          gameInputs.push([a, b]);
-          grid.append(h('span', {class: 'muted', text: best === 1 ? 'Game' : `G${g}`}), a, h('span', {text: '–'}), b);
+          const saved = g <= count, editable = !saved || (s.role === 'organizer' && correctionIndex === g);
+          const a = h('input', {type: 'text', inputmode: 'numeric', maxlength: 2,
+            'aria-label': `Game ${g}, ${row.players[0].name}`, pattern: '[0-9]*',
+            disabled: !editable || busyGame, value: draftGames[g - 1][0], on: {input: () => { draftGames[g - 1][0] = a.value; persistDraft(); }}});
+          const b = h('input', {type: 'text', inputmode: 'numeric', maxlength: 2,
+            'aria-label': `Game ${g}, ${row.players[1].name}`, pattern: '[0-9]*',
+            disabled: !editable || busyGame, value: draftGames[g - 1][1], on: {input: () => { draftGames[g - 1][1] = b.value; persistDraft(); }}});
+          gameInputs.push([a,b]);
+          grid.append(h('span', {class: 'muted', text: best === 1 ? 'Game 1' : `G${g}`}), a, h('span', {text: '–'}), b);
         }
+        const steps = [];
+        if (verified) {
+          steps.push(h('div', {class: 'game-tally', role: 'status'},
+            h('strong', {text: `Games won · ${summary.won.join('–')}`}),
+            h('span', {class: 'muted', text: summary.decided ? 'Match decided · official result not yet confirmed' : `Game ${nextGame} next` })));
+          for (let g = 1; g <= best; g++) {
+            if (g <= count) {
+              steps.push(h('div', {class: 'game-step'}, h('span', {text: `Game ${g} · ${verified.games[g-1].join('–')} · Saved`}),
+                s.role === 'organizer' ? h('button', {type: 'button', class: 'small', disabled: busyGame,
+                  text: correctionIndex === g ? 'Cancel correction' : 'Correct…',
+                  on: {click: () => { rememberFields(); correctionIndex = correctionIndex === g ? null : g; form(); }}}) : null));
+            } else if (g === nextGame && correctionIndex === null) {
+              steps.push(h('div', {class: 'game-step'},
+                h('span', {text: `Game ${g} · Unconfirmed`}),
+                h('button', {type: 'button', class: 'primary small', disabled: busyGame || !!s.gamePending || noFreeTable || !core.canWrite(),
+                  text: `Save Game ${g}`, on: {click: () => void saveGame(g)}})));
+            }
+          }
+          if (correctionIndex !== null) {
+            steps.push(h('label', {for: 'gameCorrectionReason', text: `Reason for correcting Game ${correctionIndex} (required)`}),
+              h('textarea', {id: 'gameCorrectionReason', rows: 2, placeholder: 'Describe the mistake (at least 10 characters).'}),
+              h('button', {type: 'button', class: 'primary', disabled: busyGame, text: `Save corrected Game ${correctionIndex}`,
+                on: {click: () => void saveGame(correctionIndex)}}));
+          }
+        } else steps.push(h('p', {class: 'notice warn', text: 'Loading verified game scores… Do not resend an uncertain game.'}));
         clear(body).append(h('h3', {text: `Record result · ${roundLabel(row)}`}),
+          h('p', {class: 'help', text: `${formatText(fmt)}. Save each completed game as it happens. Only confirming the final result advances the bracket.`}),
+          grid, h('div', {class: 'score-game-actions'}, steps),
           h('div', {class: 'winner-pick', role: 'radiogroup', 'aria-label': 'Winner'},
-            row.players.map(p => h('label', {}, h('input', {type: 'radio', name: 'winner', value: p.id, checked: winnerId === p.id, on: {change: () => { winnerId = p.id; }}}), h('span', {text: `${p.name} won`})))),
-          h('p', {class: 'help', text: `${formatText(fmt)}: enter ${best === 1 ? 'the game' : 'each game'} played (first to ${fmt.points}, win by 2).`}), grid,
+            row.players.map(p => h('label', {}, h('input', {type: 'radio', name: 'winner', value: p.id,
+              checked: winnerId === p.id, disabled: !!verified && count > 0,
+              on: {change: () => { winnerId = p.id; }}}), h('span', {text: `${p.name} won`})))),
           h('label', {for: 'scTable', text: 'Table'}), tableSel,
-          noFreeTable ? h('p', {class: 'notice warn', id: 'scNoFreeTable', role: 'status', text: 'All tables are occupied. Close this dialog and try again once a table is free. No result has been sent.'}) : null,
+          noFreeTable ? h('p', {class: 'notice warn', id: 'scNoFreeTable', role: 'status', text: 'All tables are occupied. No game can be saved until a table becomes available.'}) : null,
           msg,
           h('div', {class: 'dlg-actions'}, h('button', {type: 'button', text: 'Cancel', on: {click: close}}),
-            h('button', {type: 'button', class: 'primary', text: 'Review result', disabled: noFreeTable, on: {click: review}})));
+            h('button', {type: 'button', class: 'primary', text: 'Review result',
+              disabled: busyGame || !!s.gamePending || !verified || (count > 0 && !summary.decided) || noFreeTable,
+              on: {click: review}})));
       }
       function review() {
-        msg.textContent = '';
-        if (!tableSel.value) { msg.textContent = 'Choose a free table before reviewing this result.'; return; }
-        gameInputs.forEach(([a, b], i) => { draftGames[i] = [a.value, b.value]; });
-        if (!winnerId) { msg.textContent = 'Choose who won.'; return; }
-        const games = gameInputs.filter(([a, b]) => a.value.trim() !== '' || b.value.trim() !== '').map(([a, b]) => `${a.value.trim()}-${b.value.trim()}`).join(', ');
+        status('');
+        if (!tableSel.value) { status('Choose a free table before reviewing this result.', 'bad'); return; }
+        rememberFields();
+        if (!verified) { status('Verified game records are still loading.', 'bad'); return; }
+        const summary = summarizeGameProgress(verified.games, best, fmt.points);
+        if (verified.games.length) {
+          if (!summary.ok || !summary.decided) { status('Save each completed game before confirming the match.', 'bad'); return; }
+          winnerId = row.players[summary.winnerIndex].id;
+        }
+        if (!winnerId) { status('Choose who won.', 'bad'); return; }
+        const games = verified.games.length ? summary.text : gameInputs.filter(([a, b]) => a.value.trim() !== '' || b.value.trim() !== '')
+          .map(([a, b]) => `${a.value.trim()}-${b.value.trim()}`).join(', ');
         const p = core.prepareScore({matchId: row.matchId, winnerId, games, table: Number(tableSel.value), expect: fmt});
-        if (!p.ok) { msg.textContent = p.message; return; }
+        if (!p.ok) { status(p.message, 'bad'); return; }
         prepared = p;
         const winner = row.players.find(x => x.id === winnerId), loser = row.players.find(x => x.id !== winnerId);
         const out = h('p', {class: 'status', role: 'status'});
         clear(body).append(h('h3', {text: 'Check before sending'}),
-          h('div', {class: 'review'}, `${winner.name} beat ${loser.name}`, h('br'), p.text, h('br'), `Table ${p.tableNumber} · ${roundLabel(row)} · ${formatText(fmt)}`),
-          h('p', {class: 'help', text: 'This is sent once. If it cannot be confirmed, the app will NOT resend it by itself.'}), out,
+          h('div', {class: 'review'}, `${winner.name} beat ${loser.name}`, h('br'), p.text, h('br'),
+            `Table ${p.tableNumber} · ${roundLabel(row)} · ${formatText(fmt)}`),
+          h('p', {class: 'help', text: 'The completed games are already saved. This final confirmation alone advances the bracket. It is sent once; an unknown result is never resent automatically.'}), out,
           h('div', {class: 'dlg-actions'},
             h('button', {type: 'button', text: 'Back — edit', on: {click: () => { core.cancelPreparedScore(); form(); }}}),
             h('button', {type: 'button', class: 'primary', text: 'Confirm and send', on: {click: async ev => {
               ev.target.disabled = true; out.textContent = 'Sending…';
               const r = await core.confirmScore(prepared);
-              toast(r.message, r.ok ? '' : 'bad'); close(); render(true); }}})));
+              if (r.ok) clearDraft();
+              toast(r.message, r.ok ? '' : 'bad'); close(); render(true);
+            }}})));
       }
       dlg.addEventListener('close', () => { if (core.state.score.status === 'prepared') core.cancelPreparedScore(); });
       form();
+      void reloadProgress({initialLoad: true});
     }, {label: 'Record result'});
   }
   const roundLabel = r => {
