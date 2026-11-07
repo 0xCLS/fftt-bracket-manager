@@ -140,7 +140,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
       - name: Recover approved manual-proof verifier from trusted base
-        if: needs.select.outputs.manual == 'true'
+        if: needs.select.outputs.manual == 'true' && needs.select.outputs.bootstrap != 'true'
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || inputs.base_sha }}
         run: git show "$BASE_SHA:tools/ci_v2.py" > "$RUNNER_TEMP/ci_v2.py"
