@@ -3,6 +3,7 @@
  * no write path. Any field outside the allowlist, or any malformed value, makes the whole answer invalid so a
  * server-side mistake can never be displayed (the display module blanks on invalid data). */
 import {AuthorityGateError} from './phase1c_disconnect_reference.mjs';
+import {summarizeGameProgress} from './gameday_game_progress.mjs';
 // The pinned synthetic project. Deliberately NOT imported from the signed-in transports: the public bundle
 // must contain no token-handling code at all (a test compares this constant with the staff-side pin).
 export const PUBLIC_HOST = 'https://copmkalfkkrkzheohwuc.supabase.co';
@@ -11,7 +12,7 @@ const KEY = /^sb_publishable_[A-Za-z0-9_-]{8,}$/;
 const EVENT_FIELDS = ['event_id', 'event_name', 'event_date', 'status', 'revision', 'tables', 'updated_at', 'finale', 'brackets'];
 const MATCH_FIELDS = ['match_id', 'bracket', 'round', 'slot', 'player_1_name', 'player_2_name', 'winner_name', 'game_scores', 'status', 'table_number', 'phase'];
 // The format fields are optional so a display built for this version still shows a server that predates them.
-const MATCH_OPTIONAL = ['best_of', 'points_to_win'];
+const MATCH_OPTIONAL = ['best_of', 'points_to_win', 'game_progress'];
 const FINALE_FIELDS = ['status', 'team_1', 'team_2', 'winner_team', 'game_scores'];
 const FINALE_OPTIONAL = ['best_of', 'points_to_win'];
 export class PublicProjectionError extends AuthorityGateError {
@@ -59,9 +60,29 @@ export function projectPublicTournaments(rows) {
           || !txt(m.game_scores, 160) || !['pending', 'complete', 'bye', 'empty'].includes(m.status)
           || !(m.table_number === null || int(m.table_number, 1, 12)) || !['waiting', 'up_next', 'playing', 'done'].includes(m.phase)
           || (m.winner_name !== null && m.winner_name !== m.player_1_name && m.winner_name !== m.player_2_name)) bad();
+        // Absent: an older server with no progress contract. Null: no completed games.
+        // Non-null: only a validated, server-confirmed, ordered prefix on a pending match.
+        let progress;
+        if ('game_progress' in m) {
+          progress = null;
+          if (m.game_progress !== null) {
+            const p = m.game_progress;
+            if (!exact(p, ['games','version','epoch','updated_at'])
+              || m.status !== 'pending' || !m.player_1_name || !m.player_2_name
+              || ![1,3,5].includes(m.best_of) || ![11,21].includes(m.points_to_win)
+              || !int(p.version, 1) || !int(p.epoch)
+              || typeof p.updated_at !== 'string' || p.updated_at.length > 64
+              || !Number.isFinite(Date.parse(p.updated_at))) bad();
+            const summary = summarizeGameProgress(p.games, m.best_of, m.points_to_win);
+            if (!summary.ok || !p.games.length) bad();
+            progress = Object.freeze({games: Object.freeze(p.games.map(g => Object.freeze([...g]))),
+              version: p.version, epoch: p.epoch, updatedAt: p.updated_at,
+              won: summary.won, decided: summary.decided});
+          }
+        }
         return Object.freeze({id: m.match_id, round: m.round, slot: m.slot, name1: m.player_1_name, name2: m.player_2_name,
           winnerName: m.winner_name, scores: m.game_scores, status: m.status, table: m.table_number, phase: m.phase,
-          bestOf: m.best_of ?? null, points: m.points_to_win ?? null});
+          bestOf: m.best_of ?? null, points: m.points_to_win ?? null, progress});
       });
       Object.freeze(brackets[b.name]);
     }
