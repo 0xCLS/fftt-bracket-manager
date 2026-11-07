@@ -1,6 +1,6 @@
 # FFTT3 — Bracket Manager registration lookup and check-in (November 6, 2026)
 
-Status: **IMPLEMENTED AND TESTED LOCALLY; NOT RELEASED.** Source: [PR #52](https://github.com/0xCLS/fftt-bracket-manager/pull/52) (draft). Nothing here has been applied to hosted Supabase, deployed to Staff production, or used on real registrations, rosters or staff grants. Hosted SQL, Cloudflare secrets and the Staff deploy each need their own explicit authorization (see [Release requirements](#release-requirements)).
+**Current release status (November 6): DEPLOYED AND ACCEPTED.** PR #52 registration access and proof-verified Bracket Manager check-in were released to hosted Staff, followed by PRs #53–#55. Latest accepted Staff source: `5b0a3571a29accf6c348d41fbfdbbf23fb4734a3`; deployment `4bb1cd48-984d-4af1-8f7b-1b95c1a2d599`. The Organizer confirmed event-scoped Google lookups, registration privacy, accurate Awaiting arrival count and Staff event-assignment UI. The original proposal/release requirements below are historical and **must not** be re-applied. The retired `REGISTRATION_EVENT_IDS` secret remains stored for legacy rollback; do not delete it as routine housekeeping.
 
 ## What changes for the people running the day
 
