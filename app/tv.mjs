@@ -135,11 +135,12 @@ function bracket(kind) {
   const champ=champion(kind);
   const solitary=ms.length === 1;
   const featuredFinal=rounds.length === 1 && rounds[0] === totalRounds-1;
+  const consolationFinalOnScreen=kind==='consolation' && (featuredFinal || solitary || rounds.includes(totalRounds-1));
   return h('div',{class:'bracket-view cinematic-bracket ' + (kind==='championship' ? 'championship-path' : 'consolation-path') + (solitary ? ' single-match' : '') + (featuredFinal ? ' featured-final' : '')},
     h('div',{class:'broadcast-title'},
-      h('div',{},h('span',{class:'title-kicker',text:kind==='championship' ? 'THE ROAD TO THE TITLE / 03' : 'THE FINAL SHOWDOWN / 04'}),
-        h('h2',{},kind==='championship' ? [h('span',{text:'THE ROAD '}),h('em',{text:'TO THE FINAL'})] : [h('span',{text:'CONSOLATION '}),h('em',{text:'FINAL'})])),
-      h('span',{class:'title-side',text:kind==='championship' ? 'CHAMPIONSHIP · FEATURED BRACKET PATH' : 'FEATURED MATCHUP'})),
+      h('div',{},h('span',{class:'title-kicker',text:kind==='championship' ? 'THE ROAD TO THE TITLE / 03' : consolationFinalOnScreen ? 'THE FINAL SHOWDOWN / 04' : 'THE ROAD TO THE FINAL / 04'}),
+        h('h2',{},kind==='championship' ? [h('span',{text:'THE ROAD '}),h('em',{text:'TO THE FINAL'})] : [h('span',{text:'CONSOLATION '}),h('em',{text:consolationFinalOnScreen ? 'FINAL' : 'BRACKET'})])),
+      h('span',{class:'title-side',text:kind==='championship' ? 'CHAMPIONSHIP · FEATURED BRACKET PATH' : consolationFinalOnScreen ? 'THE LAST MATCH · FINAL SHOWDOWN' : 'CONSOLATION · BRACKET PROGRESSION'})),
     h('div',{class:'bracket-caption'},
       h('span',{text:pages>1 ? 'BRACKET SEGMENT '+(segment+1)+' / '+pages : 'TOURNAMENT PROGRESSION'}),
       champ ? h('strong',{text:'CHAMPION · '+champ.winner}) : null),
@@ -147,7 +148,9 @@ function bracket(kind) {
       const factor=2**(r-firstRound);
       const selected=ms.filter(m=>m.round === r && m.slot>=Math.floor(page*2/factor) && m.slot<=Math.floor((page*2+1)/factor));
       const isFinal=r === totalRounds-1;
-      const midFeature=kind==='championship' && !isFinal && idx>0 && selected.length === 1;
+      // Reserve one dramatic callout for the final visible advancing round;
+      // never duplicate the same 'One Step Closer' headline in adjacent columns.
+      const midFeature=kind==='championship' && !isFinal && idx===rounds.length-1 && idx>0 && selected.length === 1;
       return h('div',{class:'bracket-round' + (isFinal ? ' last-round' : '') + (midFeature ? ' mid-feature' : ''),'data-round':r},
         h('div',{class:'round-heading',text:(idx+1<10?'0'+(idx+1):idx+1)+' / '+roundName(totalRounds,r,kind)}),
         h('div',{class:'bracket-matches'},selected.map(m=>
@@ -165,7 +168,9 @@ function bracket(kind) {
               h('span',{text:'Players will appear as earlier matches are decided.'})),
             m.status==='complete'&&m.scores ? h('div',{class:'bracket-scores',text:games(m)}) : null))));
     })),
-    kind==='championship' ? h('div',{class:'bracket-progress'},h('strong',{text:'QUARTERFINALS'}),h('span',{text:'—'}),h('strong',{text:'SEMIFINALS'}),h('span',{text:'—'}),h('strong',{text:'CHAMPIONSHIP FINAL'})) : null);
+    kind==='championship' ? h('div',{class:'bracket-progress'},rounds.flatMap((r,i)=>[
+      ...(i ? [h('span',{text:'—'})] : []),
+      h('strong',{text:roundName(totalRounds,r,kind).toUpperCase()})])) : null);
 }
 
 function drawConnections() {

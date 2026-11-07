@@ -704,3 +704,262 @@ body.tv .controls button[data-screen="match"] {grid-column:1;grid-row:2}
 body.tv .controls button[data-screen="results"] {grid-column:2;grid-row:2}
 body.tv .controls button[data-screen="championship"] {grid-column:3;grid-row:2}
 body.tv .controls button[data-screen="consolation"] {grid-column:4;grid-row:2}
+
+/* Premium TV finishing pass — screenshot review, Nov 7.
+   Keep the existing navy / teal / yellow broadcast language. */
+
+/* A single, quiet footer control rail: no floating transport buttons over Up Next. */
+body.tv .controls{
+  display:flex;
+  grid-template-columns:none;
+  grid-template-rows:none;
+  flex-wrap:nowrap;
+  align-items:center;
+  gap:clamp(3px,.44vw,9px);
+  bottom:.58vh;
+  right:3.1vw;
+  max-width:calc(100vw - 6.2vw);
+  padding:0;
+  background:transparent;
+  border:0;
+}
+body.tv .controls button{
+  grid-column:auto;
+  grid-row:auto;
+  flex-shrink:0;
+  min-height:32px;
+  padding:.55em clamp(5px,.55vw,11px);
+  font-size:clamp(10px,.78vw,15px);
+  letter-spacing:.02em;
+  white-space:nowrap;
+}
+body.tv .controls #prev,
+body.tv .controls #pause,
+body.tv .controls #next{
+  position:static;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  grid-column:auto;
+  grid-row:auto;
+  bottom:auto;
+  right:auto;
+  min-height:32px;
+  width:clamp(29px,2.5vw,41px);
+  background:rgba(12,40,54,.54);
+  border:1px solid rgba(76,134,149,.42);
+  border-radius:4px;
+  color:#9fbbca;
+  box-shadow:none;
+  opacity:.72;
+}
+body.tv .controls #pause{
+  width:auto;
+  min-width:clamp(48px,4.2vw,76px);
+  padding-inline:.6em;
+}
+body.tv .controls:hover #prev,
+body.tv .controls:hover #pause,
+body.tv .controls:hover #next,
+body.tv .controls:focus-within #prev,
+body.tv .controls:focus-within #pause,
+body.tv .controls:focus-within #next{
+  display:inline-flex;
+}
+body.tv .controls #prev:hover,
+body.tv .controls #pause:hover,
+body.tv .controls #next:hover,
+body.tv .controls #prev:focus-visible,
+body.tv .controls #pause:focus-visible,
+body.tv .controls #next:focus-visible{
+  opacity:1;
+  color:var(--bc-white);
+  background:#123e4d;
+  border-color:var(--bc-cyan);
+}
+body.tv .controls button[data-screen]{
+  grid-column:auto;
+  grid-row:auto;
+}
+body.tv .controls button[data-screen="match"]{
+  margin-left:clamp(5px,.75vw,15px);
+}
+body.tv footer{padding-right:0}
+body.tv footer>span:first-child{
+  max-width:48%;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* Results: an actual 2-row mini scorecard, never two crowded text baselines. */
+.cinematic-results .results-grid{
+  grid-template-rows:minmax(0,1fr) clamp(109px,19%,170px);
+  column-gap:1px;
+  row-gap:clamp(6px,.7vh,12px);
+}
+.cinematic-results .result-card.lead-result{
+  background:
+    radial-gradient(ellipse 55% 65% at 48% 52%,rgba(19,98,112,.18),transparent 80%),
+    linear-gradient(110deg,#091e31,#0b2b3c 54%,#081c30);
+  box-shadow:inset 0 1px 0 rgba(160,247,240,.075);
+}
+.cinematic-results .lead-result .result-tally{
+  text-shadow:0 0 45px rgba(116,204,220,.10);
+}
+.cinematic-results .result-card:not(.lead-result){
+  display:flex;
+  flex-direction:column;
+  gap:clamp(5px,.55vh,10px);
+  padding:clamp(11px,1vw,18px) clamp(12px,1.15vw,23px);
+  border-top:1px solid rgba(69,155,174,.30);
+  background:linear-gradient(115deg,rgba(7,33,50,.98),rgba(11,45,61,.97));
+  overflow:hidden;
+}
+.cinematic-results .result-card:not(.lead-result) .result-top{
+  flex:0 0 auto;
+  justify-content:flex-start;
+  font-size:clamp(10px,.73vw,13px);
+  font-weight:800;
+  line-height:1.1;
+  letter-spacing:.07em;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+.cinematic-results .result-card:not(.lead-result) .result-top>span:first-child{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.cinematic-results .result-card:not(.lead-result) .result-body{
+  flex:1;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:clamp(7px,.8vw,15px);
+  align-items:center;
+  min-width:0;
+  min-height:0;
+}
+.cinematic-results .result-card:not(.lead-result) .result-players{
+  display:grid;
+  grid-template-rows:repeat(2,minmax(0,1fr));
+  gap:clamp(3px,.5vh,8px);
+  height:100%;
+  min-height:0;
+  min-width:0;
+  justify-content:stretch;
+}
+.cinematic-results .result-card:not(.lead-result) .result-player{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  column-gap:clamp(4px,.45vw,9px);
+  align-items:center;
+  min-width:0;
+  min-height:0;
+  gap:0;
+  line-height:1.08;
+  color:#b8cedb;
+}
+.cinematic-results .result-card:not(.lead-result) .result-player-name{
+  display:block;
+  min-width:0;
+  font:900 clamp(17px,1.36vw,27px)/1.06 var(--bc-head);
+  letter-spacing:.01em;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  text-transform:uppercase;
+}
+.cinematic-results .result-card:not(.lead-result) .result-player.winner .result-player-name{
+  color:#bdf6df;
+}
+.cinematic-results .result-card:not(.lead-result) .game-win-dots{
+  display:inline-flex;
+  justify-self:end;
+  align-items:center;
+  flex-shrink:0;
+  min-width:0;
+  gap:3px;
+}
+.cinematic-results .result-card:not(.lead-result) .result-score{
+  justify-content:center;
+  align-items:center;
+  min-width:clamp(38px,3.4vw,67px);
+}
+.cinematic-results .result-card:not(.lead-result) .result-tally{
+  font:900 clamp(28px,2.9vw,52px)/1 var(--bc-head);
+  letter-spacing:-.035em;
+  color:var(--bc-yellow);
+  white-space:nowrap;
+}
+.cinematic-results .result-card:not(.lead-result) .win-dot{
+  width:clamp(6px,.5vw,9px);
+  height:clamp(6px,.5vw,9px);
+}
+
+/* Round-specific drama. Only one progress circle per visible Championship segment. */
+.championship-path .bracket-round.mid-feature .bracket-match::before{
+  inset:9%;
+  border-color:rgba(53,216,208,.22);
+}
+.championship-path .semifinal-feature-label strong{
+  font-size:clamp(22px,2.7vw,54px);
+}
+.championship-path .bracket-round:not(.mid-feature):not(.last-round) .bracket-match{
+  background:radial-gradient(ellipse 90% 85% at 48% 5%,rgba(25,82,103,.18),transparent 80%),linear-gradient(120deg,#092235,#082138);
+}
+.cinematic-bracket .bracket-progress{
+  gap:clamp(12px,1.5vw,30px);
+}
+.cinematic-bracket .bracket-progress strong{
+  letter-spacing:.11em;
+}
+.cinematic-bracket .bracket-progress strong:last-child{
+  color:var(--bc-yellow);
+}
+.cinematic-bracket .bracket-progress span{
+  opacity:.8;
+}
+
+/* Prior rounds are the Consolation PATH, not a premature final presentation. */
+.consolation-path:not(.featured-final):not(.single-match) .bracket-match{
+  background:radial-gradient(ellipse 80% 110% at 50% 90%,rgba(26,84,102,.13),transparent),linear-gradient(120deg,#092135,#081c30);
+  border:1px solid rgba(71,128,144,.66);
+  border-radius:9px;
+  box-shadow:inset 0 1px 0 rgba(120,205,220,.035);
+}
+.consolation-path:not(.featured-final):not(.single-match) .bracket-round:not(:first-child) .bracket-player{
+  font-size:clamp(24px,2.85vw,46px);
+  line-height:1.03;
+}
+.consolation-path:not(.featured-final):not(.single-match) .bracket-state{
+  font-size:clamp(11px,.92vw,17px);
+  letter-spacing:.15em;
+}
+.consolation-path:not(.featured-final):not(.single-match) .bracket-match.completed .bracket-state{
+  color:var(--bc-cyan);
+}
+.consolation-path:not(.featured-final):not(.single-match) .bracket-match.upcoming .bracket-state{
+  color:var(--bc-yellow);
+}
+.consolation-path:not(.featured-final):not(.single-match) .bracket-scores{
+  margin-top:clamp(5px,.6vh,12px);
+}
+@media(max-height:760px){
+  .cinematic-results .results-grid{
+    grid-template-rows:minmax(0,1fr) 112px;
+  }
+  .cinematic-results .result-card:not(.lead-result){
+    padding:8px 11px;
+    gap:4px;
+  }
+  .cinematic-results .result-card:not(.lead-result) .result-player-name{
+    font-size:clamp(16px,1.2vw,22px);
+  }
+  .consolation-path:not(.featured-final):not(.single-match) .bracket-round:not(:first-child) .bracket-player{
+    font-size:clamp(21px,2.5vw,36px);
+  }
+  body.tv .controls button{min-height:29px}
+  body.tv .controls #prev,body.tv .controls #next,body.tv .controls #pause{min-height:29px}
+}

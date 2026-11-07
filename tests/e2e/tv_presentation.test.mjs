@@ -320,3 +320,64 @@ test('TV transport buttons have non-overlapping hit targets and work by pointer 
     } finally {await w.close();}
   }
 });
+
+test('premium Results cards separate both names, score and verified dots at TV sizes', {timeout:60000}, async()=>{
+  for(const viewport of [{width:1280,height:720},{width:1600,height:900},{width:1920,height:1080}]){
+    const w=await world(fixture(),viewport),{page}=w;
+    try{
+      await page.keyboard.press('2');
+      const cards=page.locator('.cinematic-results .result-card:not(.lead-result)');
+      assert.equal(await cards.count(),3);
+      const geometry=await page.evaluate(()=>[...document.querySelectorAll('.cinematic-results .result-card:not(.lead-result)')].map(card=>{
+        const rows=[...card.querySelectorAll('.result-player')].map(el=>el.getBoundingClientRect());
+        const score=card.querySelector('.result-score').getBoundingClientRect();
+        const names=[...card.querySelectorAll('.result-player-name')].map(el=>el.getBoundingClientRect());
+        return {nameRows:rows.length,verticalGap:rows[1].top-rows[0].bottom,
+          noNameVsScoreOverlap:names.every(n=>n.right<=score.left+1),
+          namesVisible:names.every(n=>n.width>35&&n.height>=15),
+          scoreVisible:score.width>=30&&score.height>20};
+      }));
+      assert.ok(geometry.every(x=>x.nameRows===2&&x.verticalGap>=-1&&x.noNameVsScoreOverlap&&x.namesVisible&&x.scoreVisible),
+        'compact result geometry '+viewport.width+': '+JSON.stringify(geometry));
+      assert.deepEqual(await fits(page),[],'Results layout at '+viewport.width);
+    }finally{await w.close();}
+  }
+});
+
+test('premium bracket hierarchy reserves a single cinematic callout and labels the current path truthfully', {timeout:60000},async()=>{
+  const f=largeFixture();
+  f[0].brackets[1].matches=f[0].brackets[0].matches.map(m=>({...m,match_id:'cons-'+m.match_id,bracket:'consolation'}));
+  const w=await world(f,{width:1600,height:900}),{page}=w;
+  try{
+    await page.keyboard.press('3');
+    assert.ok(await page.locator('.semifinal-feature-label').count()<=1,'no repeated One Step Closer artwork');
+    const stages=(await page.locator('.bracket-round .round-heading').allInnerTexts()).map(x=>x.replace(/^\d+\s*\/\s*/, '').toUpperCase());
+    const progress=await page.locator('.bracket-progress strong').allInnerTexts();
+    assert.deepEqual(progress,stages,'footer stages reflect visible round headings');
+    await page.keyboard.press('4');
+    assert.match(await page.locator('.broadcast-title').innerText(),/CONSOLATION BRACKET/);
+    assert.doesNotMatch(await page.locator('.broadcast-title').innerText(),/THE FINAL SHOWDOWN/);
+    assert.equal(await page.locator('.consolation-path .final-feature-label').count(),0);
+    assert.deepEqual(await fits(page),[]);
+  }finally{await w.close();}
+});
+
+test('premium transport stays within the footer and never covers the broadcast content', {timeout:60000},async()=>{
+  for(const viewport of [{width:1280,height:720},{width:1600,height:900},{width:1920,height:1080}]){
+    const w=await world(fixture(),viewport),{page}=w;
+    try{
+      const geometry=await page.evaluate(()=>{
+        const nav=document.querySelector('nav.controls').getBoundingClientRect();
+        const footer=document.querySelector('footer').getBoundingClientRect();
+        const title=document.querySelector('footer > span:first-child').getBoundingClientRect();
+        return {navTop:nav.top,footerTop:footer.top,navLeft:nav.left,titleRight:title.right,
+          navRight:nav.right,footerRight:footer.right};
+      });
+      assert.ok(geometry.navTop>=geometry.footerTop-3,'controls do not float over main content at '+viewport.width+': '+JSON.stringify(geometry));
+      assert.ok(geometry.navLeft>=geometry.titleRight-4,'controls do not obscure fellowship footer at '+viewport.width+': '+JSON.stringify(geometry));
+      await page.locator('#prev').click();
+      await page.locator('#next').click();
+      assert.deepEqual(await fits(page),[]);
+    }finally{await w.close();}
+  }
+});
