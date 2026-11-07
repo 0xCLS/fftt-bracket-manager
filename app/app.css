@@ -691,6 +691,16 @@ td.scores-cell{min-width:150px}
 [aria-labelledby="recentTitle"] .score-game+.score-game{margin-left:13px;padding-left:13px}
 [aria-labelledby="recentTitle"] .score-game+.score-game::before{content:"";position:absolute;left:0;top:4px;bottom:4px;width:1px;background:#d3d9e0;pointer-events:none}
 .notice .score-tiles{margin-top:10px}
+/* Spectator: use the same quiet, 1px gray game-pair separators as Staff Recent results.
+   Scope these to spectator result rows and the doubles finale, never the bracket or TV. */
+#main.public-wrap .scores-cell .score-game+.score-game,
+#main.public-wrap .spectator-finale .score-game+.score-game{position:relative;padding-left:13px;margin-left:5px}
+#main.public-wrap .scores-cell .score-game+.score-game::before,
+#main.public-wrap .spectator-finale .score-game+.score-game::before{
+ content:"";position:absolute;left:0;top:4px;bottom:4px;width:1px;background:#d3d9e0;pointer-events:none}
+/* Give the Up next queue and the finale card separate visual breathing room. */
+#main.public-wrap .spectator-finale{margin-top:var(--space-5)}
+
 
 /* notifications: compact, restrained, never over the bottom action bars */
 .toasts{position:fixed;z-index:60;top:64px;right:16px;   /* below the status bar, so it never covers the status pills */
