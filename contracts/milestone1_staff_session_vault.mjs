@@ -16,7 +16,7 @@ function valid(e){
   &&Object.keys(e).length===FIELDS.length&&FIELDS.every(k=>Object.hasOwn(e,k))
   &&e.v===1&&typeof e.refreshToken==='string'&&REFRESH.test(e.refreshToken)
   &&typeof e.userId==='string'&&UUID.test(e.userId)&&typeof e.eventId==='string'&&UUID.test(e.eventId)
-  &&['organizer','scorekeeper'].includes(e.role)&&natural(e.startedAt)&&natural(e.lastActiveAt)
+  &&['organizer','bracket_manager','scorekeeper'].includes(e.role)&&natural(e.startedAt)&&natural(e.lastActiveAt)
   &&e.lastActiveAt>=e.startedAt;
 }
 export function createMilestone1StaffSessionVault({tabStorage}={}){

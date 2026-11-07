@@ -80,6 +80,7 @@ jobs:
         run: |
           node --check app/view_players.mjs
           node --check app/view_registration.mjs
+          node --check app/view_desk_registration.mjs
       - name: Focused phone/desktop UI regression (no hosted requests)
         env:
           FFTT_CHROME_CHANNEL: none
@@ -154,6 +155,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_staging_export.py' -v
       - name: Verify the automatic staging release pipeline's decisions and staging-only boundaries (offline, deploys nothing)
         run: python -m unittest discover -s tests -p 'test_staging_release.py' -v
+      - name: Verify the production Staff release guard refuses staging, Spectator and homepage targets and the release runbook keeps secrets out of arguments (offline)
+        run: python -m unittest discover -s tests -p 'test_staff_release_guard.py' -v
       - name: Check UI, labels and dropdowns
         run: python tests/ui_smoke.py
       - name: Check tournament safety
@@ -187,6 +190,8 @@ jobs:
           python -m playwright install chromium --with-deps
       - name: Game-day client, session, exports, formats, sign-in discovery and public-model unit tests (zero network)
         run: node --test tests/gameday_*.test.mjs
+      - name: FFTT3 Bracket Manager role and production origin checks (zero network)
+        run: node --test tests/fftt3_bracket_manager_role.test.mjs tests/fftt3_event_day_delegation.test.mjs tests/fftt3_staff_directory.test.mjs
       - name: Registration model and server-side adapter (mocked Google and Supabase, zero network)
         run: node --test tests/registration_*.test.mjs
       - name: Install test-only local PostgreSQL (WebAssembly) and browser driver
@@ -196,6 +201,10 @@ jobs:
           npx playwright-core install chromium
       - name: Verify offline real-event SQL candidate in separate PGlite instance (fictional only, never deployed)
         run: node --test tests/e2e/gameday_real_event_candidate.test.mjs
+      - name: Delegated event-day Bracket Manager permission and rollback proof in real disposable SQL
+        run: node --test tests/e2e/gameday_event_day_delegation.test.mjs
+      - name: Bracket Manager registration desk against real SQL and the real Function (event-scoped roles, proof-verified provenance, duplicates, locks, rollback; fictional sheet, zero network)
+        run: node --test tests/e2e/bm_registration_lookup.test.mjs
       - name: In-place FFTT3 single-project migration proof on populated synthetic DB (zero hosted traffic)
         run: node --test tests/e2e/gameday_single_project_upgrade.test.mjs
       - name: Game-day server logic against the real SQL (local PostgreSQL), parity with the approved engine
@@ -210,6 +219,14 @@ jobs:
         env:
           FFTT_CHROME_CHANNEL: none
         run: node --test tests/e2e/gameday_browser.test.mjs
+      - name: Event-day Bracket Manager check-in and scorer isolation in fictional Chrome
+        env:
+          FFTT_CHROME_CHANNEL: none
+        run: node --test tests/e2e/gameday_event_day_ui_browser.test.mjs
+      - name: Bracket Manager registration desk in fictional Chrome (desktop and phone; search, one-tap check-in, review, duplicates, locked and failure states, no private data)
+        env:
+          FFTT_CHROME_CHANNEL: none
+        run: node --test tests/e2e/gameday_desk_registration_browser.test.mjs
       - name: Game-day browser failure paths (background/resume, outage, stale TV, reload, renewal, wrong password)
         env:
           FFTT_CHROME_CHANNEL: none
@@ -232,6 +249,14 @@ jobs:
         env:
           FFTT_CHROME_CHANNEL: none
         run: node --test tests/e2e/gameday_polish_browser.test.mjs
+      - name: Staff People directory - unassigned, pending, verified, assigned and revoked staff show actual server grants (fictional, local database)
+        env:
+          FFTT_CHROME_CHANNEL: none
+        run: node --test tests/e2e/staff_people_assignment_display.test.mjs
+      - name: Staff invitation page - expired link versus malformed callback, no token left in the address bar (fictional fragments)
+        env:
+          FFTT_CHROME_CHANNEL: none
+        run: node --test tests/e2e/staff_invite_page.test.mjs
       - name: V4 browser - responsive layout, accessibility (axe-core), keyboard and tap targets
         env:
           FFTT_CHROME_CHANNEL: none
@@ -240,6 +265,8 @@ jobs:
         env:
           FFTT_UPGRADED: '1'
         run: node --test tests/e2e/gameday_server.test.mjs tests/e2e/gameday_core.test.mjs tests/e2e/gameday_v4_server.test.mjs tests/e2e/gameday_v4_core.test.mjs
+      - name: LAUNCH MODE - separate rehearsal event beside a real-mode Nov 22 event (isolation, cross-event ids, per-event staff, per-event publication, byte-identical Nov 22 state)
+        run: node --test tests/e2e/gameday_rehearsal_isolation.test.mjs
       - name: LAUNCH MODE - browser rehearsal, failures, formats and events on a real-mode event (organizer, two scorekeepers, spectator, TV, outsider)
         env:
           FFTT_CHROME_CHANNEL: none
@@ -273,6 +300,8 @@ jobs:
         run: supabase start
       - name: Verify existing B1-B2d migrations before v2
         run: supabase test db
+      - name: Staff invitation recovery against real local GoTrue (fictional account - replacement invite, old link refused, callback format, password setup, no grants)
+        run: node tests/staff_invite_resend_local_auth.mjs
       - name: Apply v2 candidate ONLY to ephemeral local PostgreSQL
         env:
           PGPASSWORD: postgres
@@ -335,6 +364,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: bash tests/gameday_single_project_postgres.sh
+      - name: Verify the proof-secret installer reads standard input only and leaves no secret in any server log (throw-away local PostgreSQL, no hosted change)
+        run: |
+          if ! ls /usr/lib/postgresql/*/bin/initdb >/dev/null 2>&1; then sudo apt-get update -qq && sudo apt-get install -y -qq postgresql; fi
+          REQUIRE_PG_BINARIES=1 bash tests/registration_gate_installer_postgres.sh
       - name: Assert game-day V5 privileges and structure (anon/authenticated/helpers/no private data/synthetic rule)
         env:
           PGPASSWORD: postgres

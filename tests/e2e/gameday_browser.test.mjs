@@ -39,9 +39,17 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
   try {
     // ---------------------------------------------------------------- organizer signs in, loads players, builds
     const org = await w.device('org');
+    // The protected Staff directory Function is not part of this fictional world; serve the
+    // minimal, schema-valid answer production gives so the People directory becomes editable.
+    await org.context.route('**/api/staff-directory', route => route.fulfill({status: 200, contentType: 'application/json',
+      body: JSON.stringify({people: [{email: w.accounts.b[0], name: 'Scorekeeper B', verified: true, provisioned: true}]})}));
     await org.signIn('org');
     await org.page.locator('#evName').waitFor({timeout: T});
     assert.equal(await org.page.locator('#evName').inputValue(), 'Synthetic Rehearsal Games', 'selected organizer event remains correct');
+    assert.equal(await org.page.locator('.overview-feature h1').innerText(), 'Synthetic Rehearsal Games',
+      'Overview identifies the currently selected event rather than showing a fixed brand headline');
+    assert.match(await org.page.locator('#connectionLabel').innerText(), /Cloud-connected staging/,
+      'fictional staging test remains explicitly labelled staging');
     await shot(org, '01-organizer-overview');
     await goTab(org.page, 'Players');
     const list = roster(12).map(p => `${p.name}, ${p.rating}, ${p.rating_status}`).join('\n');
@@ -72,6 +80,26 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
     await org.page.locator('button', {hasText: 'Build championship bracket'}).click();
     await org.page.locator('h2', {hasText: /Ready to play/}).waitFor({timeout: T});   // moved to the Match Desk
     await shot(org, '03-organizer-desk');
+    // Staff brackets also rebuild after hosted state changes, unlike the
+    // Spectator renderer. Preserve horizontal panning through normal ticks.
+    await org.page.setViewportSize({width: 390, height: 844});
+    await goTab(org.page, 'Championship');
+    const staffBracket = org.page.locator('#main .bracket').first();
+    await staffBracket.waitFor({timeout: T});
+    const staffSwipeStart = await staffBracket.evaluate(el => {
+      el.scrollLeft = Math.min(100, el.scrollWidth - el.clientWidth);
+      el.dataset.swipeGuard = 'retained';
+      el.dispatchEvent(new Event('touchstart', {bubbles: true}));
+      return el.scrollLeft;
+    });
+    assert.ok(staffSwipeStart > 30, 'Staff bracket contains later rounds on a phone');
+    await org.page.waitForTimeout(1200);
+    await staffBracket.evaluate(el => el.dispatchEvent(new Event('touchend', {bubbles: true})));
+    const staffSwipeAfter = await staffBracket.evaluate(el => ({left: el.scrollLeft, mark: el.dataset.swipeGuard}));
+    assert.equal(staffSwipeAfter.mark, 'retained', 'a Staff swipe must not replace bracket DOM');
+    assert.ok(Math.abs(staffSwipeAfter.left - staffSwipeStart) < 2, 'Staff bracket must not jump back mid-swipe');
+    await goTab(org.page, 'Match Desk');
+    await org.page.setViewportSize({width: 1280, height: 900});
 
     // ---------------------------------------------------------------- two scorekeepers on phones
     const a = await w.device('a', PHONE), b = await w.device('b', PHONE);
@@ -113,6 +141,48 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
     assert.ok(publicLayout.mainTop < 450 && publicLayout.visible, 'spectator content must be visible below the tabs');
     await spec.page.setViewportSize({width: 390, height: 844});
 
+    // A phone must have breathing room between brand, event title, status and
+    // optional event picker; the title must be quieter than on desktop.
+    const phoneHeader = await spec.page.evaluate(() => {
+      const brand = document.querySelector('.public-head .brand').getBoundingClientRect();
+      const title = document.querySelector('#evName');
+      const titleBox = title.getBoundingClientRect();
+      const status = document.querySelector('.public-head .row');
+      const picker = document.querySelector('#evPick');
+      return {
+        brandToTitle: titleBox.top - brand.bottom,
+        titleFont: parseFloat(getComputedStyle(title).fontSize),
+        statusToPicker: parseFloat(getComputedStyle(picker).marginTop),
+        titleToStatus: status.getBoundingClientRect().top - titleBox.bottom,
+        pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      };
+    });
+    assert.ok(phoneHeader.brandToTitle >= 18, 'phone title must be separated from the brand');
+    assert.ok(phoneHeader.titleFont <= 20, 'phone event title must use compact typography');
+    assert.ok(phoneHeader.titleToStatus >= 10, 'status must have space after title');
+    assert.ok(phoneHeader.statusToPicker >= 16, 'event picker must be separated from Live status');
+    assert.ok(phoneHeader.pageOverflow <= 1, 'phone header must not overflow');
+
+    // Spectator feed ticks every second, even when no event data changes. A bracket
+    // swipe must retain its DOM and scroll position, not jump back to round one.
+    await goTab(spec.page, 'Bracket');
+    await spec.page.locator('.bracket').first().waitFor({timeout: T});
+    const swipeStart = await spec.page.evaluate(() => {
+      const el = document.querySelector('#main .bracket');
+      el.scrollLeft = Math.min(110, el.scrollWidth - el.clientWidth);
+      el.dataset.swipeGuard = 'retained';
+      return {left: el.scrollLeft, inset: parseFloat(getComputedStyle(el).paddingLeft)};
+    });
+    assert.ok(swipeStart.left > 40, 'fictional bracket must have more than one scrollable round');
+    assert.ok(swipeStart.inset >= 8, 'round cards have breathing room at mobile edges');
+    await spec.page.waitForTimeout(1600);
+    const swipeAfter = await spec.page.evaluate(() => {
+      const el = document.querySelector('#main .bracket');
+      return {left: el.scrollLeft, retained: el.dataset.swipeGuard};
+    });
+    assert.equal(swipeAfter.retained, 'retained', 'freshness tick must not replace the bracket DOM');
+    assert.ok(Math.abs(swipeAfter.left - swipeStart.left) < 2, 'swiped bracket must not reset on feed tick');
+    await goTab(spec.page, 'Now & next');
 
     // table assignment by a scorekeeper shows up as Now playing for spectators and on the TV
     const tv = await w.device('tv', {viewport: {width: 1920, height: 1080}});
@@ -156,6 +226,9 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
     await org.page.reload();   // a reload of the organizer tab: the session is not persisted, so sign in again
     await org.page.locator('#signIn:not([disabled])').waitFor({timeout: T});
     await org.signIn('org');
+    // The Staff app restores the previously active tab after a reload (session-scoped navigation),
+    // so return to Overview explicitly before reading the event name.
+    await goTab(org.page, 'Overview');
     await org.page.locator('#evName').waitFor({timeout: T});
     assert.equal(await org.page.locator('#evName').inputValue(), 'Synthetic Rehearsal Games', 'selected organizer event remains correct');
     await goTab(org.page, 'Match Desk');
@@ -229,12 +302,16 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
       assert.ok(reqs.every(r => r.path === '/rest/v1/fftt_public_tournament_v1' && r.auth === false), `${dev.name} uses only the anonymous public view`);
     }
 
-    // ---------------------------------------------------------------- revocation: the organizer removes scorekeeper B; B's phone is signed out
+    // ---------------------------------------------------------------- revocation: unchecking B's event and saving removes only that event grant.
     await goTab(org.page, 'Staff');
-    const row = org.page.locator('tr', {hasText: w.accounts.b[0]});
-    await row.locator('button', {hasText: 'Revoke'}).click();
-    await org.page.locator('dialog[open] button', {hasText: 'Revoke'}).click();
-    await waitToast(org.page, /Access revoked/);
+    const row = org.page.locator('.people-row', {hasText: w.accounts.b[0]});
+    await row.waitFor({timeout: T});
+    await row.locator('.people-event-dropdown summary').click();
+    await row.locator('.people-event-menu input[type=checkbox]').first().uncheck();
+    await row.locator('.people-action-cell button', {hasText: 'Save'}).click();
+    await org.page.locator('dialog[open]', {hasText: 'Save staff assignments?'}).waitFor();
+    await org.page.locator('dialog[open] button', {hasText: 'Save changes'}).click();
+    await waitToast(org.page, /Event access updated/);
     await b.page.locator('#signin:not([hidden])').waitFor({timeout: 20000});
     assert.match(await b.page.locator('#signInStatus').textContent(), /access ended|session ended/i);
     assert.equal(await b.page.locator('.queue-card').count(), 0, 'private rows are gone');

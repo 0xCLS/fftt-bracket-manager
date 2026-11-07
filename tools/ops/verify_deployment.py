@@ -13,7 +13,7 @@ import argparse, hashlib, json, sys, urllib.error, urllib.request
 from pathlib import Path
 
 UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36'
-PRIVATE = ['/server/registration/handler.mjs', '/functions/api/registrations.js', '/supabase/proposals/GAMEDAY_TOURNAMENT_V5_STAGING.sql',
+PRIVATE = ['/server/registration/handler.mjs', '/server/registration/gate.mjs', '/tools/ops/install_registration_gate.sql', '/functions/api/registrations.js', '/supabase/proposals/GAMEDAY_TOURNAMENT_V5_STAGING.sql',
            '/tests/registration_handler.test.mjs', '/docs/launch/FFTT3_CUTOVER_RUNBOOK.md', '/tools/release/build_single_project_upgrade.py', '/.git/config', '/.env']
 
 def get(url, method='GET', data=None, headers=None):

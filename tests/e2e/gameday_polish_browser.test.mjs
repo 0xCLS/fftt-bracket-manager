@@ -249,10 +249,22 @@ test('SPACING: one rhythm everywhere. Related controls never touch (Doubles, Sta
       const sel = await org.page.locator('#dbB').boundingBox();
       assert.ok(btn.y - (sel.y + sel.height) >= 12 || Math.abs(btn.y - sel.y) < sel.height, 'the doubles buttons are clear of the partner dropdowns');
       await goTab(org.page, 'Staff');
-      await org.page.locator('#stEmail').waitFor();
+      await org.page.locator('.people-directory-card').waitFor({timeout: T});
+      await org.page.locator('.people-row').first().waitFor({timeout: T});
       await spacing(org.page, `Staff @ ${vp}`);
-      const role = await org.page.locator('#stRole').boundingBox(), grant = await org.page.locator('button', {hasText: 'Grant access'}).boundingBox();
-      assert.ok(grant.y - (role.y + role.height) >= 14, `"Grant access" is clear of the Role dropdown (${grant.y - (role.y + role.height)}px)`);
+      if (vp === 'tablet') {
+        // Regression: Staff's narrower workspace must not keep the desktop four-column People grid.
+        const layout = await org.page.evaluate(() => {
+          const columns = getComputedStyle(document.querySelector('.people-row')).gridTemplateColumns.trim().split(' ').length;
+          return {columns, pageWidth: document.documentElement.scrollWidth, viewportWidth: window.innerWidth};
+        });
+        assert.equal(layout.columns, 2, 'People directory stacks into two columns at tablet width');
+        assert.ok(layout.pageWidth <= layout.viewportWidth + 1, `People directory tablet overflow: ${layout.pageWidth} > ${layout.viewportWidth}`);
+      }
+      const role = await org.page.locator('.people-role-control').first().boundingBox();
+      const save = await org.page.locator('.people-action-cell .primary').first().boundingBox();
+      assert.ok(role.x + role.width <= save.x + 2 || save.y >= role.y + role.height + 12,
+        `Staff Save is clear of the Role dropdown @ ${vp}`);
       await shot(org.page, `${vp}-staff`);
       await goTab(org.page, 'Match Desk');
       await org.page.locator('h2', {hasText: /Recent results/}).waitFor({timeout: T});
@@ -436,7 +448,7 @@ test('SCORE TILES: equal squares, tabular numerals, green winner / red loser per
   } finally { await w.close(); }
 });
 
-test('OVERVIEW: "How each match is scored" is the LAST section and spans the full content width, with balanced labels and dropdowns', {timeout: 400000}, async () => {
+test('OVERVIEW: full-width match formats above Your events, balanced labels and dropdowns', {timeout: 400000}, async () => {
   const w = await createBrowserWorld();
   try {
     await stageTournament(w);
@@ -449,13 +461,13 @@ test('OVERVIEW: "How each match is scored" is the LAST section and spans the ful
         const kids = [...page.children].filter(x => x.getBoundingClientRect().height > 0);
         const rows = [...document.querySelectorAll('.format-row')].map(r => { const rr = r.getBoundingClientRect(); const sels = [...r.querySelectorAll('select')].map(s => s.getBoundingClientRect()); return {x: rr.x, y: rr.y, w: rr.width, sel: sels.map(s => [s.width, s.height]), labelW: r.querySelector('.format-name').getBoundingClientRect().width}; });
         const pr = page.getBoundingClientRect(), cr = card.getBoundingClientRect();
-        return {isLast: kids[kids.length - 1] === sec, pageW: pr.width, cardW: cr.width, leftGap: cr.left - pr.left, rows, inLeftColumn: !!card.closest('.overview-main'), setupBottom: document.querySelector('.overview-settings').getBoundingClientRect().bottom, cardTop: cr.top,
-          historyBottom: document.querySelector('.overview-history').getBoundingClientRect().bottom, cols: new Set(rows.map(r => Math.round(r.x))).size, overflow: document.documentElement.scrollWidth > window.innerWidth + 1};
+        return {isLast: kids[kids.length - 1] === document.querySelector('.overview-history'), pageW: pr.width, cardW: cr.width, leftGap: cr.left - pr.left, rows, inLeftColumn: !!card.closest('.overview-main'), setupBottom: document.querySelector('.overview-settings').getBoundingClientRect().bottom, cardTop: cr.top,
+          cardBottom: cr.bottom, historyTop: document.querySelector('.overview-history').getBoundingClientRect().top, cols: new Set(rows.map(r => Math.round(r.x))).size, overflow: document.documentElement.scrollWidth > window.innerWidth + 1};
       });
-      assert.ok(g.isLast, `the formats section is the last section @ ${vp}`);
+      assert.ok(g.isLast, `the events section is the last section @ ${vp}`);
       assert.equal(g.inLeftColumn, false, 'it is no longer a card confined to the left column');
       assert.ok(g.cardW >= g.pageW - 1 && g.leftGap <= 1, `full width of the page (${g.cardW} of ${g.pageW}) @ ${vp}`);
-      assert.ok(g.cardTop >= g.historyBottom - 1 && g.cardTop >= g.setupBottom, 'it sits below the event setup and the event list');
+      assert.ok(g.cardBottom <= g.historyTop + 1 && g.cardTop >= g.setupBottom, 'match formats precedes the event list');
       assert.equal(g.rows.length, 5, 'all five format categories');
       if (vp === 'desktop') {
         assert.ok(g.cols >= 2, `the wide layout is used: ${g.cols} columns of format tiles`);

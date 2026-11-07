@@ -1,7 +1,7 @@
 /** LAUNCH-MODE Google Sheets workflow in real Chrome: a REAL-mode event (synthetic_only = false) on the UPGRADED single-project
  * schema, registration read from a FAKE Google (the FFTT3 form's shape, fictional people, no network, no credentials).
  * Covers the whole organizer path (inspect, test, map, save, enable, load, duplicates, levels, check-in, walk-in) plus the
- * access rules (organizer-only, event allowlist, mode switch) and the privacy boundary (no contact data in tournament
+ * access rules (organizer-only, event-scoped source, mode switch) and the privacy boundary (no contact data in tournament
  * records, audit log, exports, spectator projection or page). Browser-SIMULATED viewports; fictional data only. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -23,7 +23,6 @@ const idle = page => page.locator('#regSetBody[aria-busy="false"]').waitFor({tim
 
 async function launchWorld(mode = 'enabled') {
   const w = await createBrowserWorld({real: true, registration: 'google-only', google: {mode, sheets: {[SHEET]: {title: 'FFTT3 Sign-ups (fictional copy)', tabs: {[TAB]: ROWS}, shared: true}}}});
-  w.registrationEnv.REGISTRATION_EVENT_IDS = w.eventId;
   w.registrationEnv.REGISTRATION_REF_SECRET = crypto.randomBytes(32).toString('hex');
   return w;
 }
@@ -53,7 +52,7 @@ test('LAUNCH MODE: real-mode event, Organizer connects the form sheet, loads, de
     assert.deepEqual(await page.locator('.diag-list li').evaluateAll(els => els.map(e => e.className)), Array(6).fill('diag-pass'));
     assert.deepEqual(w.google.calls.filter(c => /values/.test(c.path) && !/A1:BH1|A2:A/.test(c.path)), [], 'the diagnostic read no answer rows');
 
-    // 3. save and enable (allowed: the event is real, the deployment is `enabled`, the event is on the allowlist)
+    // 3. save and enable (allowed: the event is real and the deployment is `enabled`)
     await idle(page);
     await page.locator('#regEnable').check();
     await page.locator('#regSave').click();
@@ -170,14 +169,13 @@ test('LAUNCH MODE access rules: scorekeepers and outsiders are refused, other ev
     await org.page.locator('#regLoad').click();
     await org.page.locator('#regError').waitFor({timeout: T});
     assert.equal(w.google.calls.filter((c, i) => i >= before && /values/.test(c.path)).length, 0, 'diagnostic mode reads no rows');
-    // and an event that is not on the allowlist is refused even in `enabled` mode
+    // The obsolete deployment allowlist no longer blocks an event with its own enabled source.
     w.registrationEnv.REGISTRATION_GOOGLE_MODE = 'enabled';
-    w.registrationEnv.REGISTRATION_EVENT_IDS = crypto.randomUUID();
+    w.registrationEnv.REGISTRATION_EVENT_IDS = crypto.randomUUID();   // obsolete setting: present but ignored
     await org.page.locator('#regLoad').click();
-    await org.page.locator('#regError').waitFor({timeout: T});
-    assert.equal((await org.page.locator('.reg-row').count()), 0, 'no registrants for an event outside the allowlist');
-    // back to normal: reads resume
-    w.registrationEnv.REGISTRATION_EVENT_IDS = E;
+    await org.page.locator('.reg-row').first().waitFor({timeout: T});
+    delete w.registrationEnv.REGISTRATION_EVENT_IDS;
+    // back to normal: reads resume without any event list at all
     await org.page.locator('#regLoad').click();
     await org.page.locator('.reg-row').first().waitFor({timeout: T});
     assert.deepEqual(w.pageErrors, []);

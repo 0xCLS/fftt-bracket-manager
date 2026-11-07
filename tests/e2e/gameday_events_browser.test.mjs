@@ -1,7 +1,7 @@
 /** Event management and sign-in without a technical id, in real Chrome over the real SQL (fictional data only). */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createBrowserWorld} from './browser_world.mjs';
+import {createBrowserWorld, STAFF} from './browser_world.mjs';
 import {roster} from './helpers.mjs';
 
 const T = 20000;
@@ -13,24 +13,188 @@ const chip = (page, text) => page.locator('.events-card .chip', {hasText: text})
 test('sign-in needs no event id; several events are chosen by NAME; no technical id is ever shown', {timeout: 240000}, async () => {
   const w = await createBrowserWorld();
   try {
-    await w.fake.local.rpc(w.ids.org, 'fftt_create_event_v3', {p_name: 'Spring Fellowship Open', p_date: '2027-03-06', p_table_count: 4});
-    const org = await w.device('org');
+    const longEvent = 'Spring Fellowship Open — Hosted Browser Recovery and Rehearsal Validation 2099';
+    await w.fake.local.rpc(w.ids.org, 'fftt_create_event_v3', {p_name: longEvent, p_date: '2027-03-06', p_table_count: 4});
+    const org = await w.device('org', {viewport: {width: 390, height: 844}, mobile: true});
     await org.signIn('org', {choose: 'Synthetic Rehearsal Games'});
     await org.page.locator('#evName').waitFor({timeout: T});
     assert.equal(await org.page.locator('#evName').inputValue(), 'Synthetic Rehearsal Games');
     assert.ok(!UUID.test(await org.page.locator('body').innerText()), 'no technical id on the page');
     assert.ok(!UUID.test(await org.page.locator('#eventSelect').evaluate(el => [...el.options].map(o => o.textContent).join())), 'the event switcher shows names');
-    // switch by name
+    // iPhone-sized viewport: neither a long event title nor Safari-style date
+    // form controls may widen the document or extend beyond their form card.
+    async function assertMobileWidth(label) {
+      const m = await org.page.evaluate(() => {
+        const card = document.querySelector('.overview-settings').getBoundingClientRect();
+        const dateField = document.querySelector('.overview-settings .date-field').getBoundingClientRect();
+        const frameEl = document.querySelector('.overview-settings .native-date-frame');
+        const dateFrame = frameEl.getBoundingClientRect();
+        const dateInput = document.querySelector('.overview-settings input[type="date"]').getBoundingClientRect();
+        const createFrameEl = document.querySelector('.create-event .native-date-frame');
+        const createFrame = createFrameEl?.getBoundingClientRect();
+        const select = document.querySelector('#eventSelect').getBoundingClientRect();
+        const style = getComputedStyle(frameEl);
+        return {viewport: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth,
+          scale: window.visualViewport?.scale ?? 1,
+          cardLeft: card.left, cardRight: card.right, fieldLeft: dateField.left, fieldRight: dateField.right,
+          frameLeft: dateFrame.left, frameRight: dateFrame.right, frameBorder: style.borderRightWidth,
+          frameOverlayBorder: getComputedStyle(frameEl, '::after').borderRightWidth,
+          frameOverlayPointer: getComputedStyle(frameEl, '::after').pointerEvents,
+          inputPosition: getComputedStyle(frameEl.querySelector('input')).position,
+          dateLeft: dateInput.left, dateRight: dateInput.right,
+          createFrameRight: createFrame?.right, createFrameBorder: createFrameEl ? getComputedStyle(createFrameEl).borderRightWidth : null,
+          selectRight: select.right};
+      });
+      assert.ok(m.scroll <= m.viewport + 1, label + ': no viewport width expansion');
+      assert.ok(m.fieldLeft >= m.cardLeft - 1 && m.fieldRight <= m.cardRight - 2, label + ': date field fits card');
+      assert.ok(m.frameLeft >= m.fieldLeft - 1 && m.frameRight <= m.fieldRight + 1,
+        label + ': visible native-date frame fits the grid field');
+      assert.equal(m.frameBorder, '1px', label + ': frame retains its right border');
+      assert.equal(m.frameOverlayBorder, '1px', label + ': right border is also drawn over Safari native input');
+      assert.equal(m.frameOverlayPointer, 'none', label + ': date frame overlay does not block the native picker');
+      assert.equal(m.inputPosition, 'absolute', label + ': intrinsic native date control cannot determine grid width');
+      assert.ok(m.dateLeft >= m.frameLeft - 1 && m.dateRight <= m.frameRight + 1,
+        label + ': native date control fits its visible frame');
+      assert.ok(m.createFrameRight === undefined || m.createFrameRight <= m.viewport + 1,
+        label + ': new-event date frame cannot widen the page');
+      assert.ok(m.scale >= .99 && m.scale <= 1.01, label + ': no browser page-scale change');
+      assert.ok(m.selectRight <= m.viewport + 1, label + ': event dropdown stays on-screen');
+      return m;
+    }
+    const initialWidth = await assertMobileWidth('initial event');
+    // iPhone recording: selecting an event briefly clears its snapshot;
+    // three stat chips vanish and the Overview becomes a short Loading pane.
+    // Recreate that read-only DOM state and assert stable header geometry.
+    const measureSwitch = () => org.page.evaluate(() => {
+      const main = document.querySelector('#main');
+      const status = document.querySelector('#statusline');
+      const sidebar = document.querySelector('#app .staff-sidebar');
+      const picker = document.querySelector('#eventSelect');
+      const oldMain = [...main.childNodes], oldStatus = [...status.childNodes];
+      const measure = () => ({
+        sidebarBottom: sidebar.getBoundingClientRect().bottom,
+        pickerTop: picker.getBoundingClientRect().top,
+        lastPillBottom: status.lastElementChild?.getBoundingClientRect().bottom ?? 0,
+        statusHeight: status.getBoundingClientRect().height,
+        docWidth: document.documentElement.scrollWidth,
+        viewport: document.documentElement.clientWidth,
+        loadingHeight: main.querySelector('.loading-state')?.getBoundingClientRect().height ?? 0
+      });
+      const ready = measure();
+      const loader = document.createElement('div');
+      loader.className = 'loading-state';
+      loader.textContent = 'Loading…';
+      try {
+        status.replaceChildren(...oldStatus.slice(0, 2));
+        main.replaceChildren(loader);
+        const loading = measure();
+        return {ready, loading};
+      } finally {
+        status.replaceChildren(...oldStatus);
+        main.replaceChildren(...oldMain);
+      }
+    });
+    const stableSwitch = await measureSwitch();
+    assert.ok(Math.abs(stableSwitch.ready.sidebarBottom - stableSwitch.loading.sidebarBottom) <= 2,
+      'mobile sidebar must not stretch when a different event is loading');
+    assert.ok(Math.abs(stableSwitch.ready.pickerTop - stableSwitch.loading.pickerTop) <= 2,
+      'native event picker must not jump vertically during snapshot loading: ' + JSON.stringify(stableSwitch));
+    assert.ok(stableSwitch.loading.loadingHeight >= 844 - 1,
+      'loading pane holds the footer outside the iPhone viewport');
+    assert.ok(stableSwitch.loading.docWidth <= stableSwitch.loading.viewport + 1,
+      'loading state preserves the iPhone width correction');
+    // At 430px the same five Organizer badges occupy two rows, not three.
+    // Ensure both the loaded and loading views stay aligned without a large
+    // gap before the event picker. Restore the 390px viewport for the rest.
+    await org.page.setViewportSize({width: 430, height: 844});
+    const compact430 = await measureSwitch();
+    assert.ok(Math.abs(compact430.ready.pickerTop - compact430.loading.pickerTop) <= 2,
+      '430px event picker stays steady during snapshot loading: ' + JSON.stringify(compact430));
+    assert.ok(compact430.ready.statusHeight <= 76,
+      '430px Organizer status uses at most two compact badge rows: ' + JSON.stringify(compact430));
+    assert.ok(compact430.ready.pickerTop - compact430.ready.lastPillBottom <= 44,
+      '430px Organizer has no oversized blank band before its event picker: ' + JSON.stringify(compact430));
+    assert.ok(compact430.loading.docWidth <= compact430.loading.viewport + 1,
+      '430px event reload does not reintroduce document overflow');
+    await org.page.setViewportSize({width: 390, height: 844});
+    // In physical Safari an event-dependent native picker width caused
+    // topbar.scrollWidth 607px while its box remained 430px. Simulate an
+    // interior child wider than the phone and prove only the header contains
+    // it; never hide overflow across the page or break bracket scrollers.
+    const headerContainment = await org.page.evaluate(() => {
+      const top = document.querySelector('#app .topbar');
+      const probe = document.createElement('span');
+      probe.className = 'header-overflow-probe';
+      probe.style.cssText = 'position:absolute;left:580px;top:0;width:27px;height:2px;pointer-events:none';
+      top.append(probe);
+      const size = {
+        headerOverflow: getComputedStyle(top).overflowX,
+        headerY: getComputedStyle(top).overflowY,
+        headerScroll: top.scrollWidth,
+        workScroll: document.querySelector('#app .staff-workspace').scrollWidth,
+        documentScroll: document.documentElement.scrollWidth,
+        viewport: document.documentElement.clientWidth,
+        tabsOverflow: getComputedStyle(document.querySelector('#app nav.tabs')).overflowX
+      };
+      probe.remove();
+      return size;
+    });
+    assert.equal(headerContainment.headerOverflow, 'clip', 'mobile Staff header clips only escaping horizontal overflow');
+    assert.equal(headerContainment.headerY, 'visible', 'header vertical overflow and focus remain visible');
+    assert.ok(headerContainment.headerScroll > headerContainment.viewport + 150, 'synthetic header overflow reaches far past viewport');
+    assert.ok(headerContainment.workScroll <= headerContainment.viewport + 1, 'header overflow must not expand workspace');
+    assert.ok(headerContainment.documentScroll <= headerContainment.viewport + 1, 'header overflow must not widen iPhone document');
+    assert.equal(headerContainment.tabsOverflow, 'auto', 'horizontal tab navigation remains independently scrollable');
+    const pickerTypography = await org.page.locator('#eventSelect').evaluate(el => {
+      el.querySelector('option').dataset.nativePickerGuard = 'persisted';
+      return parseFloat(getComputedStyle(el).fontSize);
+    });
+    assert.ok(pickerTypography >= 16, 'iPhone event selector must not trigger Safari small-input focus zoom');
     const options = await org.page.locator('#eventSelect option').allInnerTexts();
     assert.equal(options.length, 2);
-    const spring = options.findIndex(o => /Spring Fellowship Open/.test(o));
+    const spring = options.findIndex(o => o.includes(longEvent));
+    assert.equal(options[spring], longEvent + ' · Mar 6, 2027', 'the event picker uses short month and local-calendar-safe date formatting');
     await org.page.selectOption('#eventSelect', {index: spring});
-    for (let i = 0; i < 40 && (await org.page.inputValue('#evName').catch(() => '')) !== 'Spring Fellowship Open'; i++) await org.page.waitForTimeout(500);
-    assert.equal(await org.page.inputValue('#evName'), 'Spring Fellowship Open');
+    for (let i = 0; i < 40 && (await org.page.inputValue('#evName').catch(() => '')) !== longEvent; i++) await org.page.waitForTimeout(500);
+    assert.equal(await org.page.inputValue('#evName'), longEvent);
+    assert.equal(await org.page.locator('#eventSelect option').first().getAttribute('data-native-picker-guard'), 'persisted',
+      'native picker options must not be replaced just because the active event changed');
+    const longWidth = await assertMobileWidth('long event');
+    await org.page.selectOption('#eventSelect', {index: options.findIndex(o => o.includes('Synthetic Rehearsal Games'))});
+    for (let i = 0; i < 40 && (await org.page.inputValue('#evName').catch(() => '')) !== 'Synthetic Rehearsal Games'; i++) await org.page.waitForTimeout(500);
+    const returnWidth = await assertMobileWidth('return to initial event');
+    assert.equal(initialWidth.viewport, longWidth.viewport, 'iPhone viewport stable after choosing long event');
+    assert.equal(initialWidth.viewport, returnWidth.viewport, 'iPhone viewport stable after switching back');
     // one event only: entered directly, after a reload with the vault the person is not asked again
     const a = await w.device('a', {viewport: {width: 390, height: 844}, mobile: true});
     await a.signIn('a');
-    await a.page.locator('#statusline').waitFor({timeout: T});
+    await a.page.locator('#statusline .pill').first().waitFor({timeout: T});
+    // Scorekeeper with a single assigned event has no event picker. Its one
+    // or two status rows must not inherit the Organizer's 103px reservation.
+    await a.page.setViewportSize({width: 430, height: 844});
+    // The authorized event name renders with the first snapshot; wait for it instead of racing the paint.
+    await a.page.locator('#eventTitle:not([hidden])').waitFor({timeout: T});
+    const scorekeeper430 = await a.page.evaluate(() => {
+      const line = document.querySelector('#statusline');
+      const header = document.querySelector('#app .topbar');
+      return {
+        pickerHidden: document.querySelector('#eventSwitch').hidden,
+        statusHeight: line.getBoundingClientRect().height,
+        // the authorized event name is real content under the status row; only empty space after the last visible content is a gap
+        titleVisible: !document.querySelector('#eventTitle').hidden,
+        trailingGap: header.getBoundingClientRect().bottom - Math.max(
+          line.lastElementChild?.getBoundingClientRect().bottom ?? 0,
+          document.querySelector('#eventTitle').hidden ? 0 : document.querySelector('#eventTitle').getBoundingClientRect().bottom),
+        documentWidth: document.documentElement.scrollWidth,
+        viewport: document.documentElement.clientWidth
+      };
+    });
+    assert.equal(scorekeeper430.pickerHidden, true, 'single-event Scorekeeper has no event picker');
+    assert.equal(scorekeeper430.titleVisible, true, 'single-event Scorekeeper sees the name of the authorized event');
+    assert.ok(scorekeeper430.statusHeight < 75 && scorekeeper430.trailingGap < 45,
+      'Scorekeeper header has no artificial status-row gap: ' + JSON.stringify(scorekeeper430));
+    assert.ok(scorekeeper430.documentWidth <= scorekeeper430.viewport + 1,
+      'Scorekeeper mobile header stays within the viewport');
     // cancelling a choice leaves nothing signed in
     const again = await w.device('org2');
     await again.signIn('org');
@@ -108,5 +272,142 @@ test('events: filter by status, archive, restore (never public), delete only emp
     assert.equal(forged.code, 'P0001');
     assert.deepEqual(w.pageErrors, []);
     assert.deepEqual(w.consoleErrors.filter(e => !/net::ERR|Failed to load resource/.test(e)), []);
+  } finally { await w.close(); }
+});
+
+test('opt-in Staff iPhone layout trace records selected ordinal, actual viewport metrics, and no personal data', {timeout: 180000}, async () => {
+  const w = await createBrowserWorld();
+  try {
+    await w.fake.local.rpc(w.ids.org, 'fftt_create_event_v3',
+      {p_name: 'Example event middle', p_date: '2027-04-01', p_table_count: 2});
+    await w.fake.local.rpc(w.ids.org, 'fftt_create_event_v3',
+      {p_name: 'Example event top', p_date: '2027-05-01', p_table_count: 2});
+    const d = await w.device('trace', {viewport: {width: 390, height: 844}, mobile: true});
+    await d.open(STAFF + '/app/staff.html?layoutTrace=1');
+    await d.signIn('org', {choose: 'Synthetic Rehearsal Games'});
+    await d.page.locator('#evName').waitFor({timeout: T});
+    assert.equal(await d.page.locator('.staff-layout-trace').count(), 1);
+    assert.equal(await d.page.locator('.staff-layout-trace').evaluate(el => getComputedStyle(el).position), 'fixed');
+    const opts = await d.page.locator('#eventSelect option').count();
+    assert.equal(opts, 3);
+    for (const index of [0, 2, 1, 0]) {
+      await d.page.selectOption('#eventSelect', {index});
+      await d.page.waitForTimeout(1150);
+    }
+    const trace = await d.page.locator('.staff-layout-trace textarea').inputValue();
+    assert.match(trace, /"tag":"picker-change"/);
+    assert.match(trace, /"pos":"1\/3"/);
+    assert.match(trace, /"pos":"3\/3"/);
+    assert.match(trace, /"doc":390/);
+    assert.match(trace, /"vv":\[390,1,0\]/);
+    assert.match(trace, /"regions":\{/);
+    assert.match(trace, /"out":\[/);
+    // Force one harmless offscreen node inside the real content. Verify it is
+    // distinguished from the intentionally scrollable sidebar navigation.
+    await d.page.evaluate(() => {
+      const probe = document.createElement('div');
+      probe.className = 'overflow-probe';
+      probe.style.cssText = 'position:absolute;left:415px;width:90px;height:1px';
+      document.querySelector('#main').append(probe);
+      document.querySelector('.staff-layout-trace button:last-child').click();
+    });
+    const diagnosed = await d.page.locator('.staff-layout-trace textarea').inputValue();
+    assert.match(diagnosed, /"name":"div.overflow-probe"/, 'real non-scroller overflow is reported');
+    const records = diagnosed.split('\n').slice(1).map(line => JSON.parse(line));
+    assert.ok(records.some(v => v.out.some(e => e.name === 'div.overflow-probe')),
+      'offscreen content is classified outside deliberate horizontal scrollers');
+    assert.doesNotMatch(diagnosed, /Synthetic Rehearsal|Example event|@|[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
+    assert.doesNotMatch(trace, /Synthetic Rehearsal|Example event|@|[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
+    assert.deepEqual(w.pageErrors, []);
+  } finally { await w.close(); }
+});
+
+
+test('Organizer Create Event dialog and existing Overview setup keep rehearsal isolated', {timeout: 180000}, async () => {
+  const w = await createBrowserWorld();
+  try {
+    const org = await w.device('event-dialog', {viewport: {width: 390, height: 844}, mobile: true});
+    await org.signIn('org');
+    await org.page.locator('#evName').waitFor({timeout: T});
+    assert.equal(await org.page.locator('.create-event').count(), 0, 'old inline create form is removed');
+    assert.equal(await org.page.locator('#openCreateEvent').count(), 1);
+    assert.equal(await org.page.locator('#editEventButton').count(), 0, 'pencil is absent');
+    const before = await org.page.locator('#eventSelect option').count();
+    // Dialog geometry at the narrowest phone, validation, Escape and focus return (nothing is created by any of these).
+    for (const width of [320, 390]) {
+      await org.page.setViewportSize({width, height: 700});
+      await org.page.locator('#openCreateEvent').click();
+      const d = org.page.locator('dialog[open]');
+      await d.locator('#newName').waitFor();
+      const g = await org.page.evaluate(() => {
+        const dialog = document.querySelector('dialog[open]'), box = dialog.getBoundingClientRect();
+        const fields = [...dialog.querySelectorAll('input')].map(i => i.getBoundingClientRect());
+        return {left: box.left, right: box.right, vw: document.documentElement.clientWidth,
+          columns: getComputedStyle(dialog.querySelector('.event-dialog-grid')).gridTemplateColumns.split(' ').length,
+          fieldsInside: fields.every(r => r.left >= box.left - 1 && r.right <= box.right + 1),
+          pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          focusedId: document.activeElement?.id, labelled: [...dialog.querySelectorAll('input')].every(i => document.querySelector(`label[for="${i.id}"]`))};
+      });
+      assert.ok(g.left >= 0 && g.right <= g.vw, `dialog fits the ${width}px viewport`);
+      assert.equal(g.columns, 1, `fields stack on a ${width}px phone`);
+      assert.ok(g.fieldsInside && g.pageOverflow <= 1, `no field or page overflow @ ${width}`);
+      assert.equal(g.focusedId, 'newName', 'focus starts on the name field');
+      assert.ok(g.labelled, 'every field has a label');
+      await d.locator('#newTables').fill('99');
+      await d.getByRole('button', {name: 'Create event'}).click();
+      assert.match(await d.locator('[role=alert]').innerText(), /table count from 1 to 12/, 'invalid input is explained in the dialog');
+      assert.equal(await org.page.locator('#eventSelect option').count(), before, 'invalid input creates nothing');
+      await org.page.keyboard.press('Escape');
+      await org.page.locator('dialog[open]').waitFor({state: 'detached'});
+      assert.equal(await org.page.evaluate(() => document.activeElement?.id), 'openCreateEvent', 'focus returns to the opener');
+    }
+    await org.page.setViewportSize({width: 390, height: 844});
+    await org.page.locator('#openCreateEvent').click();
+    let dlg = org.page.locator('dialog[open]');
+    await dlg.locator('#newName').fill('Private Nov 8 Practice');
+    await dlg.getByRole('button', {name: 'Cancel'}).click();
+    assert.equal(await org.page.locator('#eventSelect option').count(), before, 'cancellation creates nothing');
+    await org.page.locator('#openCreateEvent').click();
+    dlg = org.page.locator('dialog[open]');
+    await dlg.locator('#newName').fill('Private Nov 8 Practice');
+    await dlg.locator('#newDate').fill('2026-11-08');
+    await dlg.locator('#newTables').fill('2');
+    await dlg.getByRole('button', {name: 'Create event'}).click();
+    await toast(org.page, /Event created/);
+    // Successful creation selects the new event and remains on Overview.
+    await org.page.locator('#evName').waitFor({timeout: T});
+    assert.equal(await org.page.locator('nav.tabs button[data-tab="overview"]').getAttribute('aria-current'), 'page');
+    assert.equal(await org.page.locator('#evName').inputValue(), 'Private Nov 8 Practice');
+    assert.equal(await org.page.locator('#eventSelect option:checked').innerText(), 'Private Nov 8 Practice · Nov 8, 2026');
+    await org.page.waitForFunction(() => window.scrollY <= 1, null, {timeout: T});
+    assert.equal(await org.page.locator('dialog[open]').count(), 0, 'the creation dialog is closed');
+    // The original Overview setup form remains the supported edit path.
+    await org.page.locator('#evName').fill('Private Nov 8 Rehearsal');
+    await org.page.getByRole('button', {name: /Save event setup/}).click();
+    await toast(org.page, /Event saved/);
+    assert.equal(await org.page.locator('#evName').inputValue(), 'Private Nov 8 Rehearsal');
+    assert.equal(await org.page.locator('dialog[open]').count(), 0, 'no Edit Event popup');
+    // The match desk's empty queue and results card must have a visible section gap.
+    await org.page.locator('nav.tabs button', {hasText: 'Match Desk'}).click();
+    await org.page.locator('.match-desk-page > .empty-state + .card').waitFor({timeout: T});
+    const deskGap = await org.page.evaluate(() => {
+      const empty = document.querySelector('.match-desk-page > .empty-state');
+      const recent = document.querySelector('.match-desk-page > .empty-state + .card');
+      return recent.getBoundingClientRect().top - empty.getBoundingClientRect().bottom;
+    });
+    assert.ok(deskGap >= 20, 'empty Match Desk queue and recent results have >=20px spacing');
+    await org.page.locator('nav.tabs button', {hasText: 'Overview'}).click();
+    const placement = await org.page.evaluate(() => {
+      const formats = document.querySelector('.overview-formats').getBoundingClientRect();
+      const history = document.querySelector('.overview-history').getBoundingClientRect();
+      return {formatsBottom: formats.bottom, eventsTop: history.top,
+        overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1};
+    });
+    assert.ok(placement.formatsBottom <= placement.eventsTop + 1, 'event management follows match formats');
+    assert.equal(placement.overflow, false, 'event title and event list fit phone viewport');
+    const original = await w.fake.local.admin(
+      "select event_name from fftt_private.events where event_name = 'Synthetic Rehearsal Games'");
+    assert.equal(original.length, 1, 'an unrelated existing event remains unchanged');
+    assert.deepEqual(w.pageErrors, []);
   } finally { await w.close(); }
 });

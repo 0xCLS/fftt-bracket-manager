@@ -1,5 +1,7 @@
 # FFTT3 — hosted cutover runbook (single project, in place)
 
+> **Historical release procedure — not current activation instructions (November 6, 2026).** The hosted upgrade, real events, event-scoped registration and production Staff/Spectator domains are already live following separately approved releases. Current accepted Staff source: `5b0a3571a29accf6c348d41fbfdbbf23fb4734a3` (deployment `4bb1cd48-984d-4af1-8f7b-1b95c1a2d599`). **Do not rerun** the one-time SQL upgrade, recreate FFTT3 or the rehearsal event, repeat original deployment steps or substitute historical rollback references. This document remains as historical provenance; consult current manifests and the canonical project changelog.
+
 **Status:** ready to run after the organizer's ONE consolidated approval. Nothing here has been run against the hosted project except read-only queries. Existing infrastructure only: Supabase `fftt-bracket-manager-dev` (`copmkalfkkrkzheohwuc`), Cloudflare Pages `fftt3-staff-stg` and `fftt3-games-stg`. No new project, repository or paid resource.
 
 ## What the approval covers
@@ -75,7 +77,7 @@ It compares every served file's SHA-256 and the live `MANIFEST.json` with the lo
 ## Step 6 — turn on Google registration for that one event (Cloudflare → Pages → `fftt3-staff-stg` → Settings → Variables and Secrets, **Production**)
 | Name | Type | Value |
 | --- | --- | --- |
-| `REGISTRATION_EVENT_IDS` | plain text | the real FFTT3 event UUID from Step 5 (only this one) |
+| `REGISTRATION_EVENT_IDS` | plain text | the real FFTT3 event UUID from Step 5 (only this one). **Retired by the PR #52 release** ([November 6 note](FFTT3_BRACKET_MANAGER_REGISTRATION_2026-11-06.md)): required until that release is deployed, ignored and to be deleted afterwards; later events need no Cloudflare edit. |
 | `REGISTRATION_REF_SECRET` | **secret** | the 64-character value in `~/Documents/FFTT-private/secrets/REGISTRATION_REF_SECRET.txt` (generated locally on October 27; never pasted into chat or GitHub) — or set with `npx wrangler@4 pages secret put REGISTRATION_REF_SECRET --project-name fftt3-staff-stg < that file` |
 | `REGISTRATION_GOOGLE_MODE` | plain text | change `diagnostic` → `enabled` **last** |
 | `GOOGLE_SA_EMAIL`, `GOOGLE_SA_PRIVATE_KEY` | secret | **unchanged** (already saved; do not re-enter) |

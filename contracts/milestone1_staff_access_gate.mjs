@@ -27,7 +27,7 @@ export function createMilestone1StaffAccessGate({
    if(expectedUserId!==undefined&&who.id!==expectedUserId)deny();
    const role=await readRole({eventId,token});
    if(stamp!==epoch)deny();
-   if(!['organizer','scorekeeper'].includes(role))deny();
+   if(!['organizer','bracket_manager','scorekeeper'].includes(role))deny();   // the server-proven event roles; anything else is refused
    if(!isOnline()||now()>=expiresAt)deny();
    active={eventId,expiresAt,userId:who.id,role};
    return Object.freeze({authorized:true,role,privateReadOnly:true,

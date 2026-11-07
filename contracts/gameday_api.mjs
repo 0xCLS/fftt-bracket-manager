@@ -43,14 +43,14 @@ const MESSAGE_KIND = Object.freeze({
 
 const WRITE_ROUTES = Object.freeze([
   'fftt_create_event_v3', 'fftt_update_event_v3', 'fftt_set_lifecycle_v3', 'fftt_set_visibility_v3',
-  'fftt_upsert_players_v3', 'fftt_remove_player_v3', 'fftt_set_checkin_v3', 'fftt_set_checkin_bulk_v3', 'fftt_build_championship_v3',
+  'fftt_upsert_players_v3', 'fftt_remove_player_v3', 'fftt_set_checkin_v3', 'fftt_set_checkin_bulk_v3', 'fftt_event_day_walkin_v1', 'fftt_build_championship_v3',
   'fftt_build_consolation_v3', 'fftt_assign_table_v3', 'fftt_forfeit_match_v3', 'fftt_correct_result_v3',
   'fftt_set_doubles_teams_v3', 'fftt_record_doubles_result_v3', 'fftt_set_staff_v3',
   'fftt_set_formats_v4', 'fftt_set_match_format_v4', 'fftt_checkin_registrants_v4', 'fftt_confirm_ratings_v4',
   'fftt_restore_event_v4', 'fftt_delete_event_v4', 'fftt_set_registration_source_v5', 'fftt_clear_registration_source_v5',
 ]);
 const READ_ROUTES = Object.freeze([
-  'fftt_my_events_v3', 'fftt_my_events_v4', 'fftt_event_brief_v3', 'fftt_organizer_snapshot_v3', 'fftt_audit_log_v3',
+  'fftt_my_events_v3', 'fftt_my_events_v4', 'fftt_event_brief_v3', 'fftt_organizer_snapshot_v3', 'fftt_bracket_manager_snapshot_v1', 'fftt_audit_log_v3',
   'fftt_export_event_v3', 'fftt_matchdesk_v1', 'fftt_matchdesk_v2', 'fftt_registration_source_v5',
 ]);
 
@@ -61,7 +61,7 @@ export function parseMyEvents(raw) {
     if (!only(e, ['event_id', 'name', 'date', 'lifecycle', 'role', 'revision', 'can_create', 'tables', 'players', 'deletable'])
       || !uuid(e.event_id) || !text(e.name, 160) || !/^\d{4}-\d{2}-\d{2}$/.test(e.date)
       || !['draft', 'active', 'complete', 'archived'].includes(e.lifecycle)
-      || !['organizer', 'scorekeeper'].includes(e.role) || !int(e.revision)
+      || !['organizer', 'bracket_manager', 'scorekeeper'].includes(e.role) || !int(e.revision)
       || typeof e.can_create !== 'boolean' || !int(e.tables, 1, 12)
       || !(e.players === null || int(e.players, 0, 64)) || typeof e.deletable !== 'boolean'
       || (e.role !== 'organizer' && (e.players !== null || e.deletable))) bad();
@@ -148,7 +148,7 @@ export function parseOrganizerSnapshot(raw) {
   }
   const staff = raw.staff.map(s => {
     if (!only(s, ['user_id', 'email', 'role', 'active']) || !uuid(s.user_id) || !text(s.email ?? '', 254)
-      || !['organizer', 'scorekeeper'].includes(s.role) || typeof s.active !== 'boolean') bad();
+      || !['organizer', 'bracket_manager', 'scorekeeper'].includes(s.role) || typeof s.active !== 'boolean') bad();
     return Object.freeze({userId: s.user_id, email: s.email ?? '', role: s.role, active: s.active});
   });
   const brackets = raw.brackets.map(b => {
@@ -235,6 +235,7 @@ export function createGamedayApi({projectUrl = C3_HOST, publishableKey, fetchImp
     myEvents: r('fftt_my_events_v4', parseMyEvents),
     eventBrief: r('fftt_event_brief_v3', parseEventBrief),
     organizerSnapshot: r('fftt_organizer_snapshot_v3', parseOrganizerSnapshot),
+    bracketManagerSnapshot: r('fftt_bracket_manager_snapshot_v1', parseOrganizerSnapshot),
     auditLog: r('fftt_audit_log_v3', parseAuditLog),
     exportEvent: r('fftt_export_event_v3', x => { if (!plain(x) || x.format !== 'fftt-event-export-v3') bad(); return x; }),
     createEvent: w('fftt_create_event_v3'),
@@ -244,6 +245,7 @@ export function createGamedayApi({projectUrl = C3_HOST, publishableKey, fetchImp
     upsertPlayers: w('fftt_upsert_players_v3'),
     removePlayer: w('fftt_remove_player_v3'),
     setCheckin: w('fftt_set_checkin_v3'),
+    eventDayWalkIn: w('fftt_event_day_walkin_v1'),
     setCheckinBulk: w('fftt_set_checkin_bulk_v3'),
     buildChampionship: w('fftt_build_championship_v3'),
     buildConsolation: w('fftt_build_consolation_v3'),

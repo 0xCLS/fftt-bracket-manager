@@ -11,6 +11,7 @@ import {createMilestone1EmailCodeRecovery} from '../contracts/milestone1_email_c
 import {createGamedayApi} from '../contracts/gameday_api.mjs';
 import {createGamedayScoreTransport} from '../contracts/gameday_score_transport.mjs';
 import {createRegistrationClient} from '../contracts/registration_client.mjs';
+import {createStaffDirectoryClient} from '../contracts/staff_directory_client.mjs';
 import {createStaffCore, createPendingLedger, POLL_MS} from './staff_core.mjs';
 import {createStaffUi} from './staff_ui.mjs';
 import {PUBLISHABLE_KEY} from './config.mjs';
@@ -45,16 +46,147 @@ try {
   });
 } catch { readiness = {ready: false, checks: [], blockers: ['origin-profile-invalid']}; }
 const networkAllowed = readiness.ready === true && HOSTED_PASSWORD_AUTH_ENABLED;
-$('envBanner').textContent = (readiness.environment ? readiness.environment.toUpperCase() + ' · ' : '') + 'REHEARSE WITH FICTIONAL PLAYERS · REAL REGISTRATION NAMES MAY BE VISIBLE';
+$('envBanner').textContent = profile.environment === 'production'
+  ? 'FFTT TOURNAMENT STAFF · SIGN IN TO YOUR ASSIGNED EVENT'
+  : (readiness.environment ? readiness.environment.toUpperCase() + ' · ' : '') + 'REHEARSE WITH FICTIONAL PLAYERS · REAL REGISTRATION NAMES MAY BE VISIBLE';
 for (const c of readiness.checks) $('readiness').append(Object.assign(document.createElement('li'), {textContent: (c.pass ? '✔ ' : '✘ ') + c.id.replaceAll('-', ' ')}));
 for (const b of readiness.blockers.filter(x => !readiness.checks.some(c => c.id === x))) {
   $('readiness').append(Object.assign(document.createElement('li'), {textContent: '✘ ' + b.replaceAll('-', ' ')}));
 }
 $('originStatus').textContent = !readiness.ready ? 'BLOCKED · this address is not approved for staff sign-in.' : 'This address is approved.';
+$('connectionLabel').textContent = profile.environment === 'production' ? 'Cloud-connected'
+  : profile.environment === 'staging' ? 'Cloud-connected staging' : 'Cloud status unavailable';
+$('sidebarCaution').textContent = profile.environment === 'staging'
+  ? 'Use fictional players for rehearsal · real sign-ups may be visible'
+  : 'Confirm the selected event before recording results.';
 $('signin').hidden = false;
 
 // ---- non-secret convenience: the last event, and an event link (?event=…)
 const params = new URLSearchParams(window.location.search);
+
+// Read-only iPhone layout trace. Enabled ONLY by ?layoutTrace=1, never sent to
+// a server, saved to storage or included in normal Staff UI. Records only
+// geometry, selected option ordinal, and generic element tags/classes.
+// This distinguishes Safari visual-viewport zoom from document overflow,
+// including the organizer's new top-of-list vs bottom-of-list observation.
+function installLayoutTrace() {
+  if (params.get('layoutTrace') !== '1') return;
+  const el = (tag, attrs = {}, text = '') => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    if (text) n.textContent = text;
+    return n;
+  };
+  const panel = el('details', {class: 'staff-layout-trace', 'aria-label': 'Staff layout diagnostics'});
+  const summary = el('summary', {}, 'Layout readings · tap to copy');
+  const help = el('p', {}, 'Read-only viewport measurements. No names, IDs, scores, credentials, or network uploads.');
+  const report = el('textarea', {readonly: '', 'aria-label': 'Layout diagnostic readings', spellcheck: 'false'});
+  const copy = el('button', {type: 'button'}, 'Copy readings');
+  const clear = el('button', {type: 'button'}, 'Clear');
+  panel.append(summary, help, report, copy, clear);
+  document.body.append(panel);
+  const picker = $('eventSelect');
+  const entries = [];
+  let start = Date.now();
+  const round = n => typeof n === 'number' && Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
+  const box = selector => {
+    const node = document.querySelector(selector);
+    if (!node || node.hidden || !node.getClientRects().length) return null;
+    const r = node.getBoundingClientRect();
+    return [round(r.left), round(r.right), round(r.width)];
+  };
+  // Screen geometry only: no labels, names, URLs, private IDs or input values.
+  const nodeKind = node => {
+    if (!node) return null;
+    const cls = node.classList?.[0] ?? '';
+    const safeClass = /^[a-zA-Z][a-zA-Z0-9_-]{0,35}$/.test(cls) ? '.' + cls : '';
+    return node.tagName.toLowerCase() + safeClass;
+  };
+  const region = selector => {
+    const node = document.querySelector(selector);
+    if (!node || !node.getClientRects().length) return null;
+    const r = node.getBoundingClientRect();
+    return [round(r.right), node.clientWidth, node.scrollWidth, getComputedStyle(node).overflowX];
+  };
+  function measure(tag) {
+    const doc = document.documentElement, vv = window.visualViewport;
+    const width = doc.clientWidth;
+    const over = [], unclipped = [];
+    // A horizontally scrolling navigation, bracket or table intentionally has
+    // children beyond its visible rectangle. Report these separately rather than
+    // letting them hide the culprit expanding the overall document.
+    for (const node of document.querySelectorAll('#app *')) {
+      if (!node.getClientRects().length || node.closest('.staff-layout-trace')) continue;
+      const r = node.getBoundingClientRect();
+      if (r.right <= width + 2 || r.width <= 1) continue;
+      const item = {name: nodeKind(node), right: round(r.right), width: round(r.width)};
+      const scroller = node.closest('nav.tabs, .scroll-x, .bracket');
+      if (scroller) {
+        if (!node.closest('.scroll-x,.bracket')) over.push(item);
+      } else {
+        item.parent = nodeKind(node.parentElement);
+        unclipped.push(item);
+      }
+    }
+    over.sort((a, b) => b.right - a.right);
+    unclipped.sort((a, b) => b.right - a.right);
+    const selected = picker.selectedIndex < 0 ? 'none' : String(picker.selectedIndex + 1);
+    const snapshot = {
+      t: Date.now() - start, tag, pos: selected + '/' + picker.options.length,
+      inner: window.innerWidth, doc: width, scroll: doc.scrollWidth,
+      vv: vv ? [round(vv.width), round(vv.scale), round(vv.offsetLeft)] : null,
+      app: box('#app'), main: box('#main'), select: box('#eventSelect'),
+      date: box('#evDate'),
+      // Each region: [right edge, clientWidth, scrollWidth, overflow-x].
+      regions: {
+        sidebar: region('.staff-sidebar'), tabs: region('nav.tabs'),
+        workspace: region('.staff-workspace'), topbar: region('#app .topbar'),
+        content: region('#main'), overview: region('.overview-page'),
+        settings: region('.overview-settings'), history: region('.overview-history'),
+        events: region('.events-card')
+      },
+      // "out" excludes intentionally scrolling tabs, brackets and tables.
+      // These are the strongest candidates for real document overflow.
+      out: unclipped.slice(0, 10), off: over.slice(0, 2)
+    };
+    entries.push(JSON.stringify(snapshot));
+    if (entries.length > 35) entries.shift();
+    report.value = 'FFTT layout readings · local only · no personal data\n'
+      + entries.join('\n');
+  }
+  const measureLater = tag => [80, 350, 1100].forEach(ms => {
+    setTimeout(() => measure(tag + '+' + ms), ms);
+  });
+  picker.addEventListener('pointerdown', () => measure('picker-open'), {passive: true});
+  picker.addEventListener('focus', () => measure('picker-focus'), {passive: true});
+  picker.addEventListener('change', () => {
+    measure('picker-change'); measureLater('picker-change');
+  }, true);
+  let lastResize = 0;
+  const onResize = tag => {
+    if (Date.now() - lastResize < 180) return;
+    lastResize = Date.now(); measure(tag);
+  };
+  window.addEventListener('resize', () => onResize('window-resize'), {passive: true});
+  window.visualViewport?.addEventListener('resize', () => onResize('visual-resize'), {passive: true});
+  copy.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(report.value);
+      copy.textContent = 'Copied';
+    } catch {
+      report.focus();
+      report.select();
+      copy.textContent = 'Select and copy the text';
+    }
+  });
+  clear.addEventListener('click', () => {
+    entries.length = 0; start = Date.now(); measure('cleared');
+    copy.textContent = 'Copy readings';
+  });
+  measure('initial');
+}
+installLayoutTrace();
+
 const linked = params.get('event');
 // A link carries its event: use it. Otherwise nothing is typed: after sign-in the person chooses their event by name.
 if (linked && UUID.test(linked)) { $('eventId').value = linked; $('eventIdBox').open = true; }
@@ -62,7 +194,7 @@ let lastEvent = null;
 try { lastEvent = localStorage.getItem('fftt.staff.lastEvent'); if (!UUID.test(lastEvent ?? '')) lastEvent = null; } catch { /* storage unavailable */ }
 
 const spectatorOrigin = (() => {
-  try { const u = new URL(profile.spectatorOrigin); return u.protocol === 'https:' && /\.pages\.dev$/.test(u.hostname) ? u.origin : null; } catch { return null; }
+  try { const u = new URL(profile.spectatorOrigin); return u.protocol === 'https:' && !u.port && (u.hostname === 'fftt-games.clslifestyle.com' || /^[a-z0-9-]+\.pages\.dev$/i.test(u.hostname)) ? u.origin : null; } catch { return null; }
 })();
 const config = {spectatorUrl: spectatorOrigin && spectatorOrigin + '/', tvUrl: spectatorOrigin && spectatorOrigin + '/app/tv.html'};
 
@@ -94,17 +226,25 @@ if (networkAllowed) {
   const api = createGamedayApi({publishableKey: PUBLISHABLE_KEY, fetchImpl});
   const scoreTransport = createGamedayScoreTransport({publishableKey: PUBLISHABLE_KEY, fetchImpl});
   const registrationClient = createRegistrationClient({fetchImpl});   // same-origin, organizer-only, read-only
+  const peopleClient = createStaffDirectoryClient({fetchImpl});   // same-origin; administrative actions remain server-gated
   session = createMilestone1PasswordStaffSession({transport, isOnline: () => navigator.onLine, vault, allowTabPersistence: ALLOW_TAB_PERSISTENCE,
     listEvents: ({token}) => api.myEvents(token, {})});
   recovery = createMilestone1EmailCodeRecovery({transport, adopt: session.adoptVerifiedSession});
   let storage = null; try { storage = window.localStorage; } catch { storage = null; }
   const ledger = createPendingLedger(storage ?? {getItem: () => null, setItem: () => { throw new Error('no storage'); }, removeItem: () => {}});
-  core = createStaffCore({session, api, scoreTransport, registrationClient, ledger, isOnline: () => navigator.onLine, onChange: () => {
-    if (!core.state.signedIn && !$('app').hidden) { showSignIn(core.state.endedReason ?? 'Your session ended. Please sign in again.', 'bad'); return; }
+  core = createStaffCore({session, api, scoreTransport, registrationClient, peopleClient, ledger, isOnline: () => navigator.onLine, onChange: () => {
+    if (!core.state.signedIn && !$('app').hidden) { ui?.clearNavigation(); showSignIn(core.state.endedReason ?? 'Your session ended. Please sign in again.', 'bad'); return; }
     ui?.render();
   }});
-  ui = createStaffUi({core, config, els: {main: $('main'), tabs: $('tabs'), status: $('statusline'), banner: $('banner'), eventSelect: $('eventSelect'), eventSwitch: $('eventSwitch')}});
-  $('eventSelect').addEventListener('change', async ev => { const r = await core.selectEvent(ev.target.value); if (!r.ok) toast(r.message, 'bad'); ui.openTab(core.state.role === 'organizer' ? 'overview' : 'desk'); });
+  ui = createStaffUi({core, config, els: {main: $('main'), tabs: $('tabs'), status: $('statusline'), banner: $('banner'), eventSelect: $('eventSelect'), eventSwitch: $('eventSwitch'), eventTitle: $('eventTitle'), eventTitleName: $('eventTitleName')}});
+  $('eventSelect').addEventListener('change', async ev => {
+    const r = await core.selectEvent(ev.target.value);
+    if (!r.ok) { toast(r.message, 'bad'); return; }
+    ui.openTab(core.state.role === 'organizer' ? 'overview' : core.state.role === 'bracket_manager' ? 'championship' : 'desk');
+    // An older mobile tab-strip offset can leave the first label half hidden.
+    // Event changes return to the chosen event's starting workspace.
+    $('tabs').scrollLeft = 0;
+  });
 }
 $('signIn').disabled = !networkAllowed; $('requestCode').disabled = !networkAllowed; $('verifyCode').disabled = !networkAllowed;
 
@@ -116,7 +256,7 @@ async function enter(r, eventIdHint) {
   // start() records the role synchronously; choose the landing tab BEFORE the slow first load so a tab the
   // person taps while it loads is never overwritten afterwards
   const loaded = core.started({role: r.role, eventId});
-  ui.openTab(r.role === 'organizer' ? 'overview' : 'desk');
+  ui.restoreTab(r.role);
   await loaded;
 }
 for (const ev of ['pointerdown', 'keydown', 'touchstart']) document.addEventListener(ev, () => session?.touch(), {passive: true});
@@ -136,7 +276,7 @@ function showChooser(c) {
         h('strong', {text: e.name}),
         h('span', {class: 'chooser-meta'}, h('span', {text: e.date}),
           h('span', {class: 'pill ' + (e.lifecycle === 'archived' ? 'warn' : e.lifecycle === 'active' ? 'good' : 'blue'), text: e.lifecycle === 'complete' ? 'Completed' : e.lifecycle[0].toUpperCase() + e.lifecycle.slice(1)}),
-          h('span', {class: 'pill', text: e.role === 'organizer' ? 'Organizer' : 'Scorekeeper'})))));
+          h('span', {class: 'pill', text: e.role === 'organizer' ? 'Organizer' : e.role === 'bracket_manager' ? 'Bracket Manager' : 'Scorekeeper'})))));
   }
   say('signInStatus', ''); $('chooserList').querySelector('input:checked')?.focus();
 }
@@ -188,6 +328,7 @@ $('verifyCode').addEventListener('click', async () => {
 async function leave(global) {
   const r = await session.signOut({global});
   core.signedOut();
+  ui.clearNavigation();
   showSignIn(r.serverRevoked ? 'Signed out.' : 'Signed out on this device. The server could not be reached; ask the organizer to end any other session.');
 }
 $('signOut').addEventListener('click', () => leave(false));

@@ -16,7 +16,7 @@ export class RegistrationSourceError extends Error {
   constructor(kind, {retryAfterSeconds = null} = {}) {
     super('Registration source ' + kind);
     this.name = 'RegistrationSourceError';
-    this.kind = ['not-configured', 'unauthorized', 'not-found', 'worksheet-not-found', 'busy', 'unavailable', 'malformed', 'invalid-source', 'columns', 'google-auth', 'disabled', 'not-allowed', 'event-not-enabled'].includes(kind) ? kind : 'unavailable';
+    this.kind = ['not-configured', 'unauthorized', 'not-found', 'worksheet-not-found', 'busy', 'unavailable', 'malformed', 'invalid-source', 'columns', 'google-auth', 'disabled', 'not-allowed', 'forbidden', 'access-rejected'].includes(kind) ? kind : 'unavailable';
     this.retryAfterSeconds = retryAfterSeconds;
   }
 }

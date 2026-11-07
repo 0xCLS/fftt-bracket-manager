@@ -1,5 +1,7 @@
 # FFTT3 — scorekeeper onboarding and permission verification
 
+**Current November 6 checkpoint:** The existing `FFTT 3 (Rehearsal)` event has **two active Scorekeeper grants**, **one Bracket Manager grant**, and no roster/check-ins after testing data was removed (read-only verification). These counts do **not** verify the individual grantees' identities, successful sign-ins, devices or Nov 8 attendance. Use the live Staff UI: **Staff → People → Event assignment** checkboxes, select **Role**, click **Save**, confirm, and refresh to check the server's grants. The Organizer verified the event checkbox UI; real Save/revoke was tested on fictional data. Do not create another rehearsal event. Older November 2 volunteer status paragraphs below are historical checkpoints.
+
 **Status: ready-to-use onboarding procedure.** As of November 2, **Maydis Skeete, J'Mae Ferguson and Laura Nhiwatiwa** have each accepted their November 22 scorer roles; that does **not** establish an individual Auth account, verified login identity, rehearsal attendance, event grant, or authorization to issue one. This document contains no staff e-mail addresses, credentials, player contacts or private event identifiers. Use the Owner's private volunteer tracker for contact and identity checks.
 
 ## Intended event and roles
@@ -12,12 +14,12 @@
 1. Confirm each volunteer's **preferred authentication e-mail** and availability for the November 8 rehearsal (all three have already accepted the November 22 scorer roles). Keep contact information and identity verification in the owner-private outreach tracker, **not this public repository**.
 2. Confirm an existing Supabase Auth user is the *intended individual*. If none exists, the trusted administrator uses an **approved, owner-controlled invite/create procedure** and verifies the e-mail is confirmed. **Do not enable public self-signup**; the Organizer previously confirmed that toggle is disabled.
 3. Never share an Organizer account, reuse a single volunteer account on two phones, publish a password, or create a staff grant merely because someone was mentioned in a planning conversation.
-4. For an actual FFTT3 grant, require the Organizer's explicit confirmation of **the named volunteer and the target event**. Do not use the completed October 25 fictional tournament as an access test. Use the **new, separate FFTT3 Rehearsal event**, with actual registered names and **practice-only results**, to test permissions. Its event grant is separate from the November 22 event grant; do not confuse them.
+4. For an actual FFTT3 grant, require the Organizer's explicit confirmation of **the named volunteer and the target event**. Do not use the completed October 25 fictional tournament as an access test. Use the **existing, separate `FFTT 3 (Rehearsal)` event**, with actual registered names and **practice-only results**, to test permissions. Its event grant is separate from the November 22 event grant; do not confuse them.
 
 ## Stage B — event-specific grant
 1. After separate permission to grant access, Organizer signs in on the **correct Staff host** for the intended event: production `https://fftt-staff.clslifestyle.com/app/staff`, or `https://fftt3-staff-stg.pages.dev/app/staff` only if the authorized rehearsal event is actually on staging. Verify the host **and intended event by name** before opening the **Staff** tab. Staging authorization is not production authorization.
-2. Choose **Grant access** for the verified, confirmed individual Auth e-mail. Select **Scorekeeper** (not Organizer). Grant only for that event.
-3. Verify the event's Staff list reflects precisely the intended identities and roles. If it does not, **stop** and investigate; do not guess or grant broadly.
+2. Under **Staff → People**, locate the verified volunteer. Check the authorized event under **Event assignment**, choose **Scorekeeper** under **Role**, then click **Save** and confirm the exact event. Checking a box alone never grants access.
+3. Refresh the Staff directory and verify the saved event and role against the intended individual. If the server-confirmed assignment differs, **stop** and investigate; do not grant broadly.
 4. Repeat independently for the second confirmed volunteer.
 
 ## Stage C — each volunteer's own phone

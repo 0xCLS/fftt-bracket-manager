@@ -58,7 +58,7 @@ test('event-specific sources through the REAL database: each event serves its ow
   assert.equal((await ask(handler, org, w.eventId)).status, 200);
   // a saved Google sheet (disabled: the database refuses enabling it on a synthetic event) is never read, even in a fully "enabled" deployment
   await w.fake.local.rpc(w.ids.org, 'fftt_set_registration_source_v5', {p_event_id: other, p_source: {kind: 'google-sheets', spreadsheet_id: 'SYNTHETIC_SHEET_A_0123456789abcdef', worksheet: 'Form responses 1', column_map: {}, enabled: false}});
-  const live = createRegistrationHandler({env: {...env, REGISTRATION_SOURCE: undefined, REGISTRATION_GOOGLE_MODE: 'enabled', REGISTRATION_EVENT_IDS: other, REGISTRATION_REF_SECRET: 'x'.repeat(40),
+  const live = createRegistrationHandler({env: {...env, REGISTRATION_SOURCE: undefined, REGISTRATION_GOOGLE_MODE: 'enabled', REGISTRATION_REF_SECRET: 'x'.repeat(40),
     GOOGLE_SA_EMAIL: 'fftt-reader@fftt-synthetic-project.iam.gserviceaccount.com', GOOGLE_SA_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\n' + 'A'.repeat(300) + '\n-----END PRIVATE KEY-----'},
     fetchImpl: w.fake.clientFetch('adapter2'), state: createHandlerState()});
   const refused = await ask(live, org, other);

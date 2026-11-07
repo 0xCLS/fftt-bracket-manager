@@ -133,10 +133,29 @@ test('controlled egress: only https to the pinned hosts, nothing else can be req
   assert.equal(seen[0][1].redirect, 'manual', 'redirects are never followed');
 });
 
+test('the permanent production staff origin configures the Function; lookalike and sibling hosts stay fail-closed', async () => {
+  const PROD = 'https://fftt-staff.clslifestyle.com';
+  const ok = {...synthEnv, STAFF_ORIGIN: PROD};
+  const good = await call(ok, world(), req({event_id: EVENT}, {origin: PROD, url: PROD + '/api/registrations'}));
+  assert.notEqual(good.status, 503, 'the exact production hostname is a valid staff origin');
+  assert.equal((await call(ok, world(), req({event_id: EVENT}, {origin: PROD, url: PROD + '/api/registrations', token: ''}))).status, 401, 'still requires a signed-in token');
+  assert.equal((await call(ok, world(), req({event_id: EVENT}, {method: 'GET', origin: PROD, url: PROD + '/api/registrations'}))).status, 405);
+  // the production configuration answers only on its own origin: the spectator hostname and the pages.dev alias never serve it
+  for (const url of ['https://fftt-games.clslifestyle.com/api/registrations', 'https://fftt-staff.pages.dev/api/registrations']) {
+    assert.equal((await call(ok, world(), req({event_id: EVENT}, {origin: null, url}))).status, 404, url);
+  }
+  for (const origin of ['https://fftt-games.clslifestyle.com', 'https://evil.clslifestyle.com', 'https://clslifestyle.com', 'https://fftt-staff.clslifestyle.com.evil.example',
+    'https://xfftt-staff.clslifestyle.com', 'http://fftt-staff.clslifestyle.com', 'https://fftt-staff.clslifestyle.com:8443', 'https://fftt-staff.clslifestyle.com/', 'https://FFTT-STAFF.clslifestyle.com ']) {
+    const r = await call({...synthEnv, STAFF_ORIGIN: origin}, world(), req({event_id: EVENT}));
+    assert.equal(r.status, 503, origin);
+    assert.deepEqual(await r.json(), {error: 'registration-not-configured'});
+  }
+});
+
 test('fail closed: any missing or wrong setting answers the same generic 503 and reveals nothing', async () => {
   const w = world();
   const bad = [{}, {...synthEnv, REGISTRATION_ENABLED: 'yes'}, {...synthEnv, STAFF_ORIGIN: 'https://evil.example'}, {...synthEnv, STAFF_ORIGIN: 'http://x.pages.dev'},
-    {...synthEnv, SUPABASE_URL: 'https://other.supabase.co'}, {...synthEnv, SUPABASE_PUBLISHABLE_KEY: 'sb_secret_abcdefghijkl'}, {...synthEnv, REGISTRATION_EVENT_IDS: 'not-a-uuid'}];
+    {...synthEnv, SUPABASE_URL: 'https://other.supabase.co'}, {...synthEnv, SUPABASE_PUBLISHABLE_KEY: 'sb_secret_abcdefghijkl'}];
   for (const env of bad) {
     const r = await call(env, w, req({event_id: EVENT}));
     assert.equal(r.status, 503, JSON.stringify(env));
@@ -273,16 +292,14 @@ test('a sheet title that looks like a date or a phone number never breaks loadin
   }
 });
 
-test('a live Google source is NEVER served for a synthetic event, when off/diagnostic, when disabled, or outside the allowlist', async () => {
+test('a live Google source is NEVER served for a synthetic event, when off/diagnostic, or when disabled', async () => {
   const sheet = (over = {}) => ({[EVENT]: sheetRecord(over)});
   const cases = [
     ['synthetic event, mode enabled', liveEnv, sheet({synthetic: true}), 403, 'google-not-allowed'],
     ['mode diagnostic', diagEnv, sheet(), 403, 'google-not-allowed'],
     ['mode off', {...liveEnv, REGISTRATION_GOOGLE_MODE: 'off'}, sheet(), 403, 'google-not-allowed'],
     ['switched off for the event', liveEnv, sheet({enabled: false}), 403, 'source-disabled'],
-    ['event not allowlisted', {...liveEnv, REGISTRATION_EVENT_IDS: OTHER_EVENT}, sheet(), 403, 'event-not-enabled'],
     ['no reference secret', {...liveEnv, REGISTRATION_REF_SECRET: undefined}, sheet(), 503, 'registration-not-configured'],
-    ['no allowlist at all', {...liveEnv, REGISTRATION_EVENT_IDS: ''}, sheet(), 503, 'registration-not-configured'],
   ];
   for (const [label, env, sources, status, error] of cases) {
     const w = world({sources});
@@ -290,6 +307,17 @@ test('a live Google source is NEVER served for a synthetic event, when off/diagn
     assert.equal(r.status, status, label);
     assert.deepEqual(await r.json(), {error}, label);
     assert.equal(w.google().length, 0, label + ': Google is not contacted');
+  }
+});
+
+test('eligible event sources do not depend on the former deployment event allowlist', async () => {
+  for (const value of [undefined, '', OTHER_EVENT, 'obsolete-invalid-value']) {
+    const w = world({sources: {[EVENT]: sheetRecord(), [OTHER_EVENT]: sheetRecord()}});
+    for (const event of [EVENT, OTHER_EVENT]) {
+      const r = await load({...liveEnv, REGISTRATION_EVENT_IDS: value}, w, {}, event);
+      assert.equal(r.status, 200, `eligible event ${event} with obsolete setting ${value}`);
+      parseRegistrationPayload(await r.json());
+    }
   }
 });
 

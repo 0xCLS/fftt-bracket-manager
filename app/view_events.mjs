@@ -95,6 +95,53 @@ export function createEventsView(ctx) {
     }, {label: 'Delete event'});
   }
 
+
+  // Create is Organizer-only; edits remain in the Overview event setup form.
+  function eventDialog() {
+    if (!writable() || s.role !== 'organizer') return;
+    const title = 'Create a new event';
+    openDialog((dlg, close) => {
+      const name = h('input', {type: 'text', id: 'newName',
+        maxlength: 120, autocomplete: 'off', required: true});
+      const date = h('input', {type: 'date', id: 'newDate', required: true});
+      const tables = h('input', {type: 'number', id: 'newTables',
+        min: 1, max: 12, value: 2, required: true});
+      const error = h('p', {class: 'status bad', role: 'alert', 'aria-live': 'polite'});
+      const save = h('button', {type: 'submit', class: 'primary', text: 'Create event'});
+      const field = (text, input) => h('div', {class: 'event-dialog-field'},
+        h('label', {for: input.id, text}), input);
+      const form = h('form', {class: 'event-dialog-form', novalidate: true, on: {submit: async ev => {
+        ev.preventDefault();
+        const eventName = name.value.trim(), eventDate = date.value, count = Number(tables.value);
+        error.textContent = '';
+        if (!eventName || !/^\d{4}-\d{2}-\d{2}$/.test(eventDate) || !Number.isInteger(count) || count < 1 || count > 12) {
+          error.textContent = 'Enter an event name, a valid date and a table count from 1 to 12.';
+          return;
+        }
+        if (!writable()) {
+          error.textContent = 'The connection has changed. Close this dialog and try again.';
+          return;
+        }
+        save.disabled = true;
+        try {
+          const r = await core.actions.createEvent(eventName, eventDate, count);
+          if (!r.ok) { error.textContent = r.message ?? 'The event could not be created.'; return; }
+          toast('Event created. It is empty and not public.');
+          // The dialog normally restores focus to its opener on close. Navigate after that
+          // restoration so the newly selected event opens on Overview at the top of the page.
+          dlg.addEventListener('close', () => { ctx.openEvent(); window.scrollTo(0, 0); }, {once: true});
+          close();
+          forget('new');
+        } finally { save.disabled = !writable(); }
+      }}},
+        h('div', {class: 'event-dialog-grid'}, field('Name', name), field('Date', date), field('Tables', tables)),
+        error,
+        h('div', {class: 'dlg-actions'}, h('button', {type: 'button', text: 'Cancel', on: {click: close}}), save));
+      dlg.append(h('div', {class: 'dlg event-dialog'}, h('h3', {text: title}), form));
+      queueMicrotask(() => name.focus());
+    }, {label: title});
+  }
+
   function eventsCard() {
     const create = s.events.some(e => e.canCreate);
     const counts = Object.fromEntries(FILTERS.map(([k]) => [k, s.events.filter(e => k === 'all' || e.lifecycle === k).length]));
@@ -102,9 +149,6 @@ export function createEventsView(ctx) {
       filter = s.events.find(e => e.eventId === s.eventId)?.lifecycle ?? 'active';
       if (!counts[filter] && counts.all) filter = 'all';
     }
-    const name = h('input', {type: 'text', id: 'newName', maxlength: 120, placeholder: 'Event name', 'data-draft': 'newName', required: true});
-    const date = h('input', {type: 'date', id: 'newDate', 'data-draft': 'newDate', required: true});
-    const tables = h('input', {type: 'number', id: 'newTables', min: 1, max: 12, value: 2, 'data-draft': 'newTables'});
     const shown = s.events.filter(e => filter === 'all' || e.lifecycle === filter);
     const chips = h('div', {class: 'chips', role: 'group', 'aria-label': 'Filter events by status'},
       FILTERS.map(([k, t]) => h('button', {type: 'button', class: 'chip', 'aria-pressed': String(filter === k), text: `${t} (${counts[k]})`,
@@ -128,18 +172,13 @@ export function createEventsView(ctx) {
     });
     return h('section', {class: 'card events-card', 'aria-labelledby': 'evTitle'},
       h('div', {class: 'card-head'}, h('div', {}, h('h2', {id: 'evTitle', text: 'Your events'}),
-        h('p', {class: 'card-sub', text: 'Choose an event by name. Only an empty draft can be deleted; everything else can be archived and restored.'}))),
+        h('p', {class: 'card-sub', text: 'Choose an event by name. Only an empty draft can be deleted; everything else can be archived and restored.'})),
+        create ? h('button', {id: 'openCreateEvent', class: 'primary small', type: 'button',
+          'aria-label': 'Create new event', disabled: !writable(), on: {click: () => eventDialog()}, text: '+ Create event'}) : null),
       chips,
       rows.length ? h('div', {class: 'scroll-x'}, h('table', {class: 'responsive-table'}, h('thead', {}, h('tr', {}, ['Event', 'Date', 'Status', 'Actions'].map(t => h('th', {scope: 'col', text: t})))), h('tbody', {}, rows)))
         : h('div', {class: 'empty-state', text: counts.all ? `No ${(FILTERS.find(f => f[0] === filter)?.[1] ?? '').toLowerCase()} events.` : 'No events yet.'}),
-      create ? h('form', {class: 'create-event', novalidate: true, on: {submit: async ev => { ev.preventDefault();
-          if (result(await core.actions.createEvent(name.value, date.value, Number(tables.value)), 'Event created. It is empty and not public.')) { forget('new'); ctx.goTab('players'); } }}},
-        h('h3', {text: 'Create a new event'}),
-        h('div', {class: 'create-grid'},
-          h('div', {class: 'create-name'}, h('label', {for: 'newName', text: 'Name'}), name),
-          h('div', {}, h('label', {for: 'newDate', text: 'Date'}), date),
-          h('div', {}, h('label', {for: 'newTables', text: 'Tables'}), tables)),
-        h('div', {class: 'row'}, h('button', {class: 'primary', type: 'submit', disabled: !writable(), text: 'Create event'}))) : null);
+      );
   }
   return {formatsCard, eventsCard};
 }

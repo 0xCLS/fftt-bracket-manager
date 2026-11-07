@@ -12,6 +12,7 @@ import {StaffSignInError} from '../contracts/milestone1_password_transport.mjs';
 import {createMilestone1ScoreSession} from '../contracts/milestone1_score_session.mjs';
 import {seedSlots, enginePlayers, normalizeGameScores} from '../contracts/gameday_engine.mjs';
 import {RegistrationClientError} from '../contracts/registration_client.mjs';
+import {directoryFromSnapshots, planStaffChange, staffEmail} from '../contracts/staff_people.mjs';
 import {importCsv} from '../contracts/registration_model.mjs';
 
 export const POLL_MS = 7000;
@@ -121,7 +122,44 @@ const REG_ERRORS = Object.freeze({
 });
 export const REGISTRATION_MESSAGES = REG_ERRORS;
 
-export function createStaffCore({session, api, scoreTransport, registrationClient = null, ledger, now = () => Date.now(),
+// The desk (Bracket Manager) never sees source settings, so its messages say what to do at the desk and who to ask.
+const DESK_ERRORS = Object.freeze({
+  'not-configured': 'Registration lookup is not set up for this event. Use the roster below, or add a walk-in.',
+  'not-enabled': 'The Organizer has not enabled a registration sheet for this event. Use the roster below, or ask the Organizer.',
+  'source-disabled': 'The registration sheet is switched off for this event. Ask the Organizer to switch it on, or use the roster below.',
+  'not-allowed-here': 'Live registrations are not available on this practice site. Use the roster below.',
+  'forbidden': 'Your account cannot look up registrations for this event.',
+  'access-rejected': 'Your sign-in expired. Sign in again.',
+  'rate-limited': 'That was a lot of requests in a short time. Wait a moment, then try again.',
+  'source-unauthorized': 'The registration sheet is not shared with the connection account. Ask the Organizer to check the sheet. Nothing was changed.',
+  'source-auth': 'The connection to the registration sheet failed. Ask the Organizer to check it. Nothing was changed.',
+  'source-not-found': 'The registration sheet could not be found. Ask the Organizer to check it. Nothing was changed.',
+  'source-worksheet': 'The registration sheet\'s tab could not be found. Ask the Organizer to check it. Nothing was changed.',
+  'source-columns': 'The registration sheet\'s columns changed. Ask the Organizer to check it. Nothing was changed.',
+  'source-busy': 'Google asked us to slow down. Try again in a minute.',
+  'source-unavailable': 'The registrations are temporarily unavailable. Nothing was changed. Try again shortly, or use the roster below.',
+  'network': 'You appear to be offline. Nothing was sent.',
+  'malformed': 'The registration answer was not in the expected form, so nothing was shown.',
+  'registration-not-found': 'That registration is no longer in the sign-up sheet. The list was reloaded.',
+  'name-incomplete': 'This registration does not have a full first and last name. Ask the Organizer to fix the sheet, or add the player as a walk-in with their full name.',
+  'level-required': 'Choose a level for this player first.',
+  'registration-not-duplicate': 'Those registrations are no longer grouped as the same person. The list was reloaded.',
+  'registration-invalid': 'That registration could not be used. The list was reloaded.',
+  'outcome-unknown': 'The connection dropped before we heard back. The list was refreshed: check whether this player is checked in before trying again.',
+});
+const DESK_CONFLICTS = Object.freeze({
+  'check-in-closed': 'Check-in is closed: the Championship bracket has been built or the event is not open. Contact the Organizer about a late arrival.',
+  'bracket-locked': 'The Championship bracket has been built, so check-in is locked. Contact the Organizer about a late arrival.',
+  'lifecycle': 'This event is not open for check-in.',
+  'duplicate-name': 'A player with this name is already on the roster. Open Review to link them if it is the same person.',
+  'roster-full': 'The roster is full (64 players).',
+  'already-linked': 'One of those registrations already belongs to a different player. The list was reloaded.',
+  'source-not-enabled': 'The registration source is not available for this event right now. Ask the Organizer.',
+  'source-changed': 'The registration source changed. The list was reloaded; try again.',
+  'link-name-mismatch': 'That roster player has a different name, so the registration cannot be linked to them.',
+});
+
+export function createStaffCore({session, api, scoreTransport, registrationClient = null, peopleClient = null, ledger, now = () => Date.now(),
   randomId = () => crypto.randomUUID(), isOnline = () => true, onChange = () => {}} = {}) {
   const s = {
     signedIn: false, role: null, eventId: null, events: [], snapshot: null, brief: null, pulse: null,
@@ -130,13 +168,18 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     lastScoreMessage: null,
     // organizer-only, in memory only, dropped with every other private view: {status, payload, error, at}
     registrations: {status: 'idle', payload: null, error: null, at: 0},
+    // Bracket Manager desk only, in memory only, dropped with every other private view: this event's registrations reduced for the desk
+    // {status, payload, error, code, at, rev, busyRef}; `rev` counts local roster marks so the view repaints without another sheet read
+    registrationLookup: {status: 'idle', payload: null, error: null, code: null, at: 0, rev: 0, busyRef: null},
     // organizer-only settings for THIS event's registration source: {status, source, capabilities, inspect, diagnostic, error}
     registrationSettings: {status: 'idle', source: null, capabilities: null, capabilitiesError: null, inspect: null, diagnostic: null, error: null, busy: null},
+    staffDirectory: {status: 'idle', people: [], error: null, version: 0},
   };
   let confirming = false;
   const refused = new Map();   // submission id -> reason: the database REFUSED it (validation), so nothing was recorded
   let scoreSession = null, scope = null, rawDesk = new Map(), refreshing = false, queuedForce = false, lastFullAt = 0;
   const emit = () => { try { onChange(); } catch { /* a view error must not stop the core */ } };
+  const staffScope = events => events.filter(e=>e.role==='organizer'&&e.lifecycle!=='archived').map(e=>e.eventId+':'+e.lifecycle).sort().join('|');
 
   // ---------------------------------------------------------------- score session wiring
   function newScoreSession(eventId) {
@@ -195,7 +238,9 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
   function clearPrivate(reason = null) {
     s.snapshot = null; s.brief = null; s.pulse = null; s.desk = []; s.deskStatus = 'idle'; s.audit = null;
     s.registrations = {status: 'idle', payload: null, error: null, at: 0};
-    s.registrationSettings = {status: 'idle', source: null, capabilities: null, capabilitiesError: null, inspect: null, diagnostic: null, error: null, busy: null};
+    s.registrationLookup = {status: 'idle', payload: null, error: null, code: null, at: 0, rev: 0, busyRef: null};
+    s.registrationSettings = {status: 'idle', source: null, capabilities: null, capabilitiesError: null, diagnostic: null, error: null, busy: null};
+    s.staffDirectory = {status: 'idle', people: [], error: null, version: s.staffDirectory.version + 1};
     rawDesk = new Map(); lastFullAt = 0;
     if (reason) s.endedReason = reason;
   }
@@ -216,12 +261,13 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
         const pulse = await scoreTransport.readPulse(ctx.token, {eventId: ctx.eventId});
         const same = s.pulse && pulse.revision === s.pulse.revision && pulse.generation === s.pulse.generation
           && pulse.lifecycle === s.pulse.lifecycle;
-        const needSnapshot = ctx.role === 'organizer' && !s.snapshot;
+        const needSnapshot = (ctx.role === 'organizer' || ctx.role === 'bracket_manager') && !s.snapshot;
         const needDesk = pulse.lifecycle === 'active' && scoreSession && !UNRESOLVED.has(scoreSession.view.status)
           && scoreSession.view.status !== 'ready';
         if (!force && same && !needSnapshot && !needDesk && now() - lastFullAt < FULL_REFRESH_MS) return {pulse, unchanged: true, role: ctx.role};
         const res = {pulse, role: ctx.role};
         if (ctx.role === 'organizer') res.snapshot = await api.organizerSnapshot(ctx.token, {p_event_id: ctx.eventId});
+        else if (ctx.role === 'bracket_manager') res.snapshot = await api.bracketManagerSnapshot(ctx.token, {p_event_id: ctx.eventId});
         else res.brief = await api.eventBrief(ctx.token, {p_event_id: ctx.eventId});
         try { res.events = await api.myEvents(ctx.token, {}); } catch (e) { if (e instanceof GamedayApiError && e.kind === 'access-rejected') throw e; /* the list is a convenience */ }
         if (pulse.lifecycle === 'active') {
@@ -238,7 +284,10 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
         lastFullAt = now();
         if (out.snapshot) s.snapshot = out.snapshot;
         if (out.brief) s.brief = out.brief;
-        if (out.events) s.events = out.events;
+        if (out.events) {
+          if(staffScope(s.events)!==staffScope(out.events)) s.staffDirectory={status:'idle',people:[],error:null,version:s.staffDirectory.version+1};
+          s.events = out.events;
+        }
         if (out.notActive) { s.desk = []; s.deskStatus = 'not-active'; }
         else if (out.deskLoaded) {
           syncScoreView();
@@ -352,6 +401,9 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     updatePlayer: p => act(ctx => api.upsertPlayers(ctx.token, {p_event_id: E(), p_players: [{id: p.id, name: p.name, rating: p.rating, rating_status: p.ratingStatus}]})),
     removePlayer: id => act(ctx => api.removePlayer(ctx.token, {p_event_id: E(), p_player_id: id})),
     setCheckin: (id, v) => act(ctx => api.setCheckin(ctx.token, {p_event_id: E(), p_player_id: id, p_checked_in: v})),
+    eventDayWalkIn: (name, rating) => s.role === 'bracket_manager'
+      ? act(ctx => api.eventDayWalkIn(ctx.token, {p_event_id: E(), p_name: name, p_rating: rating}))
+      : Promise.resolve({ok: false, message: 'Bracket Manager access required.'}),
     setCheckinAll: v => act(ctx => api.setCheckinBulk(ctx.token, {p_event_id: E(), p_player_ids: null, p_checked_in: v})),
     buildChampionship: ({confirm = false} = {}) => {
       const snap = s.snapshot;
@@ -431,6 +483,66 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
         s.registrations = {...s.registrations, status: s.registrations.payload ? 'ready' : 'error', error: message, code: kind, at: s.registrations.at}; emit();
         return {ok: false, message, kind};
       }
+    },
+    /** Bracket Manager desk, read-only: this event's registrations (reduced: no contact hints) from the event's saved source, via the
+     * Function. The database decides who may; this only asks. A failed reload keeps an earlier list on screen, clearly marked. */
+    async loadRegistrationLookup() {
+      if (!registrationClient) { s.registrationLookup = {...s.registrationLookup, status: 'error', payload: null, error: DESK_ERRORS['not-configured'], code: 'not-configured', at: now()}; emit(); return {ok: false, message: DESK_ERRORS['not-configured'], kind: 'not-configured'}; }
+      if (s.role !== 'bracket_manager' || !s.eventId) return {ok: false, message: DESK_ERRORS.forbidden, kind: 'forbidden'};
+      if (!isOnline()) return {ok: false, message: DESK_ERRORS.network, kind: 'network'};
+      if (s.registrationLookup.status === 'loading') return {ok: false, message: '', kind: 'superseded'};
+      s.registrationLookup = {...s.registrationLookup, status: 'loading', error: null}; emit();
+      const eventAtStart = s.eventId;
+      try {
+        const payload = await session.authorized(ctx => {
+          if (ctx.role !== 'bracket_manager') throw new RegistrationClientError('forbidden');
+          return registrationClient.lookup(ctx.token, {eventId: ctx.eventId});
+        });
+        if (eventAtStart !== s.eventId || !s.signedIn) return {ok: false, message: 'The event changed while loading. Try again.', kind: 'stale'};
+        s.registrationLookup = {status: 'ready', payload, error: null, code: null, at: now(), rev: s.registrationLookup.rev + 1, busyRef: null}; emit();
+        return {ok: true, payload};
+      } catch (e) {
+        if (isSessionEnded(e)) { endSession(e.kind); return {ok: false, message: describeError(e)}; }
+        const kind = e instanceof RegistrationClientError ? e.kind : null;
+        const message = kind ? (DESK_ERRORS[kind] ?? DESK_ERRORS['source-unavailable']) : describeError(e);
+        s.registrationLookup = {...s.registrationLookup, status: s.registrationLookup.payload ? 'ready' : 'error', error: message, code: kind, rev: s.registrationLookup.rev + 1}; emit();
+        return {ok: false, message, kind};
+      }
+    },
+    /** Bracket Manager desk: check ONE registration in (optionally merging its duplicate submissions / linking a same-named roster
+     * player). Only the opaque reference travels; the Function re-reads the sheet and the database verifies it. One at a time. */
+    async checkinRegistration({ref, mergeRefs = [], level = null, linkPlayerId = null} = {}) {
+      if (!registrationClient) return {ok: false, message: DESK_ERRORS['not-configured'], kind: 'not-configured'};
+      if (s.role !== 'bracket_manager' || !s.eventId) return {ok: false, message: DESK_ERRORS.forbidden, kind: 'forbidden'};
+      if (!isOnline()) return {ok: false, message: DESK_ERRORS.network, kind: 'network'};
+      if (!canWrite()) return {ok: false, message: connection() === 'live' ? 'One moment: another change is being saved.' : 'The connection is not confirmed, so changes are paused. Check the connection, then try again.'};
+      if (s.registrationLookup.busyRef) return {ok: false, message: 'One moment: another check-in is being saved.', kind: 'busy'};
+      const at = s.eventId;
+      s.registrationLookup = {...s.registrationLookup, busyRef: ref}; emit();
+      try {
+        const result = await session.authorized(ctx => {
+          if (ctx.role !== 'bracket_manager') throw new RegistrationClientError('forbidden');
+          return registrationClient.checkin(ctx.token, {eventId: ctx.eventId, ref, mergeRefs, level, linkPlayerId});
+        });
+        if (at !== s.eventId || !s.signedIn) return {ok: false, message: 'The event changed. Try again.', kind: 'stale'};
+        const lk = s.registrationLookup;
+        const marked = new Set([ref, ...mergeRefs]);
+        const payload = lk.payload && Object.freeze({...lk.payload, rosterSize: lk.payload.rosterSize + (result.outcome === 'created' ? 1 : 0),
+          registrants: Object.freeze(lk.payload.registrants.map(r => marked.has(r.ref) ? Object.freeze({...r, roster: Object.freeze({playerId: result.playerId, checkedIn: true})}) : r))});
+        s.registrationLookup = {...lk, payload: payload ?? lk.payload, rev: lk.rev + 1};
+        await refresh({force: true});
+        return {ok: true, result};
+      } catch (e) {
+        if (isSessionEnded(e)) { endSession(e.kind); return {ok: false, message: describeError(e)}; }
+        const kind = e instanceof RegistrationClientError ? e.kind : 'source-unavailable';
+        const message = kind === 'conflict' ? (DESK_CONFLICTS[e.detail] ?? 'The roster changed. Reload the list and try again.') : (DESK_ERRORS[kind] ?? DESK_ERRORS['source-unavailable']);
+        // anything that may have changed, or no longer matches, is re-read from the server so the screen shows the truth
+        const stale = ['outcome-unknown', 'registration-not-found', 'registration-not-duplicate', 'registration-invalid'].includes(kind)
+          || (kind === 'conflict' && ['already-linked', 'source-changed', 'source-not-enabled', 'bracket-locked', 'check-in-closed', 'lifecycle', 'duplicate-name', 'roster-full'].includes(e.detail));
+        s.registrationLookup = {...s.registrationLookup, busyRef: null}; 
+        if (stale) { await refresh({force: true}); if (kind !== 'conflict' || ['already-linked', 'source-changed'].includes(e.detail)) await actions.loadRegistrationLookup(); }
+        return {ok: false, message, kind, detail: e?.detail ?? null};
+      } finally { s.registrationLookup = {...s.registrationLookup, busyRef: null}; emit(); }
     },
     /** The organizer's PRIVATE fallback: a CSV file read in memory in this browser; never uploaded, never stored. */
     async importRegistrationsCsv(text) {
@@ -582,6 +694,97 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     emit();
     return {ok: false, unknown: true, message: 'We could not confirm what the server recorded. Do not enter it again yet — press "Check what the server recorded".'};
   }
+  // ---------------------------------------------------------------- shared Staff & Access
+  async function loadStaffDirectory() {
+    if(s.role!=='organizer'||!s.signedIn)return {ok:false,message:'Organizer access is required.'};
+    if(s.paused) return {ok:false,message:'Reconnect before refreshing staff access.'};
+    const eventAtStart=s.eventId, requestVersion=s.staffDirectory.version+1;
+    // A late directory response must never restore private staff data after a sign-out,
+    // event switch, or newer load. clearPrivate() increments the generation.
+    const stillCurrent=()=>s.signedIn&&s.role==='organizer'&&s.eventId===eventAtStart
+      &&s.staffDirectory.version===requestVersion;
+    s.staffDirectory={...s.staffDirectory,status:'loading',error:null,version:requestVersion};emit();
+    try {
+      const details=await session.authorized(async ctx=>{
+        const events=await api.myEvents(ctx.token,{});
+        const manageable=events.filter(e=>e.role==='organizer'&&e.lifecycle!=='archived');
+        if(ctx.role!=='organizer'||!manageable.some(e=>e.eventId===ctx.eventId)) throw new Error('scope-unverified');
+        const snapshots={};
+        for(const event of manageable){
+          // A failed authorized read is an incomplete directory, not an empty event.
+          snapshots[event.eventId]=await api.organizerSnapshot(ctx.token,{p_event_id:event.eventId});
+        }
+        let people=[],directoryError=null;
+        if(peopleClient) {
+          try {
+            const r=await peopleClient.request(ctx.token,'list',{eventId:ctx.eventId});
+            people=r.people;
+          } catch {
+            directoryError='Account invitations and directory removal are not available on this site yet. Existing event access can still be reviewed.';
+          }
+        } else directoryError='Account invitations require the protected Staff directory service.';
+        return {events,manageable,snapshots,people,directoryError};
+      },{wait:true});
+      if(!stillCurrent())return {ok:false,message:'The event or session changed during the directory request.'};
+      s.events=details.events;
+      s.staffDirectory={status:details.directoryError?'error':'ready',people:directoryFromSnapshots(details.manageable,details.snapshots,details.people),
+        error:details.directoryError,version:s.staffDirectory.version+1};emit();
+      return details.directoryError ? {ok:false,message:details.directoryError} : {ok:true};
+    } catch(e) {
+      if(!stillCurrent())return {ok:false,message:'The event or session changed during the directory request.'};
+      if(isSessionEnded(e)){endSession(e.kind);return {ok:false,message:describeError(e)};}
+      s.staffDirectory={status:'error',people:s.staffDirectory.people,error:s.staffDirectory.people.length?'Staff access could not be verified. The last loaded information is read-only. Reconnect and refresh before making changes.':'Staff access could not be verified. Reconnect and refresh before making changes.',
+        version:s.staffDirectory.version+1};emit();
+      return {ok:false,message:describeError(e)};
+    }
+  }
+  async function addStaffPerson(name,email){
+    if(!peopleClient)return {ok:false,message:'Secure staff invitations are not configured on this site.'};
+    if(s.staffDirectory.status!=='ready')return {ok:false,message:'Refresh the staff directory before adding anyone.'};
+    if(s.role!=='organizer'||!canWrite())return {ok:false,message:'Organizer access and a live connection are required.'};
+    const normalized=staffEmail(email);
+    if(!normalized||typeof name!=='string'||!name.trim())return {ok:false,message:'Enter the staff member’s name and valid email.'};
+    const r=await act(ctx=>peopleClient.request(ctx.token,'add',{eventId:ctx.eventId,name:name.trim(),email:normalized}),{refreshAfter:false});
+    if(r.ok)await loadStaffDirectory();
+    return r;
+  }
+  async function saveStaffPerson(person,selected,role){
+    if(s.staffDirectory.status!=='ready')return {ok:false,message:'Refresh the staff directory before changing access.'};
+    if(!person||!person.verified||!staffEmail(person.email))
+      return {ok:false,message:'This person must confirm their account before receiving event access.'};
+    let plan;
+    try{plan=planStaffChange(person,selected,role,s.events);}catch{return {ok:false,message:'The selected event assignments are not allowed.'};}
+    if(!plan.changed)return {ok:true,message:'No changes.'};
+    const r=await act(async ctx=>{
+      // Revocations first; any partial failure is surfaced and never silently retried.
+      for(const eventId of plan.revoke)await api.setStaff(ctx.token,{p_event_id:eventId,p_email:person.email,p_action:'revoke',p_role:null});
+      for(const eventId of plan.grant)await api.setStaff(ctx.token,{p_event_id:eventId,p_email:person.email,p_action:'grant',p_role:plan.role});
+    },{refreshAfter:false});
+    // Refresh server truth even after a partial/unknown outcome.
+    const [directory] = await Promise.all([loadStaffDirectory(),refresh({force:true})]);
+    if (!directory.ok) return {ok:false, message:'The change could not be verified because the staff directory could not be refreshed. Reconnect and refresh before making further changes.'};
+    return r.ok?r:{...r,message:'The change was not fully confirmed. Current server assignments have been reloaded. '+(r.message??'')};
+  }
+  async function removeStaffPerson(person) {
+    if(!peopleClient)return {ok:false,message:'Secure staff directory removal is not configured on this site.'};
+    if(s.staffDirectory.status!=='ready'||!staffEmail(person?.email))
+      return {ok:false,message:'Refresh the staff directory before removing anyone.'};
+    // Preflight ensures directory service is alive before any grant is revoked.
+    try{await session.authorized(ctx=>peopleClient.request(ctx.token,'list',{eventId:ctx.eventId}),{wait:true});}
+    catch{return {ok:false,message:'The directory service is unavailable. No event permissions were changed.'};}
+    const p=planStaffChange(person,[],Object.values(person.assignments)[0]??'scorekeeper',s.events);
+    const r=await act(async ctx=>{
+      for(const eventId of p.revoke)await api.setStaff(ctx.token,{p_event_id:eventId,p_email:person.email,p_action:'revoke',p_role:null});
+      await peopleClient.request(ctx.token,'archive',{eventId:ctx.eventId,email:person.email});
+    },{refreshAfter:false});
+    await Promise.all([loadStaffDirectory(),refresh({force:true})]);
+    return r.ok?r:{...r,message:'Removal was not fully confirmed. Review the refreshed permissions before taking further action. '+(r.message??'')};
+  }
+  actions.loadStaffDirectory=loadStaffDirectory;
+  actions.addStaffPerson=addStaffPerson;
+  actions.saveStaffPerson=saveStaffPerson;
+  actions.removeStaffPerson=removeStaffPerson;
+
   /** Look up the server's own record of the unresolved score (works after a reload too). */
   async function checkPendingScore() {
     const rec = s.pending;

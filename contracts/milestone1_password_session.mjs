@@ -198,7 +198,7 @@ export function createMilestone1PasswordStaffSession({
    events=await listEvents({token});
    if(!Array.isArray(events)||events.length>50
      ||events.some(e=>!e||!UUID.test(e.eventId||'')||typeof e.name!=='string'||typeof e.date!=='string'
-       ||!['organizer','scorekeeper'].includes(e.role)||!['draft','active','complete','archived'].includes(e.lifecycle)))fail('unavailable');
+       ||!['organizer','bracket_manager','scorekeeper'].includes(e.role)||!['draft','active','complete','archived'].includes(e.lifecycle)))fail('unavailable');
   }catch(e){
    await quietSignOut(token);
    const kind=kindOf(e);

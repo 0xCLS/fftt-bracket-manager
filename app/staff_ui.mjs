@@ -5,17 +5,22 @@ import {h, clear, fill, toast, download, pill} from './dom.mjs';
 import {bracketView} from './bracket_view.mjs';
 import {suggestPartners, enginePlayers, seedSlots, roundName, partnerCandidates, normalizeGameScores, formatLabel, ALLOWED_BEST_OF, ALLOWED_POINTS} from '../contracts/gameday_engine.mjs';
 import {normalizeSnapshotMatches, standingsFromSnapshot, resultsText, matchesCsv} from './exports.mjs';
-import {createPlayersView, levelShield} from './view_players.mjs';
+import {createPlayersView, levelShield, playerLevelSelector} from './view_players.mjs';
+import {createDeskRegistration} from './view_desk_registration.mjs';
 import {createEventsView} from './view_events.mjs';
+import {createStaffPeopleView} from './view_staff_people.mjs';
 import {scoreTiles} from './game_tiles.mjs';
 
 const ORGANIZER_TABS = [['overview', 'Overview'], ['players', 'Players'], ['championship', 'Championship'],
   ['consolation', 'Consolation'], ['desk', 'Match Desk'], ['finale', 'Doubles Finale'], ['results', 'Results & Export'], ['staff', 'Staff']];
+const BRACKET_MANAGER_TABS = [['checkin', 'Check-in'], ['championship', 'Championship'], ['consolation', 'Consolation'], ['desk', 'Match Desk'], ['finale', 'Doubles Finale'], ['wrap', 'Finish']];
 const SCOREKEEPER_TABS = [['desk', 'Match Desk']];
 /** Fixed outline icon geometry from the approved single-file FFTT navigation. */
 const STAFF_NAV_GEOMETRY = Object.freeze({
   overview: [['rect',{x:3,y:3,width:7,height:7,rx:1}],['rect',{x:14,y:3,width:7,height:7,rx:1}],['rect',{x:3,y:14,width:7,height:7,rx:1}],['rect',{x:14,y:14,width:7,height:7,rx:1}]],
   players: [['path',{d:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'}],['circle',{cx:9,cy:7,r:4}],['path',{d:'M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75'}]],
+  checkin: [['path',{d:'M3 12l4 4 8-9'}],['path',{d:'M14 18h7M14 13h7M14 8h7'}]],
+  wrap: [['rect',{x:4,y:4,width:16,height:16,rx:2}],['path',{d:'M8 12l3 3 5-6'}]],
   championship: [['path',{d:'M8 21h8M12 17v4M7 4h10v7a5 5 0 0 1-10 0V4ZM7 6H4v3a4 4 0 0 0 4 4M17 6h3v3a4 4 0 0 1-4 4'}]],
   consolation: [['path',{d:'M3 11a9 9 0 0 1 16-5l2 2M21 3v5h-5M21 13a9 9 0 0 1-16 5l-2-2M3 21v-5h5'}]],
   desk: [['rect',{x:5,y:4,width:14,height:17,rx:2}],['path',{d:'M9 4.5V3h6v1.5M9 10h6M9 14h6M9 18h4'}]],
@@ -34,11 +39,26 @@ function staffNavIcon(kind) {
   return svg;
 }
 
+const EVENT_PICKER_DATE = new Intl.DateTimeFormat('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC'});
+function eventPickerDate(isoDate) {
+  // Event dates are calendar dates, not local timestamps: UTC prevents a day shift in US time zones.
+  if (typeof isoDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return isoDate ?? '';
+  const date = new Date(isoDate + 'T00:00:00Z');
+  return Number.isNaN(date.getTime()) ? isoDate : EVENT_PICKER_DATE.format(date);
+}
+
 const OFFLINE_TOOL = 'https://0xcls.github.io/fftt-bracket-manager/';
 
 export function createStaffUi({core, els, config, signOut}) {
   const s = core.state;
+  const NAV_KEY='fftt.staff.navigation';
+  const tabsForRole=role=>role==='organizer'?ORGANIZER_TABS:role==='bracket_manager'?BRACKET_MANAGER_TABS:SCOREKEEPER_TABS;
+  const rememberTab=id=>{try{sessionStorage.setItem(NAV_KEY,id);}catch{/* navigation is optional */}};
   let tab = 'overview', lastInputAt = 0, dirtyDialog = 0, lastPaneKey = '';
+  // On iPhone, scroll/pan momentum can outlive the touchend event. Do not
+  // replace a bracket mid-gesture or immediately after its scroll settles.
+  let bracketTouching = false, lastBracketMotionAt = 0, renderedEventId = null;
+  const BRACKET_SCROLL_IDLE_MS = 1800;
   // Drafts belong to one organizer event and tab; never persist these private values in storage.
   // Anything marked data-draft (or listed in draftInputs) keeps what the person typed or opened across the
   // background refresh that rebuilds a pane; a successful save forgets it.
@@ -51,6 +71,7 @@ export function createStaffUi({core, els, config, signOut}) {
   const draftInputs = new Set(['evName', 'evDate', 'evTables', 'dbA', 'dbB', 'dbScores']);
   const draftKeyOf = el => el.dataset?.draft ?? (draftInputs.has(el.id) ? el.id : null);
   const isOrganizer = () => s.role === 'organizer';
+  const isBracketManager = () => s.role === 'bracket_manager';
   const nameOf = id => s.snapshot?.players.find(p => p.id === id)?.name ?? '—';
 
   // ------------------------------------------------------------ dialogs
@@ -99,11 +120,11 @@ export function createStaffUi({core, els, config, signOut}) {
       : conn === 'offline' ? ['Offline · changes paused', 'bad'] : conn === 'paused' ? ['Paused in background', 'warn'] : ['Signed out', 'warn'];
     // Only organizers receive player/match totals. The scorekeeper's brief intentionally contains
     // no roster or results; never turn its absent fields into misleading "0" statistics.
-    const snapshot = s.role === 'organizer' ? s.snapshot : null;
+    const snapshot = isOrganizer() || isBracketManager() ? s.snapshot : null;
     const checked = snapshot?.players?.filter(p => p.checkedIn).length;
     const completed = snapshot?.matches?.filter(m => m.status === 'complete').length;
     fill(els.status,
-      pill(text, kind), pill(s.role === 'organizer' ? 'Organizer' : s.role === 'scorekeeper' ? 'Scorekeeper' : '—', 'blue'),
+      pill(text, kind), pill(s.role === 'organizer' ? 'Organizer' : s.role === 'bracket_manager' ? 'Bracket Manager' : s.role === 'scorekeeper' ? 'Scorekeeper' : '—', 'blue'),
       snapshot ? pill(checked + ' checked in') : null,
       snapshot ? pill(completed + ' matches completed', 'blue') : null,
       snapshot ? (snapshot.candidates?.length ? pill(snapshot.candidates.length + ' consolation candidates', 'warn') : pill('Consolation not ready', 'warn')) : null,
@@ -112,13 +133,25 @@ export function createStaffUi({core, els, config, signOut}) {
       snapshot?.event?.publicVisible ? pill('Public view ON', 'blue') : null);
     const evs = s.events;
     const eventOptionsKey = JSON.stringify(evs.map(e => [e.eventId, e.name, e.date, e.lifecycle]));
-    if (els.eventSelect.dataset.optionsKey !== eventOptionsKey || els.eventSelect.value !== s.eventId) {
+    // The iPhone's native option picker may still be dismissing when a new
+    // event becomes active. Do not destroy its options for a selection-only
+    // change: synchronize the value without replacing the focused control.
+    if (els.eventSelect.dataset.optionsKey !== eventOptionsKey) {
       clear(els.eventSelect);
-      for (const e of evs) els.eventSelect.append(h('option', {value: e.eventId, text: `${e.name} · ${e.date}${e.lifecycle === 'archived' ? ' (archived)' : ''}`, selected: e.eventId === s.eventId}));
+      for (const e of evs) els.eventSelect.append(h('option', {value: e.eventId, text: `${e.name} · ${eventPickerDate(e.date)}${e.lifecycle === 'archived' ? ' (archived)' : ''}`, selected: e.eventId === s.eventId}));
       els.eventSelect.dataset.optionsKey = eventOptionsKey;
     }
+    if (els.eventSelect.value !== s.eventId) els.eventSelect.value = s.eventId ?? '';
     (els.eventSwitch ?? els.eventSelect).hidden = evs.length < 2;
-    const tabs = isOrganizer() ? ORGANIZER_TABS : SCOREKEEPER_TABS;
+    // A person assigned to one event has no switcher, so name that event instead of leaving only generic branding.
+    // The name comes only from data the server already scoped to this account (its authorized event list or event brief).
+    if (els.eventTitle) {
+      const shown = evs.length < 2 ? (evs.find(e => e.eventId === s.eventId)?.name ?? (s.brief?.eventId === s.eventId ? s.brief?.name : null) ?? null) : null;
+      els.eventTitle.hidden = !shown;
+      if (els.eventTitleName.textContent !== (shown ?? '')) els.eventTitleName.textContent = shown ?? '';
+      els.eventTitleName.title = shown ?? '';
+    }
+    const tabs = isOrganizer() ? ORGANIZER_TABS : isBracketManager() ? BRACKET_MANAGER_TABS : SCOREKEEPER_TABS;
     if (!tabs.some(([id]) => id === tab)) tab = tabs[0][0];
     // keep the same buttons (and focus) when nothing changed; rebuild only when the tab set or selection changed
     const tabsKey = tabs.map(t => t[0]).join() + '|' + tab;
@@ -127,7 +160,7 @@ export function createStaffUi({core, els, config, signOut}) {
       clear(els.tabs);
       for (const [id, label] of tabs) {
         els.tabs.append(h('button', {type: 'button', 'data-tab': id, 'aria-current': id === tab ? 'page' : null,
-          on: {click: () => { if (tab !== id) abandonDrafts(); tab = id; render(true); focusMain(); }}}, staffNavIcon(id), h('span', {text: label})));
+          on: {click: () => { if (tab !== id) abandonDrafts(); tab = id; rememberTab(id); render(true); focusMain(); }}}, staffNavIcon(id), h('span', {text: label})));
       }
       els.tabs.dataset.key = tabsKey;
       if (hadFocus) els.tabs.querySelector(`[data-tab="${hadFocus}"]`)?.focus();
@@ -143,7 +176,7 @@ export function createStaffUi({core, els, config, signOut}) {
   // ------------------------------------------------------------ shared view helpers
   const loading = () => h('div', {class: 'loading-state', role: 'status', 'aria-live': 'polite'},
     h('span', {class: 'spinner', 'aria-hidden': 'true'}), s.endedReason ?? 'Loading…');
-  const goTab = id => { if (tab !== id) abandonDrafts(); tab = id; render(true); focusMain(); };
+  const goTab = id => { if (tab !== id) abandonDrafts(); tab = id; rememberTab(id); render(true); focusMain(); };
   function parseBulk(text) {
     const players = [], errors = [];
     text.split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach((line, i) => {
@@ -156,8 +189,9 @@ export function createStaffUi({core, els, config, signOut}) {
     return {players, errors};
   }
   const viewCtx = {core, s, h, clear, fill, pill, toast, result, confirmDialog, openDialog, remember, draft, forget, loading, parseBulk, goTab,
-    rerender: () => render(true), openEvent: () => { abandonDrafts(); tab = 'overview'; render(true); focusMain(); }};
+    rerender: () => render(true), openEvent: () => { abandonDrafts(); tab = 'overview'; rememberTab(tab); render(true); focusMain(); }};
   const viewPlayers = createPlayersView(viewCtx);
+  const deskRegistrationCard = createDeskRegistration(viewCtx);
   const {formatsCard, eventsCard} = createEventsView(viewCtx);
   const formatOf = m => ({bestOf: m.bestOf, points: m.points});
   const formatText = f => formatLabel(f);
@@ -201,7 +235,7 @@ export function createStaffUi({core, els, config, signOut}) {
     return h('div', {class: 'overview-page'},
       h('section', {class: 'overview-feature'},
         h('span', {class: 'feature-overline'}, h('span', {class: 'feature-spark', 'aria-hidden': 'true'}), 'FORGING FELLOWSHIP · TOURNAMENT DESK'),
-        h('h1', {text: 'Forging Fellowship Table Tennis Games'}),
+        h('h1', {text: e.name}),
         h('p', {text: 'Everything you need to prepare the Games, organize players, and keep the competition moving.'}),
         h('div', {class: 'feature-actions'},
           h('button', {type: 'button', class: 'feature-primary', on: {click: () => goTab('players')}}, 'Manage players  ↗'),
@@ -216,7 +250,7 @@ export function createStaffUi({core, els, config, signOut}) {
             h('p', {class: 'section-description', text: 'Choose the event details before building the bracket.'}),
             h('form', {class: 'form-grid', on: {submit: async ev => { ev.preventDefault(); if (result(await core.actions.updateEvent(form.name.value, form.date.value, Number(form.tables.value)), 'Event saved.')) forget('ev'); }}},
               field('Event name', 'evName', form.name, 'wide'),
-              field('Event date', 'evDate', form.date, 'date-field'),
+              field('Event date', 'evDate', h('div', {class: 'native-date-frame'}, form.date), 'date-field'),
               field('Tables in use', 'evTables', form.tables, 'third'),
               h('div', {class: 'setup-save'},
                 h('button', {class: 'primary', type: 'submit', disabled: !core.canWrite(), text: 'Save event setup  →'})))),
@@ -235,9 +269,8 @@ export function createStaffUi({core, els, config, signOut}) {
         h('p', {class: 'format-footnote', text: 'Ratings stay private. Consolation matchups are reviewed before the bracket is built.'})),
       stand.champion ? h('div', {class: 'champion-banner'},
         h('h2', {text: 'Champion: ' + stand.champion}), h('p', {text: 'Runner-up: ' + stand.runnerUp})) : null,
-      h('section', {class: 'overview-history'}, eventsCard()),
-      // LAST on the page and the full width of it: the scoring formats are a configuration reference, not first-run setup
-      h('section', {class: 'overview-formats', 'aria-label': 'Match scoring formats'}, formatsCard(sn)));
+      h('section', {class: 'overview-formats', 'aria-label': 'Match scoring formats'}, formatsCard(sn)),
+      h('section', {class: 'overview-history'}, eventsCard()));
   }
 
   function normalized(kind) {
@@ -248,6 +281,84 @@ export function createStaffUi({core, els, config, signOut}) {
     const seen = [...new Set(real.map(m => formatText(formatOf(m)) + (m.formatLegacy ? ' (historical)' : '')))];
     return seen;
   };
+
+  // The registration lookup is an event-scoped, sanitized snapshot. A sign-up only stops
+  // awaiting arrival when linked to a checked-in roster player. Merge-linked duplicate
+  // submissions share a single roster identity; unresolved duplicates remain separate
+  // entries until staff review them, so this is not a confirmed unique-person total.
+  function awaitingArrivalCount(players, lookup) {
+    if (lookup?.status !== 'ready' || lookup.error || !Array.isArray(lookup.payload?.registrants)) return null;
+    const checked = new Map(players.map(p => [p.id, p.checkedIn]));
+    const awaiting = new Set();
+    for (const r of lookup.payload.registrants) {
+      const linked = r.roster;
+      if (linked && (checked.get(linked.playerId) ?? linked.checkedIn)) continue;
+      awaiting.add(linked ? 'player:' + linked.playerId : 'registration:' + r.ref);
+    }
+    return awaiting.size;
+  }
+  // Event-day check-in is deliberately separate from the organizer's registration settings and CSV tools. The roster below uses the
+  // sanitized Bracket Manager snapshot (no contacts, source settings or registration refs); the registered-player lookup above it is
+  // read through the server, which re-reads the event's own sheet and never sends contact details or sheet settings.
+  function viewManagerCheckin() {
+    if (!isBracketManager()) return loading();
+    const sn = s.snapshot;
+    if (!sn) return loading();
+    const built = sn.brackets.some(b => b.kind === 'championship');
+    const eligible = !built && ['draft', 'active'].includes(sn.event.lifecycle);
+    const checked = sn.players.filter(p => p.checkedIn).length;
+    const awaiting = awaitingArrivalCount(sn.players, s.registrationLookup);
+    const awaitingInfo = awaiting === null
+      ? 'Registration list not available. Load or reload it in Registered players.'
+      : 'Registration entries not checked in; unresolved duplicate sign-ups may be counted separately until reviewed.';
+    const name = h('input', {type:'text', id:'edName', maxlength:80, autocomplete:'off',
+      placeholder:'First and last name', value:draft('edName',''), disabled:!eligible || !core.canWrite()});
+    let rating = Number(draft('edLevel','1'));
+    const level = playerLevelSelector(h, {name:'edLevel', rating, disabled:!eligible || !core.canWrite(),
+      onChange:n=>{rating=n;remember('edLevel',String(n));}});
+    const kpi = (n, label, tone, hint = null) => h('div', {class: 'mini-kpi ' + tone, ...(hint ? {title: hint} : {})},
+      h('strong', {text: String(n)}), h('span', {text: label}));
+    return h('div', {class:'players-page manager-checkin-page'},
+      h('div', {class:'players-overview'},
+        h('div', {class:'players-add-column'},
+          h('section',{class:'card add-players-card'},h('h2',{text:'Add a walk-in'}),
+            h('p',{class:'card-sub',text:'Use a full first and last name. A walk-in is added and checked in together; no contact information is collected.'}),
+            h('form',{on:{submit:async ev=>{
+              ev.preventDefault();
+              if(!eligible)return;
+              const r=await core.actions.eventDayWalkIn(name.value.trim(),rating);
+              if(result(r,'Walk-in added and checked in.')){forget('edName');name.value='';}
+            }}},
+              h('div',{class:'grid two'},h('div',{},h('label',{for:'edName',text:'Full name'}),name), level),
+              h('div',{class:'row'},h('button',{class:'primary',type:'submit',
+                disabled:!eligible || !core.canWrite(),text:'Add & check in'}))),
+            h('p',{class:'help add-privacy',text:'Levels are private to staff. Do not enter contact details.'}))),
+        h('section', {class:'players-snapshot', 'aria-labelledby':'managerSnapshotTitle'},
+          h('div', {class:'side-section-heading'}, h('span', {class:'section-overline', text:'LIVE SNAPSHOT'}),
+            h('h2', {id:'managerSnapshotTitle', text:'At a glance'})),
+          h('div', {class:'mini-kpis', role:'group', 'aria-label':'Check-in summary'},
+            kpi(checked, 'Checked in', 'ice'), kpi(sn.players.length, 'On the roster', 'lav'),
+            kpi(awaiting ?? '—', 'Awaiting arrival', 'lime', awaitingInfo),
+            kpi(Math.max(0, 64 - sn.players.length), 'Roster spots left', 'butter')))),
+      deskRegistrationCard(sn, {eligible}),
+      h('section', {class:'card'}, h('h2', {text:'Arrivals and check-in'}),
+        h('p', {class:'card-sub',text:`${checked} of ${sn.players.length} roster players checked in. Check in only those present.`}),
+        built ? h('div',{class:'notice warn',text:'The Championship bracket has been built. Check-in changes and new walk-ins are locked to protect the active bracket. Contact the Organizer about a late arrival.'}) :
+          h('p',{class:'help',text:'Players already on the roster are listed here. Search the registered players above to check in someone who is not on the roster yet, or add a walk-in above. No private registration data is shown.'}),
+        h('div', {class:'scroll-x'},
+          h('table',{class:'responsive-table', 'aria-label':'Event-day roster'},
+            h('thead',{},h('tr',{},['Player','Level','Attendance','Action'].map(t=>h('th',{scope:'col',text:t})))),
+            h('tbody',{}, sn.players.map(p=>h('tr',{},
+              h('td',{'data-label':'Player',text:p.name}),
+              h('td',{'data-label':'Level'},h('div',{class:'roster-level'},levelShield(p.rating),h('span',{text:`Level ${p.rating}`}))),
+              h('td',{'data-label':'Attendance'},pill(p.checkedIn?'Checked in':'Expected',p.checkedIn?'good':'warn')),
+              h('td',{'data-label':'Action'},h('button',{type:'button',class:'small'+(p.checkedIn?'':' primary'),
+                disabled:!eligible || !core.canWrite(),text:p.checkedIn?'Undo':'Check in',
+                'aria-label':`${p.checkedIn?'Undo check-in for':'Check in'} ${p.name}`,
+                on:{click:async()=>result(await core.actions.setCheckin(p.id,!p.checkedIn),p.checkedIn?'Check-in undone.':'Player checked in.')}}))
+            )))))),
+      h('div',{class:'notice',text:'After check-in, open Championship to review the field and build the bracket. Never rebuild an active bracket to add a late player.'}));
+  }
 
   function viewChampionship() {
     const sn = s.snapshot;
@@ -264,16 +375,16 @@ export function createStaffUi({core, els, config, signOut}) {
           h('p', {class: 'card-sub', text: `${field.length} player${field.length === 1 ? '' : 's'} checked in. Seeding uses the internal ratings: strongest players are kept apart and receive the byes.`}))),
         !champ ? h('div', {class: 'chips static', 'aria-label': 'Formats this bracket will use'}, pill(`Rounds: ${formatText(f.champ)}`, 'blue'), pill(`Final: ${formatText(f.champ_final)}`, 'blue')) : h('div', {class: 'chips static', 'aria-label': 'Formats in this bracket'}, formatSummary(sn, 'championship').map(t => pill(t, 'blue'))),
         unconfirmed ? h('div', {class: 'notice warn', role: 'status'}, `${unconfirmed} checked-in player${unconfirmed === 1 ? ' has' : 's have'} a suggested level that has not been confirmed. `,
-          h('button', {type: 'button', class: 'small', text: 'Review on Players', on: {click: () => goTab('players')}})) : null,
+          isOrganizer() ? h('button', {type: 'button', class: 'small', text: 'Review on Players', on: {click: () => goTab('players')}}) : ' Ask the Organizer to confirm levels before seeding.') : null,
         !champ && preview.length ? h('details', {'data-draft': 'seedPreviewOpen', open: draft('seedPreviewOpen', false)},
           h('summary', {text: 'Preview opening round'}),
           h('ol', {}, pairs(preview).map(([a, b]) => h('li', {text: `${nameOf(a)} vs ${b ? nameOf(b) : 'BYE'}`})))) : null,
         h('div', {class: 'row'},
           !champ ? h('button', {class: 'primary', type: 'button', disabled: !core.canWrite() || field.length < 2, text: 'Build championship bracket',
             on: {click: async () => { if (result(await core.actions.buildChampionship(), 'Championship bracket built.')) goTab('desk'); }}})
-            : h('button', {class: 'danger', type: 'button', disabled: !core.canWrite(), text: 'Rebuild (replaces the bracket)', on: {click: async () => {
+            : isOrganizer() ? h('button', {class: 'danger', type: 'button', disabled: !core.canWrite(), text: 'Rebuild (replaces the bracket)', on: {click: async () => {
               const text = played ? `This replaces the bracket and discards ${played} completed result(s) from the current bracket, the consolation bracket and the doubles teams. Scorekeepers will need to refresh. Export a backup first.` : 'This replaces the current bracket.';
-              if (await confirmDialog('Rebuild the championship bracket?', text, 'Rebuild', {danger: true})) result(await core.actions.buildChampionship({confirm: true}), 'Bracket rebuilt.'); }}}))),
+              if (await confirmDialog('Rebuild the championship bracket?', text, 'Rebuild', {danger: true})) result(await core.actions.buildChampionship({confirm: true}), 'Bracket rebuilt.'); }}}) : null)),
       champ ? h('section', {class: 'card', 'aria-label': 'Championship bracket'}, bracketView(normalized('championship'), 'championship')) : null);
   }
   const pairs = a => a.reduce((out, x, i) => i % 2 ? out : [...out, [x, a[i + 1] ?? null]], []);
@@ -306,9 +417,9 @@ export function createStaffUi({core, els, config, signOut}) {
           !cons ? h('button', {class: 'primary', type: 'button', disabled: !core.canWrite() || pending.length > 0 || cands.length < 2, text: 'Build consolation bracket',
             on: {click: async () => { const ids = cands.filter(c => checks.get(c.playerId).checked).map(c => c.playerId);
               if (result(await core.actions.buildConsolation({entrantIds: ids}), 'Consolation bracket built.')) goTab('desk'); }}})
-            : h('button', {type: 'button', disabled: !core.canWrite() || normalized('consolation').some(m => m.status === 'complete'), text: 'Rebuild (no results yet)', on: {click: async () => {
+            : isOrganizer() ? h('button', {type: 'button', disabled: !core.canWrite() || normalized('consolation').some(m => m.status === 'complete'), text: 'Rebuild (no results yet)', on: {click: async () => {
               const ids = cands.map(c => c.playerId);
-              if (await confirmDialog('Rebuild consolation?', 'This replaces the consolation bracket. It has no results yet.', 'Rebuild')) result(await core.actions.buildConsolation({entrantIds: ids, confirm: true}), 'Rebuilt.'); }}}))),
+              if (await confirmDialog('Rebuild consolation?', 'This replaces the consolation bracket. It has no results yet.', 'Rebuild')) result(await core.actions.buildConsolation({entrantIds: ids, confirm: true}), 'Rebuilt.'); }}}) : null)),
       cons ? h('section', {class: 'card', 'aria-label': 'Consolation bracket'}, bracketView(normalized('consolation'), 'consolation')) : null);
   }
 
@@ -317,6 +428,7 @@ export function createStaffUi({core, els, config, signOut}) {
     const tables = s.snapshot?.event.tables ?? s.brief?.tables ?? 12;
     const rows = s.desk;
     const org = isOrganizer();
+    const canAdjudicate = org || isBracketManager();
     const children = [];
     if (s.pending) children.push(pendingBanner());
     if (s.deskStatus === 'not-active') children.push(h('div', {class: 'notice warn', text: s.brief?.lifecycle === 'complete'
@@ -328,21 +440,21 @@ export function createStaffUi({core, els, config, signOut}) {
       Array.from({length: tables}, (_, i) => { const m = usage.get(i + 1);
         return pill(m ? `Table ${i + 1} · ${m.players[0].name} v ${m.players[1].name}` : `Table ${i + 1} · free`, (m ? 'blue' : 'good') + ' table-pill'); }))));
     children.push(h('h2', {class: 'page-h2', text: `Ready to play (${rows.length})`}));
-    children.push(rows.length ? h('div', {class: 'queue'}, rows.map(r => queueCard(r, tables, org)))
+    children.push(rows.length ? h('div', {class: 'queue'}, rows.map(r => queueCard(r, tables, canAdjudicate)))
       : h('div', {class: 'empty-state', text:
         s.deskStatus === 'not-active' && (s.brief?.lifecycle === 'complete' || s.snapshot?.event.lifecycle === 'complete')
           ? 'This event is complete. There are no further matches to play.'
           : s.deskStatus === 'not-active' ? 'No bracket is active yet. The organizer builds it from Championship.'
           : s.deskStatus === 'ready' ? 'No playable matches are waiting right now.' : 'Waiting for the Match Desk…'}));
-    if (org && s.snapshot) {
+    if (canAdjudicate && s.snapshot) {
       const done = normalizeSnapshotMatches(s.snapshot).filter(m => m.status === 'complete').sort((a, b) => b.round - a.round).slice(0, 12);
-      children.push(h('section', {class: 'card', 'aria-labelledby': 'recentTitle'}, h('h2', {id: 'recentTitle', class: 'card-title', text: 'Recent results (organizer corrections)'}),
+      children.push(h('section', {class: 'card', 'aria-labelledby': 'recentTitle'}, h('h2', {id: 'recentTitle', class: 'card-title', text: 'Recent results and corrections'}),
         done.length ? h('div', {class: 'scroll-x'}, h('table', {class: 'responsive-table'}, h('tbody', {}, done.map(m => h('tr', {}, h('td', {'data-label': 'Match'}, `${m.name1} v ${m.name2}`), h('td', {'data-label': 'Winner'}, `${m.winnerName} won`), h('td', {'data-label': 'Scores', class: 'scores-cell'}, scoreTiles(m.scores, {left: m.name1, right: m.name2, caption: false})),
           h('td', {'data-label': 'Format'}, h('span', {class: 'muted', text: m.bestOf ? `${formatText({bestOf: m.bestOf, points: m.points})}${m.formatLegacy ? ' (historical)' : ''}` : ''})),
           h('td', {}, h('button', {class: 'small', type: 'button', disabled: !core.canWrite(), text: 'Correct…', 'aria-label': `Correct the result of ${m.name1} versus ${m.name2}`, on: {click: () => openCorrection(m)}})))))))
           : h('div', {class: 'muted', text: 'No results yet.'})));
     }
-    return h('div', {}, children);
+    return h('div', {class: 'match-desk-page'}, children);
   }
   // UI removes occupied table choices; the server retains the authoritative conflict check.
   const occupiedByOtherMatch = (match, table) => s.desk.some(other =>
@@ -562,6 +674,44 @@ export function createStaffUi({core, els, config, signOut}) {
             h('div', {class: 'row'}, h('button', {class: 'primary', type: 'submit', disabled: !core.canWrite(), text: 'Record doubles result'})))) : null);
   }
 
+  // Manager-only closeout: standings and public-safe exports, never publication, archive,
+  // registration contacts, staff directory, audit log or the private event backup.
+  function viewManagerWrap() {
+    if (!isBracketManager()) return loading();
+    const sn = s.snapshot;
+    if (!sn) return loading();
+    const e = sn.event, st = standingsFromSnapshot(sn);
+    const champDone = sn.brackets.some(b=>b.kind==='championship' && b.status==='complete');
+    const unfinished = sn.brackets.some(b=>b.status!=='complete');
+    const doublesPending = !!(sn.doubles?.partner1 && !sn.doubles?.winnerTeam);
+    const ready = champDone && !unfinished && !doublesPending && e.lifecycle==='active';
+    const line = (label,v) => v ? h('tr',{},h('th',{scope:'row',text:label}),
+      h('td',{text:Array.isArray(v)?v.join(', '):v})) : null;
+    return h('div',{},
+      h('section',{class:'card'},h('h2',{text:'Review final results'}),
+        st.champion ? h('table',{class:'kv-table'},h('tbody',{},
+          line('Singles champion',st.champion),line('Runner-up',st.runnerUp),
+          line('Consolation champion',st.consolationChampion),
+          line('Consolation runner-up',st.consolationRunnerUp),
+          st.doubles ? line('Doubles winners',st.doubles.winners.join(' + ')) : null))
+          : h('p',{text:'Final standings appear once the Championship is complete.'}),
+        h('p',{class:'help',text:'Confirm the winners with the scorecards before sharing results. Prize assignments remain outside the app.'}),
+        h('div',{class:'row'},
+          h('button',{type:'button',text:'Results (text)',on:{click:()=>download(`FFTT_results_${e.date}.txt`,resultsText(sn))}}),
+          h('button',{type:'button',text:'Matches (CSV)',on:{click:()=>download(`FFTT_matches_${e.date}.csv`,matchesCsv(sn),'text/csv')}})),
+        h('p',{class:'help',text:'These exports contain match details, not private registration contacts or the complete backup.'})),
+      h('section',{class:'card'},h('h2',{text:'Finish tournament'}),
+        e.lifecycle==='complete' ? h('div',{class:'notice good',text:'This event is complete. New scoring and table assignments are closed.'}) :
+          h('p',{text:ready?'All required brackets and recorded doubles are complete. Review the results, then close the event.':'Finish the Championship, Consolation (if built), and Doubles Finale (if teams are set) before completing the event.'}),
+        h('div',{class:'row'},h('button',{type:'button',class:'primary',disabled:!core.canWrite() || !ready,
+          text:'Mark event complete',on:{click:async()=>{
+            if(await confirmDialog('Mark this event complete?',
+              'New scoring and table assignments stop. Saved results stay available and changes remain audited. Public visibility does not change.',
+              'Mark complete'))result(await core.actions.setLifecycle('complete'),'Event complete.');
+          }}})),
+        h('p',{class:'help',text:'Archiving, deleting, changing visibility and private backups remain Organizer-only.'})));
+  }
+
   // ------------------------------------------------------------ Results & export
   function viewResults() {
     const sn = s.snapshot;
@@ -615,31 +765,17 @@ export function createStaffUi({core, els, config, signOut}) {
   }
 
   // ------------------------------------------------------------ Staff
-  function viewStaff() {
-    const sn = s.snapshot;
-    if (!sn) return loading();
-    const email = h('input', {type: 'email', id: 'stEmail', autocapitalize: 'none', autocomplete: 'off', placeholder: 'volunteer@example.org', 'data-draft': 'stEmail'});
-    const role = h('select', {id: 'stRole', 'data-draft': 'stRole'}, h('option', {value: 'scorekeeper', text: 'Scorekeeper'}), h('option', {value: 'organizer', text: 'Organizer'}));
-    return h('div', {},
-      h('section', {class: 'card', 'aria-labelledby': 'staffTitle'}, h('h2', {id: 'staffTitle', class: 'card-title', text: 'Event staff'}),
-        h('div', {class: 'scroll-x'}, h('table', {class: 'responsive-table'}, h('thead', {}, h('tr', {}, ['Account', 'Role', 'Status', ''].map(t => h('th', {scope: 'col', text: t})))),
-          h('tbody', {}, sn.staff.map(m => h('tr', {}, h('td', {'data-label': 'Account', text: m.email}), h('td', {'data-label': 'Role', text: m.role}), h('td', {'data-label': 'Status'}, pill(m.active ? 'Active' : 'Revoked', m.active ? 'good' : '')),
-            h('td', {}, m.active ? h('button', {class: 'small danger', type: 'button', disabled: !core.canWrite(), text: 'Revoke', 'aria-label': `Revoke access for ${m.email}`, on: {click: async () => {
-              if (await confirmDialog('Revoke access?', `${m.email} will lose access to this event immediately.`, 'Revoke', {danger: true})) result(await core.actions.setStaff(m.email, 'revoke', null), 'Access revoked.'); }}}) : null)))))),
-        h('p', {class: 'help', text: 'Staff accounts are created in advance by the administrator. Here you only give an existing account access to this event, or take it away.'})),
-      h('form', {class: 'card', 'aria-labelledby': 'grantTitle', on: {submit: async ev => { ev.preventDefault(); if (result(await core.actions.setStaff(email.value, 'grant', role.value), 'Access granted.')) { email.value = ''; forget('st'); } }}},
-        h('h2', {id: 'grantTitle', class: 'card-title', text: 'Give an existing account access'}), h('label', {for: 'stEmail', text: 'Account e-mail'}), email, h('label', {for: 'stRole', text: 'Role'}), role,
-        h('div', {class: 'row'}, h('button', {class: 'primary', type: 'submit', disabled: !core.canWrite(), text: 'Grant access'}))));
-  }
+  // One permanent People directory replaces the old per-event list and separate grant form.
+  const viewStaff = createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDialog,rerender:()=>render(true)});
 
   // ------------------------------------------------------------ render loop
-  const views = {overview: viewOverview, players: viewPlayers, championship: viewChampionship, consolation: viewConsolation,
-    desk: viewDesk, finale: viewFinale, results: viewResults, staff: viewStaff};
+  const views = {overview: viewOverview, players: viewPlayers, checkin: viewManagerCheckin, championship: viewChampionship, consolation: viewConsolation,
+    desk: viewDesk, finale: viewFinale, wrap: viewManagerWrap, results: viewResults, staff: viewStaff};
   function syncConnectionGuard() {
     // A heartbeat may change writability without rebuilding (and erasing) a draft.
     const writable = core.canWrite();
     for (const el of els.main.querySelectorAll('input, select, textarea, button')) {
-      if (!writable && !el.disabled) { el.disabled = true; el.dataset.connectionPaused = '1'; }
+      if (!writable && el.dataset.readRetry !== 'true' && !el.disabled) { el.disabled = true; el.dataset.connectionPaused = '1'; }
       else if (writable && el.dataset.connectionPaused === '1') {
         el.disabled = false; delete el.dataset.connectionPaused;
       }
@@ -668,30 +804,38 @@ export function createStaffUi({core, els, config, signOut}) {
       s.pulse?.revision, s.pulse?.generation, s.snapshot?.event.revision,
       s.brief?.lifecycle, s.deskStatus, s.pending?.submissionId, s.score.status,
       s.events.map(e => e.eventId + e.lifecycle + e.players + e.deletable).join(), s.audit?.length, s.busy,
-      s.registrations.status, s.registrations.at, s.registrationSettings.status, s.registrationSettings.busy, s.registrationSettings.source?.updatedAt,
-      s.registrationSettings.inspect?.spreadsheetId, s.registrationSettings.diagnostic?.checks.map(c => c.status).join(), s.registrationSettings.capabilities?.googleMode]);
+      s.registrations.status, s.registrations.at, s.registrationLookup.status, s.registrationLookup.rev, s.registrationLookup.busyRef, s.registrationSettings.status, s.registrationSettings.busy, s.registrationSettings.source?.updatedAt,
+      s.registrationSettings.inspect?.spreadsheetId, s.registrationSettings.diagnostic?.checks.map(c => c.status).join(), s.registrationSettings.capabilities?.googleMode,
+      s.staffDirectory.version]);
     if (!force && paneKey === lastPaneKey) { syncConnectionGuard(); return; }
     const active = document.activeElement;
     // typing: text being entered (15 s); a drop-down only protects its own just-made choice for a moment (2 s)
     const typing = active && els.main.contains(active) && Date.now() - lastInputAt < (active.tagName === 'SELECT' ? 2000 : 15000) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName);
-    if (!force && (typing || dirtyDialog > 0)) { syncConnectionGuard(); return; } // never rebuild under a person's fingers
+    const bracketInUse = ['championship', 'consolation'].includes(tab) && renderedEventId === s.eventId
+      && (bracketTouching || Date.now() - lastBracketMotionAt < BRACKET_SCROLL_IDLE_MS);
+    const staffMenuOpen = tab === 'staff' && s.signedIn && s.role === 'organizer' && renderedEventId === s.eventId
+      && !!els.main.querySelector('.people-event-dropdown[open]');
+    if (!force && (typing || dirtyDialog > 0 || bracketInUse || staffMenuOpen)) { syncConnectionGuard(); return; } // never rebuild under a person's fingers
     const ui = captureUi();
     const view = views[tab] ?? views.desk;
     const pane = s.signedIn ? view() : loading();
-    const title = {players: 'Players & check-in', championship: 'Championship', consolation: 'Consolation', desk: 'Match Desk',
-      finale: 'Doubles Finale', results: 'Results & Export', staff: 'Staff'}[tab];
+    const title = {players: 'Players & check-in', checkin: 'Event-day check-in', championship: 'Championship', consolation: 'Consolation', desk: 'Match Desk',
+      finale: 'Doubles Finale', wrap: 'Tournament finish', results: 'Results & Export', staff: 'Staff'}[tab];
     const description = {players: 'Check in registered players with one click, add walk-ins and confirm their levels before seeding the bracket.',
+      checkin: 'Find registered players, record arrivals and add full-name walk-ins before bracket creation.',
       championship: 'Seed the field and build the singles championship bracket.',
       consolation: 'Review first-match losses and build fair additional matches.',
       desk: 'Assign tables and submit server-verified match scores.',
       finale: 'Pair finalists with selected consolation players.',
+      wrap: 'Verify final standings, download public-safe results and mark the tournament complete.',
       results: 'Review standings, publish results and export private backups.',
-      staff: 'Manage organizer-approved roles for this event.'}[tab];
+      staff: 'Manage staff accounts and event-specific assignments.'}[tab];
     fill(els.main, title && s.signedIn ? h('div', {},
       h('header', {class: 'section-intro'},
         h('div', {class: 'feature-overline'}, h('span', {class: 'feature-spark', 'aria-hidden': 'true'}), 'FORGING FELLOWSHIP · TOURNAMENT DESK'),
         h('h1', {text: title}), h('p', {text: description})), pane) : pane);
     lastPaneKey = paneKey;
+    renderedEventId = s.eventId;
     for (const el of els.main.querySelectorAll('[id],[data-draft]')) {
       const k = draftKeyOf(el);
       if (!k || !drafts.has(draftKey(k))) continue;
@@ -712,6 +856,16 @@ export function createStaffUi({core, els, config, signOut}) {
   };
   document.addEventListener('input', ev => { if (els.main.contains(ev.target)) lastInputAt = Date.now(); capture(ev); }, true);
   document.addEventListener('change', capture, true);
+  const bracketEvent = ev => els.main.contains(ev.target) && ev.target instanceof Element
+    && Boolean(ev.target.closest('.bracket'));
+  const bracketMotion = ev => { if (bracketEvent(ev)) lastBracketMotionAt = Date.now(); };
+  document.addEventListener('touchstart', ev => {
+    if (bracketEvent(ev)) { bracketTouching = true; lastBracketMotionAt = Date.now(); }
+  }, {capture: true, passive: true});
+  for (const type of ['touchend', 'touchcancel']) document.addEventListener(type, ev => {
+    if (bracketEvent(ev)) { bracketTouching = false; lastBracketMotionAt = Date.now(); }
+  }, {capture: true, passive: true});
+  document.addEventListener('scroll', bracketMotion, {capture: true, passive: true});
   // A section's open/closed state is remembered only when the PERSON toggled it. The browser also fires one `toggle`
   // when a rebuilt <details> appears already open; render() marks those so that event is never mistaken for a choice.
   document.addEventListener('toggle', ev => {
@@ -729,5 +883,8 @@ export function createStaffUi({core, els, config, signOut}) {
     const writable = core.canWrite();
     if (writable !== lastWritable) { lastWritable = writable; syncConnectionGuard(); }
   }, 1000);
-  return Object.freeze({render, openTab: id => { if (tab !== id) abandonDrafts(); tab = id; render(true); }});
+  return Object.freeze({render, openTab: id => { if (tab !== id) abandonDrafts(); tab = id; rememberTab(id); render(true); },
+    restoreTab: role => { let saved=null; try{saved=sessionStorage.getItem(NAV_KEY);}catch{}
+      const allowed=tabsForRole(role); tab=allowed.some(([id])=>id===saved)?saved:allowed[0][0]; render(true); },
+    clearNavigation:()=>{try{sessionStorage.removeItem(NAV_KEY);}catch{}}});
 }

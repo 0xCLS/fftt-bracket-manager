@@ -1,7 +1,16 @@
 # FFTT Bracket Manager
 
+## Current hosted status — November 6, 2026
 
-## Current hosted and source status — October 29, 2026 (supersedes historical checkpoints)
+**Live websites:** Staff https://fftt-staff.clslifestyle.com/ · Spectator/TV https://fftt-games.clslifestyle.com/ · Homepage https://fftt.clslifestyle.com/. Cloudflare projects are separate; merging GitHub source **does not deploy** any site.
+
+**Accepted Staff production:** PR #55 source `5b0a3571a29accf6c348d41fbfdbbf23fb4734a3`, deployment `4bb1cd48-984d-4af1-8f7b-1b95c1a2d599`. Full CI passed and the Organizer accepted the Staff event-assignment checkbox and Bracket Manager KPI layout. PRs #22, #45 and #50–#54 are steps in this deployed feature lineage. Their open PR status is not the current deployment status. Deployed PR #52 retired the `REGISTRATION_EVENT_IDS` allowlist: each real event must have its own saved, enabled source, while global security switches and legacy rollback secrets remain preserved.
+
+**Read-only November 6 rehearsal snapshot:** `FFTT 3 (Rehearsal)` (November 8) is draft, with 1 Bracket Manager, 2 Scorekeepers, 0 roster/check-ins and 0 brackets after the Organizer removed testing data. The November 22 `FFTT 3` event remains separate. Active grants do not prove individual volunteer sign-ins. See [rehearsal checklist](docs/launch/FFTT3_REHEARSAL_CHECKLIST_NOV8.md) and the [canonical execution plan](https://github.com/0xCLS/forging-fellowship-table-tennis/blob/main/maintenance/FFTT3_NOV8_EXECUTION_PLAN_2026-11-04.md).
+
+**Source integration:** The current integration reconciles the verified production Staff lineage with `main` public-site changes. Merging source does not change any live event, data or deployment. Older checkpoints below are historical.
+
+## Historical hosted/source status — October 29, 2026 (superseded November 6)
 
 [PR #19](https://github.com/0xCLS/fftt-bracket-manager/pull/19) was **approved and merged into public `main`** on October 29, 2026, at merge commit `1dfb269205f9d1b5d31e013dff56d86276fa2fa6`. The original GitHub Pages browser-local application's root `index.html` remains byte-identical to the pre-merge version and its Pages rebuild passed. The source integration did **not** trigger a new Cloudflare deployment or activate real event data. [PR #20](https://github.com/0xCLS/fftt-bracket-manager/pull/20) was closed without merging because its CSS was already present in PR #19.
 
@@ -13,6 +22,8 @@ The active hosted tournament system continues to use the separately managed Clou
 The Organizer-approved October 27 **in-place Supabase upgrade** preserved the fictional test events and created a separate **real-mode FFTT3 event** in draft, unpublished state with **two configured software tables**. The Organizer has confirmed permanent access to two physical tables and the November 22 venue. No automatic registration import or check-in, real Scorekeeper grant, or public player-name publication is implied by the source merge.
 
 **Post-merge validation:** [full main regression 40939047908](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/40939047908) **passed**: disposable synthetic PostgreSQL, browser/security and full game-day/launch workflow jobs green; the separate fast UI-only lane was correctly skipped. An earlier two-table, 21-fictional-player/two-played-singles test also passed [run 40922823847](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/40922823847). These are automated results, **not** proof of physical devices, Wi-Fi, registration reconciliation or November 8 onsite acceptance.
+
+**Historical PR #52 implementation note (subsequently released):** [PR #52](https://github.com/0xCLS/fftt-bracket-manager/pull/52) retires the Cloudflare `REGISTRATION_EVENT_IDS` list (a new real event reads its own enabled Google Sheet with no deployment edit) and adds a Bracket Manager *Registered players* lookup and check-in with its own event-scoped, proof-verified database authorization; source configuration stays Organizer-only. The reviewed backend and Staff functionality were later deployed and accepted; this sentence is retained only as proposal history. See [the November 6 note](docs/launch/FFTT3_BRACKET_MANAGER_REGISTRATION_2026-11-06.md).
 
 For current operations consult [November 8 rehearsal](docs/launch/FFTT3_REHEARSAL_CHECKLIST_NOV8.md), [November 22 event guide](docs/launch/FFTT3_EVENT_DAY_GUIDE_NOV22.md), [scorekeeper onboarding](docs/launch/FFTT3_SCOREKEEPER_ONBOARDING.md) and [acceptance checklist](docs/launch/FFTT3_ACCEPTANCE_CHECKLIST.md). Older historical statements about unmerged PRs or unperformed upgrades below remain as dated provenance, not current instructions.
 
