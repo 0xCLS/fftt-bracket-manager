@@ -729,7 +729,7 @@ body.tv .controls button{
   flex-shrink:0;
   min-height:32px;
   padding:.55em clamp(5px,.55vw,11px);
-  font-size:clamp(10px,.78vw,15px);
+  font-size:clamp(11px,.78vw,15px);
   letter-spacing:.02em;
   white-space:nowrap;
 }
