@@ -12,13 +12,15 @@ import path from 'node:path';
 import os from 'node:os';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {createLocalDb} from '../../tests/e2e/localdb.mjs';
+import {createLocalDb, SQL_FILES} from '../../tests/e2e/localdb.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const args = process.argv.slice(2);
 const rehearse = args.includes('--rehearse');
+const v6Preflight = args.includes('--v6-preflight');
+if (v6Preflight && rehearse) throw new Error('Use --v6-preflight alone; the older launch-upgrade rehearsal is separate.');
 const file = args.find(a => !a.startsWith('--'));
-if (!file) { console.error('usage: restore_verify.mjs <export.json> [--rehearse]'); process.exit(2); }
+if (!file) { console.error('usage: restore_verify.mjs <export.json> [--rehearse | --v6-preflight]'); process.exit(2); }
 
 const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
 if (doc.format !== 'fftt-hosted-export-v1') throw new Error('unknown export format');
@@ -38,7 +40,10 @@ const fingerprint = async (db, table) => {
 const fingerprintAll = async db => Object.fromEntries(await Promise.all(Object.keys(doc.tables).map(async t => [t, await fingerprint(db, t)])));
 const schemaFp = async db => Object.fromEntries((await db.admin(fs.readFileSync(path.join(ROOT, 'tools/ops/schema_fingerprint.sql'), 'utf8'))).map(r => [r.kind, `${r.n}:${r.fingerprint}`]));
 
-const db = await createLocalDb();
+// An owner-held pre-V6 backup must first verify against a pre-V6 *real-mode* schema.
+// Never silently normalize the source fingerprint against already-added V6 columns.
+const preV6SqlFiles = SQL_FILES.filter(f => !f.endsWith('/GAMEDAY_V6_GAME_PROGRESS_DO_NOT_APPLY.sql'));
+const db = await createLocalDb(v6Preflight ? {sqlFiles: preV6SqlFiles, upgraded: true} : {});
 try {
   const baseSchema = await schemaFp(db);
   await db.admin('begin');
@@ -88,6 +93,55 @@ try {
     }
   } else check(false, 'a platform organizer exists in the backup');
   check((await db.publicTournaments()).length === 0, 'nothing is published by a restore (public_visible stays off)');
+
+  if (v6Preflight) {
+    // This is the ONLY permitted place for V6 in the backup rehearsal: a disposable
+    // restored clone with baseline fingerprints already verified. Never contacts Supabase.
+    if (failures) throw new Error('V6 rehearsal blocked: the private export failed restore verification');
+    if ((doc.tables.matches?.rows ?? []).some(m => Object.hasOwn(m, 'game_progress_epoch')))
+      throw new Error('V6 rehearsal refused: backup already contains game_progress_epoch');
+    const beforeSchema = await schemaFp(db);
+    const baseline = await fingerprintAll(db);
+    const candidate = fs.readFileSync(path.join(ROOT, 'supabase/proposals/GAMEDAY_V6_GAME_PROGRESS_DO_NOT_APPLY.sql'), 'utf8');
+    await db.db.exec(candidate);
+    const after = await fingerprintAll(db);
+    for (const table of Object.keys(doc.tables)) {
+      // V6 adds matches.game_progress_epoch default 0. Compare only original
+      // columns; every other existing table remains byte-equivalent.
+      const value = table === 'matches'
+        ? (await db.admin(`select count(*)::int n,
+          md5(coalesce(jsonb_agg(j order by j::text)::text,'')) fp
+          from (select to_jsonb(x) - 'game_progress_epoch' j from fftt_private.matches x) t`))[0]
+        : after[table];
+      check(value.n === baseline[table].n && value.fp === baseline[table].fp,
+        `V6 preserves pre-existing ${table} rows and fields (${value.n})`);
+    }
+    const [state] = await db.admin(`select
+      (select count(*)::int from fftt_private.match_game_progress) as progress_count,
+      (select count(*)::int from fftt_private.game_progress_decisions) as receipt_count,
+      (select count(*)::int from fftt_private.matches where game_progress_epoch <> 0) as nonzero_epochs,
+      (select relrowsecurity from pg_class where oid='fftt_private.match_game_progress'::regclass) as progress_rls,
+      (select relrowsecurity from pg_class where oid='fftt_private.game_progress_decisions'::regclass) as receipt_rls,
+      has_table_privilege('anon','fftt_private.match_game_progress','SELECT') as anon_progress_read,
+      has_table_privilege('authenticated','fftt_private.match_game_progress','SELECT') as staff_progress_read,
+      exists(select 1 from information_schema.columns where table_schema='public'
+        and table_name='fftt_published_matches' and column_name='game_progress') as public_column,
+      exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+        where n.nspname='public' and p.proname='fftt_save_completed_game_v1'
+        and not has_function_privilege('anon',p.oid,'EXECUTE')) as anon_save_denied`);
+    check(state.progress_count === 0 && state.receipt_count === 0,
+      'V6 does not fabricate saved games or receipts for historical matches');
+    check(state.nonzero_epochs === 0, 'V6 initial match epochs remain zero');
+    check(state.progress_rls && state.receipt_rls && !state.anon_progress_read && !state.staff_progress_read,
+      'V6 private progress tables retain deny-direct-read RLS');
+    check(state.public_column && state.anon_save_denied,
+      'V6 nullable public projection exists and anonymous save RPC is denied');
+    const afterSchema = await schemaFp(db);
+    check(afterSchema.function !== beforeSchema.function && afterSchema.column !== beforeSchema.column,
+      'V6 changes functions and adds schema columns without altering old records');
+    check((await db.publicTournaments()).length === 0,
+      'restoring a private backup never independently publishes event data');
+  }
 
   if (rehearse) {
     console.log('\nRehearsal: in-place upgrade on the restored clone');

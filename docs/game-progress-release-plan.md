@@ -33,3 +33,8 @@ Run `tests/gameday_v6_disposable.sql` after the V6 proposal on fresh local Postg
 
 ## Pending release gate
 This branch can be reviewed and tested but **must remain draft/unmerged** until full CI, server/TV browser verification, production compatibility and backup/restore review, and explicit deployment/migration permission.
+
+## Owner-held private backup rehearsal (prepared, not executed on real data)
+- After taking a fresh read-only private export as documented in `docs/launch/FFTT3_BACKUP_RECOVERY.md`, run `node tools/ops/restore_verify.mjs /absolute/path/to/private-export.json --v6-preflight` on the organizer's private machine, outside any repository or cloud build log, with the isolated test dependencies installed.
+- The tool restores into **disposable pre-V6 real-mode PGlite**, checks source fingerprints before DDL, runs the V6 SQL only on the clone, checks all historical fields and scores and zero synthetic saved-game receipts, then checks public/anonymous access boundaries. A mismatch blocks release. It never connects to hosted Supabase.
+- `--v6-preflight` and the older `--rehearse` launch-upgrade mode are mutually exclusive. Require a successful private restore log and safe schema parity evidence before any production approval. Do not interpret a fictional CI pass as a real-backup restore proof.
