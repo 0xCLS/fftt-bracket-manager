@@ -314,9 +314,9 @@ test('TV transport buttons have non-overlapping hit targets and work by pointer 
       await page.locator('#prev').click();
       assert.equal(await label(page),'MATCH CENTER');
       await page.locator('#pause').click();
-      assert.equal(await page.locator('#pause').innerText(),'Resume');
+      assert.equal(await page.locator('#pause').textContent(),'Resume');
       await page.locator('#pause').click();
-      assert.equal(await page.locator('#pause').innerText(),'Pause');
+      assert.equal(await page.locator('#pause').textContent(),'Pause');
     } finally {await w.close();}
   }
 });
