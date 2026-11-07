@@ -41,7 +41,9 @@ SUITES = {
     'auth': ('tests/milestone1_staff_access_gate.test.mjs',
              'tests/milestone1_staff_revocation.test.mjs',
              'tests/milestone1_password_auth.test.mjs'),
-    'database': ('tests/e2e/gameday_real_event_candidate.test.mjs',),
+    'database': ('tests/e2e/gameday_real_event_candidate.test.mjs',
+                 'tests/fftt_backup_cli.test.mjs',
+                 'tests/e2e/ops_restore_rehearsal.test.mjs'),
 }
 
 

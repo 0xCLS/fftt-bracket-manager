@@ -24,6 +24,16 @@ if (!file) { console.error('usage: restore_verify.mjs <export.json> [--rehearse 
 
 const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
 if (doc.format !== 'fftt-hosted-export-v1') throw new Error('unknown export format');
+const EXPECTED = ['platform_organizers','events','event_staff','players','brackets','matches',
+  'consolation_reviews','doubles_finale','registration_links','registration_sources',
+  'result_submissions','score_decisions_v2','audit_events','deleted_events','auth_users'];
+if (JSON.stringify(Object.keys(doc.tables ?? {}).sort()) !== JSON.stringify([...EXPECTED].sort()))
+  throw new Error('backup table set is incomplete or contains unknown identifiers');
+for (const [table, part] of Object.entries(doc.tables)) {
+  if (!part || !Array.isArray(part.rows) || !Number.isSafeInteger(part.count) ||
+      part.count !== part.rows.length || !/^[a-f0-9]{32}$/i.test(part.fingerprint ?? ''))
+    throw new Error('backup row count or table fingerprint malformed: ' + table);
+}
 // Parents before children. Triggers and FK checks are off during the load (replica role); FKs are verified afterwards.
 const ORDER = ['platform_organizers', 'events', 'event_staff', 'players', 'brackets', 'matches', 'consolation_reviews', 'doubles_finale',
   'registration_links', 'registration_sources', 'result_submissions', 'score_decisions_v2', 'audit_events', 'deleted_events'];
@@ -46,6 +56,13 @@ const preV6SqlFiles = SQL_FILES.filter(f => !f.endsWith('/GAMEDAY_V6_GAME_PROGRE
 const db = await createLocalDb(v6Preflight ? {sqlFiles: preV6SqlFiles, upgraded: true} : {});
 try {
   const baseSchema = await schemaFp(db);
+  if (doc.schema_fingerprint) {
+    const kinds = Object.keys(baseSchema).sort(), expected = Object.keys(doc.schema_fingerprint).sort();
+    if (JSON.stringify(kinds) !== JSON.stringify(expected) ||
+        kinds.some(k => doc.schema_fingerprint[k] !== baseSchema[k]))
+      throw new Error('hosted schema differs from verified disposable baseline; release blocked');
+    check(true,'hosted schema fingerprint matches disposable pre-V6 baseline');
+  }
   await db.admin('begin');
   await db.admin(`set local session_replication_role = replica`);
   for (const u of doc.tables.auth_users.rows) {
@@ -87,12 +104,20 @@ try {
       const snap = await db.rpc(organizer, 'fftt_organizer_snapshot_v3', {p_event_id: ev.id}).catch(e => ({error: e.message}));
       const wantPlayers = doc.tables.players.rows.filter(p => p.event_id === ev.id).length;
       const wantMatches = doc.tables.matches.rows.filter(m => m.event_id === ev.id).length;
-      check(!snap.error && snap.players?.length === wantPlayers, `organizer snapshot "${ev.event_name.slice(0, 40)}": ${wantPlayers} players`, snap.error ?? '');
+      check(!snap.error && snap.players?.length === wantPlayers, `organizer snapshot: ${wantPlayers} players`, snap.error ? ' (API refused)' : '');
       const exp = await db.rpc(organizer, 'fftt_export_event_v3', {p_event_id: ev.id}).catch(e => ({error: e.message}));
       check(!exp.error, `private export works for ${wantMatches} matches`, exp.error ?? '');
     }
   } else check(false, 'a platform organizer exists in the backup');
-  check((await db.publicTournaments()).length === 0, 'nothing is published by a restore (public_visible stays off)');
+  // Publication flags are private source data and MUST survive; public cache tables
+  // are deliberately not restored, and must not become exposed automatically.
+  const sourcePublished = doc.tables.events.rows.filter(e => e.public_visible === true).length;
+  const clonePublished = (await db.admin(
+    'select count(*)::int as n from fftt_private.events where public_visible = true'))[0].n;
+  check(clonePublished === sourcePublished,
+    'private publication flags preserved (' + clonePublished + ' published event record(s))');
+  check((await db.publicTournaments()).length === 0,
+    'no public cache is repopulated by private-only restoration');
 
   if (v6Preflight) {
     // This is the ONLY permitted place for V6 in the backup rehearsal: a disposable
@@ -139,8 +164,11 @@ try {
     const afterSchema = await schemaFp(db);
     check(afterSchema.function !== beforeSchema.function && afterSchema.column !== beforeSchema.column,
       'V6 changes functions and adds schema columns without altering old records');
-    check((await db.publicTournaments()).length === 0,
-      'restoring a private backup never independently publishes event data');
+    const finalPublished = (await db.admin(
+    'select count(*)::int as n from fftt_private.events where public_visible = true'))[0].n;
+  check(finalPublished === sourcePublished,'V6 preserves existing publication flags');
+  check((await db.publicTournaments()).length === 0,
+      'V6 rehearsal does not create public cache records');
   }
 
   if (rehearse) {
@@ -176,7 +204,7 @@ try {
       check((await schemaFp(db)).function === upSchema.function, 'refused rollback changed nothing');
     } finally { fs.rmSync(tmp, {recursive: true, force: true}); }
   }
-} catch (e) { failures++; console.log('FAIL  unexpected error: ' + String(e.message).slice(0, 300)); }
+} catch (e) { failures++; console.log('FAIL  private restore or clone check failed (details withheld from shared logs)'); }
 finally { await db.db.close(); }
 
 async function assertRejects(promise, label, re = null) {

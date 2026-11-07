@@ -11,7 +11,38 @@ Supabase Free has no downloadable managed backups, and this Mac has no `pg_dump`
 * Not included: Cloudflare secrets, Google credentials, the Supabase Auth password hashes, any Google Form answer (registration answers are never stored).
 * Contains staff e-mail addresses and, for a real event, **player names and results** → it is private data. **Never commit it, never paste it in chat, never email it.**
 
-## Take a backup (about 2 minutes)
+## One-command Mac backup (recommended; V6 preparation)
+
+From the repository checkout, run `./tools/ops/fftt-backup`. The script calls only
+Supabase's dedicated `/database/query/read-only` endpoint using a project-scoped
+`database_read` token. It never links the Supabase CLI, runs hosted SQL writes, or
+accepts database passwords. Before the first run, store such a token securely with
+`./tools/ops/fftt-backup --setup` (macOS Keychain prompt; never pass a token as a
+command-line argument). An existing `SUPABASE_ACCESS_TOKEN` environment value
+takes precedence; a private mode-600 `~/.supabase/access-token` is an optional fallback.
+
+The command writes private mode-600 JSON and a non-sensitive report beneath
+`~/Documents/FFTT-private/backups` (mode 700), captures the hosted schema
+fingerprint, and auto-installs pinned local test dependencies only if needed. It
+verifies a disposable pre-V6 real-mode restore and attempts V6 **only on the
+clone**, checking original rows, fingerprint integrity, authorization and
+publication flags. If schema definitions differ, the restore or API read fails,
+it leaves the private backup marked **UNVERIFIED** and blocks release.
+
+For an independently checked second copy, set `FFTT_BACKUP_MIRROR_DIR` to a
+private directory on encrypted removable storage or an owner-controlled
+encrypted cloud storage mount. Alternatively run `./tools/ops/fftt-backup
+--mirror-dir /absolute/path/to/private/mirror`. Without a verified second
+copy, the result is `LOCAL_VERIFIED`, not complete release-readiness.
+Never upload raw backup JSON to GitHub, chat, email or CI.
+
+This is a logical FFTT app-data backup. It excludes Auth password hashes,
+Cloudflare secrets and public projection caches (which must be rebuilt and
+re-reviewed in recovery). The Management API's dedicated read-only endpoint
+is currently Beta; a permission failure or missing endpoint blocks the
+automation rather than falling back to write-capable SQL.
+
+## Legacy manual backup (fallback)
 1. Open the SQL editor of `fftt-bracket-manager-dev`, paste the contents of `tools/ops/hosted_export.sql`, **Run**. (Read-only; it changes nothing.)
 2. Copy the result into one JSON document (`format: "fftt-hosted-export-v1"`, `tables: {name: {count, fingerprint, rows}}`) and save it as a **mode-600 file in a private folder outside any Git repository**, e.g. `~/Documents/FFTT-private/backups/hosted-export-<purpose>-<UTC-timestamp>.json` (folder mode 700). Record its `shasum -a 256`.
 3. Keep at least: one pre-migration copy, one taken right before the Nov 22 doors open, and one after the final result is entered. Copy the newest one to a second private place (an encrypted USB drive or the owner's private cloud storage) — a laptop-only backup is not a backup.

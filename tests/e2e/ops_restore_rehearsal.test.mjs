@@ -88,7 +88,16 @@ test('a private pre-V6 real-mode backup is verified unchanged before and after t
     assert.equal(ok.status,0,ok.stdout+'\n'+ok.stderr);
     assert.match(ok.stdout,/V6 preserves pre-existing matches rows and fields/);
     assert.match(ok.stdout,/V6 nullable public projection exists and anonymous save RPC is denied/);
+    assert.match(ok.stdout,/private publication flags preserved \(1 published event record\(s\)\)/);
+    assert.match(ok.stdout,/V6 preserves existing publication flags/);
     assert.match(ok.stdout,/ALL CHECKS PASSED/);
+    const schemaBad = structuredClone(doc);
+    schemaBad.schema_fingerprint = {column:'9:deadbeefdeadbeefdeadbeefdeadbeef'};
+    const wrongSchema = path.join(dir,'wrong-schema.json');
+    fs.writeFileSync(wrongSchema,JSON.stringify(schemaBad),{mode:0o600});
+    const schemaFail=spawnSync('node',[TOOL,wrongSchema,'--v6-preflight'],
+      {encoding:'utf8',timeout:240000});
+    assert.notEqual(schemaFail.status,0,'hosted schema drift must fail before V6 DDL');
     const bad = structuredClone(doc);
     bad.tables.matches.rows[0].table_number = 9;
     const badFile=path.join(dir,'tampered.json');
