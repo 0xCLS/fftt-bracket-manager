@@ -819,7 +819,7 @@ body.tv footer>span:first-child{
 .cinematic-results .result-card:not(.lead-result) .result-top{
   flex:0 0 auto;
   justify-content:flex-start;
-  font-size:clamp(10px,.73vw,13px);
+  font-size:clamp(11px,.73vw,13px);
   font-weight:800;
   line-height:1.1;
   letter-spacing:.07em;
