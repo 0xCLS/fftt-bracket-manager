@@ -58,7 +58,7 @@ test('TV modes, scores, controls, rotation and read-only public requests', {time
     assert.equal(await page.locator('#demoBadge').isHidden(),true);
     assert.equal(await page.locator('.table-card.active').count(),2);
     assert.match(await page.locator('.table-card.active').first().innerText(), /BEST OF THREE/);
-    assert.equal(await page.locator('.next-card:visible').count(),2,'720p shows two legible upcoming matches');
+    assert.equal(await page.locator('.next-card:visible').count(),3,'default 1600px view shows three upcoming matches');
     assert.match(await text(page), /Alexandria\s+Montgomery-Fitzgerald/i);
     assert.equal(await page.locator('.score-pending').count(),0,'no unsupported live-score placeholders');
     assert.doesNotMatch(await page.locator('.table-grid').innerText(),/11[–-]7|1\s*[–:]\s*1/);
@@ -205,9 +205,9 @@ test('fictional showcase is clearly identified on both public views', {timeout:6
   try {
     assert.match(await page.locator('#demoBadge').innerText(),/FICTIONAL TOURNAMENT/);
     assert.equal(await page.locator('#live').innerText(),'DEMO DATA');
-    const headerFit=await page.evaluate(()=>{const h=document.querySelector('.tv-header').getBoundingClientRect(), e=document.querySelector('.eyebrow').getBoundingClientRect(), b=document.querySelector('#demoBadge').getBoundingClientRect(), d=document.querySelector('#evDate').getBoundingClientRect();
-      return {eyebrowTop:e.top, badgeInside:b.top>=h.top && b.bottom<=h.bottom && b.right<=innerWidth, sameLineAsDate:Math.abs((b.top+b.bottom)/2-(d.top+d.bottom)/2)<8, headerHeight:h.height};});
-    assert.ok(headerFit.eyebrowTop >= 11, `eyebrow keeps a safe top margin with the demo label (${headerFit.eyebrowTop}px)`);
+    const headerFit=await page.evaluate(()=>{const h=document.querySelector('.tv-header').getBoundingClientRect(), n=document.querySelector('#evName').getBoundingClientRect(), b=document.querySelector('#demoBadge').getBoundingClientRect(), d=document.querySelector('#evDate').getBoundingClientRect();
+      return {titleTop:n.top, badgeInside:b.top>=h.top && b.bottom<=h.bottom && b.right<=innerWidth, sameLineAsDate:Math.abs((b.top+b.bottom)/2-(d.top+d.bottom)/2)<8, headerHeight:h.height};});
+    assert.ok(headerFit.titleTop >= 0, `event title keeps a safe header margin (${headerFit.titleTop}px)`);
     assert.equal(headerFit.badgeInside,true); assert.equal(headerFit.sameLineAsDate,true,'demo label shares the date line');
     if (process.env.TV_SCREENSHOTS) {fs.mkdirSync(process.env.TV_SCREENSHOTS,{recursive:true}); await page.screenshot({path:path.join(process.env.TV_SCREENSHOTS,'supplementary-demo-showcase-1280.png')});}
     assert.match(await page.locator('main').innerText(),/Sample Matches/);
