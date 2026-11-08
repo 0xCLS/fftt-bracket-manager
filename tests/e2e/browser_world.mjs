@@ -23,14 +23,23 @@ export async function launch() {
 }
 
 /** `real: true` runs on the UPGRADED single-project schema with a real-mode (synthetic_only = false) event; FFTT_UPGRADED=1 does the same for every world. */
-export async function createBrowserWorld({ttlSeconds = 3600, players = 0, registration = 'synthetic-fixture', google = null, real = undefined} = {}) {
-  const isReal = real ?? process.env.FFTT_UPGRADED === '1';
+const STAFF_ROLE_SQL = ['supabase/proposals/FFTT3_BRACKET_MANAGER_ROLE_20261030_DO_NOT_APPLY.sql',
+  'supabase/proposals/FFTT3_EVENT_DAY_DELEGATION_20261105_DO_NOT_APPLY.sql',
+  'supabase/proposals/FFTT3_BRACKET_MANAGER_REGISTRATION_20261106_DO_NOT_APPLY.sql',
+  'supabase/migrations/20261108114950_showcase_reset.sql',
+  'supabase/migrations/20261108150000_staff_scoring_permissions.sql'];
+
+/** `staffRoles: true` also loads the Bracket Manager role, delegation, registration, showcase-reset and correction-permission SQL
+ * (hosted layering) and adds a `bm` account with the Bracket Manager role on the event. Off by default. */
+export async function createBrowserWorld({ttlSeconds = 3600, players = 0, registration = 'synthetic-fixture', google = null, real = undefined, staffRoles = false} = {}) {
+  const isReal = staffRoles ? true : (real ?? process.env.FFTT_UPGRADED === '1');
   const fake = await createFakeSupabase({ttlSeconds, upgraded: isReal});
   const accounts = {
     org: ['organizer@fftt-staging.invalid', 'org-' + Math.random().toString(36).slice(2) + 'Aa1!'],
     a: ['scorekeeper-a@fftt-staging.invalid', 'a-' + Math.random().toString(36).slice(2) + 'Aa1!'],
     b: ['scorekeeper-b@fftt-staging.invalid', 'b-' + Math.random().toString(36).slice(2) + 'Aa1!'],
     out: ['outsider@fftt-staging.invalid', 'o-' + Math.random().toString(36).slice(2) + 'Aa1!'],
+    ...(staffRoles ? {bm: ['bracket-manager@fftt-staging.invalid', 'bm-' + Math.random().toString(36).slice(2) + 'Aa1!']} : {}),
   };
   const ids = {};
   for (const [k, [email, pw]] of Object.entries(accounts)) ids[k] = await fake.addAccount(email, pw, {platformOrganizer: k === 'org'});
@@ -38,6 +47,10 @@ export async function createBrowserWorld({ttlSeconds = 3600, players = 0, regist
      values ($2,'2026-11-22',3,$1,$3) returning id`, [ids.org, 'Synthetic Rehearsal Games', !isReal]);
   await fake.local.admin(`insert into fftt_private.event_staff(event_id,user_id,role) values ($1,$2,'organizer'),($1,$3,'scorekeeper'),($1,$4,'scorekeeper')`,
     [ev.id, ids.org, ids.a, ids.b]);
+  if (staffRoles) {
+    for (const f of STAFF_ROLE_SQL) await fake.local.db.exec(fs.readFileSync(path.join(ROOT, f), 'utf8'));
+    await fake.local.rpc(ids.org, 'fftt_set_staff_v3', {p_event_id: ev.id, p_email: accounts.bm[0], p_action: 'grant', p_role: 'bracket_manager'});
+  }
   if (players) await fake.local.rpc(ids.org, 'fftt_upsert_players_v3', {p_event_id: ev.id, p_players: roster(players)});
   const browser = await launch();
   const world = {fake, accounts, ids, eventId: ev.id, browser, contexts: [], consoleErrors: [], pageErrors: [], requests: []};

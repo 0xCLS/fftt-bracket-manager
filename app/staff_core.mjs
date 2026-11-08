@@ -39,11 +39,14 @@ const DETAIL = Object.freeze({
   'roster-full': 'The roster is full (64 players).',
   'event-limit': 'The limit on open events has been reached. Archive an old event first.',
   'doubles-complete': 'The doubles finale already has a result.',
+  'game-progress-mismatch': 'The result does not match the saved games for this match. Reopen it and check the saved games.',
+  'doubles-not-complete': 'The doubles finale has no recorded result to correct yet.',
+  'result-changed': 'The doubles result was changed by someone else. Refresh and check it before correcting.',
   'teams-not-set': 'Choose the two doubles teams first.',
   'duplicate-name': 'Two players cannot share the same name. Enter each full first and last name.',
   'player-name': 'Player names cannot contain e-mail addresses or phone numbers.',
   'player-rating': 'Ratings are 1 to 5.',
-  'reason': 'A short reason (3 to 300 characters) is required.',
+  'reason': 'The reason must be 3 to 300 characters (required for a no-show) and contain no control characters; for a correction it is optional.',
   'slots-incomplete': 'Every checked-in player must be in the bracket.',
   'slots-ineligible': 'Only checked-in players can be placed.',
   'slots-players': 'At least two players are needed.',
@@ -180,7 +183,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
   randomId = () => crypto.randomUUID(), isOnline = () => true, onChange = () => {}} = {}) {
   const s = {
     signedIn: false, role: null, eventId: null, events: [], snapshot: null, brief: null, pulse: null,
-    desk: [], deskStatus: 'idle', score: {status: 'idle', pendingSubmissionId: null}, pending: null, gamePending: null,
+    desk: [], doublesDesk: null, deskStatus: 'idle', score: {status: 'idle', pendingSubmissionId: null}, pending: null, gamePending: null,
     lastGoodAt: 0, lastError: null, busy: false, paused: false, endedReason: null, audit: null,
     lastScoreMessage: null,
     // organizer-only, in memory only, dropped with every other private view: {status, payload, error, at}
@@ -253,7 +256,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
   const canWrite = () => s.signedIn && !s.busy && connection() === 'live';
 
   function clearPrivate(reason = null) {
-    s.snapshot = null; s.brief = null; s.pulse = null; s.desk = []; s.deskStatus = 'idle'; s.audit = null;
+    s.snapshot = null; s.brief = null; s.pulse = null; s.desk = []; s.doublesDesk = null; s.deskStatus = 'idle'; s.audit = null;
     s.registrations = {status: 'idle', payload: null, error: null, at: 0};
     s.registrationLookup = {status: 'idle', payload: null, error: null, code: null, at: 0, rev: 0, busyRef: null};
     s.registrationSettings = {status: 'idle', source: null, capabilities: null, capabilitiesError: null, diagnostic: null, error: null, busy: null};
@@ -293,6 +296,8 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
             res.deskLoaded = true;
           }
         } else res.notActive = true;
+        // Mixed-Skill Doubles (game-by-game). Failure-tolerant: a database without it simply shows no doubles card.
+        try { res.doubles = await scoreTransport.readDoublesDesk(ctx.token, {eventId: ctx.eventId}); } catch { res.doubles = null; }
         return res;
       }, {wait: false});
       s.lastGoodAt = now(); s.lastError = null; s.endedReason = null;
@@ -301,6 +306,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
         lastFullAt = now();
         if (out.snapshot) s.snapshot = out.snapshot;
         if (out.brief) s.brief = out.brief;
+        s.doublesDesk = out.doubles && out.doubles.status !== 'no-teams' ? out.doubles : null;
         if (out.events) {
           if(staffScope(s.events)!==staffScope(out.events)) s.staffDirectory={status:'idle',people:[],error:null,version:s.staffDirectory.version+1};
           s.events = out.events;
@@ -451,9 +457,10 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     },
     assignTable: (matchId, table) => act(ctx => api.assignTable(ctx.token, {p_event_id: E(), p_match_id: matchId, p_table_number: table})),
     forfeit: (matchId, version, absentId, reason) => act(ctx => api.forfeitMatch(ctx.token, {p_event_id: E(), p_match_id: matchId, p_expected_match_version: version, p_absent_player_id: absentId, p_reason: reason})),
-    correct: (matchId, version, winnerId, scores, reason) => act(ctx => api.correctResult(ctx.token, {p_event_id: E(), p_match_id: matchId, p_expected_match_version: version, p_winner_id: winnerId, p_game_scores: scores, p_reason: reason})),
+    correct: (matchId, version, winnerId, scores, reason) => act(ctx => api.correctResult(ctx.token, {p_event_id: E(), p_match_id: matchId, p_expected_match_version: version, p_winner_id: winnerId, p_game_scores: scores, p_reason: (typeof reason === 'string' && reason.trim()) || null})),
     setDoublesTeams: (p1, p2) => act(ctx => api.setDoublesTeams(ctx.token, {p_event_id: E(), p_partner_1: p1, p_partner_2: p2})),
     recordDoubles: (team, scores) => act(ctx => api.recordDoublesResult(ctx.token, {p_event_id: E(), p_winner_team: team, p_game_scores: scores})),
+    correctDoubles: (expectedTeam, expectedScores, team, scores, reason) => act(ctx => api.correctDoublesResult(ctx.token, {p_event_id: E(), p_expected_winner_team: expectedTeam, p_expected_game_scores: expectedScores, p_winner_team: team, p_game_scores: scores, p_reason: (typeof reason === 'string' && reason.trim()) || null})),
     setVisibility: v => act(ctx => api.setVisibility(ctx.token, {p_event_id: E(), p_visible: v})),
     async setLifecycle(l) { const r = await act(ctx => api.setLifecycle(ctx.token, {p_event_id: E(), p_lifecycle: l})); if (r.ok) await loadEvents(); return r; },
     setStaff: (email, action, role) => act(ctx => api.setStaff(ctx.token, {p_event_id: E(), p_email: email, p_action: action, p_role: action === 'revoke' ? null : role})),
@@ -637,6 +644,56 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     },
   };
 
+  // ---------------------------------------------------------------- Mixed-Skill Doubles (game-by-game)
+  // The doubles desk is read with each full refresh (failure-tolerant). The database, not this view, decides who may score or correct.
+  async function readDoublesProgress() {
+    if (!s.signedIn || s.paused || !isOnline()) return {ok: false, message: 'Reconnect before reading completed games.'};
+    try {
+      const data = await session.authorized(ctx => scoreTransport.readDoublesDesk(ctx.token, {eventId: ctx.eventId}), {wait: false});
+      if (data.status !== 'ready' || !summarizeGameProgress(data.games, data.best_of, data.points_to_win).ok) {
+        return {ok: false, message: 'The doubles finale is not open for scoring. Refresh the Match Desk.'};
+      }
+      return {ok: true, data};
+    } catch (e) {
+      if (isSessionEnded(e)) endSession(e.kind);
+      return {ok: false, message: 'Completed-game records are unavailable. Nothing was changed; check the connection.'};
+    }
+  }
+  async function saveDoublesGame({snapshot, gameIndex, team1Score, team2Score, reason = null}) {
+    if (gameSending || s.gamePending) return {ok: false, unknown: true, message: 'An earlier game is unconfirmed. Check its receipt before sending anything else.'};
+    if (!canWrite()) return {ok: false, message: 'The connection is not confirmed; no game was sent.'};
+    if (!snapshot || snapshot.status !== 'ready' || snapshot.event_id !== s.eventId || !s.doublesDesk
+      || s.doublesDesk.team_key !== snapshot.team_key) return {ok: false, message: 'The doubles teams changed. Refresh and reopen the doubles match.'};
+    if (!Number.isSafeInteger(gameIndex) || ![team1Score, team2Score].every(x => Number.isSafeInteger(x) && x >= 0 && x <= 99)) {
+      return {ok: false, message: 'Enter both teams\' scores for a completed game.'};
+    }
+    const previous = snapshot.games;
+    if (!Array.isArray(previous) || gameIndex > previous.length + 1 || gameIndex < 1 || gameIndex > snapshot.best_of) {
+      return {ok: false, message: 'Only the next completed game can be saved.'};
+    }
+    const correction = gameIndex <= previous.length;
+    const note = typeof reason === 'string' ? reason.trim() : '';
+    if (!correction && note) return {ok: false, message: 'Only a correction may carry a reason.'};
+    if (correction && note.length > 500) return {ok: false, message: 'Keep the reason to 500 characters or fewer.'};
+    const next = previous.map(g => [...g]);
+    if (correction) next[gameIndex - 1] = [team1Score, team2Score]; else next.push([team1Score, team2Score]);
+    const summary = summarizeGameProgress(next, snapshot.best_of, snapshot.points_to_win);
+    if (!summary.ok) return {ok: false, message: summary.error};
+    const submissionId = randomId(), eventId = s.eventId;
+    const intent = {eventId, submissionId, teamKey: snapshot.team_key, revision: snapshot.revision, bestOf: snapshot.best_of,
+      points: snapshot.points_to_win, gameIndex, team1Score, team2Score, reason: correction && note ? note : null};
+    const rec = {submissionId, matchId: eventId, gameIndex, at: now(), code: 'DOUBLES'};
+    if (!gameLedger?.write(eventId, rec)) {
+      return {ok: false, message: 'This device cannot preserve an uncertain game submission. No game was sent.'};
+    }
+    gameSending = true; s.gamePending = rec; s.busy = true; emit();
+    try {
+      try { await session.authorized(ctx => scoreTransport.submitDoublesGame(ctx.token, intent)); }
+      catch (e) { if (isSessionEnded(e)) endSession(e.kind); /* even a missing reply is unknown */ }
+      return await checkPendingGame();
+    } finally { gameSending = false; s.busy = false; emit(); }
+  }
+
   // ---------------------------------------------------------------- completed-game progress (NEVER an authoritative result)
   async function readGameProgress(matchId) {
     if (!s.signedIn || s.paused || !isOnline()) return {ok: false, message: 'Reconnect before reading completed games.'};
@@ -674,9 +731,11 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     if (!Array.isArray(previous) || gameIndex > previous.length + 1 || gameIndex < 1
       || gameIndex > row.bestOf) return {ok: false, message: 'Only the next completed game can be saved.'};
     const correction = gameIndex <= previous.length;
-    if (correction && s.role !== 'organizer') return {ok: false, message: 'Only the organizer can correct an already saved game.'};
-    if ((correction && (typeof reason !== 'string' || reason.trim().length < 10 || reason.trim().length > 500))
-      || (!correction && reason !== null)) return {ok: false, message: 'Corrections require a reason of at least 10 characters.'};
+    // The database is the authority on who may correct (organizer, bracket manager or scorekeeper while the match is open);
+    // the client does not decide it. A correction's reason is optional; a brand-new game never carries one.
+    const note = typeof reason === 'string' ? reason.trim() : '';
+    if (!correction && note) return {ok: false, message: 'Only a correction may carry a reason.'};
+    if (correction && note.length > 500) return {ok: false, message: 'Keep the reason to 500 characters or fewer.'};
     const next = previous.map(g => [...g]);
     if (correction) next[gameIndex - 1] = [player1Score, player2Score];
     else next.push([player1Score, player2Score]);
@@ -686,7 +745,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     const intent = {eventId,matchId,submissionId,generation:row.generation,
       matchVersion:row.version,epoch:snapshot.epoch,revision:snapshot.revision,
       bestOf:row.bestOf,points:row.points,gameIndex,player1Score,player2Score,
-      reason:correction ? reason.trim() : null};
+      reason:correction && note ? note : null};
     const rec = {submissionId,matchId,gameIndex,at:now(),code:row.code};
     if (!gameLedger?.write(eventId,rec)) {
       return {ok: false, message: 'This device cannot preserve an uncertain game submission. No game was sent.'};
@@ -934,7 +993,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     get state() { return s; },
     connection, canWrite, refresh, started, selectEvent, loadEvents, pause, resume, signedOut, endSession,
     actions, prepareScore, cancelPreparedScore, confirmScore, checkPendingScore, dismissPendingScore,
-    readGameProgress, saveCompletedGame, checkPendingGame, dismissPendingGame,
+    readGameProgress, saveCompletedGame, readDoublesProgress, saveDoublesGame, checkPendingGame, dismissPendingGame,
     organizerOnly,
   });
 }

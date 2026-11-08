@@ -160,6 +160,55 @@ export function createGamedayScoreTransport({projectUrl = C3_HOST, publishableKe
       }
       return Object.freeze(r);
     },
+    /** Mixed-Skill Doubles: event-scoped staff read of the two teams (names only), format and server-confirmed games. */
+    async readDoublesDesk(token, {eventId} = {}) {
+      if (!UUID.test(eventId || '')) fail('Invalid doubles request');
+      reads++;
+      const r = await post('/rest/v1/rpc/fftt_doubles_desk_v1', token, {p_event_id: eventId}, 'doubles desk');
+      if (sameKeys(r, ['event_id','status','event_revision']) && r.event_id === eventId && r.status === 'no-teams' && natural(r.event_revision)) {
+        return Object.freeze(r);
+      }
+      const keys = ['event_id','status','lifecycle','team_key','best_of','points_to_win','teams','revision','games',
+        'winner_team','game_scores','event_revision'];
+      if (!sameKeys(r, keys) || r.event_id !== eventId || !['ready','complete'].includes(r.status)
+        || typeof r.lifecycle !== 'string' || r.lifecycle.length > 20 || typeof r.team_key !== 'string' || !/^[0-9a-f]{32}$/.test(r.team_key)
+        || ![1,3,5].includes(r.best_of) || ![11,21].includes(r.points_to_win)
+        || !Array.isArray(r.teams) || r.teams.length !== 2
+        || !r.teams.every(t => Array.isArray(t) && t.length === 2 && t.every(n => typeof n === 'string' && n.length > 0 && n.length <= 120))
+        || !natural(r.revision) || !natural(r.event_revision) || !Array.isArray(r.games) || r.games.length > r.best_of
+        || !r.games.every(g => Array.isArray(g) && g.length === 2 && g.every(x => Number.isSafeInteger(x) && x >= 0 && x <= 99))
+        || !(r.winner_team === null || r.winner_team === 1 || r.winner_team === 2)
+        || typeof r.game_scores !== 'string' || r.game_scores.length > 120) {
+        fail('Invalid doubles desk');
+      }
+      return Object.freeze({...r, teams: Object.freeze(r.teams.map(t => Object.freeze([...t]))), games: Object.freeze(r.games.map(g => Object.freeze([...g])))});
+    },
+    /** One-shot, like submitCompletedGame: an unknown outcome is settled with readGameDecision, never resent. */
+    async submitDoublesGame(token, x) {
+      if (!x || !UUID.test(x.eventId || '') || !UUID.test(x.submissionId || '') || typeof x.teamKey !== 'string' || !/^[0-9a-f]{32}$/.test(x.teamKey)
+        || !natural(x.revision) || ![1,3,5].includes(x.bestOf) || ![11,21].includes(x.points)
+        || !Number.isSafeInteger(x.gameIndex) || x.gameIndex < 1 || x.gameIndex > x.bestOf
+        || ![x.team1Score,x.team2Score].every(n => Number.isSafeInteger(n) && n >= 0 && n <= 99)
+        || !(x.reason === null || (typeof x.reason === 'string' && x.reason.length <= 500))) {
+        fail('Invalid doubles game request');
+      }
+      if (attempted.has(x.submissionId)) fail('Duplicate submission is forbidden, even after a timeout');
+      attempted.add(x.submissionId);
+      scoreRequests++;
+      const r = await post('/rest/v1/rpc/fftt_save_doubles_game_v1', token, {
+        p_event_id: x.eventId, p_expected_team_key: x.teamKey, p_expected_progress_version: x.revision,
+        p_expected_best_of: x.bestOf, p_expected_points_to_win: x.points, p_submission_id: x.submissionId,
+        p_game_index: x.gameIndex, p_team_1_score: x.team1Score, p_team_2_score: x.team2Score, p_reason: x.reason,
+      }, 'game');
+      if (!sameKeys(r, ['submission_id','status','reason','match_id','revision','event_revision'])
+        || r.submission_id !== x.submissionId || r.match_id !== x.eventId
+        || !['accepted','rejected'].includes(r.status)
+        || !natural(r.revision) || !natural(r.event_revision)
+        || (r.status === 'accepted' ? (r.reason !== null || r.revision <= x.revision) : r.reason !== 'stale-progress')) {
+        fail('Invalid doubles game-save response; outcome unknown');
+      }
+      return Object.freeze(r);
+    },
     /** Caller-owned, event-scoped receipt only; absence never proves the write failed. */
     async readGameDecision(token, {eventId, submissionId} = {}) {
       if (!UUID.test(eventId || '') || !UUID.test(submissionId || '')) fail('Invalid game receipt request');

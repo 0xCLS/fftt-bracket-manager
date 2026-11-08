@@ -45,7 +45,7 @@ const WRITE_ROUTES = Object.freeze([
   'fftt_reset_showcase_v1', 'fftt_create_event_v3', 'fftt_update_event_v3', 'fftt_set_lifecycle_v3', 'fftt_set_visibility_v3',
   'fftt_upsert_players_v3', 'fftt_remove_player_v3', 'fftt_set_checkin_v3', 'fftt_set_checkin_bulk_v3', 'fftt_event_day_walkin_v1', 'fftt_build_championship_v3',
   'fftt_build_consolation_v3', 'fftt_assign_table_v3', 'fftt_forfeit_match_v3', 'fftt_correct_result_v3',
-  'fftt_set_doubles_teams_v3', 'fftt_record_doubles_result_v3', 'fftt_set_staff_v3',
+  'fftt_set_doubles_teams_v3', 'fftt_record_doubles_result_v3', 'fftt_correct_doubles_result_v1', 'fftt_set_staff_v3',
   'fftt_set_formats_v4', 'fftt_set_match_format_v4', 'fftt_checkin_registrants_v4', 'fftt_confirm_ratings_v4',
   'fftt_restore_event_v4', 'fftt_delete_event_v4', 'fftt_set_registration_source_v5', 'fftt_clear_registration_source_v5',
 ]);
@@ -181,7 +181,7 @@ export function parseAuditLog(raw) {
   return Object.freeze(raw.map(a => {
     if (!only(a, ['operation', 'match_id', 'actor_id', 'reason', 'before', 'after', 'revision', 'at'])
       || !text(a.operation, 40) || !uuidOrNull(a.match_id) || !uuidOrNull(a.actor_id)
-      || !(a.reason === null || text(a.reason, 300)) || !int(a.revision) || !text(a.at, 64)) bad();
+      || !(a.reason === null || text(a.reason, 500)) || !int(a.revision) || !text(a.at, 64)) bad();
     return Object.freeze({operation: a.operation, matchId: a.match_id, actorId: a.actor_id, reason: a.reason,
       revision: a.revision, at: a.at, before: a.before, after: a.after});
   }));
@@ -259,6 +259,7 @@ export function createGamedayApi({projectUrl = C3_HOST, publishableKey, fetchImp
     correctResult: w('fftt_correct_result_v3'),
     setDoublesTeams: w('fftt_set_doubles_teams_v3'),
     recordDoublesResult: w('fftt_record_doubles_result_v3'),
+    correctDoublesResult: w('fftt_correct_doubles_result_v1'),
     setStaff: w('fftt_set_staff_v3'),
     setFormats: w('fftt_set_formats_v4'),
     setMatchFormat: w('fftt_set_match_format_v4'),

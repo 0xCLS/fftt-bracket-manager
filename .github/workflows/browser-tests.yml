@@ -263,6 +263,12 @@ jobs:
         env:
           FFTT_CHROME_CHANNEL: none
         run: node --test tests/e2e/gameday_v6_browser.test.mjs
+      - name: Scoring correction permissions and Mixed-Skill Doubles game-by-game scoring against the real SQL (per-role allow/deny, forbidden direct calls, optional reasons, audit, rollback and install composer; fictional, local database)
+        run: node --test tests/e2e/correction_permissions.test.mjs tests/e2e/doubles_scoring.test.mjs tests/e2e/scoring_rollback.test.mjs tests/e2e/scoring_install_compose.test.mjs
+      - name: Scoring correction permissions, Doubles Match Desk and Reset Showcase card order in fictional Chrome
+        env:
+          FFTT_CHROME_CHANNEL: none
+        run: node --test tests/e2e/correction_permissions_browser.test.mjs tests/e2e/showcase_reset_ui.test.mjs
       - name: V4 server logic against the real SQL (formats incl. historical Bo5, registration, restore, guarded deletion)
         run: node --test tests/e2e/gameday_v4_server.test.mjs
       - name: V4 real client stack (stale formats, duplicate sends, registration privacy lifecycle, events) and adapter authorization against the real SQL
@@ -352,12 +358,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # V6 is applied explicitly below. Keep its dependent reset migration out of
-          # the initial B1-B2d bootstrap, and restore the exact file even on failure.
+          # V6 is applied explicitly below. Keep the migrations that depend on it (and on the role and
+          # delegation layers) out of the initial B1-B2d bootstrap, and restore the exact files even on failure.
           reset=supabase/migrations/20261108114950_showcase_reset.sql
+          scoring=supabase/migrations/20261108150000_staff_scoring_permissions.sql
           cp "$reset" "$RUNNER_TEMP/showcase_reset.sql"
-          trap 'cp "$RUNNER_TEMP/showcase_reset.sql" "$reset"' EXIT
-          rm "$reset"
+          cp "$scoring" "$RUNNER_TEMP/staff_scoring_permissions.sql"
+          trap 'cp "$RUNNER_TEMP/showcase_reset.sql" "$reset"; cp "$RUNNER_TEMP/staff_scoring_permissions.sql" "$scoring"' EXIT
+          rm "$reset" "$scoring"
           supabase start
           supabase test db
       - name: Staff invitation recovery against real local GoTrue (fictional account - replacement invite, old link refused, callback format, password setup, no grants)
@@ -465,3 +473,18 @@ jobs:
         run: |
           python -m py_compile tests/fftt3_launch_signed_http.py
           python tests/fftt3_launch_signed_http.py
+      - name: Apply role and delegation layers, then the scoring-permissions migration (ephemeral local PostgreSQL only; no private fixture)
+        env:
+          PGPASSWORD: postgres
+        run: |
+          for f in supabase/proposals/FFTT3_BRACKET_MANAGER_ROLE_20261030_DO_NOT_APPLY.sql \
+                   supabase/proposals/FFTT3_EVENT_DAY_DELEGATION_20261105_DO_NOT_APPLY.sql \
+                   supabase/migrations/20261108150000_staff_scoring_permissions.sql; do
+            psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres -f "$f" >/dev/null
+          done
+      - name: Assert scoring-permission privileges, structure and anonymous denial (local PostgreSQL only)
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres \
+            -f tests/staff_scoring_permissions_disposable.sql

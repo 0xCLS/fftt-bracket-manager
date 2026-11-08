@@ -3,7 +3,7 @@
 One page per role. Keep it short; follow it literally. **During normal online play, the accepted server match record is authoritative. During a declared paper fallback, preserve signed paper scores as incident evidence and reconcile them against accepted server receipts before any retry or correction. Do not overwrite a server-accepted score solely because paper disagrees.**
 
 ## Roles
-* **Organizer (1, laptop):** registration/check-in, bracket building, corrections, publication, the backup. The only person who changes anything structural.
+* **Organizer (1, laptop):** registration/check-in, bracket building, corrections (of games and finished results), publication, the backup. The only person who changes anything structural.
 * **Scorekeeper A and B (2 phones, signed in separately):** Match Desk only — assign tables, record results.
 * **Greeter (optional):** walk-in names on paper to the Organizer (full first and last name + level 1–5).
 * **Owner (on call):** Cloudflare/Supabase/Google access for emergencies only.
@@ -35,7 +35,9 @@ Results & Export → **Private backup** (the app's own download; it contains lev
 ## During play — scorekeepers
 * Match Desk → pick a ready match → choose a free **table** → play → **Record result**: tap the winner, enter game scores (e.g., `11-7, 9-11, 11-8`). If the screen says the match changed or is already recorded, **stop**: the other scorekeeper already entered it — tell the Organizer, do not re-enter.
 * **No-show/walkover:** Record a no-show (reason required).
-* Spotted a wrong score *after* saving? **Do not retype it.** Tell the Organizer (corrections are organizer-only and leave an audit entry).
+* Spotted a wrong **game** score while the match is still open? Tap **Correct…** beside that saved game, fix the numbers and save. A note is optional; the old and new scores are always logged.
+* Spotted a wrong **final result** (the match is already finished)? **Do not retype it.** Tell a Bracket Manager or the Organizer: only they can correct a finished match, and it leaves an audit entry. A note is optional.
+* **Mixed-Skill Doubles:** once the Organizer or a Bracket Manager has chosen the two teams, a **Mixed-Skill Doubles** card appears on your Match Desk. **Record doubles**, save each completed game as it ends, then **Review result** and **Confirm**. Scorekeepers never choose or change the partners.
 * Offline banner = changes are paused. Write the score on paper. Reconnecting does **not** automatically submit an uncertain result: check the server record/receipt with the Organizer before any deliberate entry. Never enter an unverified score twice.
 
 ## Problems and fast fixes
