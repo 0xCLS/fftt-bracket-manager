@@ -35,6 +35,10 @@
     {
       "version": "20261108114950",
       "name": "showcase_reset"
+    },
+    {
+      "version": "20261108150000",
+      "name": "staff_scoring_permissions"
     }
   ],
   "version_aliases": {
@@ -52,7 +56,8 @@
     "supabase/migrations/20261009000100_b2d_staff_grants.sql": "c731f36792fa67b94d2f0235ce959f0a268d0e1f",
     "supabase/proposals/MILESTONE1_DURABLE_SCORING_V2_DO_NOT_APPLY.sql": "af46f1d2cf7de1387086a6e2416f358a00e59b1a",
     "supabase/migrations/20261108114950_showcase_reset.sql": "29f5661750b58e8561363a01686daaee36e13ef1",
-    "supabase/proposals/GAMEDAY_V6_GAME_PROGRESS_DO_NOT_APPLY.sql": "fc201b785be6dc84ad34219f1e28a47cf25be00d"
+    "supabase/proposals/GAMEDAY_V6_GAME_PROGRESS_DO_NOT_APPLY.sql": "fc201b785be6dc84ad34219f1e28a47cf25be00d",
+    "supabase/migrations/20261108150000_staff_scoring_permissions.sql": "69dfdd4db6bbf85e854b69f959905b719432d865"
   },
   "review_notes": [
     "Four hosted migration bodies match repository SQL byte-for-byte; the hosted helper-hardening migration differs from the local conditional DO block.",
@@ -60,6 +65,7 @@
     "Tracked local migration version IDs differ from hosted IDs. Never run db push or migration repair until a reviewed reconciliation and separate approval; never reset consumed scoring fixtures.",
     "On 2026-11-08 the seventh hosted migration (gameday_v6_game_progress) was verified read-only to match supabase/proposals/GAMEDAY_V6_GAME_PROGRESS_DO_NOT_APPLY.sql byte-for-byte (identical length and MD5); its DO NOT APPLY gate remains in force.",
     "On 2026-11-08 supabase/migrations/20261108114950_showcase_reset.sql (SHA-256 35a6506035cf07d8d7b33d3e1bc4dfdab4670fee53c5a277a82052223b8e043b) was installed once on the named project by the owner-approved target-specific transaction in docs/SHOWCASE_RESET_RELEASE.md, registered with the same version and null statements. This records history that already exists; it does not authorize any further hosted write.",
+    "On 2026-11-08 supabase/migrations/20261108150000_staff_scoring_permissions.sql (SHA-256 a0f88d5090fb7d1c348b016b298205c1df2bbc06bb71369c9f3da129f6d90d72) was installed once on the named project by the owner-approved target-specific transaction in docs/STAFF_SCORING_PERMISSIONS_RELEASE.md after exact history and function-fingerprint guards, registered with the same version and null statements (so no hosted body exists to compare byte-for-byte; verification was by the four replaced and six new function fingerprints, grants, and a value-identical restore-proved backup comparison). This records history that already exists; it does not authorize any further hosted write.",
     "hosted_push_approved remains false and --mode gate still denies. Do not run db push or migration repair; the historical ID differences above are unchanged and no historical record was rewritten."
   ]
 }

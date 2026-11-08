@@ -1,6 +1,6 @@
 # Consolidated Staff update — scoring permissions, doubles scoring, archived switcher, Reset card position
 
-**Status: implemented and focused-tested; NOT installed, deployed or comprehensively CI-tested.** Nothing here touches production until the owner approves (1) one comprehensive CI run for the exact final SHA, (2) one database installation, and (3) one Staff deployment.
+**Status: RELEASED on November 8, 2026.** Merged as PR #75 (merge commit `3af6444b37f6f55d955941db87a649e68fcf465f`; approved head `7affacba8858c406e27553d4a6573d0d323aaa3e`; comprehensive CI run 42500628517 passed). The migration was installed once on project `copmkalfkkrkzheohwuc` (combined transaction SHA-256 `d3a49f74cf75b2ce83854fec8db70aba8749af1860f9cd785bdc39cc8cf23a20`), and Staff was deployed once to `fftt-staff` as deployment `10ed3cf8-ef91-44af-8e95-f1db531548bf` (previous good deployment `ef1b694a-2494-454c-b2f1-7461d407a88b`). Production acceptance was read-only/static: nine history entries ending `20261108150000`; the four replaced functions and six new functions match the reviewed after-fingerprints with no `anon` execute right; a post-install export is value-identical to the restore-proved pre-install backup for all 20 private tables (only `doubles_finale` gained its six new columns, all null except the generated epoch); served Staff asset hashes verified; Spectator/TV and homepage unchanged. **No score or correction was recorded on any real event, and a signed-in practice-event walk-through by each role is still outstanding.** The original pre-release text below is kept as the record of what was reviewed. The backup of record is outside Git. Rollback guidance is unchanged.
 
 ## What is included
 | Workstream | Source | Result |
@@ -42,7 +42,7 @@ SHA-256 `a0f88d5090fb7d1c348b016b298205c1df2bbc06bb71369c9f3da129f6d90d72`. Addi
 * `tests/e2e/gameday_fast_ui_browser.test.mjs` (archived switcher, PR #71) and `tests/e2e/showcase_reset_ui.test.mjs` (card order, PR #74).
 * `tests/e2e/scoring_rollback.test.mjs` (rollback restores the exact previous bodies and privileges), `tests/e2e/scoring_install_compose.test.mjs`, `tests/staff_scoring_permissions_disposable.sql` (grants on real PostgreSQL in CI).
 
-## Installation (requires explicit owner approval; not yet executed)
+## Installation (executed once on November 8, 2026; kept as the reviewed procedure)
 Same target-specific path as the showcase reset; never `db push` or `migration repair`. Order: **database first, then one Staff deployment** (an older Staff build keeps working against the new database; a new Staff build against the old database only loses the new doubles card and the new correction rights).
 
 1. Preconditions: green comprehensive run for the exact merged commit; written owner approval for project `copmkalfkkrkzheohwuc`.
