@@ -1443,3 +1443,12 @@ body.tv .cinematic-bracket .bracket-round.last-round .bracket-match.pending-fina
     font-size:clamp(14px,1.11vw,19px);
   }
 }
+
+/* Keep featured Results names readable with fonts available across computers. */
+body.tv .cinematic-results .lead-result .result-player-name{
+  font-family:Arial,"Helvetica Neue",Helvetica,sans-serif;
+  font-size:clamp(27px,3vw,58px);
+  font-weight:800;
+  line-height:1.08;
+  font-stretch:normal;
+}
