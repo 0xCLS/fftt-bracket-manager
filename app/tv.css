@@ -250,7 +250,7 @@ body.tv{
 }
 footer{
   border-top-color:#29475f;color:#a9c0d2;
-  font-size:clamp(10px,.78vw,15px);
+  font-size:clamp(11px,.78vw,15px);
 }
 .dot{color:var(--tv-accent)}
 .control-hint{opacity:1;color:#a9bfd0}
@@ -704,3 +704,751 @@ body.tv .controls button[data-screen="match"] {grid-column:1;grid-row:2}
 body.tv .controls button[data-screen="results"] {grid-column:2;grid-row:2}
 body.tv .controls button[data-screen="championship"] {grid-column:3;grid-row:2}
 body.tv .controls button[data-screen="consolation"] {grid-column:4;grid-row:2}
+
+/* Premium TV finishing pass — screenshot review, Nov 7.
+   Keep the existing navy / teal / yellow broadcast language. */
+
+/* A single, quiet footer control rail: no floating transport buttons over Up Next. */
+body.tv .controls{
+  display:flex;
+  grid-template-columns:none;
+  grid-template-rows:none;
+  flex-wrap:nowrap;
+  align-items:center;
+  gap:clamp(3px,.44vw,9px);
+  bottom:.58vh;
+  right:3.1vw;
+  max-width:calc(100vw - 6.2vw);
+  padding:0;
+  background:transparent;
+  border:0;
+}
+body.tv .controls button{
+  grid-column:auto;
+  grid-row:auto;
+  flex-shrink:0;
+  min-height:32px;
+  padding:.55em clamp(5px,.55vw,11px);
+  font-size:clamp(11px,.78vw,15px);
+  letter-spacing:.02em;
+  white-space:nowrap;
+}
+body.tv .controls #prev,
+body.tv .controls #pause,
+body.tv .controls #next{
+  position:static;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  grid-column:auto;
+  grid-row:auto;
+  bottom:auto;
+  right:auto;
+  min-height:32px;
+  width:clamp(29px,2.5vw,41px);
+  background:rgba(12,40,54,.54);
+  border:1px solid rgba(76,134,149,.42);
+  border-radius:4px;
+  color:#9fbbca;
+  box-shadow:none;
+  opacity:.72;
+}
+body.tv .controls #pause{
+  width:auto;
+  min-width:clamp(48px,4.2vw,76px);
+  padding-inline:.6em;
+}
+body.tv .controls:hover #prev,
+body.tv .controls:hover #pause,
+body.tv .controls:hover #next,
+body.tv .controls:focus-within #prev,
+body.tv .controls:focus-within #pause,
+body.tv .controls:focus-within #next{
+  display:inline-flex;
+}
+body.tv .controls #prev:hover,
+body.tv .controls #pause:hover,
+body.tv .controls #next:hover,
+body.tv .controls #prev:focus-visible,
+body.tv .controls #pause:focus-visible,
+body.tv .controls #next:focus-visible{
+  opacity:1;
+  color:var(--bc-white);
+  background:#123e4d;
+  border-color:var(--bc-cyan);
+}
+body.tv .controls button[data-screen]{
+  grid-column:auto;
+  grid-row:auto;
+}
+body.tv .controls button[data-screen="match"]{
+  margin-left:clamp(5px,.75vw,15px);
+}
+body.tv footer{padding-right:0}
+body.tv footer>span:first-child{
+  max-width:48%;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* Results: an actual 2-row mini scorecard, never two crowded text baselines. */
+.cinematic-results .results-grid{
+  grid-template-rows:minmax(0,1fr) clamp(109px,19%,170px);
+  column-gap:1px;
+  row-gap:clamp(6px,.7vh,12px);
+}
+.cinematic-results .result-card.lead-result{
+  background:
+    radial-gradient(ellipse 55% 65% at 48% 52%,rgba(19,98,112,.18),transparent 80%),
+    linear-gradient(110deg,#091e31,#0b2b3c 54%,#081c30);
+  box-shadow:inset 0 1px 0 rgba(160,247,240,.075);
+}
+.cinematic-results .lead-result .result-tally{
+  text-shadow:0 0 45px rgba(116,204,220,.10);
+}
+.cinematic-results .result-card:not(.lead-result){
+  display:flex;
+  flex-direction:column;
+  gap:clamp(5px,.55vh,10px);
+  padding:clamp(11px,1vw,18px) clamp(12px,1.15vw,23px);
+  border-top:1px solid rgba(69,155,174,.30);
+  background:linear-gradient(115deg,rgba(7,33,50,.98),rgba(11,45,61,.97));
+  overflow:hidden;
+}
+.cinematic-results .result-card:not(.lead-result) .result-top{
+  flex:0 0 auto;
+  justify-content:flex-start;
+  font-size:clamp(11px,.73vw,13px);
+  font-weight:800;
+  line-height:1.1;
+  letter-spacing:.07em;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+.cinematic-results .result-card:not(.lead-result) .result-top>span:first-child{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.cinematic-results .result-card:not(.lead-result) .result-body{
+  flex:1;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:clamp(7px,.8vw,15px);
+  align-items:center;
+  min-width:0;
+  min-height:0;
+}
+.cinematic-results .result-card:not(.lead-result) .result-players{
+  display:grid;
+  grid-template-rows:repeat(2,minmax(0,1fr));
+  gap:clamp(3px,.5vh,8px);
+  height:100%;
+  min-height:0;
+  min-width:0;
+  justify-content:stretch;
+}
+.cinematic-results .result-card:not(.lead-result) .result-player{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  column-gap:clamp(4px,.45vw,9px);
+  align-items:center;
+  min-width:0;
+  min-height:0;
+  gap:0;
+  line-height:1.08;
+  color:#b8cedb;
+}
+.cinematic-results .result-card:not(.lead-result) .result-player-name{
+  display:block;
+  min-width:0;
+  font:900 clamp(17px,1.36vw,27px)/1.06 var(--bc-head);
+  letter-spacing:.01em;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  text-transform:uppercase;
+}
+.cinematic-results .result-card:not(.lead-result) .result-player.winner .result-player-name{
+  color:#bdf6df;
+}
+.cinematic-results .result-card:not(.lead-result) .game-win-dots{
+  display:inline-flex;
+  justify-self:end;
+  align-items:center;
+  flex-shrink:0;
+  min-width:0;
+  gap:3px;
+}
+.cinematic-results .result-card:not(.lead-result) .result-score{
+  justify-content:center;
+  align-items:center;
+  min-width:clamp(38px,3.4vw,67px);
+}
+.cinematic-results .result-card:not(.lead-result) .result-tally{
+  font:900 clamp(28px,2.9vw,52px)/1 var(--bc-head);
+  letter-spacing:-.035em;
+  color:var(--bc-yellow);
+  white-space:nowrap;
+}
+.cinematic-results .result-card:not(.lead-result) .win-dot{
+  width:clamp(6px,.5vw,9px);
+  height:clamp(6px,.5vw,9px);
+}
+
+/* Round-specific drama. Only one progress circle per visible Championship segment. */
+.championship-path .bracket-round.mid-feature .bracket-match::before{
+  inset:9%;
+  border-color:rgba(53,216,208,.22);
+}
+.championship-path .semifinal-feature-label strong{
+  font-size:clamp(22px,2.7vw,54px);
+}
+.championship-path .bracket-round:not(.mid-feature):not(.last-round) .bracket-match{
+  background:radial-gradient(ellipse 90% 85% at 48% 5%,rgba(25,82,103,.18),transparent 80%),linear-gradient(120deg,#092235,#082138);
+}
+.cinematic-bracket .bracket-progress{
+  gap:clamp(12px,1.5vw,30px);
+}
+.cinematic-bracket .bracket-progress strong{
+  letter-spacing:.11em;
+}
+.cinematic-bracket .bracket-progress strong:last-child{
+  color:var(--bc-yellow);
+}
+.cinematic-bracket .bracket-progress span{
+  opacity:.8;
+}
+
+/* Prior rounds are the Consolation PATH, not a premature final presentation. */
+.consolation-path:not(.featured-final):not(.single-match) .bracket-match{
+  background:radial-gradient(ellipse 80% 110% at 50% 90%,rgba(26,84,102,.13),transparent),linear-gradient(120deg,#092135,#081c30);
+  border:1px solid rgba(71,128,144,.66);
+  border-radius:9px;
+  box-shadow:inset 0 1px 0 rgba(120,205,220,.035);
+}
+.consolation-path:not(.featured-final):not(.single-match) .bracket-round:not(:first-child) .bracket-player{
+  font-size:clamp(24px,2.85vw,46px);
+  line-height:1.03;
+}
+.consolation-path:not(.featured-final):not(.single-match) .bracket-state{
+  font-size:clamp(11px,.92vw,17px);
+  letter-spacing:.15em;
+}
+.consolation-path:not(.featured-final):not(.single-match) .bracket-match.completed .bracket-state{
+  color:var(--bc-cyan);
+}
+.consolation-path:not(.featured-final):not(.single-match) .bracket-match.upcoming .bracket-state{
+  color:var(--bc-yellow);
+}
+.consolation-path:not(.featured-final):not(.single-match) .bracket-scores{
+  margin-top:clamp(5px,.6vh,12px);
+}
+@media(max-height:760px){
+  .cinematic-results .results-grid{
+    grid-template-rows:minmax(0,1fr) 112px;
+  }
+  .cinematic-results .result-card:not(.lead-result){
+    padding:8px 11px;
+    gap:4px;
+  }
+  .cinematic-results .result-card:not(.lead-result) .result-player-name{
+    font-size:clamp(16px,1.2vw,22px);
+  }
+  .consolation-path:not(.featured-final):not(.single-match) .bracket-round:not(:first-child) .bracket-player{
+    font-size:clamp(21px,2.5vw,36px);
+  }
+  body.tv .controls button{min-height:29px}
+  body.tv .controls #prev,body.tv .controls #next,body.tv .controls #pause{min-height:29px}
+}
+
+/* Cross-computer legibility and organizer-directed compact layout, Nov 7.
+   Keep display headlines condensed; use widely available readable sans-serif for people. */
+:root{--tv-player-type:Arial,"Helvetica Neue",Helvetica,sans-serif}
+body.tv .broadcast-match-center{
+  grid-template-rows:minmax(24px,5%) minmax(0,1fr) clamp(84px,18%,166px);
+  row-gap:clamp(12px,1.9vh,24px);
+}
+body.tv .broadcast-match-center .table-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-rows:minmax(0,1fr);
+  gap:clamp(20px,2vw,48px);
+  align-items:center;
+  height:100%;
+}
+body.tv .broadcast-match-center .table-stage{
+  display:grid;
+  grid-template-columns:clamp(65px,6.3vw,112px) minmax(0,1fr);
+  align-items:center;
+  min-width:0;
+  height:clamp(250px,42vh,420px);
+  max-height:100%;
+}
+body.tv .broadcast-match-center .table-stage-2{
+  grid-template-columns:minmax(0,1fr) clamp(65px,6.3vw,112px);
+}
+body.tv .broadcast-match-center .table-outside-label{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:clamp(5px,.65vh,11px);
+  min-width:0;
+  text-align:center;
+  color:var(--bc-cyan);
+}
+body.tv .broadcast-match-center .table-stage-2 .table-outside-label{color:var(--bc-yellow)}
+body.tv .broadcast-match-center .table-outside-number{
+  font:900 clamp(40px,4.3vw,75px)/.85 var(--bc-head);
+  letter-spacing:.01em;
+}
+body.tv .broadcast-match-center .table-outside-word{
+  max-width:90px;
+  font:800 clamp(11px,.92vw,17px)/1.22 var(--tv-player-type);
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:#d8e9f2;
+}
+body.tv .broadcast-match-center .table-card.broadcast-match{
+  min-width:0;
+  width:100%;
+  height:100%;
+  padding:clamp(16px,1.65vw,30px);
+  border-radius:clamp(16px,1.7vw,30px);
+  border-width:1.5px;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  box-shadow:inset 0 1px 0 rgba(185,244,239,.07),
+    0 14px 42px rgba(0,0,0,.19),0 0 34px rgba(30,206,201,.07);
+}
+body.tv .broadcast-match-center .table-stage-2 .table-card.broadcast-match{
+  box-shadow:inset 0 1px 0 rgba(255,235,153,.05),
+    0 14px 42px rgba(0,0,0,.19),0 0 34px rgba(247,221,84,.045);
+}
+body.tv .broadcast-match-center .card-top{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:clamp(8px,1vh,15px);
+  min-height:0;
+  padding:0;
+  text-align:center;
+}
+body.tv .broadcast-match-center .match-round{
+  font:800 clamp(12px,1.04vw,18px)/1.18 var(--tv-player-type);
+  letter-spacing:.07em;
+  white-space:normal;
+  text-align:center;
+  color:#e3f1f9;
+}
+body.tv .broadcast-match-center .status-label{
+  font:800 clamp(11px,.86vw,15px)/1.1 var(--tv-player-type);
+  letter-spacing:.14em;
+  color:var(--bc-cyan);
+}
+body.tv .broadcast-match-center .match-content{
+  flex:1;
+  justify-content:center;
+  gap:clamp(12px,1.4vh,21px);
+}
+body.tv .broadcast-match-center .players{
+  flex:1;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) clamp(46px,4.5vw,70px) minmax(0,1fr);
+  align-items:center;
+  gap:clamp(8px,.8vw,18px);
+  min-width:0;
+  width:100%;
+}
+body.tv .broadcast-match-center .match-player{min-width:0}
+body.tv .broadcast-match-center .player-name{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  min-width:0;
+  width:100%;
+  font-family:var(--tv-player-type);
+  font-size:clamp(22px,2.1vw,41px);
+  font-weight:800;
+  line-height:1.08;
+  letter-spacing:-.025em;
+  overflow-wrap:anywhere;
+  text-wrap:balance;
+  text-align:center;
+  text-transform:uppercase;
+}
+body.tv .broadcast-match-center .player-name span{
+  display:block;
+  max-width:100%;
+  overflow-wrap:anywhere;
+}
+body.tv .broadcast-match-center .player-name .player-first{
+  color:#c3d8e4;
+  font-size:.79em;
+  font-weight:700;
+  letter-spacing:.055em;
+}
+body.tv .broadcast-match-center .player-name .player-last{
+  color:#fff;
+  font-size:1em;
+  margin-top:.13em;
+}
+body.tv .broadcast-match-center .versus{
+  width:clamp(46px,4.25vw,72px);
+  height:clamp(46px,4.25vw,72px);
+  font-size:clamp(21px,2.1vw,36px);
+}
+body.tv .broadcast-match-center .versus-line:before,
+body.tv .broadcast-match-center .versus-line:after{width:7px}
+body.tv .broadcast-match-center .match-meta{
+  font:800 clamp(12px,.96vw,18px)/1.15 var(--tv-player-type);
+  letter-spacing:.20em;
+  color:#cfe0e9;
+  padding-top:clamp(4px,.5vh,9px);
+}
+body.tv .broadcast-match-center .next-names{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  gap:clamp(3px,.32vw,7px);
+  font:800 clamp(16px,1.32vw,25px)/1.1 var(--tv-player-type);
+  letter-spacing:-.025em;
+}
+body.tv .broadcast-match-center .next-vs{
+  color:var(--bc-yellow);
+  margin:0 .1em;
+  font:800 .82em/1 var(--tv-player-type);
+}
+body.tv .broadcast-match-center .next-meta{
+  font-family:var(--tv-player-type);
+  letter-spacing:.045em;
+}
+
+/* Brackets: tighter physical cards with breathing room around names and dots. */
+body.tv .cinematic-bracket .bracket-matches{
+  justify-content:center;
+  gap:clamp(12px,1.8vh,28px);
+}
+body.tv .cinematic-bracket .bracket-round:not(.mid-feature):not(.last-round) .bracket-match,
+body.tv .cinematic-bracket .bracket-round:first-child .bracket-match{
+  flex:0 0 auto;
+  min-height:clamp(126px,18.5vh,194px);
+  max-height:clamp(152px,23vh,232px);
+  padding:clamp(12px,1.3vh,22px) clamp(12px,1vw,22px);
+  gap:clamp(4px,.6vh,10px);
+}
+body.tv .cinematic-bracket .bracket-player{
+  font-family:var(--tv-player-type);
+  font-size:clamp(19px,2.08vw,38px);
+  font-weight:800;
+  line-height:1.10;
+  letter-spacing:-.035em;
+  overflow-wrap:anywhere;
+  text-wrap:balance;
+}
+body.tv .cinematic-bracket .bracket-round:first-child .bracket-player{
+  font-size:clamp(18px,1.65vw,30px);
+}
+body.tv .cinematic-bracket .bracket-player-row{
+  gap:clamp(7px,.92vh,14px);
+}
+body.tv .cinematic-bracket .bracket-player-row + .bracket-player-row{
+  margin-top:clamp(9px,1.25vh,17px);
+}
+body.tv .cinematic-bracket .game-win-dots{
+  display:flex;
+  width:max-content;
+  gap:clamp(7px,.55vw,11px);
+  margin:clamp(2px,.25vh,5px) 0;
+}
+body.tv .cinematic-bracket .win-dot{
+  width:clamp(9px,.72vw,13px);
+  height:clamp(9px,.72vw,13px);
+}
+body.tv .cinematic-bracket .bracket-scores{
+  margin-top:clamp(7px,.9vh,14px);
+  font:750 clamp(11px,.82vw,15px)/1.15 var(--tv-player-type);
+  letter-spacing:.02em;
+}
+body.tv .cinematic-bracket .bracket-state{
+  font:800 clamp(11px,.88vw,16px)/1.15 var(--tv-player-type);
+  letter-spacing:.09em;
+  margin-bottom:clamp(5px,.7vh,12px);
+}
+body.tv .cinematic-bracket .bracket-round.mid-feature .bracket-match{
+  flex:0 0 auto;
+  min-height:clamp(270px,40vh,385px);
+  max-height:clamp(285px,46vh,410px);
+  gap:clamp(9px,1.1vh,16px);
+}
+body.tv .cinematic-bracket .bracket-round.mid-feature .bracket-player{
+  font-size:clamp(21px,1.9vw,34px);
+}
+body.tv .cinematic-bracket .bracket-round.mid-feature .bracket-player-row{
+  gap:clamp(7px,1vh,15px);
+}
+
+/* Consolation preliminary cards stay restrained; the actual Final remains a feature. */
+body.tv .consolation-path:not(.featured-final):not(.single-match) .bracket-round:not(.last-round) .bracket-match{
+  flex:0 0 auto;
+  min-height:clamp(145px,22vh,225px);
+  max-height:clamp(158px,25vh,245px);
+}
+body.tv .consolation-path:not(.featured-final):not(.single-match) .bracket-round:not(.last-round) .bracket-player{
+  font-family:var(--tv-player-type);
+  font-size:clamp(19px,2.0vw,35px);
+}
+
+/* Scores: familiar hyphen separated by visible space, never a cramped en dash. */
+body.tv .cinematic-results .lead-result .result-tally{
+  font-size:clamp(70px,9vw,174px);
+  letter-spacing:.015em;
+  white-space:nowrap;
+}
+body.tv .cinematic-results .result-card:not(.lead-result) .result-tally{
+  font-size:clamp(26px,2.35vw,43px);
+  letter-spacing:.015em;
+}
+body.tv .cinematic-results .result-games{
+  letter-spacing:.055em;
+  word-spacing:.10em;
+}
+@media(max-height:760px){
+  body.tv .broadcast-match-center .table-stage{height:clamp(235px,40vh,295px)}
+  body.tv .broadcast-match-center .table-outside-number{font-size:clamp(37px,3.65vw,55px)}
+  body.tv .broadcast-match-center .table-card.broadcast-match{padding:clamp(12px,1.2vw,18px)}
+  body.tv .broadcast-match-center .player-name{font-size:clamp(21px,1.7vw,30px)}
+  body.tv .broadcast-match-center .card-top{gap:5px}
+  body.tv .broadcast-match-center .match-content{gap:8px}
+  body.tv .cinematic-bracket .bracket-player-row + .bracket-player-row{margin-top:8px}
+  body.tv .cinematic-bracket .bracket-round:first-child .bracket-player{font-size:clamp(17px,1.45vw,25px)}
+}
+
+/* Final organizer polish: symmetrical queue, circular VS and a quieter lower edge. */
+body.tv .broadcast-match-center{
+  padding-bottom:clamp(14px,2.35vh,30px);
+  box-sizing:border-box;
+}
+body.tv .broadcast-match-center .versus{
+  --vs-diameter:clamp(46px,4.25vw,72px);
+  display:grid;
+  place-items:center;
+  flex:0 0 var(--vs-diameter);
+  width:var(--vs-diameter);
+  height:var(--vs-diameter);
+  min-width:var(--vs-diameter);
+  min-height:var(--vs-diameter);
+  max-width:var(--vs-diameter);
+  max-height:var(--vs-diameter);
+  box-sizing:border-box;
+  aspect-ratio:1 / 1;
+  border-radius:50%;
+  padding:0;
+  line-height:1;
+  letter-spacing:0;
+}
+body.tv .broadcast-match-center .versus-line{
+  min-width:0;
+  overflow:visible;
+}
+body.tv .broadcast-match-center .queue-banner{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:clamp(10px,.9vw,18px) clamp(20px,1.5vw,30px);
+  box-sizing:border-box;
+}
+body.tv .broadcast-match-center .queue-banner strong,
+body.tv .broadcast-match-center .queue-banner small{
+  width:100%;
+  text-align:center;
+}
+body.tv .broadcast-match-center .next-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  min-width:0;
+}
+body.tv .broadcast-match-center .next-card{
+  min-width:0;
+  border-right:1px solid rgba(118,199,211,.38)!important;
+  padding:clamp(9px,1vw,17px) clamp(16px,1.3vw,25px);
+}
+body.tv .broadcast-match-center .next-card:last-child{border-right:0!important}
+body.tv .broadcast-match-center .next-names{
+  font-size:clamp(15px,1.12vw,22px);
+  line-height:1.15;
+}
+body.tv .cinematic-results .result-card:not(.lead-result){
+  padding-left:clamp(20px,1.65vw,36px);
+  padding-right:clamp(20px,1.65vw,36px);
+}
+body.tv .cinematic-results .result-card:not(.lead-result) .result-score{
+  margin-left:clamp(5px,.45vw,10px);
+}
+body.tv .cinematic-bracket .round-scope{
+  font:800 clamp(11px,.75vw,14px)/1.2 var(--tv-player-type);
+  letter-spacing:.075em;
+  color:#a9d3d9;
+  text-transform:uppercase;
+  margin:-.15vh 0 .4vh;
+}
+body.tv .cinematic-bracket .bracket-caption>span{
+  max-width:80%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+@media(max-width:1439px){
+  body.tv .broadcast-match-center .next-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  body.tv .broadcast-match-center .next-card:nth-child(n+3){display:none}
+  body.tv .broadcast-match-center .next-card:nth-child(2){border-right:0!important}
+}
+@media(max-height:760px){
+  body.tv .broadcast-match-center{padding-bottom:clamp(12px,1.9vh,17px)}
+  body.tv .broadcast-match-center .next-card{padding:7px 13px}
+  body.tv .broadcast-match-center .queue-banner{padding-inline:clamp(14px,1.4vw,21px)}
+  body.tv .cinematic-bracket .round-scope{font-size:11px}
+}
+
+/* Organizer cross-device review: clear upcoming matches and legible Results text.
+   Maintain the approved broadcast colors and verified game-win dots. */
+body.tv .broadcast-match-center .next-card{
+  text-align:center;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:clamp(6px,.72vh,11px);
+}
+body.tv .broadcast-match-center .next-meta{
+  width:100%;
+  text-align:center;
+}
+body.tv .broadcast-match-center .next-names{
+  justify-content:center;
+  align-items:baseline;
+  text-align:center;
+  width:100%;
+  line-height:1.25;
+  text-wrap:balance;
+}
+body.tv .cinematic-results .result-card:not(.lead-result){
+  padding-left:clamp(27px,2.08vw,43px);
+  padding-right:clamp(27px,2.08vw,43px);
+}
+body.tv .cinematic-results .result-card:not(.lead-result) .result-player-name{
+  font-family:Arial,"Helvetica Neue",Helvetica,sans-serif;
+  font-size:clamp(15px,1.13vw,21px);
+  font-weight:750;
+  letter-spacing:.015em;
+  line-height:1.19;
+  font-stretch:normal;
+  text-transform:uppercase;
+}
+body.tv .cinematic-results .result-card:not(.lead-result) .result-player{
+  column-gap:clamp(7px,.64vw,13px);
+}
+body.tv .cinematic-results .result-card:not(.lead-result) .game-win-dots{
+  gap:clamp(4px,.38vw,8px);
+}
+body.tv .cinematic-results .result-card:not(.lead-result) .result-body{
+  column-gap:clamp(9px,1vw,19px);
+}
+/* Bracket showcase: restrained pending cards instead of oversized, nearly
+   empty cinematic circles. No phantom finalists or speculative match progress. */
+body.tv .cinematic-bracket .bracket-round .bracket-match.awaiting-opponents,
+body.tv .cinematic-bracket .bracket-round.last-round .bracket-match.pending-final{
+  flex:0 0 auto;
+  width:100%;
+  height:clamp(160px,26vh,264px);
+  min-height:clamp(160px,26vh,264px);
+  max-height:clamp(180px,31vh,296px);
+  margin-block:auto;
+  padding:clamp(16px,1.65vw,30px);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:clamp(7px,.85vh,15px);
+  background:
+    radial-gradient(ellipse at 50% 45%,rgba(27,112,130,.18),transparent 80%),
+    linear-gradient(120deg,rgba(7,27,42,.98),rgba(9,40,57,.97));
+  border:1px solid rgba(67,170,181,.38);
+  border-radius:clamp(10px,.95vw,18px);
+  box-shadow:inset 0 1px 0 rgba(144,229,227,.06);
+}
+body.tv .cinematic-bracket .bracket-round.last-round .bracket-match.pending-final::before,
+body.tv .cinematic-bracket .bracket-round.mid-feature .bracket-match.awaiting-opponents::before{
+  display:none;
+}
+body.tv .cinematic-bracket .bracket-match.awaiting-opponents .bracket-pending-pair,
+body.tv .cinematic-bracket .bracket-match.pending-final .bracket-pending-pair{
+  align-items:center;
+  justify-content:center;
+  gap:clamp(8px,1.1vh,17px);
+  padding:0;
+  max-width:90%;
+  text-align:center;
+}
+body.tv .cinematic-bracket .bracket-match.awaiting-opponents .bracket-pending-pair strong,
+body.tv .cinematic-bracket .bracket-match.pending-final .bracket-pending-pair strong{
+  font:800 clamp(18px,1.65vw,31px)/1.14 Arial,"Helvetica Neue",Helvetica,sans-serif;
+  color:#f2fafc;
+  letter-spacing:.045em;
+  text-wrap:balance;
+}
+body.tv .cinematic-bracket .bracket-match.awaiting-opponents .bracket-pending-pair span,
+body.tv .cinematic-bracket .bracket-match.pending-final .bracket-pending-pair span{
+  font:700 clamp(12px,.91vw,17px)/1.24 Arial,"Helvetica Neue",Helvetica,sans-serif;
+  letter-spacing:.03em;
+  color:#a6c6d6;
+  text-wrap:balance;
+}
+body.tv .cinematic-bracket .bracket-match.awaiting-opponents .bracket-state,
+body.tv .cinematic-bracket .bracket-match.pending-final .bracket-state{
+  color:var(--bc-yellow);
+  text-align:center;
+  margin:0;
+}
+body.tv .cinematic-bracket .bracket-round.last-round .bracket-match.pending-final .bracket-player{
+  font-family:Arial,"Helvetica Neue",Helvetica,sans-serif;
+  font-size:clamp(19px,1.9vw,34px);
+}
+/* Do not let older first-round or consolation sizing rules override pending
+   card constraints at 720p. */
+@media(max-height:760px){
+  body.tv .cinematic-bracket .bracket-round .bracket-match.awaiting-opponents,
+  body.tv .cinematic-bracket .bracket-round.last-round .bracket-match.pending-final{
+    height:clamp(146px,24vh,182px);
+    min-height:clamp(146px,24vh,182px);
+    max-height:clamp(156px,27vh,199px);
+    padding:clamp(10px,1.4vw,20px);
+  }
+  body.tv .cinematic-results .result-card:not(.lead-result){
+    padding-left:clamp(23px,1.78vw,30px);
+    padding-right:clamp(23px,1.78vw,30px);
+  }
+  body.tv .cinematic-results .result-card:not(.lead-result) .result-player-name{
+    font-size:clamp(14px,1.11vw,19px);
+  }
+}
+
+/* Keep featured Results names readable with fonts available across computers. */
+body.tv .cinematic-results .lead-result .result-player-name{
+  font-family:Arial,"Helvetica Neue",Helvetica,sans-serif;
+  font-size:clamp(27px,3vw,58px);
+  font-weight:800;
+  line-height:1.08;
+  font-stretch:normal;
+}
