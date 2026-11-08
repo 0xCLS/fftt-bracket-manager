@@ -48,7 +48,33 @@ SUITES = {
 }
 
 
-def select(paths):
+# A *single* reviewed presentation-only delta in Staff's existing event switcher.
+# Compare the WHOLE source file using Git's verified base/head blobs. This
+# exception cannot be extended to authentication, roster, scoring, event writes,
+# or unrelated Staff UI changes by adding a second hunk.
+STAFF_PICKER_BEFORE = "    const evs = s.events;\n"
+STAFF_PICKER_AFTER = "    // Archived events remain in Overview → Your events. Keep the currently open one in the\n    // switcher so its selection stays accurate until another event is opened.\n    const evs = s.events.filter(e => e.lifecycle !== 'archived' || e.eventId === s.eventId);\n"
+
+
+def approved_staff_picker_delta(before, after):
+    return (before.count(STAFF_PICKER_BEFORE) == 1
+            and after == before.replace(STAFF_PICKER_BEFORE, STAFF_PICKER_AFTER))
+
+
+def verified_staff_picker_delta(base, head):
+    if not SHA.fullmatch(base or '') or not SHA.fullmatch(head or ''):
+        return False
+    try:
+        def at(rev):
+            return subprocess.check_output(
+                ['git', 'show', rev + ':app/staff_ui.mjs'], cwd=ROOT,
+                text=True, stderr=subprocess.DEVNULL)
+        return approved_staff_picker_delta(at(base), at(head))
+    except (OSError, subprocess.CalledProcessError):
+        return False
+
+
+def select(paths, verified_staff_picker=False):
     """Return immutable lanes, authorization requirement and rationale.
 
     If any path is unrecognized, don't guess that it is UI. Guarded changes may
@@ -66,6 +92,8 @@ def select(paths):
         elif path in {'app/spectator.html', 'app/spectator.mjs', 'app/public_core.mjs',
                       'app/date_format.mjs', 'contracts/gameday_public.mjs'} or path.startswith('public-site/'):
             lanes.add('public')
+        elif path == 'app/staff_ui.mjs' and verified_staff_picker:
+            lanes.add('staff')
         elif path in {'app/app.css', 'app/view_players.mjs', 'app/view_registration.mjs',
                       'app/view_desk_registration.mjs', 'tests/e2e/gameday_fast_ui_browser.test.mjs'}:
             lanes.add('staff')
@@ -166,7 +194,10 @@ def cli():
     a = p.parse_args()
     if a.cmd == 'plan':
         try:
-            result = select(changed_paths(a.base, a.head))
+            paths = changed_paths(a.base, a.head)
+            trusted_picker = ('app/staff_ui.mjs' in paths
+                              and verified_staff_picker_delta(a.base, a.head))
+            result = select(paths, verified_staff_picker=trusted_picker)
         except (ValueError, subprocess.CalledProcessError) as e:
             result = select([])
             result['reasons'] = [type(e).__name__ + ': unverified range']
