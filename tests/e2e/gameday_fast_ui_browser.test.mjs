@@ -276,12 +276,12 @@ test('Staff switcher hides archived events while Overview can open and restore t
 
     await page.locator('.events-card .chip', {hasText: /^Archived \(1\)$/}).click();
     await row.locator('button', {hasText: 'Open'}).click();
-    await page.locator(`#eventSelect option[value="${created.event_id}"]:checked`).waitFor();
+    await page.locator(`#eventSelect option[value="${created.event_id}"]:checked`).waitFor({state: 'attached'});
     assert.match(await select.locator('option:checked').innerText(), /\(archived\)/,
       'opening the archive keeps its own selection visible');
 
     await select.selectOption(w.eventId);
-    await page.locator(`#eventSelect option[value="${w.eventId}"]:checked`).waitFor();
+    await page.locator(`#eventSelect option[value="${w.eventId}"]:checked`).waitFor({state: 'attached'});
     await archivedOption.waitFor({state: 'detached'});
     await page.locator('.events-card .chip', {hasText: /^Archived \(1\)$/}).click();
     await row.locator('button', {hasText: 'Restore'}).click();
