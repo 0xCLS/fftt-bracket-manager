@@ -95,13 +95,16 @@ test('spectator and TV: stale information is labelled, and live reads resume wit
     const tv = await w.device('tv', {viewport: {width: 1920, height: 1080}});
     await tv.open(SPECT + '/app/tv.html');
     await tv.page.locator('#live', {hasText: 'LIVE'}).waitFor({timeout: 15000});
+    const tvTable = tv.page.locator('.table-grid .table-card[data-table="01"]');
+    await tvTable.waitFor({timeout: 15000});
+    const tableBefore = await tvTable.innerText();
     const spec = await w.device('spec', PHONE);
     await spec.open(SPECT + '/');
     await spec.page.locator('#live', {hasText: 'Live'}).waitFor({timeout: 15000});
     w.fake.setOffline('tv', true); w.fake.setOffline('spec', true);
     await tv.page.locator('#live', {hasText: 'OUT OF DATE'}).waitFor({timeout: 45000});
     await spec.page.locator('#live', {hasText: 'Out of date'}).waitFor({timeout: 45000});
-    assert.ok(await tv.page.locator('.table-grid .table-card', {hasText: 'TABLE 1'}).count() > 0, 'the last information is kept but labelled');
+    assert.equal(await tvTable.innerText(), tableBefore, 'the last table information is kept but labelled');
     w.fake.setOffline('tv', false); w.fake.setOffline('spec', false);
     await tv.page.locator('#live', {hasText: 'LIVE'}).waitFor({timeout: 45000});
     await spec.page.locator('#live', {hasText: /^Live$/}).waitFor({timeout: 45000});
