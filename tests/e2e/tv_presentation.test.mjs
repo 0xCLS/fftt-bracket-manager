@@ -58,13 +58,13 @@ test('TV modes, scores, controls, rotation and read-only public requests', {time
     assert.equal(await page.locator('#demoBadge').isHidden(),true);
     assert.equal(await page.locator('.table-card.active').count(),2);
     assert.match(await page.locator('.table-card.active').first().innerText(), /BEST OF THREE/);
-    assert.equal(await page.locator('.next-card').count(),2);
-    assert.match(await text(page), /Alexandria Montgomery-Fitzgerald/i);
+    assert.equal(await page.locator('.next-card:visible').count(),3,'default 1600px view shows three upcoming matches');
+    assert.match(await text(page), /Alexandria\s+Montgomery-Fitzgerald/i);
     assert.equal(await page.locator('.score-pending').count(),0,'no unsupported live-score placeholders');
     assert.doesNotMatch(await page.locator('.table-grid').innerText(),/11[–-]7|1\s*[–:]\s*1/);
     assert.deepEqual(await fits(page), []);
     await page.keyboard.press('ArrowRight'); assert.equal(await label(page),'COMPLETED RESULTS');
-    assert.match(await text(page),/2–1/); assert.match(await text(page),/G1 11–7.*G2 8–11.*G3 11–9/);
+    assert.match(await text(page),/2\s*-\s*1/); assert.match(await text(page),/G1 11 - 7.*G2 8 - 11.*G3 11 - 9/);
     await page.keyboard.press('3'); assert.equal(await label(page),'CHAMPIONSHIP BRACKET'); assert.equal(await page.locator('.bracket-vs').count(),0,'undecided final has no VS'); assert.ok(await page.locator('.bracket-connectors path').count() > 0); assert.ok(await page.locator('.bracket-state', {hasText:'COMPLETED'}).count() > 0); assert.equal(await page.locator('.bracket-state', {hasText:'FINAL'}).count(),0);
     await page.keyboard.press('4'); assert.equal(await label(page),'CONSOLATION BRACKET'); assert.equal(await page.locator('.single-match .bracket-match').count(),1); assert.equal(await page.locator('.bracket-vs').count(),1,'known finalists are separated by VS');
     assert.ok((await page.locator('.single-match .bracket-match').boundingBox()).height >= 300, 'single-match bracket uses a readable featured-card layout');
@@ -91,11 +91,17 @@ test('large bracket advances through bounded round windows', {timeout:60000}, as
   const f=largeFixture(); f[0].brackets[1].matches = f[0].brackets[0].matches.map(m => ({...m, match_id: `cons-${m.match_id}`, bracket:'consolation'}));
   const w=await world(f); const {page}=w;
   try {
-    await page.keyboard.press('3'); assert.match(await text(page),/BRACKET SEGMENT 1 \/ 18/);
+    await page.keyboard.press('3'); assert.match(await text(page),/FEATURED BRACKET PATH 1 \/ 3/);
     assert.ok(await page.locator('.bracket-round').count()<=3); assert.ok(await page.locator('.bracket-round').first().locator('.bracket-match').count()<=2);
-    await page.clock.fastForward(18000); assert.match(await text(page),/BRACKET SEGMENT 2 \/ 18/);
-    for (let i=0; i<16; i++) { await page.clock.fastForward(18000); await page.evaluate(() => window.dispatchEvent(new Event('online'))); await new Promise(resolve => setTimeout(resolve, 100)); } assert.match(await text(page),/BRACKET SEGMENT 18 \/ 18/);
-    await page.keyboard.press('4'); assert.equal(await page.locator('.single-match').count(),0); assert.match(await text(page),/BRACKET SEGMENT 1 \/ 18/); assert.ok(await page.locator('.bracket-connectors path').count() > 0);
+    assert.match(await text(page),/COMPLETE BRACKET IN SPECTATOR VIEW/);
+    assert.ok(await page.locator('.round-scope').count()>0,'partial selections explicitly labelled as featured');
+    await page.clock.fastForward(18000); assert.match(await text(page),/FEATURED BRACKET PATH 2 \/ 3/);
+    await page.clock.fastForward(18000); assert.match(await text(page),/FEATURED BRACKET PATH 3 \/ 3/);
+    assert.ok(await page.locator('.last-round .final-feature-label').count()>0,'the third Championship slide showcases the final');
+    await page.keyboard.press('4'); assert.equal(await page.locator('.single-match').count(),0); assert.match(await text(page),/FEATURED BRACKET PATH 1 \/ 3/); assert.ok(await page.locator('.bracket-connectors path').count() > 0);
+    await page.clock.fastForward(18000); assert.match(await text(page),/FEATURED BRACKET PATH 2 \/ 3/);
+    await page.clock.fastForward(18000); assert.match(await text(page),/FEATURED BRACKET PATH 3 \/ 3/);
+    assert.match(await text(page),/COMPLETE BRACKET IN SPECTATOR VIEW/);
     if (process.env.TV_SCREENSHOTS) {
       fs.mkdirSync(process.env.TV_SCREENSHOTS,{recursive:true});
       await page.screenshot({path:path.join(process.env.TV_SCREENSHOTS,'large-multi-segment-bracket-1920.png')});
@@ -128,10 +134,12 @@ test('a sparse undecided final becomes a focused bracket feature, not two fabric
   try {
     await page.keyboard.press('4');
     await page.clock.fastForward(18000);
-    assert.equal(await page.locator('.bracket-round').count(), 1);
-    assert.equal(await page.locator('.bracket-match').count(), 1);
-    assert.match(await page.locator('.bracket-pending-pair').innerText(), /Finalists to be determined/i);
-    assert.doesNotMatch(await page.locator('.bracket-match').innerText(), /Jamie Lee|Casey Ross/);
+    assert.equal(await page.locator('.bracket-round').count(), 2,'semifinal and final share one featured slide');
+    const pending=page.locator('.last-round .bracket-match.pending-final');
+    assert.equal(await pending.count(),1,'no fictitious final competitor pairing');
+    assert.match(await pending.innerText(), /FINAL PAIRING PENDING/i);
+    assert.doesNotMatch(await pending.innerText(), /Jamie Lee|Casey Ross/);
+    assert.equal(await pending.locator('.final-feature-label').count(),0,'no celebratory hero on an unknown final');
     assert.equal(await page.locator('.bracket-vs').count(), 0);
     assert.deepEqual(await fits(page), []);
     if (process.env.TV_SCREENSHOTS) {
@@ -180,6 +188,9 @@ test('premium match cards show only server-confirmed active games and dots; stal
     assert.equal(await c.nth(1).locator('.match-player').nth(1).locator('.win-dot.earned').count(),1);
     assert.equal(w.requests.filter(x=>x.method==='POST'&&x.url.startsWith(project)).length,0);
     assert.deepEqual(await fits(page),[], 'confirmed progress must fit 720p premium layout');
+    await page.setViewportSize({width:1920,height:1080});
+    assert.equal(await c.nth(0).locator('.player-name.stacked').count(),2,'new stacked-name layout remains in the active card');
+    assert.deepEqual(await fits(page),[], 'confirmed progress must fit 1080p premium layout');
     w.setMode('offline');
     await page.clock.fastForward(21000);
     assert.match(await page.locator('.broadcast-match .progress-kicker').first().innerText(),/OUT OF DATE/);
@@ -227,9 +238,9 @@ test('fictional showcase is clearly identified on both public views', {timeout:6
   try {
     assert.match(await page.locator('#demoBadge').innerText(),/FICTIONAL TOURNAMENT/);
     assert.equal(await page.locator('#live').innerText(),'DEMO DATA');
-    const headerFit=await page.evaluate(()=>{const h=document.querySelector('.tv-header').getBoundingClientRect(), e=document.querySelector('.eyebrow').getBoundingClientRect(), b=document.querySelector('#demoBadge').getBoundingClientRect(), d=document.querySelector('#evDate').getBoundingClientRect();
-      return {eyebrowTop:e.top, badgeInside:b.top>=h.top && b.bottom<=h.bottom && b.right<=innerWidth, sameLineAsDate:Math.abs((b.top+b.bottom)/2-(d.top+d.bottom)/2)<8, headerHeight:h.height};});
-    assert.ok(headerFit.eyebrowTop >= 11, `eyebrow keeps a safe top margin with the demo label (${headerFit.eyebrowTop}px)`);
+    const headerFit=await page.evaluate(()=>{const h=document.querySelector('.tv-header').getBoundingClientRect(), n=document.querySelector('#evName').getBoundingClientRect(), b=document.querySelector('#demoBadge').getBoundingClientRect(), d=document.querySelector('#evDate').getBoundingClientRect();
+      return {titleTop:n.top, badgeInside:b.top>=h.top && b.bottom<=h.bottom && b.right<=innerWidth, sameLineAsDate:Math.abs((b.top+b.bottom)/2-(d.top+d.bottom)/2)<8, headerHeight:h.height};});
+    assert.ok(headerFit.titleTop >= 0, `event title keeps a safe header margin (${headerFit.titleTop}px)`);
     assert.equal(headerFit.badgeInside,true); assert.equal(headerFit.sameLineAsDate,true,'demo label shares the date line');
     if (process.env.TV_SCREENSHOTS) {fs.mkdirSync(process.env.TV_SCREENSHOTS,{recursive:true}); await page.screenshot({path:path.join(process.env.TV_SCREENSHOTS,'supplementary-demo-showcase-1280.png')});}
     assert.match(await page.locator('main').innerText(),/Sample Matches/);
@@ -295,18 +306,22 @@ test('approved cinematic hierarchy keeps two balanced match panels, featured res
     assert.match(await page.locator('.queue-banner').innerText(),/UP NEXT/);
     const geometry=await page.evaluate(()=>{
       const cards=[...document.querySelectorAll('.broadcast-match')].map(e=>e.getBoundingClientRect());
-      return {gap:cards[1].top-cards[0].bottom,radius:getComputedStyle(document.querySelector('.broadcast-match')).borderTopLeftRadius};
+      return {gap:cards[1].left-cards[0].right,aligned:Math.abs(cards[1].top-cards[0].top)<15,radius:getComputedStyle(document.querySelector('.broadcast-match')).borderTopLeftRadius};
     });
-    assert.ok(geometry.gap>=15,'match panels retain breathing room');
+    assert.ok(geometry.gap>=15&&geometry.aligned,'side-by-side match panels retain horizontal breathing room');
     assert.notEqual(geometry.radius,'0px','match panels retain approved rounded contours');
     assert.deepEqual(await fits(page),[]);
     await page.keyboard.press('2');
     assert.equal(await page.locator('.lead-result').count(),1);
     assert.match(await page.locator('.lead-result').innerText(),/Taylor Smith/i);
-    assert.match(await page.locator('.lead-result .result-tally').innerText(),/2–1/);
+    assert.match(await page.locator('.lead-result .result-tally').innerText(),/2\s*-\s*1/);
     await page.keyboard.press('3');
     assert.match(await page.locator('.broadcast-title').innerText(),/THE ROAD TO THE FINAL/);
-    assert.ok(await page.locator('.last-round .final-feature-label').count()>0);
+    await page.clock.fastForward(18000);
+    assert.equal(await page.locator('.last-round .bracket-match.pending-final').count(),1,
+      'fixture final remains explicitly undecided');
+    assert.equal(await page.locator('.last-round .final-feature-label').count(),0,
+      'unknown finalists do not get a misleading completed-showdown hero');
     await page.keyboard.press('4');
     assert.match(await page.locator('.consolation-path .final-feature-label').innerText(),/ONE MORE/);
     assert.ok(await page.locator('.single-match .bracket-match').count()===1);
@@ -344,4 +359,263 @@ test('TV transport buttons have non-overlapping hit targets and work by pointer 
       assert.equal(await page.locator('#pause').textContent(),'Pause');
     } finally {await w.close();}
   }
+});
+
+test('premium Results cards separate both names, score and verified dots at TV sizes', {timeout:60000}, async()=>{
+  for(const viewport of [{width:1280,height:720},{width:1600,height:900},{width:1920,height:1080}]){
+    const w=await world(fixture(),viewport),{page}=w;
+    try{
+      await page.keyboard.press('2');
+      const cards=page.locator('.cinematic-results .result-card:not(.lead-result)');
+      assert.equal(await cards.count(),3);
+      const geometry=await page.evaluate(()=>[...document.querySelectorAll('.cinematic-results .result-card:not(.lead-result)')].map(card=>{
+        const rows=[...card.querySelectorAll('.result-player')].map(el=>el.getBoundingClientRect());
+        const score=card.querySelector('.result-score').getBoundingClientRect();
+        const names=[...card.querySelectorAll('.result-player-name')].map(el=>el.getBoundingClientRect());
+        return {nameRows:rows.length,verticalGap:rows[1].top-rows[0].bottom,
+          noNameVsScoreOverlap:names.every(n=>n.right<=score.left+1),
+          namesVisible:names.every(n=>n.width>35&&n.height>=15),
+          scoreVisible:score.width>=30&&score.height>20};
+      }));
+      assert.ok(geometry.every(x=>x.nameRows===2&&x.verticalGap>=-1&&x.noNameVsScoreOverlap&&x.namesVisible&&x.scoreVisible),
+        'compact result geometry '+viewport.width+': '+JSON.stringify(geometry));
+      assert.deepEqual(await fits(page),[],'Results layout at '+viewport.width);
+    }finally{await w.close();}
+  }
+});
+
+test('premium bracket hierarchy reserves a single cinematic callout and labels the current path truthfully', {timeout:60000},async()=>{
+  const f=largeFixture();
+  f[0].brackets[1].matches=f[0].brackets[0].matches.map(m=>({...m,match_id:'cons-'+m.match_id,bracket:'consolation'}));
+  const w=await world(f,{width:1600,height:900}),{page}=w;
+  try{
+    await page.keyboard.press('3');
+    assert.ok(await page.locator('.semifinal-feature-label').count()<=1,'no repeated One Step Closer artwork');
+    const stages=(await page.locator('.bracket-round .round-heading').allInnerTexts()).map(x=>x.replace(/^\d+\s*\/\s*/, '').toUpperCase());
+    const progress=await page.locator('.bracket-progress strong').allInnerTexts();
+    assert.deepEqual(progress,stages,'footer stages reflect visible round headings');
+    await page.keyboard.press('4');
+    assert.match(await page.locator('.broadcast-title').innerText(),/CONSOLATION BRACKET/);
+    assert.doesNotMatch(await page.locator('.broadcast-title').innerText(),/THE FINAL SHOWDOWN/);
+    assert.equal(await page.locator('.consolation-path .final-feature-label').count(),0);
+    assert.deepEqual(await fits(page),[]);
+  }finally{await w.close();}
+});
+
+test('premium transport stays within the footer and never covers the broadcast content', {timeout:60000},async()=>{
+  for(const viewport of [{width:1280,height:720},{width:1600,height:900},{width:1920,height:1080}]){
+    const w=await world(fixture(),viewport),{page}=w;
+    try{
+      const geometry=await page.evaluate(()=>{
+        const nav=document.querySelector('nav.controls').getBoundingClientRect();
+        const footer=document.querySelector('footer').getBoundingClientRect();
+        const title=document.querySelector('footer > span:first-child').getBoundingClientRect();
+        return {navTop:nav.top,footerTop:footer.top,navLeft:nav.left,titleRight:title.right,
+          navRight:nav.right,footerRight:footer.right};
+      });
+      assert.ok(geometry.navTop>=geometry.footerTop-3,'controls do not float over main content at '+viewport.width+': '+JSON.stringify(geometry));
+      assert.ok(geometry.navLeft>=geometry.titleRight-4,'controls do not obscure fellowship footer at '+viewport.width+': '+JSON.stringify(geometry));
+      await page.locator('#prev').click();
+      await page.locator('#next').click();
+      assert.deepEqual(await fits(page),[]);
+    }finally{await w.close();}
+  }
+});
+
+
+test('side-by-side Match Center uses stacked names and external table numbers at three display sizes', {timeout:60000},async()=>{
+  for(const vp of [{width:1280,height:720},{width:1600,height:900},{width:1920,height:1080}]){
+    const w=await world(fixture(),vp),{page}=w;
+    try{
+      assert.equal(await page.locator('.table-stage').count(),2);
+      assert.equal(await page.locator('.table-stage .table-outside-number').count(),2);
+      assert.equal(await page.locator('.table-stage .player-first').count(),4);
+      const g=await page.evaluate(()=>{
+        const rect=selector=>document.querySelector(selector).getBoundingClientRect();
+        const a=rect('.table-stage-1 .table-card'),b=rect('.table-stage-2 .table-card');
+        const one=rect('.table-stage-1 .table-outside-label'),two=rect('.table-stage-2 .table-outside-label');
+        const names=[...document.querySelectorAll('.table-stage .player-name')];
+        return {parallel:Math.abs(a.top-b.top)<15,disjoint:a.right<b.left,
+          outsideLeft:one.right<=a.left+2,outsideRight:two.left>=b.right-2,
+          compact:a.height<window.innerHeight*.57&&b.height<window.innerHeight*.57,
+          labelReadable:names.every(n=>getComputedStyle(n).fontFamily.includes('Arial')),
+          stacked:names.every(n=>n.querySelector('.player-first')?.getBoundingClientRect().top <
+            n.querySelector('.player-last')?.getBoundingClientRect().top)};
+      });
+      assert.deepEqual(g,{parallel:true,disjoint:true,outsideLeft:true,outsideRight:true,compact:true,labelReadable:true,stacked:true},'responsive Match Center '+vp.width);
+      assert.deepEqual(await fits(page),[],'Match Center visible layout '+vp.width);
+    }finally{await w.close();}
+  }
+});
+
+test('bracket cards leave separate room for names and verified dots and avoid giant empty match boxes', {timeout:60000},async()=>{
+  for(const vp of [{width:1280,height:720},{width:1600,height:900}]){
+    const w=await world(fixture(),vp),{page}=w;
+    try{
+      await page.keyboard.press('3');
+      const sizes=await page.evaluate(()=>({
+        heights:[...document.querySelectorAll('.bracket-round:not(.mid-feature):not(.last-round) .bracket-match')].map(x=>x.getBoundingClientRect().height),
+        dots:[...document.querySelectorAll('.bracket-player-row')].filter(x=>x.querySelector('.game-win-dots')).map(x=>{
+          const n=x.querySelector('.bracket-player').getBoundingClientRect(),d=x.querySelector('.game-win-dots').getBoundingClientRect();
+          return d.top-n.bottom;
+        })
+      }));
+      assert.ok(sizes.heights.length>0&&sizes.heights.every(v=>v<Math.min(255,vp.height*.38)),
+        'no oversized preliminary cards: '+JSON.stringify(sizes.heights));
+      assert.ok(sizes.dots.length>0&&sizes.dots.every(v=>v>=3),'game dots visibly separated from names');
+      assert.deepEqual(await fits(page),[],'bracket card fit '+vp.width);
+      await page.keyboard.press('4');
+      assert.deepEqual(await fits(page),[],'consolation card fit '+vp.width);
+    }finally{await w.close();}
+  }
+});
+
+test('Results uses a spaced hyphen for games and match tallies', {timeout:60000},async()=>{
+  const w=await world(fixture(),{width:1600,height:900}),{page}=w;
+  try{
+    await page.keyboard.press('2');
+    const tally=await page.locator('.lead-result .result-tally').innerText();
+    assert.match(tally,/2\s+-\s+1/);
+    assert.doesNotMatch(tally,/[–—]/);
+    assert.match(await page.locator('.lead-result .result-games').innerText(),/G1\s+11 - 7/);
+    assert.deepEqual(await fits(page),[]);
+  }finally{await w.close();}
+});
+
+
+test('final TV queue and typography polish: circular VS, centered banner, dividers, three-on-deck and footer spacing', {timeout:60000},async()=>{
+  for(const size of [{width:1280,height:720,queue:2},{width:1600,height:900,queue:3},{width:1920,height:1080,queue:3}]){
+    const w=await world(fixture(),size),{page}=w;
+    try{
+      assert.equal(await page.locator('.next-card:visible').count(),size.queue,'responsive queue count');
+      const g=await page.evaluate(()=>{
+        const rect=el=>el.getBoundingClientRect(),style=el=>getComputedStyle(el);
+        const rings=[...document.querySelectorAll('.broadcast-match .versus')].map(el=>({
+          width:rect(el).width,height:rect(el).height,radius:style(el).borderRadius
+        }));
+        const banner=document.querySelector('.queue-banner'),title=banner.querySelector('strong'),onDeck=banner.querySelector('small');
+        const b=rect(banner),a=rect(title),d=rect(onDeck);
+        const v=[...document.querySelectorAll('.next-card')].filter(el=>style(el).display!=='none');
+        const strip=rect(document.querySelector('.next-section'));
+        const footer=rect(document.querySelector('footer'));
+        return {rings,
+          titleError:Math.abs((a.left+a.right)/2-(b.left+b.right)/2),
+          labelError:Math.abs((d.left+d.right)/2-(b.left+b.right)/2),
+          border:parseFloat(style(v[0]).borderRightWidth),
+          gapBelow:footer.top-strip.bottom,
+          numberOfCards:v.length,
+          lastBorder:parseFloat(style(v[v.length-1]).borderRightWidth)};
+      });
+      assert.ok(g.rings.length===2&&g.rings.every(r=>Math.abs(r.width-r.height)<=1&&r.radius.startsWith('50%')),
+        'VS must be circular, not elliptical: '+JSON.stringify(g.rings));
+      assert.ok(g.titleError<=3&&g.labelError<=3,'UP NEXT and ON DECK horizontally centered');
+      assert.ok(g.border>=1&&g.lastBorder===0,'upcoming matchups have distinct internal separator only');
+      assert.ok(g.gapBelow>=11,'queue has footer breathing room: '+JSON.stringify(g));
+      assert.deepEqual(await fits(page),[],'queue and rings fit '+size.width);
+    } finally {await w.close();}
+  }
+});
+
+test('Results lower tiles retain generous horizontal padding without overlap', {timeout:60000},async()=>{
+  for(const vp of [{width:1280,height:720},{width:1600,height:900},{width:1920,height:1080}]){
+    const w=await world(fixture(),vp),{page}=w;
+    try{
+      await page.keyboard.press('2');
+      const values=await page.locator('.result-card:not(.lead-result)').evaluateAll(els=>els.map(el=>{
+        const s=getComputedStyle(el),r=el.getBoundingClientRect();
+        return {left:parseFloat(s.paddingLeft),right:parseFloat(s.paddingRight),width:r.width};
+      }));
+      assert.ok(values.length===3 && values.every(x=>x.left>=18&&x.right>=18),
+        'secondary Results tiles need even edge padding: '+JSON.stringify(values));
+      assert.deepEqual(await fits(page),[],'Results at '+vp.width);
+    }finally{await w.close();}
+  }
+});
+
+test('header retains commented brand eyebrow in HTML without displaying it', {timeout:60000},async()=>{
+  const w=await world(fixture(),{width:1600,height:900}),{page}=w;
+  try{
+    assert.equal(await page.locator('header .brand .eyebrow').count(),0);
+    const html=await page.evaluate(()=>document.documentElement.outerHTML);
+    assert.match(html,/<!-- <div class="eyebrow">FORGING FELLOWSHIP TABLE TENNIS<\/div> -->/);
+    assert.match(await page.locator('#evName').textContent(),/Forging Fellowship Games/);
+  }finally{await w.close();}
+});
+
+
+test('Up Next text is horizontally centered in each visible matchup card at TV resolutions', {timeout:60000},async()=>{
+  for(const viewport of [{width:1280,height:720},{width:1600,height:900},{width:1920,height:1080}]){
+    const w=await world(fixture(),viewport),{page}=w;
+    try{
+      const cells=await page.locator('.next-card:visible').evaluateAll(els=>els.map(el=>{
+        const e=el.getBoundingClientRect(),meta=el.querySelector('.next-meta')?.getBoundingClientRect(),
+          names=el.querySelector('.next-names')?.getBoundingClientRect();
+        const st=getComputedStyle(el);
+        return {textAlign:st.textAlign,metaDelta:Math.abs((meta.left+meta.right-e.left-e.right)/2),
+          namesDelta:Math.abs((names.left+names.right-e.left-e.right)/2),
+          justify:getComputedStyle(el.querySelector('.next-names')).justifyContent};
+      }));
+      assert.ok(cells.length>=2&&cells.every(x=>x.textAlign==='center'&&x.metaDelta<4&&x.namesDelta<4&&x.justify==='center'),
+        'each upcoming card has centered matchup content: '+JSON.stringify(cells));
+      assert.deepEqual(await fits(page),[],'centered Up Next '+viewport.width);
+    } finally {await w.close();}
+  }
+});
+
+test('Results player labels use readable universal sans and wider edge padding', {timeout:60000},async()=>{
+  for(const viewport of [{width:1280,height:720},{width:1600,height:900},{width:1920,height:1080}]){
+    const w=await world(fixture(),viewport),{page}=w;
+    try{
+      await page.keyboard.press('2');
+      const styles=await page.locator('.result-card:not(.lead-result)').evaluateAll(cards=>cards.map(card=>{
+        const cs=getComputedStyle(card),name=card.querySelector('.result-player-name'),
+          ns=getComputedStyle(name),rect=name.getBoundingClientRect();
+        return {paddingLeft:parseFloat(cs.paddingLeft),paddingRight:parseFloat(cs.paddingRight),
+          nameFamily:ns.fontFamily,fontSize:parseFloat(ns.fontSize),lineHeight:parseFloat(ns.lineHeight),
+          nameWidth:rect.width};
+      }));
+      assert.equal(styles.length,3);
+      assert.ok(styles.every(x=>x.paddingLeft>=22&&x.paddingRight>=22&&x.nameFamily.includes('Arial')&&
+        x.fontSize>=14&&x.lineHeight>x.fontSize&&x.nameWidth>85), 'readable names and balanced padding '+JSON.stringify(styles));
+      assert.deepEqual(await fits(page),[],'Results lower strip '+viewport.width);
+    }finally{await w.close();}
+  }
+});
+
+test('Consolation uses three or fewer broadcast segments, not repeated byes across many pages', {timeout:60000},async()=>{
+  const f=largeFixture();
+  f[0].brackets[1].matches=f[0].brackets[0].matches.map(m=>({...m,match_id:'cons-'+m.match_id,bracket:'consolation'}));
+  const w=await world(f,{width:1600,height:900}),{page}=w;
+  try{
+    await page.keyboard.press('4');
+    assert.match(await text(page),/FEATURED BRACKET PATH 1 \/ 3/);
+    assert.match(await text(page),/COMPLETE BRACKET IN SPECTATOR VIEW/);
+    await page.clock.fastForward(18000);
+    assert.match(await text(page),/FEATURED BRACKET PATH 2 \/ 3/);
+    await page.clock.fastForward(18000);
+    assert.match(await text(page),/FEATURED BRACKET PATH 3 \/ 3/);
+    assert.deepEqual(await fits(page),[]);
+  }finally{await w.close();}
+});
+
+test('undecided bracket stages use compact, truthful pending cards rather than giant feature overlays', {timeout:60000},async()=>{
+  const f=largeFixture();
+  for(const m of f[0].brackets[0].matches){
+    if(m.round>=4){m.player_1_name=null;m.player_2_name=null;m.status='pending';m.phase='waiting';}
+  }
+  const w=await world(f,{width:1600,height:900}),{page}=w;
+  try{
+    await page.keyboard.press('3');
+    await page.clock.fastForward(18000);
+    assert.equal(await page.locator('.bracket-match.awaiting-opponents .semifinal-feature-label').count(),0);
+    await page.clock.fastForward(18000);
+    const pending=page.locator('.bracket-round.last-round .bracket-match.pending-final');
+    assert.equal(await pending.count(),1);
+    assert.equal(await pending.locator('.final-feature-label').count(),0);
+    assert.match(await pending.innerText(),/FINAL PAIRING PENDING/);
+    const info=await pending.evaluate(el=>({height:el.getBoundingClientRect().height,
+      family:getComputedStyle(el.querySelector('.bracket-pending-pair strong')).fontFamily}));
+    assert.ok(info.height<=300&&info.family.includes('Arial'),'compact and readable undecided final: '+JSON.stringify(info));
+    assert.deepEqual(await fits(page),[]);
+  }finally{await w.close();}
 });

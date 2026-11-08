@@ -20,11 +20,7 @@ function tally(m) {
   if (!parsed?.length || !normalizeGameScores(m.scores, m.bestOf, m.winnerName === m.name1, m.points).ok) return null;
   return [parsed.filter(g => g.a > g.b).length, parsed.filter(g => g.b > g.a).length];
 }
-/**
- * The public contract permits only validated, SERVER-CONFIRMED completed games
- * while a match is still pending. Never infer dots from unfinished form fields.
- * The same dots also represent validated final results after confirmation.
- */
+/** Dots use validated saved games for active matches and official final scores for completed matches. */
 function winDots(m, player) {
   if (m.bestOf !== 3) return null;
   const active = m.phase === 'playing' && m.status === 'pending'
@@ -39,7 +35,7 @@ function winDots(m, player) {
 }
 function games(m) {
   const t = tally(m);
-  return t ? parseGames(m.scores).map((g, i) => `G${i + 1} ${g.a}–${g.b}`).join('   ·   ') : (m.scores === 'W/O' ? 'Walkover' : m.status === 'complete' && m.scores && (!m.bestOf || !m.points) ? `Recorded: ${m.scores}` : 'Game scores unavailable');
+  return t ? parseGames(m.scores).map((g, i) => `G${i + 1} ${g.a} - ${g.b}`).join('   ·   ') : (m.scores === 'W/O' ? 'Walkover' : m.status === 'complete' && m.scores && (!m.bestOf || !m.points) ? `Recorded: ${m.scores}` : 'Game scores unavailable');
 }
 
 const tableWord = number => number === 1 ? 'ONE' : number === 2 ? 'TWO' : String(number);
@@ -50,30 +46,43 @@ const matchFormat = m => {
 function liveGameProgress(m) {
   if (m.status !== 'pending' || m.phase !== 'playing' ||
       !m.progress?.games?.length || !['current','stale'].includes(view?.state)) return null;
-  const {games, won, decided} = m.progress; // validated by contracts/gameday_public.mjs
+  const {games, won, decided} = m.progress;
   return h('div',{class:'live-game-progress',role:'status','aria-live':'polite'},
     h('span',{class:'progress-kicker',text:view.state === 'stale' ? 'LAST CONFIRMED · OUT OF DATE' : 'CONFIRMED GAMES'}),
     h('strong',{class:'progress-tally',text:won.join('–')}),
     h('span',{class:'progress-lines',text:games.map((g,i)=>`G${i+1} ${g[0]}–${g[1]}`).join('  ·  ')}),
     h('span',{class:'progress-next',text:decided ? 'AWAITING OFFICIAL MATCH CONFIRMATION' : `GAME ${games.length+1} NEXT`}));
 }
+
+function tablePlayerName(raw) {
+  const full=name(raw), parts=full.trim().split(/\s+/);
+  const stacked=parts.length>1 && raw && !/^to be determined$/i.test(full);
+  return h('div',{class:'player-name'+(stacked?' stacked':''),'aria-label':full},
+    stacked
+      ? [h('span',{class:'player-first',text:parts[0]+' '}),h('span',{class:'player-last',text:parts.slice(1).join(' ')})]
+      : h('span',{class:'player-full',text:full}));
+}
 function tableCard(table) {
-  const m = board.playing.find(x => x.table === table);
-  const sample = isShowcase(event);
-  return h('article', {class:'table-card broadcast-match' + (m ? ' active' : ''), 'data-table':'0' + table},
-    h('div', {class:'card-top'},
-      h('div', {class:'table-label'}, h('strong', {class:'table-number',text:'0' + table}), h('span',{text:'TABLE ' + tableWord(table)})),
-      h('span',{class:'match-round',text:m ? bracketLabel(m) + ' · ' + roundLabel(m,event) : 'TABLE AVAILABLE'}),
-      h('span',{class:'status-label',text:m ? (sample ? '● SAMPLE MATCH' : '● NOW PLAYING') : 'AVAILABLE'})),
-    m ? h('div',{class:'match-content'},
+  const m=board.playing.find(x=>x.table===table), sample=isShowcase(event);
+  const outLabel=h('div',{class:'table-outside-label','aria-label':'Table '+table},
+    h('strong',{class:'table-outside-number',text:'0'+table}),
+    h('span',{class:'table-outside-word',text:'TABLE '+tableWord(table)}));
+  const panel=h('article',{class:'table-card broadcast-match'+(m?' active':''),'data-table':'0'+table},
+    h('div',{class:'card-top'},
+      h('span',{class:'match-round',text:m?bracketLabel(m)+' · '+roundLabel(m,event):'TABLE AVAILABLE'}),
+      h('span',{class:'status-label',text:m?(sample?'● SAMPLE MATCH':'● NOW PLAYING'):'AVAILABLE'})),
+    m?h('div',{class:'match-content'},
       h('div',{class:'players'},
-        h('div',{class:'match-player'},h('div',{class:'player-name',text:name(m.name1)}),winDots(m,0)),
+        h('div',{class:'match-player'},tablePlayerName(m.name1),winDots(m,0)),
         h('div',{class:'versus-line'},h('span',{class:'versus',text:'VS'})),
-        h('div',{class:'match-player'},h('div',{class:'player-name',text:name(m.name2)}),winDots(m,1))),
+        h('div',{class:'match-player'},tablePlayerName(m.name2),winDots(m,1))),
       liveGameProgress(m),
       h('div',{class:'match-meta',text:matchFormat(m)}))
-    : h('div',{class:'empty-table'},h('strong',{text:'Table open'}),h('span',{text:'Waiting for the next match'})));
+    :h('div',{class:'empty-table'},h('strong',{text:'Table open'}),h('span',{text:'Waiting for the next match'})));
+  return h('div',{class:'table-stage table-stage-'+table},
+    ...(table===1?[outLabel,panel]:[panel,outLabel]));
 }
+
 function matchCenter() {
   const playing = board.playing.filter(m => m.table === 1 || m.table === 2).length;
   return h('div',{class:'match-center broadcast-match-center'},
@@ -83,7 +92,7 @@ function matchCenter() {
     h('section',{class:'now-section'},h('div',{class:'table-grid'},tableCard(1),tableCard(2))),
     h('section',{class:'next-section'},
       h('div',{class:'queue-banner'},h('strong',{text:'UP NEXT'}),h('small',{text:'ON DECK'})),
-      board.upNext.length ? h('div',{class:'next-grid'},board.upNext.slice(0,2).map(m =>
+      board.upNext.length ? h('div',{class:'next-grid'},board.upNext.slice(0,3).map(m =>
         h('article',{class:'next-card'},
           h('div',{class:'next-meta',text:bracketLabel(m) + ' · ' + roundLabel(m,event)}),
           h('div',{class:'next-names'},h('span',{text:name(m.name1)}),h('span',{class:'next-vs',text:'vs'}),h('span',{text:name(m.name2)})))))
@@ -129,13 +138,26 @@ function results() {
                   winDots(m,index)))),
             h('div',{class:'result-score'},
               h('span',{class:'score-caption',text:i === 0 ? 'FINAL · BEST OF ' + (m.bestOf || '—') : 'GAMES'}),
-              h('div',{class:'result-tally',text:t ? t[0] + '–' + t[1] : '—'}))),
+              h('div',{class:'result-tally',text:t ? t[0] + ' - ' + t[1] : '—'}))),
           h('div',{class:'result-games',text:games(m)}));
       })));
 }
 
-function bracketWindows(ms) {
+function bracketWindows(ms, kind = 'consolation') {
   const rounds = [...new Set(ms.map(m => m.round))].sort((a, b) => a - b);
+  if (!rounds.length) return [];
+  // Both bracket broadcasts show a small number of clearly-labelled featured
+  // paths. The complete tournament bracket is retained in Spectator View.
+  // Single-match finals remain a separate fully readable presentation.
+  if (ms.length > 1) {
+    const size = Math.max(2, Math.ceil(rounds.length / 3));
+    const windows = [];
+    for (let i = 0; i < rounds.length; i += size) {
+      const group=rounds.slice(i,i+size);
+      windows.push({rounds:group,first:group[0],page:0,featured:true});
+    }
+    return windows;
+  }
   const windows = [];
   for (let i = 0; i < rounds.length; i += 3) {
     const group = rounds.slice(i, i + 3), first = group[0];
@@ -144,33 +166,73 @@ function bracketWindows(ms) {
   }
   return windows;
 }
+/** Pick two representative paths, preferring matches actually being played.
+ * They are labelled 'featured' if not every match in a round is displayed.
+ * Never treat this curated selection as a complete bracket. */
+function featuredBracketRows(ms, rounds) {
+  const first = rounds[0], starters = ms.filter(m=>m.round===first);
+  // Actual matches with two competitors take precedence over byes and empty
+  // placeholders; no fabricated opponents or intermediate scores are used.
+  const interest = m => (m.phase==='playing'?150:0) +
+    (m.status==='complete'&&m.scores?110:0) +
+    (m.phase==='up_next'&&m.name1&&m.name2?65:0) +
+    (m.name1&&m.name2?50:0) -
+    (m.status==='bye'?250:0);
+  const anchors=starters.slice().sort((a,b)=>interest(b)-interest(a)||a.slot-b.slot).slice(0,2);
+  const startSlots=new Set(anchors.map(m=>m.slot));
+  const result=new Map();
+  for (const r of rounds) {
+    const shift=r-first;
+    let chosen=ms.filter(m=>m.round===r && [...startSlots].some(slot=>Math.floor(slot/(2**shift))===m.slot));
+    const alternatives=ms.filter(m=>m.round===r).slice().sort((a,b)=>interest(b)-interest(a)||a.slot-b.slot);
+    // If the anchor branch is only byes/placeholders, showcase useful matches
+    // elsewhere in the same round instead. UI connectors remain slot-accurate.
+    if(!chosen.length || (chosen.every(m=>m.status==='bye' || (!m.name1&&!m.name2)) &&
+        alternatives.some(m=>m.status!=='bye' && (m.name1 || m.name2)))) {
+      chosen=alternatives.slice(0,2);
+    }
+    result.set(r,chosen.sort((a,b)=>a.slot-b.slot).slice(0,2));
+  }
+  return result;
+}
 
 function bracket(kind) {
   const ms=event[kind].filter(m=>m.status !== 'empty');
   const totalRounds=Math.max(...ms.map(m=>m.round))+1;
-  const windows=bracketWindows(ms),pages=windows.length;
-  const {rounds,first:firstRound,page}=windows[Math.min(segment,pages-1)];
+  const windows=bracketWindows(ms,kind),pages=windows.length;
+  const {rounds,first:firstRound,page,featured}=windows[Math.min(segment,pages-1)];
+  const featuredRows=featured ? featuredBracketRows(ms,rounds) : null;
   const champ=champion(kind);
   const solitary=ms.length === 1;
   const featuredFinal=rounds.length === 1 && rounds[0] === totalRounds-1;
+  const consolationFinalOnScreen=kind==='consolation' && (featuredFinal || solitary || rounds.includes(totalRounds-1));
   return h('div',{class:'bracket-view cinematic-bracket ' + (kind==='championship' ? 'championship-path' : 'consolation-path') + (solitary ? ' single-match' : '') + (featuredFinal ? ' featured-final' : '')},
     h('div',{class:'broadcast-title'},
-      h('div',{},h('span',{class:'title-kicker',text:kind==='championship' ? 'THE ROAD TO THE TITLE / 03' : 'THE FINAL SHOWDOWN / 04'}),
-        h('h2',{},kind==='championship' ? [h('span',{text:'THE ROAD '}),h('em',{text:'TO THE FINAL'})] : [h('span',{text:'CONSOLATION '}),h('em',{text:'FINAL'})])),
-      h('span',{class:'title-side',text:kind==='championship' ? 'CHAMPIONSHIP · FEATURED BRACKET PATH' : 'FEATURED MATCHUP'})),
+      h('div',{},h('span',{class:'title-kicker',text:kind==='championship' ? 'THE ROAD TO THE TITLE / 03' : consolationFinalOnScreen ? 'THE FINAL SHOWDOWN / 04' : 'THE ROAD TO THE FINAL / 04'}),
+        h('h2',{},kind==='championship' ? [h('span',{text:'THE ROAD '}),h('em',{text:'TO THE FINAL'})] : [h('span',{text:'CONSOLATION '}),h('em',{text:consolationFinalOnScreen ? 'FINAL' : 'BRACKET'})])),
+      h('span',{class:'title-side',text:kind==='championship' ? 'CHAMPIONSHIP · FEATURED BRACKET PATH' : consolationFinalOnScreen ? 'THE LAST MATCH · FINAL SHOWDOWN' : 'CONSOLATION · BRACKET PROGRESSION'})),
     h('div',{class:'bracket-caption'},
-      h('span',{text:pages>1 ? 'BRACKET SEGMENT '+(segment+1)+' / '+pages : 'TOURNAMENT PROGRESSION'}),
+      h('span',{text:featured
+        ? 'FEATURED BRACKET PATH '+(segment+1)+' / '+pages+' · COMPLETE BRACKET IN SPECTATOR VIEW'
+        : pages>1 ? 'BRACKET SEGMENT '+(segment+1)+' / '+pages : 'TOURNAMENT PROGRESSION'}),
       champ ? h('strong',{text:'CHAMPION · '+champ.winner}) : null),
     h('div',{class:'bracket-columns'},rounds.map((r,idx)=>{
       const factor=2**(r-firstRound);
-      const selected=ms.filter(m=>m.round === r && m.slot>=Math.floor(page*2/factor) && m.slot<=Math.floor((page*2+1)/factor));
+      const selected=featured ? featuredRows.get(r) : ms.filter(m=>m.round === r && m.slot>=Math.floor(page*2/factor) && m.slot<=Math.floor((page*2+1)/factor));
+      const inRound=featured ? ms.filter(m=>m.round===r).length : 0;
       const isFinal=r === totalRounds-1;
-      const midFeature=kind==='championship' && !isFinal && idx>0 && selected.length === 1;
+      // Dramatic messaging belongs to resolved pairings, never an empty
+      // placeholder. Do not repeat the same visual in adjacent rounds.
+      const midFeature=kind==='championship' && !isFinal && idx===rounds.length-1 &&
+        idx>0 && selected.length===1 && !!selected[0].name1 && !!selected[0].name2;
       return h('div',{class:'bracket-round' + (isFinal ? ' last-round' : '') + (midFeature ? ' mid-feature' : ''),'data-round':r},
         h('div',{class:'round-heading',text:(idx+1<10?'0'+(idx+1):idx+1)+' / '+roundName(totalRounds,r,kind)}),
+        featured && inRound>selected.length ? h('div',{class:'round-scope',text:'FEATURED '+selected.length+' OF '+inRound+' MATCHES'}) : null,
         h('div',{class:'bracket-matches'},selected.map(m=>
-          h('article',{class:'bracket-match ' + (m.phase==='playing' ? 'playing' : m.status==='complete' ? 'completed' : 'upcoming'),'data-round':m.round,'data-slot':m.slot},
-            isFinal ? h('div',{class:'final-feature-label','aria-hidden':'true'},h('span',{class:'final-star',text:'★'}),h('strong',{},h('span',{text:kind === 'consolation' ? 'ONE MORE' : 'ONE MATCH.'}),h('em',{text:kind === 'consolation' ? 'MATCH' : 'ONE CHAMPION.'}))) : null,
+          h('article',{class:'bracket-match ' + (m.phase==='playing' ? 'playing' : m.status==='complete' ? 'completed' : 'upcoming') +
+            (isFinal && !(m.name1&&m.name2) ? ' pending-final' : '') +
+            (!m.name1&&!m.name2 ? ' awaiting-opponents' : ''),'data-round':m.round,'data-slot':m.slot},
+            isFinal && m.name1 && m.name2 ? h('div',{class:'final-feature-label','aria-hidden':'true'},h('span',{class:'final-star',text:'★'}),h('strong',{},h('span',{text:kind === 'consolation' ? 'ONE MORE' : 'ONE MATCH.'}),h('em',{text:kind === 'consolation' ? 'MATCH' : 'ONE CHAMPION.'}))) : null,
             midFeature ? h('div',{class:'semifinal-feature-label','aria-hidden':'true'},h('span',{text:'THE NEXT SHOWDOWN'}),h('strong',{},h('span',{text:'ONE STEP'}),h('em',{text:'CLOSER.'}))) : null,
             h('span',{class:'bracket-table-stamp',text:m.table ? '0' + m.table : ''}),
             h('div',{class:'bracket-state',text:m.status==='bye'?'BYE':m.status==='complete'?'COMPLETED':m.phase==='playing'?(isShowcase(event)?'SAMPLE MATCH':'NOW PLAYING'):'UPCOMING'}),
@@ -179,11 +241,13 @@ function bracket(kind) {
                 h('div',{class:'bracket-player'+(n&&n===m.winnerName?' winner':''),text:name(n)}),winDots(m,i));
               return i === 0 && m.name1 && m.name2 && isFinal ? [row,h('div',{class:'versus-line bracket-vs','aria-hidden':'true'},h('span',{class:'versus',text:'VS'}))] : [row];
             }) : h('div',{class:'bracket-pending-pair'},
-              h('strong',{text:isFinal?'Finalists to be determined':'Matchup to be determined'}),
-              h('span',{text:'Players will appear as earlier matches are decided.'})),
+              h('strong',{text:isFinal?'FINAL PAIRING PENDING':'AWAITING PREVIOUS ROUND'}),
+              h('span',{text:isFinal?'Semifinal results will determine the finalists.':'Players appear after earlier matches are decided.'})),
             m.status==='complete'&&m.scores ? h('div',{class:'bracket-scores',text:games(m)}) : null))));
     })),
-    kind==='championship' ? h('div',{class:'bracket-progress'},h('strong',{text:'QUARTERFINALS'}),h('span',{text:'—'}),h('strong',{text:'SEMIFINALS'}),h('span',{text:'—'}),h('strong',{text:'CHAMPIONSHIP FINAL'})) : null);
+    kind==='championship' ? h('div',{class:'bracket-progress'},rounds.flatMap((r,i)=>[
+      ...(i ? [h('span',{text:'—'})] : []),
+      h('strong',{text:roundName(totalRounds,r,kind).toUpperCase()})])) : null);
 }
 
 function drawConnections() {
@@ -231,6 +295,6 @@ $('prev').addEventListener('click', () => move(-1)); $('next').addEventListener(
 document.querySelectorAll('[data-screen]').forEach(b => b.addEventListener('click', () => select(b.dataset.screen)));
 window.addEventListener('resize', () => { document.querySelector('.bracket-connectors')?.remove(); drawConnections(); });
 document.addEventListener('keydown', e => { if (e.target.tagName === 'BUTTON') return; if (e.key === 'ArrowRight') move(1); else if (e.key === 'ArrowLeft') move(-1); else if (e.key === ' ') { e.preventDefault(); toggle(); } else if (e.key === '1') select('match'); else if (e.key === '2') select('results'); else if (e.key === '3') select('championship'); else if (e.key === '4') select('consolation'); });
-setInterval(() => { if (paused || Date.now() < deadline) return; if (screen === 'championship' || screen === 'consolation') { const ms = event?.[screen] || []; const pages = bracketWindows(ms.filter(m => m.status !== 'empty')).length;  if (segment + 1 < pages) { segment++; deadline = Date.now() + durations[screen]; render(); return; } } move(1); }, 250);
+setInterval(() => { if (paused || Date.now() < deadline) return; if (screen === 'championship' || screen === 'consolation') { const ms = event?.[screen] || []; const pages = bracketWindows(ms.filter(m => m.status !== 'empty'),screen).length;  if (segment + 1 < pages) { segment++; deadline = Date.now() + durations[screen]; render(); return; } } move(1); }, 250);
 startPublicFeed({onUpdate(next) { view = next; const picked = pickEvent(view.events, wanted); const flag = $('live'); flag.className = `feed-status ${picked ? view.state : 'empty'}`; flag.textContent = !picked ? 'NO CURRENT DATA' : view.state === 'current' ? (isShowcase(picked) ? 'DEMO DATA' : '●  LIVE') : view.state === 'stale' ? `OUT OF DATE · ${Math.round(view.ageMs / 1000)}s` : 'NO CURRENT DATA';
-  const nextSignature = JSON.stringify(picked); if (nextSignature === signature && lastRenderedState === view.state) return; signature = nextSignature; lastRenderedState = view.state; event = picked; board = event ? deriveBoard(event) : null; if (event && (screen === 'championship' || screen === 'consolation')) segment = Math.min(segment, Math.max(0, bracketWindows(event[screen].filter(m => m.status !== 'empty')).length - 1)); if (!available().includes(screen)) { screen = 'match'; segment = 0; deadline = Date.now() + durations.match; } render(); }});
+  const nextSignature = JSON.stringify(picked); if (nextSignature === signature && lastRenderedState === view.state) return; signature = nextSignature; lastRenderedState = view.state; event = picked; board = event ? deriveBoard(event) : null; if (event && (screen === 'championship' || screen === 'consolation')) segment = Math.min(segment, Math.max(0, bracketWindows(event[screen].filter(m => m.status !== 'empty'),screen).length - 1)); if (!available().includes(screen)) { screen = 'match'; segment = 0; deadline = Date.now() + durations.match; } render(); }});
