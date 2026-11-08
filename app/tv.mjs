@@ -132,9 +132,10 @@ function results() {
 function bracketWindows(ms, kind = 'consolation') {
   const rounds = [...new Set(ms.map(m => m.round))].sort((a, b) => a - b);
   if (!rounds.length) return [];
-  // TV Championship is a 3-part featured broadcast, NOT an exhaustive bracket.
-  // All participants and complete match paths remain available on Spectator.
-  if (kind === 'championship') {
+  // Both bracket broadcasts show a small number of clearly-labelled featured
+  // paths. The complete tournament bracket is retained in Spectator View.
+  // Single-match finals remain a separate fully readable presentation.
+  if (ms.length > 1) {
     const size = Math.max(2, Math.ceil(rounds.length / 3));
     const windows = [];
     for (let i = 0; i < rounds.length; i += size) {
@@ -156,17 +157,26 @@ function bracketWindows(ms, kind = 'consolation') {
  * Never treat this curated selection as a complete bracket. */
 function featuredBracketRows(ms, rounds) {
   const first = rounds[0], starters = ms.filter(m=>m.round===first);
-  const interest = m => (m.phase==='playing'?100:0) +
-    (m.status==='upcoming'&&m.name1&&m.name2?40:0) +
-    (m.status==='complete'?20:0) +
-    (m.name1&&m.name2?10:0);
+  // Actual matches with two competitors take precedence over byes and empty
+  // placeholders; no fabricated opponents or intermediate scores are used.
+  const interest = m => (m.phase==='playing'?150:0) +
+    (m.status==='complete'&&m.scores?110:0) +
+    (m.status==='upcoming'&&m.name1&&m.name2?65:0) +
+    (m.name1&&m.name2?50:0) -
+    (m.status==='bye'?250:0);
   const anchors=starters.slice().sort((a,b)=>interest(b)-interest(a)||a.slot-b.slot).slice(0,2);
   const startSlots=new Set(anchors.map(m=>m.slot));
   const result=new Map();
   for (const r of rounds) {
     const shift=r-first;
     let chosen=ms.filter(m=>m.round===r && [...startSlots].some(slot=>Math.floor(slot/(2**shift))===m.slot));
-    if(!chosen.length) chosen=ms.filter(m=>m.round===r).slice().sort((a,b)=>interest(b)-interest(a)||a.slot-b.slot).slice(0,2);
+    const alternatives=ms.filter(m=>m.round===r).slice().sort((a,b)=>interest(b)-interest(a)||a.slot-b.slot);
+    // If the anchor branch is only byes/placeholders, showcase useful matches
+    // elsewhere in the same round instead. UI connectors remain slot-accurate.
+    if(!chosen.length || (chosen.every(m=>m.status==='bye' || (!m.name1&&!m.name2)) &&
+        alternatives.some(m=>m.status!=='bye' && (m.name1 || m.name2)))) {
+      chosen=alternatives.slice(0,2);
+    }
     result.set(r,chosen.sort((a,b)=>a.slot-b.slot).slice(0,2));
   }
   return result;
@@ -197,15 +207,18 @@ function bracket(kind) {
       const selected=featured ? featuredRows.get(r) : ms.filter(m=>m.round === r && m.slot>=Math.floor(page*2/factor) && m.slot<=Math.floor((page*2+1)/factor));
       const inRound=featured ? ms.filter(m=>m.round===r).length : 0;
       const isFinal=r === totalRounds-1;
-      // Reserve one dramatic callout for the final visible advancing round;
-      // never duplicate the same 'One Step Closer' headline in adjacent columns.
-      const midFeature=kind==='championship' && !isFinal && idx===rounds.length-1 && idx>0 && selected.length === 1;
+      // Dramatic messaging belongs to resolved pairings, never an empty
+      // placeholder. Do not repeat the same visual in adjacent rounds.
+      const midFeature=kind==='championship' && !isFinal && idx===rounds.length-1 &&
+        idx>0 && selected.length===1 && !!selected[0].name1 && !!selected[0].name2;
       return h('div',{class:'bracket-round' + (isFinal ? ' last-round' : '') + (midFeature ? ' mid-feature' : ''),'data-round':r},
         h('div',{class:'round-heading',text:(idx+1<10?'0'+(idx+1):idx+1)+' / '+roundName(totalRounds,r,kind)}),
         featured && inRound>selected.length ? h('div',{class:'round-scope',text:'FEATURED '+selected.length+' OF '+inRound+' MATCHES'}) : null,
         h('div',{class:'bracket-matches'},selected.map(m=>
-          h('article',{class:'bracket-match ' + (m.phase==='playing' ? 'playing' : m.status==='complete' ? 'completed' : 'upcoming'),'data-round':m.round,'data-slot':m.slot},
-            isFinal ? h('div',{class:'final-feature-label','aria-hidden':'true'},h('span',{class:'final-star',text:'★'}),h('strong',{},h('span',{text:kind === 'consolation' ? 'ONE MORE' : 'ONE MATCH.'}),h('em',{text:kind === 'consolation' ? 'MATCH' : 'ONE CHAMPION.'}))) : null,
+          h('article',{class:'bracket-match ' + (m.phase==='playing' ? 'playing' : m.status==='complete' ? 'completed' : 'upcoming') +
+            (isFinal && !(m.name1&&m.name2) ? ' pending-final' : '') +
+            (!m.name1&&!m.name2 ? ' awaiting-opponents' : ''),'data-round':m.round,'data-slot':m.slot},
+            isFinal && m.name1 && m.name2 ? h('div',{class:'final-feature-label','aria-hidden':'true'},h('span',{class:'final-star',text:'★'}),h('strong',{},h('span',{text:kind === 'consolation' ? 'ONE MORE' : 'ONE MATCH.'}),h('em',{text:kind === 'consolation' ? 'MATCH' : 'ONE CHAMPION.'}))) : null,
             midFeature ? h('div',{class:'semifinal-feature-label','aria-hidden':'true'},h('span',{text:'THE NEXT SHOWDOWN'}),h('strong',{},h('span',{text:'ONE STEP'}),h('em',{text:'CLOSER.'}))) : null,
             h('span',{class:'bracket-table-stamp',text:m.table ? '0' + m.table : ''}),
             h('div',{class:'bracket-state',text:m.status==='bye'?'BYE':m.status==='complete'?'COMPLETED':m.phase==='playing'?(isShowcase(event)?'SAMPLE MATCH':'NOW PLAYING'):'UPCOMING'}),
@@ -214,8 +227,8 @@ function bracket(kind) {
                 h('div',{class:'bracket-player'+(n&&n===m.winnerName?' winner':''),text:name(n)}),winDots(m,i));
               return i === 0 && m.name1 && m.name2 && isFinal ? [row,h('div',{class:'versus-line bracket-vs','aria-hidden':'true'},h('span',{class:'versus',text:'VS'}))] : [row];
             }) : h('div',{class:'bracket-pending-pair'},
-              h('strong',{text:isFinal?'Finalists to be determined':'Matchup to be determined'}),
-              h('span',{text:'Players will appear as earlier matches are decided.'})),
+              h('strong',{text:isFinal?'FINAL PAIRING PENDING':'AWAITING PREVIOUS ROUND'}),
+              h('span',{text:isFinal?'Semifinal results will determine the finalists.':'Players appear after earlier matches are decided.'})),
             m.status==='complete'&&m.scores ? h('div',{class:'bracket-scores',text:games(m)}) : null))));
     })),
     kind==='championship' ? h('div',{class:'bracket-progress'},rounds.flatMap((r,i)=>[

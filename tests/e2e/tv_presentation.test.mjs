@@ -98,7 +98,10 @@ test('large bracket advances through bounded round windows', {timeout:60000}, as
     await page.clock.fastForward(18000); assert.match(await text(page),/FEATURED BRACKET PATH 2 \/ 3/);
     await page.clock.fastForward(18000); assert.match(await text(page),/FEATURED BRACKET PATH 3 \/ 3/);
     assert.ok(await page.locator('.last-round .final-feature-label').count()>0,'the third Championship slide showcases the final');
-    await page.keyboard.press('4'); assert.equal(await page.locator('.single-match').count(),0); assert.match(await text(page),/BRACKET SEGMENT 1 \/ 18/); assert.ok(await page.locator('.bracket-connectors path').count() > 0);
+    await page.keyboard.press('4'); assert.equal(await page.locator('.single-match').count(),0); assert.match(await text(page),/FEATURED BRACKET PATH 1 \/ 3/); assert.ok(await page.locator('.bracket-connectors path').count() > 0);
+    await page.clock.fastForward(18000); assert.match(await text(page),/FEATURED BRACKET PATH 2 \/ 3/);
+    await page.clock.fastForward(18000); assert.match(await text(page),/FEATURED BRACKET PATH 3 \/ 3/);
+    assert.match(await text(page),/COMPLETE BRACKET IN SPECTATOR VIEW/);
     if (process.env.TV_SCREENSHOTS) {
       fs.mkdirSync(process.env.TV_SCREENSHOTS,{recursive:true});
       await page.screenshot({path:path.join(process.env.TV_SCREENSHOTS,'large-multi-segment-bracket-1920.png')});
@@ -503,5 +506,83 @@ test('header retains commented brand eyebrow in HTML without displaying it', {ti
     const html=await page.evaluate(()=>document.documentElement.outerHTML);
     assert.match(html,/<!-- <div class="eyebrow">FORGING FELLOWSHIP TABLE TENNIS<\/div> -->/);
     assert.match(await page.locator('#evName').textContent(),/Forging Fellowship Games/);
+  }finally{await w.close();}
+});
+
+
+test('Up Next text is horizontally centered in each visible matchup card at TV resolutions', {timeout:60000},async()=>{
+  for(const viewport of [{width:1280,height:720},{width:1600,height:900},{width:1920,height:1080}]){
+    const w=await world(fixture(),viewport),{page}=w;
+    try{
+      const cells=await page.locator('.next-card:visible').evaluateAll(els=>els.map(el=>{
+        const e=el.getBoundingClientRect(),meta=el.querySelector('.next-meta')?.getBoundingClientRect(),
+          names=el.querySelector('.next-names')?.getBoundingClientRect();
+        const st=getComputedStyle(el);
+        return {textAlign:st.textAlign,metaDelta:Math.abs((meta.left+meta.right-e.left-e.right)/2),
+          namesDelta:Math.abs((names.left+names.right-e.left-e.right)/2),
+          justify:getComputedStyle(el.querySelector('.next-names')).justifyContent};
+      }));
+      assert.ok(cells.length>=2&&cells.every(x=>x.textAlign==='center'&&x.metaDelta<4&&x.namesDelta<4&&x.justify==='center'),
+        'each upcoming card has centered matchup content: '+JSON.stringify(cells));
+      assert.deepEqual(await fits(page),[],'centered Up Next '+viewport.width);
+    } finally {await w.close();}
+  }
+});
+
+test('Results player labels use readable universal sans and wider edge padding', {timeout:60000},async()=>{
+  for(const viewport of [{width:1280,height:720},{width:1600,height:900},{width:1920,height:1080}]){
+    const w=await world(fixture(),viewport),{page}=w;
+    try{
+      await page.keyboard.press('2');
+      const styles=await page.locator('.result-card:not(.lead-result)').evaluateAll(cards=>cards.map(card=>{
+        const cs=getComputedStyle(card),name=card.querySelector('.result-player-name'),
+          ns=getComputedStyle(name),rect=name.getBoundingClientRect();
+        return {paddingLeft:parseFloat(cs.paddingLeft),paddingRight:parseFloat(cs.paddingRight),
+          nameFamily:ns.fontFamily,fontSize:parseFloat(ns.fontSize),lineHeight:parseFloat(ns.lineHeight),
+          nameWidth:rect.width};
+      }));
+      assert.equal(styles.length,3);
+      assert.ok(styles.every(x=>x.paddingLeft>=22&&x.paddingRight>=22&&x.nameFamily.includes('Arial')&&
+        x.fontSize>=14&&x.lineHeight>x.fontSize&&x.nameWidth>85), 'readable names and balanced padding '+JSON.stringify(styles));
+      assert.deepEqual(await fits(page),[],'Results lower strip '+viewport.width);
+    }finally{await w.close();}
+  }
+});
+
+test('Consolation uses three or fewer broadcast segments, not repeated byes across many pages', {timeout:60000},async()=>{
+  const f=largeFixture();
+  f[0].brackets[1].matches=f[0].brackets[0].matches.map(m=>({...m,match_id:'cons-'+m.match_id,bracket:'consolation'}));
+  const w=await world(f,{width:1600,height:900}),{page}=w;
+  try{
+    await page.keyboard.press('4');
+    assert.match(await text(page),/FEATURED BRACKET PATH 1 \/ 3/);
+    assert.match(await text(page),/COMPLETE BRACKET IN SPECTATOR VIEW/);
+    await page.clock.fastForward(18000);
+    assert.match(await text(page),/FEATURED BRACKET PATH 2 \/ 3/);
+    await page.clock.fastForward(18000);
+    assert.match(await text(page),/FEATURED BRACKET PATH 3 \/ 3/);
+    assert.deepEqual(await fits(page),[]);
+  }finally{await w.close();}
+});
+
+test('undecided bracket stages use compact, truthful pending cards rather than giant feature overlays', {timeout:60000},async()=>{
+  const f=largeFixture();
+  for(const m of f[0].brackets[0].matches){
+    if(m.round>=4){m.name1=null;m.name2=null;m.status='upcoming';}
+  }
+  const w=await world(f,{width:1600,height:900}),{page}=w;
+  try{
+    await page.keyboard.press('3');
+    await page.clock.fastForward(18000);
+    assert.equal(await page.locator('.bracket-match.awaiting-opponents .semifinal-feature-label').count(),0);
+    await page.clock.fastForward(18000);
+    const pending=page.locator('.bracket-round.last-round .bracket-match.pending-final');
+    assert.equal(await pending.count(),1);
+    assert.equal(await pending.locator('.final-feature-label').count(),0);
+    assert.match(await pending.innerText(),/FINAL PAIRING PENDING/);
+    const info=await pending.evaluate(el=>({height:el.getBoundingClientRect().height,
+      family:getComputedStyle(el.querySelector('.bracket-pending-pair strong')).fontFamily}));
+    assert.ok(info.height<=300&&info.family.includes('Arial'),'compact and readable undecided final: '+JSON.stringify(info));
+    assert.deepEqual(await fits(page),[]);
   }finally{await w.close();}
 });

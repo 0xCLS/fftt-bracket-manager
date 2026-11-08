@@ -1320,3 +1320,126 @@ body.tv .cinematic-bracket .bracket-caption>span{
   body.tv .broadcast-match-center .queue-banner{padding-inline:clamp(14px,1.4vw,21px)}
   body.tv .cinematic-bracket .round-scope{font-size:11px}
 }
+
+/* Organizer cross-device review: clear upcoming matches and legible Results text.
+   Maintain the approved broadcast colors and verified game-win dots. */
+body.tv .broadcast-match-center .next-card{
+  text-align:center;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:clamp(6px,.72vh,11px);
+}
+body.tv .broadcast-match-center .next-meta{
+  width:100%;
+  text-align:center;
+}
+body.tv .broadcast-match-center .next-names{
+  justify-content:center;
+  align-items:baseline;
+  text-align:center;
+  width:100%;
+  line-height:1.25;
+  text-wrap:balance;
+}
+body.tv .cinematic-results .result-card:not(.lead-result){
+  padding-left:clamp(27px,2.08vw,43px);
+  padding-right:clamp(27px,2.08vw,43px);
+}
+body.tv .cinematic-results .result-card:not(.lead-result) .result-player-name{
+  font-family:Arial,"Helvetica Neue",Helvetica,sans-serif;
+  font-size:clamp(15px,1.13vw,21px);
+  font-weight:750;
+  letter-spacing:.015em;
+  line-height:1.19;
+  font-stretch:normal;
+  text-transform:uppercase;
+}
+body.tv .cinematic-results .result-card:not(.lead-result) .result-player{
+  column-gap:clamp(7px,.64vw,13px);
+}
+body.tv .cinematic-results .result-card:not(.lead-result) .game-win-dots{
+  gap:clamp(4px,.38vw,8px);
+}
+body.tv .cinematic-results .result-card:not(.lead-result) .result-body{
+  column-gap:clamp(9px,1vw,19px);
+}
+/* Bracket showcase: restrained pending cards instead of oversized, nearly
+   empty cinematic circles. No phantom finalists or speculative match progress. */
+body.tv .cinematic-bracket .bracket-round .bracket-match.awaiting-opponents,
+body.tv .cinematic-bracket .bracket-round.last-round .bracket-match.pending-final{
+  flex:0 0 auto;
+  width:100%;
+  height:clamp(160px,26vh,264px);
+  min-height:clamp(160px,26vh,264px);
+  max-height:clamp(180px,31vh,296px);
+  margin-block:auto;
+  padding:clamp(16px,1.65vw,30px);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:clamp(7px,.85vh,15px);
+  background:
+    radial-gradient(ellipse at 50% 45%,rgba(27,112,130,.18),transparent 80%),
+    linear-gradient(120deg,rgba(7,27,42,.98),rgba(9,40,57,.97));
+  border:1px solid rgba(67,170,181,.38);
+  border-radius:clamp(10px,.95vw,18px);
+  box-shadow:inset 0 1px 0 rgba(144,229,227,.06);
+}
+body.tv .cinematic-bracket .bracket-round.last-round .bracket-match.pending-final::before,
+body.tv .cinematic-bracket .bracket-round.mid-feature .bracket-match.awaiting-opponents::before{
+  display:none;
+}
+body.tv .cinematic-bracket .bracket-match.awaiting-opponents .bracket-pending-pair,
+body.tv .cinematic-bracket .bracket-match.pending-final .bracket-pending-pair{
+  align-items:center;
+  justify-content:center;
+  gap:clamp(8px,1.1vh,17px);
+  padding:0;
+  max-width:90%;
+  text-align:center;
+}
+body.tv .cinematic-bracket .bracket-match.awaiting-opponents .bracket-pending-pair strong,
+body.tv .cinematic-bracket .bracket-match.pending-final .bracket-pending-pair strong{
+  font:800 clamp(18px,1.65vw,31px)/1.14 Arial,"Helvetica Neue",Helvetica,sans-serif;
+  color:#f2fafc;
+  letter-spacing:.045em;
+  text-wrap:balance;
+}
+body.tv .cinematic-bracket .bracket-match.awaiting-opponents .bracket-pending-pair span,
+body.tv .cinematic-bracket .bracket-match.pending-final .bracket-pending-pair span{
+  font:700 clamp(12px,.91vw,17px)/1.24 Arial,"Helvetica Neue",Helvetica,sans-serif;
+  letter-spacing:.03em;
+  color:#a6c6d6;
+  text-wrap:balance;
+}
+body.tv .cinematic-bracket .bracket-match.awaiting-opponents .bracket-state,
+body.tv .cinematic-bracket .bracket-match.pending-final .bracket-state{
+  color:var(--bc-yellow);
+  text-align:center;
+  margin:0;
+}
+body.tv .cinematic-bracket .bracket-round.last-round .bracket-match.pending-final .bracket-player{
+  font-family:Arial,"Helvetica Neue",Helvetica,sans-serif;
+  font-size:clamp(19px,1.9vw,34px);
+}
+/* Do not let older first-round or consolation sizing rules override pending
+   card constraints at 720p. */
+@media(max-height:760px){
+  body.tv .cinematic-bracket .bracket-round .bracket-match.awaiting-opponents,
+  body.tv .cinematic-bracket .bracket-round.last-round .bracket-match.pending-final{
+    height:clamp(146px,24vh,182px);
+    min-height:clamp(146px,24vh,182px);
+    max-height:clamp(156px,27vh,199px);
+    padding:clamp(10px,1.4vw,20px);
+  }
+  body.tv .cinematic-results .result-card:not(.lead-result){
+    padding-left:clamp(23px,1.78vw,30px);
+    padding-right:clamp(23px,1.78vw,30px);
+  }
+  body.tv .cinematic-results .result-card:not(.lead-result) .result-player-name{
+    font-size:clamp(14px,1.11vw,19px);
+  }
+}
