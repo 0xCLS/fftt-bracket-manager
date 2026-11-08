@@ -78,7 +78,7 @@ function matchCenter() {
     h('section',{class:'now-section'},h('div',{class:'table-grid'},tableCard(1),tableCard(2))),
     h('section',{class:'next-section'},
       h('div',{class:'queue-banner'},h('strong',{text:'UP NEXT'}),h('small',{text:'ON DECK'})),
-      board.upNext.length ? h('div',{class:'next-grid'},board.upNext.slice(0,2).map(m =>
+      board.upNext.length ? h('div',{class:'next-grid'},board.upNext.slice(0,3).map(m =>
         h('article',{class:'next-card'},
           h('div',{class:'next-meta',text:bracketLabel(m) + ' · ' + roundLabel(m,event)}),
           h('div',{class:'next-names'},h('span',{text:name(m.name1)}),h('span',{class:'next-vs',text:'vs'}),h('span',{text:name(m.name2)})))))
@@ -129,8 +129,20 @@ function results() {
       })));
 }
 
-function bracketWindows(ms) {
+function bracketWindows(ms, kind = 'consolation') {
   const rounds = [...new Set(ms.map(m => m.round))].sort((a, b) => a - b);
+  if (!rounds.length) return [];
+  // TV Championship is a 3-part featured broadcast, NOT an exhaustive bracket.
+  // All participants and complete match paths remain available on Spectator.
+  if (kind === 'championship') {
+    const size = Math.max(2, Math.ceil(rounds.length / 3));
+    const windows = [];
+    for (let i = 0; i < rounds.length; i += size) {
+      const group=rounds.slice(i,i+size);
+      windows.push({rounds:group,first:group[0],page:0,featured:true});
+    }
+    return windows;
+  }
   const windows = [];
   for (let i = 0; i < rounds.length; i += 3) {
     const group = rounds.slice(i, i + 3), first = group[0];
@@ -139,12 +151,33 @@ function bracketWindows(ms) {
   }
   return windows;
 }
+/** Pick two representative paths, preferring matches actually being played.
+ * They are labelled 'featured' if not every match in a round is displayed.
+ * Never treat this curated selection as a complete bracket. */
+function featuredBracketRows(ms, rounds) {
+  const first = rounds[0], starters = ms.filter(m=>m.round===first);
+  const interest = m => (m.phase==='playing'?100:0) +
+    (m.status==='upcoming'&&m.name1&&m.name2?40:0) +
+    (m.status==='complete'?20:0) +
+    (m.name1&&m.name2?10:0);
+  const anchors=starters.slice().sort((a,b)=>interest(b)-interest(a)||a.slot-b.slot).slice(0,2);
+  const startSlots=new Set(anchors.map(m=>m.slot));
+  const result=new Map();
+  for (const r of rounds) {
+    const shift=r-first;
+    let chosen=ms.filter(m=>m.round===r && [...startSlots].some(slot=>Math.floor(slot/(2**shift))===m.slot));
+    if(!chosen.length) chosen=ms.filter(m=>m.round===r).slice().sort((a,b)=>interest(b)-interest(a)||a.slot-b.slot).slice(0,2);
+    result.set(r,chosen.sort((a,b)=>a.slot-b.slot).slice(0,2));
+  }
+  return result;
+}
 
 function bracket(kind) {
   const ms=event[kind].filter(m=>m.status !== 'empty');
   const totalRounds=Math.max(...ms.map(m=>m.round))+1;
-  const windows=bracketWindows(ms),pages=windows.length;
-  const {rounds,first:firstRound,page}=windows[Math.min(segment,pages-1)];
+  const windows=bracketWindows(ms,kind),pages=windows.length;
+  const {rounds,first:firstRound,page,featured}=windows[Math.min(segment,pages-1)];
+  const featuredRows=featured ? featuredBracketRows(ms,rounds) : null;
   const champ=champion(kind);
   const solitary=ms.length === 1;
   const featuredFinal=rounds.length === 1 && rounds[0] === totalRounds-1;
@@ -155,17 +188,21 @@ function bracket(kind) {
         h('h2',{},kind==='championship' ? [h('span',{text:'THE ROAD '}),h('em',{text:'TO THE FINAL'})] : [h('span',{text:'CONSOLATION '}),h('em',{text:consolationFinalOnScreen ? 'FINAL' : 'BRACKET'})])),
       h('span',{class:'title-side',text:kind==='championship' ? 'CHAMPIONSHIP · FEATURED BRACKET PATH' : consolationFinalOnScreen ? 'THE LAST MATCH · FINAL SHOWDOWN' : 'CONSOLATION · BRACKET PROGRESSION'})),
     h('div',{class:'bracket-caption'},
-      h('span',{text:pages>1 ? 'BRACKET SEGMENT '+(segment+1)+' / '+pages : 'TOURNAMENT PROGRESSION'}),
+      h('span',{text:featured
+        ? 'FEATURED BRACKET PATH '+(segment+1)+' / '+pages+' · COMPLETE BRACKET IN SPECTATOR VIEW'
+        : pages>1 ? 'BRACKET SEGMENT '+(segment+1)+' / '+pages : 'TOURNAMENT PROGRESSION'}),
       champ ? h('strong',{text:'CHAMPION · '+champ.winner}) : null),
     h('div',{class:'bracket-columns'},rounds.map((r,idx)=>{
       const factor=2**(r-firstRound);
-      const selected=ms.filter(m=>m.round === r && m.slot>=Math.floor(page*2/factor) && m.slot<=Math.floor((page*2+1)/factor));
+      const selected=featured ? featuredRows.get(r) : ms.filter(m=>m.round === r && m.slot>=Math.floor(page*2/factor) && m.slot<=Math.floor((page*2+1)/factor));
+      const inRound=featured ? ms.filter(m=>m.round===r).length : 0;
       const isFinal=r === totalRounds-1;
       // Reserve one dramatic callout for the final visible advancing round;
       // never duplicate the same 'One Step Closer' headline in adjacent columns.
       const midFeature=kind==='championship' && !isFinal && idx===rounds.length-1 && idx>0 && selected.length === 1;
       return h('div',{class:'bracket-round' + (isFinal ? ' last-round' : '') + (midFeature ? ' mid-feature' : ''),'data-round':r},
         h('div',{class:'round-heading',text:(idx+1<10?'0'+(idx+1):idx+1)+' / '+roundName(totalRounds,r,kind)}),
+        featured && inRound>selected.length ? h('div',{class:'round-scope',text:'FEATURED '+selected.length+' OF '+inRound+' MATCHES'}) : null,
         h('div',{class:'bracket-matches'},selected.map(m=>
           h('article',{class:'bracket-match ' + (m.phase==='playing' ? 'playing' : m.status==='complete' ? 'completed' : 'upcoming'),'data-round':m.round,'data-slot':m.slot},
             isFinal ? h('div',{class:'final-feature-label','aria-hidden':'true'},h('span',{class:'final-star',text:'★'}),h('strong',{},h('span',{text:kind === 'consolation' ? 'ONE MORE' : 'ONE MATCH.'}),h('em',{text:kind === 'consolation' ? 'MATCH' : 'ONE CHAMPION.'}))) : null,
@@ -231,6 +268,6 @@ $('prev').addEventListener('click', () => move(-1)); $('next').addEventListener(
 document.querySelectorAll('[data-screen]').forEach(b => b.addEventListener('click', () => select(b.dataset.screen)));
 window.addEventListener('resize', () => { document.querySelector('.bracket-connectors')?.remove(); drawConnections(); });
 document.addEventListener('keydown', e => { if (e.target.tagName === 'BUTTON') return; if (e.key === 'ArrowRight') move(1); else if (e.key === 'ArrowLeft') move(-1); else if (e.key === ' ') { e.preventDefault(); toggle(); } else if (e.key === '1') select('match'); else if (e.key === '2') select('results'); else if (e.key === '3') select('championship'); else if (e.key === '4') select('consolation'); });
-setInterval(() => { if (paused || Date.now() < deadline) return; if (screen === 'championship' || screen === 'consolation') { const ms = event?.[screen] || []; const pages = bracketWindows(ms.filter(m => m.status !== 'empty')).length;  if (segment + 1 < pages) { segment++; deadline = Date.now() + durations[screen]; render(); return; } } move(1); }, 250);
+setInterval(() => { if (paused || Date.now() < deadline) return; if (screen === 'championship' || screen === 'consolation') { const ms = event?.[screen] || []; const pages = bracketWindows(ms.filter(m => m.status !== 'empty'),screen).length;  if (segment + 1 < pages) { segment++; deadline = Date.now() + durations[screen]; render(); return; } } move(1); }, 250);
 startPublicFeed({onUpdate(next) { view = next; const picked = pickEvent(view.events, wanted); const flag = $('live'); flag.className = `feed-status ${picked ? view.state : 'empty'}`; flag.textContent = !picked ? 'NO CURRENT DATA' : view.state === 'current' ? (isShowcase(picked) ? 'DEMO DATA' : '●  LIVE') : view.state === 'stale' ? `OUT OF DATE · ${Math.round(view.ageMs / 1000)}s` : 'NO CURRENT DATA';
-  const nextSignature = JSON.stringify(picked); if (nextSignature === signature) return; signature = nextSignature; event = picked; board = event ? deriveBoard(event) : null; if (event && (screen === 'championship' || screen === 'consolation')) segment = Math.min(segment, Math.max(0, bracketWindows(event[screen].filter(m => m.status !== 'empty')).length - 1)); if (!available().includes(screen)) { screen = 'match'; segment = 0; deadline = Date.now() + durations.match; } render(); }});
+  const nextSignature = JSON.stringify(picked); if (nextSignature === signature) return; signature = nextSignature; event = picked; board = event ? deriveBoard(event) : null; if (event && (screen === 'championship' || screen === 'consolation')) segment = Math.min(segment, Math.max(0, bracketWindows(event[screen].filter(m => m.status !== 'empty'),screen).length - 1)); if (!available().includes(screen)) { screen = 'match'; segment = 0; deadline = Date.now() + durations.match; } render(); }});

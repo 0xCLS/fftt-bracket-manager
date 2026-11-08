@@ -1230,3 +1230,93 @@ body.tv .cinematic-results .result-games{
   body.tv .cinematic-bracket .bracket-player-row + .bracket-player-row{margin-top:8px}
   body.tv .cinematic-bracket .bracket-round:first-child .bracket-player{font-size:clamp(17px,1.45vw,25px)}
 }
+
+/* Final organizer polish: symmetrical queue, circular VS and a quieter lower edge. */
+body.tv .broadcast-match-center{
+  padding-bottom:clamp(14px,2.35vh,30px);
+  box-sizing:border-box;
+}
+body.tv .broadcast-match-center .versus{
+  --vs-diameter:clamp(46px,4.25vw,72px);
+  display:grid;
+  place-items:center;
+  flex:0 0 var(--vs-diameter);
+  width:var(--vs-diameter);
+  height:var(--vs-diameter);
+  min-width:var(--vs-diameter);
+  min-height:var(--vs-diameter);
+  max-width:var(--vs-diameter);
+  max-height:var(--vs-diameter);
+  box-sizing:border-box;
+  aspect-ratio:1 / 1;
+  border-radius:50%;
+  padding:0;
+  line-height:1;
+  letter-spacing:0;
+}
+body.tv .broadcast-match-center .versus-line{
+  min-width:0;
+  overflow:visible;
+}
+body.tv .broadcast-match-center .queue-banner{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:clamp(10px,.9vw,18px) clamp(20px,1.5vw,30px);
+  box-sizing:border-box;
+}
+body.tv .broadcast-match-center .queue-banner strong,
+body.tv .broadcast-match-center .queue-banner small{
+  width:100%;
+  text-align:center;
+}
+body.tv .broadcast-match-center .next-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  min-width:0;
+}
+body.tv .broadcast-match-center .next-card{
+  min-width:0;
+  border-right:1px solid rgba(118,199,211,.38)!important;
+  padding:clamp(9px,1vw,17px) clamp(16px,1.3vw,25px);
+}
+body.tv .broadcast-match-center .next-card:last-child{border-right:0!important}
+body.tv .broadcast-match-center .next-names{
+  font-size:clamp(15px,1.12vw,22px);
+  line-height:1.15;
+}
+body.tv .cinematic-results .result-card:not(.lead-result){
+  padding-left:clamp(20px,1.65vw,36px);
+  padding-right:clamp(20px,1.65vw,36px);
+}
+body.tv .cinematic-results .result-card:not(.lead-result) .result-score{
+  margin-left:clamp(5px,.45vw,10px);
+}
+body.tv .cinematic-bracket .round-scope{
+  font:800 clamp(11px,.75vw,14px)/1.2 var(--tv-player-type);
+  letter-spacing:.075em;
+  color:#a9d3d9;
+  text-transform:uppercase;
+  margin:-.15vh 0 .4vh;
+}
+body.tv .cinematic-bracket .bracket-caption>span{
+  max-width:80%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+@media(max-width:1439px){
+  body.tv .broadcast-match-center .next-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  body.tv .broadcast-match-center .next-card:nth-child(n+3){display:none}
+  body.tv .broadcast-match-center .next-card:nth-child(2){border-right:0!important}
+}
+@media(max-height:760px){
+  body.tv .broadcast-match-center{padding-bottom:clamp(12px,1.9vh,17px)}
+  body.tv .broadcast-match-center .next-card{padding:7px 13px}
+  body.tv .broadcast-match-center .queue-banner{padding-inline:clamp(14px,1.4vw,21px)}
+  body.tv .cinematic-bracket .round-scope{font-size:11px}
+}

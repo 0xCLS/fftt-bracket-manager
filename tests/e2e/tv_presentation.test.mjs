@@ -58,7 +58,7 @@ test('TV modes, scores, controls, rotation and read-only public requests', {time
     assert.equal(await page.locator('#demoBadge').isHidden(),true);
     assert.equal(await page.locator('.table-card.active').count(),2);
     assert.match(await page.locator('.table-card.active').first().innerText(), /BEST OF THREE/);
-    assert.equal(await page.locator('.next-card').count(),2);
+    assert.equal(await page.locator('.next-card:visible').count(),2,'720p shows two legible upcoming matches');
     assert.match(await text(page), /Alexandria\s+Montgomery-Fitzgerald/i);
     assert.equal(await page.locator('.score-pending').count(),0,'no unsupported live-score placeholders');
     assert.doesNotMatch(await page.locator('.table-grid').innerText(),/11[–-]7|1\s*[–:]\s*1/);
@@ -91,10 +91,13 @@ test('large bracket advances through bounded round windows', {timeout:60000}, as
   const f=largeFixture(); f[0].brackets[1].matches = f[0].brackets[0].matches.map(m => ({...m, match_id: `cons-${m.match_id}`, bracket:'consolation'}));
   const w=await world(f); const {page}=w;
   try {
-    await page.keyboard.press('3'); assert.match(await text(page),/BRACKET SEGMENT 1 \/ 18/);
+    await page.keyboard.press('3'); assert.match(await text(page),/FEATURED BRACKET PATH 1 \/ 3/);
     assert.ok(await page.locator('.bracket-round').count()<=3); assert.ok(await page.locator('.bracket-round').first().locator('.bracket-match').count()<=2);
-    await page.clock.fastForward(18000); assert.match(await text(page),/BRACKET SEGMENT 2 \/ 18/);
-    for (let i=0; i<16; i++) { await page.clock.fastForward(18000); await page.evaluate(() => window.dispatchEvent(new Event('online'))); await new Promise(resolve => setTimeout(resolve, 100)); } assert.match(await text(page),/BRACKET SEGMENT 18 \/ 18/);
+    assert.match(await text(page),/COMPLETE BRACKET IN SPECTATOR VIEW/);
+    assert.ok(await page.locator('.round-scope').count()>0,'partial selections explicitly labelled as featured');
+    await page.clock.fastForward(18000); assert.match(await text(page),/FEATURED BRACKET PATH 2 \/ 3/);
+    await page.clock.fastForward(18000); assert.match(await text(page),/FEATURED BRACKET PATH 3 \/ 3/);
+    assert.ok(await page.locator('.last-round .final-feature-label').count()>0,'the third Championship slide showcases the final');
     await page.keyboard.press('4'); assert.equal(await page.locator('.single-match').count(),0); assert.match(await text(page),/BRACKET SEGMENT 1 \/ 18/); assert.ok(await page.locator('.bracket-connectors path').count() > 0);
     if (process.env.TV_SCREENSHOTS) {
       fs.mkdirSync(process.env.TV_SCREENSHOTS,{recursive:true});
@@ -281,6 +284,7 @@ test('approved cinematic hierarchy keeps two balanced match panels, featured res
     assert.match(await page.locator('.lead-result .result-tally').innerText(),/2\s*-\s*1/);
     await page.keyboard.press('3');
     assert.match(await page.locator('.broadcast-title').innerText(),/THE ROAD TO THE FINAL/);
+    await page.clock.fastForward(18000);
     assert.ok(await page.locator('.last-round .final-feature-label').count()>0);
     await page.keyboard.press('4');
     assert.match(await page.locator('.consolation-path .final-feature-label').innerText(),/ONE MORE/);
@@ -439,5 +443,65 @@ test('Results uses a spaced hyphen for games and match tallies', {timeout:60000}
     assert.doesNotMatch(tally,/[–—]/);
     assert.match(await page.locator('.lead-result .result-games').innerText(),/G1\s+11 - 7/);
     assert.deepEqual(await fits(page),[]);
+  }finally{await w.close();}
+});
+
+
+test('final TV queue and typography polish: circular VS, centered banner, dividers, three-on-deck and footer spacing', {timeout:60000},async()=>{
+  for(const size of [{width:1280,height:720,queue:2},{width:1600,height:900,queue:3},{width:1920,height:1080,queue:3}]){
+    const w=await world(fixture(),size),{page}=w;
+    try{
+      assert.equal(await page.locator('.next-card:visible').count(),size.queue,'responsive queue count');
+      const g=await page.evaluate(()=>{
+        const rect=el=>el.getBoundingClientRect(),style=el=>getComputedStyle(el);
+        const rings=[...document.querySelectorAll('.broadcast-match .versus')].map(el=>({
+          width:rect(el).width,height:rect(el).height,radius:style(el).borderRadius
+        }));
+        const banner=document.querySelector('.queue-banner'),title=banner.querySelector('strong'),onDeck=banner.querySelector('small');
+        const b=rect(banner),a=rect(title),d=rect(onDeck);
+        const v=[...document.querySelectorAll('.next-card')].filter(el=>style(el).display!=='none');
+        const strip=rect(document.querySelector('.next-section'));
+        const footer=rect(document.querySelector('footer'));
+        return {rings,
+          titleError:Math.abs((a.left+a.right)/2-(b.left+b.right)/2),
+          labelError:Math.abs((d.left+d.right)/2-(b.left+b.right)/2),
+          border:parseFloat(style(v[0]).borderRightWidth),
+          gapBelow:footer.top-strip.bottom,
+          numberOfCards:v.length,
+          lastBorder:parseFloat(style(v[v.length-1]).borderRightWidth)};
+      });
+      assert.ok(g.rings.length===2&&g.rings.every(r=>Math.abs(r.width-r.height)<=1&&r.radius.startsWith('50%')),
+        'VS must be circular, not elliptical: '+JSON.stringify(g.rings));
+      assert.ok(g.titleError<=3&&g.labelError<=3,'UP NEXT and ON DECK horizontally centered');
+      assert.ok(g.border>=1&&g.lastBorder===0,'upcoming matchups have distinct internal separator only');
+      assert.ok(g.gapBelow>=11,'queue has footer breathing room: '+JSON.stringify(g));
+      assert.deepEqual(await fits(page),[],'queue and rings fit '+size.width);
+    } finally {await w.close();}
+  }
+});
+
+test('Results lower tiles retain generous horizontal padding without overlap', {timeout:60000},async()=>{
+  for(const vp of [{width:1280,height:720},{width:1600,height:900},{width:1920,height:1080}]){
+    const w=await world(fixture(),vp),{page}=w;
+    try{
+      await page.keyboard.press('2');
+      const values=await page.locator('.result-card:not(.lead-result)').evaluateAll(els=>els.map(el=>{
+        const s=getComputedStyle(el),r=el.getBoundingClientRect();
+        return {left:parseFloat(s.paddingLeft),right:parseFloat(s.paddingRight),width:r.width};
+      }));
+      assert.ok(values.length===3 && values.every(x=>x.left>=18&&x.right>=18),
+        'secondary Results tiles need even edge padding: '+JSON.stringify(values));
+      assert.deepEqual(await fits(page),[],'Results at '+vp.width);
+    }finally{await w.close();}
+  }
+});
+
+test('header retains commented brand eyebrow in HTML without displaying it', {timeout:60000},async()=>{
+  const w=await world(fixture(),{width:1600,height:900}),{page}=w;
+  try{
+    assert.equal(await page.locator('header .brand .eyebrow').count(),0);
+    const html=await page.evaluate(()=>document.documentElement.outerHTML);
+    assert.match(html,/<!-- <div class="eyebrow">FORGING FELLOWSHIP TABLE TENNIS<\/div> -->/);
+    assert.match(await page.locator('#evName').textContent(),/Forging Fellowship Games/);
   }finally{await w.close();}
 });
