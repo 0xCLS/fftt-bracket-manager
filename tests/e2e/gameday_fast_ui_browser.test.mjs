@@ -265,28 +265,27 @@ test('Staff switcher hides archived events while Overview can open and restore t
     await d.signIn('org', {event: w.eventId});
     const page = d.page, select = page.locator('#eventSelect');
     await page.locator('.events-card').waitFor();
-    await page.waitForFunction(id => [...document.querySelector('#eventSelect').options].some(o => o.value === id), created.event_id);
+    const archivedOption = page.locator(`#eventSelect option[value="${created.event_id}"]`);
+    await archivedOption.waitFor({state: 'attached'});
 
     const row = page.locator('.events-card tbody tr', {hasText: name});
     await row.locator('button', {hasText: 'Archive'}).click();
     await page.locator('dialog[open] button', {hasText: 'Archive'}).click();
-    await page.waitForFunction(id => ![...document.querySelector('#eventSelect').options].some(o => o.value === id), created.event_id);
+    await archivedOption.waitFor({state: 'detached'});
     assert.equal(await select.locator('option').count(), 1, 'only the unarchived event remains in the switcher');
 
     await page.locator('.events-card .chip', {hasText: /^Archived \(1\)$/}).click();
     await row.locator('button', {hasText: 'Open'}).click();
-    await page.waitForFunction(id => document.querySelector('#eventSelect').value === id, created.event_id);
+    await page.locator(`#eventSelect option[value="${created.event_id}"]:checked`).waitFor();
     assert.match(await select.locator('option:checked').innerText(), /\(archived\)/,
       'opening the archive keeps its own selection visible');
 
     await select.selectOption(w.eventId);
-    await page.waitForFunction(({active, archived}) => {
-      const picker = document.querySelector('#eventSelect');
-      return picker.value === active && ![...picker.options].some(o => o.value === archived);
-    }, {active: w.eventId, archived: created.event_id});
+    await page.locator(`#eventSelect option[value="${w.eventId}"]:checked`).waitFor();
+    await archivedOption.waitFor({state: 'detached'});
     await page.locator('.events-card .chip', {hasText: /^Archived \(1\)$/}).click();
     await row.locator('button', {hasText: 'Restore'}).click();
-    await page.waitForFunction(id => [...document.querySelector('#eventSelect').options].some(o => o.value === id), created.event_id);
+    await archivedOption.waitFor({state: 'attached'});
     assert.deepEqual(w.pageErrors, []);
   } finally { await w.close(); }
 });
