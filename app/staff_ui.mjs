@@ -270,8 +270,33 @@ export function createStaffUi({core, els, config, signOut}) {
         h('p', {class: 'format-footnote', text: 'Ratings stay private. Consolation matchups are reviewed before the bracket is built.'})),
       stand.champion ? h('div', {class: 'champion-banner'},
         h('h2', {text: 'Champion: ' + stand.champion}), h('p', {text: 'Runner-up: ' + stand.runnerUp})) : null,
+      isOrganizer() && s.eventId === 'e6bd40cf-4107-43ea-8c87-057dc38ef31b' ? h('section', {class:'card overview-settings', 'aria-label':'Reset Showcase'},
+        h('h2', {text:'Reset Showcase'}),
+        h('p', {text:'Restore the fictional players, brackets, scores, tables and public presentation to their original state. Current demo scoring progress will be cleared from the presentation.'}),
+        h('button', {type:'button', class:'danger', disabled:!core.canWrite(), on:{click:openShowcaseReset}}, 'Reset Showcase')) : null,
       h('section', {class: 'overview-formats', 'aria-label': 'Match scoring formats'}, formatsCard(sn)),
       h('section', {class: 'overview-history'}, eventsCard()));
+  }
+
+  function openShowcaseReset() {
+    openDialog((d, close) => {
+      const input=h('input',{type:'text',id:'showcaseResetConfirm',autocomplete:'off'});
+      const button=h('button',{type:'button',class:'danger',disabled:true,text:'Confirm reset'});
+      const cancel=h('button',{type:'button',text:'Cancel',on:{click:close}});
+      input.addEventListener('input',()=>{button.disabled=input.value !== 'RESET SHOWCASE';});
+      button.addEventListener('click',async()=>{
+        if (input.value !== 'RESET SHOWCASE') return;
+        button.disabled=true; input.disabled=true; cancel.disabled=true;
+        const r=await core.actions.resetShowcase();
+        close();
+        if(r.ok) toast('Showcase reset confirmed.');
+        else toast(r.message ?? 'Reset could not be confirmed. Refresh and check before trying again.','bad');
+      });
+      d.append(h('div',{class:'dlg'},h('h3',{text:'Reset Showcase?'}),
+        h('p',{text:'This restores the original fictional tournament. Current demo scoring progress will be cleared from the presentation.'}),
+        h('label',{'for':'showcaseResetConfirm',text:'Type RESET SHOWCASE to confirm'}),input,
+        h('div',{class:'dlg-actions'},cancel,button)));
+    },{label:'Reset Showcase'});
   }
 
   function normalized(kind) {

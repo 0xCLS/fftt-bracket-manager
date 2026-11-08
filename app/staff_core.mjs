@@ -407,6 +407,15 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
   const E = () => s.eventId;
   const organizerOnly = () => s.role === 'organizer';
   const actions = {
+    resetShowcase: () => {
+      if (s.role !== 'organizer' || E() !== 'e6bd40cf-4107-43ea-8c87-057dc38ef31b') return Promise.resolve({ok:false,message:'This action is not available for this event.'});
+      const requestId = randomId();
+      return act(async ctx => {
+        const response = await api.resetShowcase(ctx.token, {p_confirmation:'RESET SHOWCASE',p_request_id:requestId});
+        if (response.requestId !== requestId) throw new GamedayApiError('malformed', {outcomeUnknown:true});
+        return response;
+      });
+    },
     async updateEvent(name, date, tables) { const r = await act(ctx => api.updateEvent(ctx.token, {p_event_id: E(), p_name: name, p_date: date, p_table_count: tables})); if (r.ok) await loadEvents(); return r; },
     createEvent: async (name, date, tables) => {
       const r = await act(ctx => api.createEvent(ctx.token, {p_name: name, p_date: date, p_table_count: tables}), {refreshAfter: false});

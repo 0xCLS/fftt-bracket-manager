@@ -42,7 +42,7 @@ const MESSAGE_KIND = Object.freeze({
 });
 
 const WRITE_ROUTES = Object.freeze([
-  'fftt_create_event_v3', 'fftt_update_event_v3', 'fftt_set_lifecycle_v3', 'fftt_set_visibility_v3',
+  'fftt_reset_showcase_v1', 'fftt_create_event_v3', 'fftt_update_event_v3', 'fftt_set_lifecycle_v3', 'fftt_set_visibility_v3',
   'fftt_upsert_players_v3', 'fftt_remove_player_v3', 'fftt_set_checkin_v3', 'fftt_set_checkin_bulk_v3', 'fftt_event_day_walkin_v1', 'fftt_build_championship_v3',
   'fftt_build_consolation_v3', 'fftt_assign_table_v3', 'fftt_forfeit_match_v3', 'fftt_correct_result_v3',
   'fftt_set_doubles_teams_v3', 'fftt_record_doubles_result_v3', 'fftt_set_staff_v3',
@@ -238,6 +238,11 @@ export function createGamedayApi({projectUrl = C3_HOST, publishableKey, fetchImp
     bracketManagerSnapshot: r('fftt_bracket_manager_snapshot_v1', parseOrganizerSnapshot),
     auditLog: r('fftt_audit_log_v3', parseAuditLog),
     exportEvent: r('fftt_export_event_v3', x => { if (!plain(x) || x.format !== 'fftt-event-export-v3') bad(); return x; }),
+    resetShowcase: w('fftt_reset_showcase_v1', raw => {
+      if (!only(raw, ['status','revision','request_id']) || raw.status !== 'reset' || !int(raw.revision) || !uuid(raw.request_id))
+        throw new GamedayApiError('malformed', {outcomeUnknown: true});
+      return Object.freeze({status: raw.status, revision: raw.revision, requestId: raw.request_id});
+    }),
     createEvent: w('fftt_create_event_v3'),
     updateEvent: w('fftt_update_event_v3'),
     setLifecycle: w('fftt_set_lifecycle_v3'),
