@@ -23,6 +23,13 @@
 
 Targets, pending measurement in actual GitHub runs: under 30 seconds for static selection, and 1–3 minutes for focused browser checks. These are design budgets, not promises.
 
+## Narrow archived-event switcher exception (2026-11-08)
+
+- The already-reviewed `app/staff_ui.mjs` change that hides other archived events from the everyday dropdown may use **focused Staff browser checks** only when a trusted-base comparator establishes that **the entire file** differs by exactly the documented replacement of `const evs = s.events;` with the approved filter and explanatory comments.
+- The comparator reads the exact base and PR-head Git blobs, with valid immutable SHAs. Missing blobs, additional hunks, different filtering logic, altered permissions, or another protected file fail closed to manual comprehensive proof.
+- The trusted-base `tools/ci_v2.py` performs this check. Changes to the classifier itself remain protected and need owner-authorized manual comprehensive proof before merge; proposed PR code cannot approve itself.
+- This is a bounded exception for the archived-event switcher, **not** a general exemption for `app/staff_ui.mjs`, authentication, scoring, or data access. It does not change production deployment safeguards.
+
 ## Manual full verification
 
 An owner-authorized operator must explicitly dispatch **Browser regression tests** on the exact feature-branch head with input `approval=APPROVED`. Only a completed **successful** manually dispatched run with all three comprehensive jobs green counts as proof. Afterward, re-run the failed `CI v2 — release-risk gate` check to re-evaluate the immutable SHA evidence, without restarting full regression.
