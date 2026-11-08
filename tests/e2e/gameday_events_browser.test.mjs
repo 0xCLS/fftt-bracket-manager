@@ -260,7 +260,19 @@ test('events: filter by status, archive, restore (never public), delete only emp
     await eventRow(d.page, 'Busy Draft').locator('button', {hasText: 'Archive'}).click();
     await d.page.locator('dialog[open] button', {hasText: 'Archive'}).click();
     await toast(d.page, /Archived/);
+    // Archived events are hidden from routine switching, but still accessible via Your events.
+    await d.page.waitForFunction(id => ![...document.querySelector('#eventSelect').options].some(o => o.value === id), busy.event_id);
+    assert.equal(await d.page.locator('#eventSelect option').count(), 1, 'archived event is excluded from the switcher');
     await chip(d.page, /^Archived \(1\)$/).click();
+    await eventRow(d.page, 'Busy Draft').locator('button', {hasText: 'Open'}).click();
+    await d.page.waitForFunction(id => document.querySelector('#eventSelect').value === id, busy.event_id);
+    assert.match(await d.page.locator('#eventSelect option:checked').innerText(), /Busy Draft.*\(archived\)/,
+      'the currently opened archived event remains identified in the switcher');
+    await d.page.selectOption('#eventSelect', w.eventId);
+    await d.page.waitForFunction(({active, archived}) => {
+      const select = document.querySelector('#eventSelect');
+      return select.value === active && ![...select.options].some(o => o.value === archived);
+    }, {active: w.eventId, archived: busy.event_id});
     await eventRow(d.page, 'Busy Draft').locator('button', {hasText: 'Restore'}).click();
     await toast(d.page, /Restored\. It is not public/);
     await chip(d.page, /^Draft \(2\)$/).waitFor({timeout: T});
