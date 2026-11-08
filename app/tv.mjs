@@ -161,7 +161,7 @@ function featuredBracketRows(ms, rounds) {
   // placeholders; no fabricated opponents or intermediate scores are used.
   const interest = m => (m.phase==='playing'?150:0) +
     (m.status==='complete'&&m.scores?110:0) +
-    (m.status==='upcoming'&&m.name1&&m.name2?65:0) +
+    (m.phase==='up_next'&&m.name1&&m.name2?65:0) +
     (m.name1&&m.name2?50:0) -
     (m.status==='bye'?250:0);
   const anchors=starters.slice().sort((a,b)=>interest(b)-interest(a)||a.slot-b.slot).slice(0,2);

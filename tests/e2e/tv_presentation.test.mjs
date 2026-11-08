@@ -568,7 +568,7 @@ test('Consolation uses three or fewer broadcast segments, not repeated byes acro
 test('undecided bracket stages use compact, truthful pending cards rather than giant feature overlays', {timeout:60000},async()=>{
   const f=largeFixture();
   for(const m of f[0].brackets[0].matches){
-    if(m.round>=4){m.name1=null;m.name2=null;m.status='upcoming';}
+    if(m.round>=4){m.player_1_name=null;m.player_2_name=null;m.status='pending';m.phase='waiting';}
   }
   const w=await world(f,{width:1600,height:900}),{page}=w;
   try{
