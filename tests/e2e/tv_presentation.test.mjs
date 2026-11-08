@@ -134,10 +134,12 @@ test('a sparse undecided final becomes a focused bracket feature, not two fabric
   try {
     await page.keyboard.press('4');
     await page.clock.fastForward(18000);
-    assert.equal(await page.locator('.bracket-round').count(), 1);
-    assert.equal(await page.locator('.bracket-match').count(), 1);
-    assert.match(await page.locator('.bracket-pending-pair').innerText(), /Finalists to be determined/i);
-    assert.doesNotMatch(await page.locator('.bracket-match').innerText(), /Jamie Lee|Casey Ross/);
+    assert.equal(await page.locator('.bracket-round').count(), 2,'semifinal and final share one featured slide');
+    const pending=page.locator('.last-round .bracket-match.pending-final');
+    assert.equal(await pending.count(),1,'no fictitious final competitor pairing');
+    assert.match(await pending.innerText(), /FINAL PAIRING PENDING/i);
+    assert.doesNotMatch(await pending.innerText(), /Jamie Lee|Casey Ross/);
+    assert.equal(await pending.locator('.final-feature-label').count(),0,'no celebratory hero on an unknown final');
     assert.equal(await page.locator('.bracket-vs').count(), 0);
     assert.deepEqual(await fits(page), []);
     if (process.env.TV_SCREENSHOTS) {
@@ -288,7 +290,10 @@ test('approved cinematic hierarchy keeps two balanced match panels, featured res
     await page.keyboard.press('3');
     assert.match(await page.locator('.broadcast-title').innerText(),/THE ROAD TO THE FINAL/);
     await page.clock.fastForward(18000);
-    assert.ok(await page.locator('.last-round .final-feature-label').count()>0);
+    assert.equal(await page.locator('.last-round .bracket-match.pending-final').count(),1,
+      'fixture final remains explicitly undecided');
+    assert.equal(await page.locator('.last-round .final-feature-label').count(),0,
+      'unknown finalists do not get a misleading completed-showdown hero');
     await page.keyboard.press('4');
     assert.match(await page.locator('.consolation-path .final-feature-label').innerText(),/ONE MORE/);
     assert.ok(await page.locator('.single-match .bracket-match').count()===1);
