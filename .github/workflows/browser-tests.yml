@@ -263,6 +263,12 @@ jobs:
         env:
           FFTT_CHROME_CHANNEL: none
         run: node --test tests/e2e/gameday_v6_browser.test.mjs
+      - name: Scoring correction permissions and Mixed-Skill Doubles game-by-game scoring against the real SQL (per-role allow/deny, forbidden direct calls, optional reasons, audit, rollback and install composer; fictional, local database)
+        run: node --test tests/e2e/correction_permissions.test.mjs tests/e2e/doubles_scoring.test.mjs tests/e2e/scoring_rollback.test.mjs tests/e2e/scoring_install_compose.test.mjs
+      - name: Scoring correction permissions, Doubles Match Desk and Reset Showcase card order in fictional Chrome
+        env:
+          FFTT_CHROME_CHANNEL: none
+        run: node --test tests/e2e/correction_permissions_browser.test.mjs tests/e2e/showcase_reset_ui.test.mjs
       - name: V4 server logic against the real SQL (formats incl. historical Bo5, registration, restore, guarded deletion)
         run: node --test tests/e2e/gameday_v4_server.test.mjs
       - name: V4 real client stack (stale formats, duplicate sends, registration privacy lifecycle, events) and adapter authorization against the real SQL
