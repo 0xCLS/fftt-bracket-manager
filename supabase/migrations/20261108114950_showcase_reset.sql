@@ -246,6 +246,10 @@ begin
  left join fftt_private.match_game_progress p on p.event_id=m.event_id and p.match_id=m.id where m.event_id=eid
  on conflict(match_id) do update set revision=greatest(fftt_private.showcase_progress_watermarks.revision,excluded.revision-1)+1;
  delete from fftt_private.match_game_progress where event_id=eid;
+ -- Release any current pending-table assignments before restoring original tables;
+ -- otherwise the immediate uniqueness constraint can reject a legitimate reset.
+ update fftt_private.matches set table_number=null
+ where event_id=eid and status='pending' and table_number is not null;
  update fftt_private.players p set display_name=x.display_name,rating=x.rating,rating_status=x.rating_status,
    checked_in=x.checked_in,first_champ_loss=x.first_champ_loss,seed_order=x.seed_order,
    source=x.source,rating_confirmed=x.rating_confirmed

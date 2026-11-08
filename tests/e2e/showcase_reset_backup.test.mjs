@@ -60,6 +60,11 @@ test('historical showcase: reset progress, final scores, stale writes and receip
   assert.equal(result.status,'accepted');
   const advanced=await db.admin('select status,(select count(*) from fftt_private.matches n where n.event_id=m.event_id and n.id=m.next_match_id and (n.player_1_id=m.winner_id or n.player_2_id=m.winner_id))::int as advanced from fftt_private.matches m where m.event_id=$1 and m.id=$2',[eid,row.match_id]);
   assert.equal(advanced[0].status,'complete'); assert.equal(advanced[0].advanced,1);
+  // A subsequent demo match can occupy the original table; restoration must still
+  // release that assignment before restoring the baseline playing match.
+  const available=(await db.rpc(score,'fftt_matchdesk_v2',{p_event_id:eid},{rows:true})).find(m=>m.match_id!==row.match_id && m.table_number===null && m.player_1_id && m.player_2_id);
+  assert.ok(available,'another fictional match is ready');
+  await db.rpc(org,'fftt_assign_table_v3',{p_event_id:eid,p_match_id:available.match_id,p_table_number:1});
   await reset(org);
   const staleResult=await db.rpc(score,'fftt_submit_match_result_v2',{p_event_id:eid,p_match_id:row.match_id,p_bracket_generation:row.bracket_generation,p_expected_match_version:middle.match_version,p_submission_id:crypto.randomUUID(),p_winner_id:row.player_1_id,p_game_scores:'11-7, 11-8',p_table_number:1});
   assert.equal(staleResult.status,'rejected');
