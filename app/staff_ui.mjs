@@ -744,7 +744,7 @@ export function createStaffUi({core, els, config, signOut}) {
       const reason = h('input', {type: 'text', id: 'crReason', maxlength: 300, placeholder: 'Why is this being corrected?'});
       const msg = h('p', {class: 'status bad', role: 'alert'});
       dlg.append(h('div', {class: 'dlg'}, h('h3', {text: `Correct result · ${m.name1} vs ${m.name2}`}),
-        h('p', {class: 'help', text: `Only the organizer can correct a result. The change and your reason are written to the audit log. This match was played as ${formatText(fmt)}${m.formatLegacy ? ' (historical format)' : ''}.`}),
+        h('p', {class: 'help', text: `Only the Bracket Manager and Organizer can correct a result. The change and your reason are written to the audit log. This match was played as ${formatText(fmt)}${m.formatLegacy ? ' (historical format)' : ''}.`}),
         h('div', {class: 'winner-pick', role: 'radiogroup', 'aria-label': 'Winner'},
           [[m.p1, m.name1], [m.p2, m.name2]].map(([id, nm]) => h('label', {}, h('input', {type: 'radio', name: 'crWinner', value: id, checked: id === m.winner, on: {change: () => { winnerId = id; }}}), h('span', {text: `${nm} won`})))),
         h('label', {for: 'crScores', text: 'Game scores (optional)'}), scores, h('label', {for: 'crReason', text: 'Reason (required)'}), reason, msg,
