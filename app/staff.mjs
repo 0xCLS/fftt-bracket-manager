@@ -12,7 +12,7 @@ import {createGamedayApi} from '../contracts/gameday_api.mjs';
 import {createGamedayScoreTransport} from '../contracts/gameday_score_transport.mjs';
 import {createRegistrationClient} from '../contracts/registration_client.mjs';
 import {createStaffDirectoryClient} from '../contracts/staff_directory_client.mjs';
-import {createStaffCore, createPendingLedger, POLL_MS} from './staff_core.mjs';
+import {createStaffCore, createPendingLedger, createGamePendingLedger, POLL_MS} from './staff_core.mjs';
 import {createStaffUi} from './staff_ui.mjs';
 import {PUBLISHABLE_KEY} from './config.mjs';
 import {$, toast, h, clear, attachPasswordToggle} from './dom.mjs';
@@ -232,7 +232,7 @@ if (networkAllowed) {
   recovery = createMilestone1EmailCodeRecovery({transport, adopt: session.adoptVerifiedSession});
   let storage = null; try { storage = window.localStorage; } catch { storage = null; }
   const ledger = createPendingLedger(storage ?? {getItem: () => null, setItem: () => { throw new Error('no storage'); }, removeItem: () => {}});
-  core = createStaffCore({session, api, scoreTransport, registrationClient, peopleClient, ledger, isOnline: () => navigator.onLine, onChange: () => {
+  core = createStaffCore({session, api, scoreTransport, registrationClient, peopleClient, ledger, gameLedger: createGamePendingLedger(storage ?? {getItem: () => null, setItem: () => { throw new Error('no storage'); }, removeItem: () => {}}), isOnline: () => navigator.onLine, onChange: () => {
     if (!core.state.signedIn && !$('app').hidden) { ui?.clearNavigation(); showSignIn(core.state.endedReason ?? 'Your session ended. Please sign in again.', 'bad'); return; }
     ui?.render();
   }});

@@ -11,6 +11,7 @@ import {GamedayApiError} from '../contracts/gameday_api.mjs';
 import {StaffSignInError} from '../contracts/milestone1_password_transport.mjs';
 import {createMilestone1ScoreSession} from '../contracts/milestone1_score_session.mjs';
 import {seedSlots, enginePlayers, normalizeGameScores} from '../contracts/gameday_engine.mjs';
+import {summarizeGameProgress} from '../contracts/gameday_game_progress.mjs';
 import {RegistrationClientError} from '../contracts/registration_client.mjs';
 import {directoryFromSnapshots, planStaffChange, staffEmail} from '../contracts/staff_people.mjs';
 import {importCsv} from '../contracts/registration_model.mjs';
@@ -100,6 +101,22 @@ export function createPendingLedger(storage) {
   });
 }
 
+/** Durable, non-secret one-shot game write. Kept separate from the final-result ledger. */
+export function createGamePendingLedger(storage) {
+  const key = id => 'fftt.gameday.pending-game.v1.' + id;
+  const valid = r => r && r.v === 1 && typeof r.submissionId === 'string'
+    && typeof r.matchId === 'string' && Number.isSafeInteger(r.gameIndex)
+    && Number.isSafeInteger(r.at);
+  return Object.freeze({
+    read(eventId) { try { const r = JSON.parse(storage.getItem(key(eventId)) ?? 'null'); return valid(r) ? r : null; } catch { return null; } },
+    write(eventId, rec) { try {
+      storage.setItem(key(eventId), JSON.stringify({v: 1, ...rec}));
+      return storage.getItem(key(eventId)) !== null;
+    } catch { return false; } },
+    clear(eventId) { try { storage.removeItem(key(eventId)); } catch { /* never hide unresolved server state */ } },
+  });
+}
+
 // One vocabulary for every registration problem: what happened, whose move it is, and what is safe (nothing was changed).
 const REG_ERRORS = Object.freeze({
   'not-configured': 'No registration source is set up for this event yet. Choose one in Registration settings, import a private CSV, or add walk-ins by hand.',
@@ -159,11 +176,11 @@ const DESK_CONFLICTS = Object.freeze({
   'link-name-mismatch': 'That roster player has a different name, so the registration cannot be linked to them.',
 });
 
-export function createStaffCore({session, api, scoreTransport, registrationClient = null, peopleClient = null, ledger, now = () => Date.now(),
+export function createStaffCore({session, api, scoreTransport, registrationClient = null, peopleClient = null, ledger, gameLedger = null, now = () => Date.now(),
   randomId = () => crypto.randomUUID(), isOnline = () => true, onChange = () => {}} = {}) {
   const s = {
     signedIn: false, role: null, eventId: null, events: [], snapshot: null, brief: null, pulse: null,
-    desk: [], deskStatus: 'idle', score: {status: 'idle', pendingSubmissionId: null}, pending: null,
+    desk: [], deskStatus: 'idle', score: {status: 'idle', pendingSubmissionId: null}, pending: null, gamePending: null,
     lastGoodAt: 0, lastError: null, busy: false, paused: false, endedReason: null, audit: null,
     lastScoreMessage: null,
     // organizer-only, in memory only, dropped with every other private view: {status, payload, error, at}
@@ -314,7 +331,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
   async function started({role, eventId}) {
     s.signedIn = true; s.role = role; s.eventId = eventId; s.endedReason = null; s.paused = false;
     clearPrivate(); newScoreSession(eventId);
-    s.pending = ledger.read(eventId);
+    s.pending = ledger.read(eventId); s.gamePending = gameLedger?.read(eventId) ?? null;
     syncScoreView(); emit();
     await Promise.all([refresh({force: true}), loadEvents()]);
   }
@@ -326,7 +343,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     try {
       const r = await session.selectEvent(eventId);
       s.eventId = r.eventId; s.role = r.role; clearPrivate(); newScoreSession(r.eventId);
-      s.pending = ledger.read(r.eventId); syncScoreView(); emit();
+      s.pending = ledger.read(r.eventId); s.gamePending = gameLedger?.read(r.eventId) ?? null; syncScoreView(); emit();
       await refresh({force: true});
       return {ok: true};
     } catch (e) { if (isSessionEnded(e)) endSession(e.kind); return {ok: false, message: describeError(e)}; }
@@ -339,11 +356,12 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
       s.lastError = describeError(e); emit(); return {ok: false, retry: true};
     }
     s.paused = false; s.lastGoodAt = 0;
+    s.gamePending = gameLedger?.read(s.eventId) ?? null;
     await refresh({force: true});
     return {ok: true};
   }
   function signedOut() {
-    s.signedIn = false; s.role = null; s.eventId = null; s.events = []; clearPrivate(); s.pending = null;
+    s.signedIn = false; s.role = null; s.eventId = null; s.events = []; clearPrivate(); s.pending = null; s.gamePending = null;
     scoreSession?.dispose(); scoreSession = null; syncScoreView(); emit();
   }
 
@@ -610,6 +628,91 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     },
   };
 
+  // ---------------------------------------------------------------- completed-game progress (NEVER an authoritative result)
+  async function readGameProgress(matchId) {
+    if (!s.signedIn || s.paused || !isOnline()) return {ok: false, message: 'Reconnect before reading completed games.'};
+    if (!s.desk.some(m => m.matchId === matchId)) return {ok: false, message: 'This match is no longer playable. Refresh the Match Desk.'};
+    try {
+      const data = await session.authorized(ctx =>
+        scoreTransport.readGameProgress(ctx.token, {eventId: ctx.eventId, matchId}), {wait: false});
+      const row = s.desk.find(m => m.matchId === matchId);
+      if (!row || data.generation !== row.generation || data.match_version !== row.version
+        || data.best_of !== row.bestOf || data.points_to_win !== row.points || data.match_status !== 'pending'
+        || !summarizeGameProgress(data.games, row.bestOf, row.points).ok) {
+        return {ok: false, message: 'The match changed. Refresh and reopen it.'};
+      }
+      return {ok: true, data};
+    } catch (e) {
+      if (isSessionEnded(e)) endSession(e.kind);
+      return {ok: false, message: 'Completed-game records are unavailable. Nothing was changed; check the connection and migration.'};
+    }
+  }
+  let gameSending = false;
+  async function saveCompletedGame({matchId, snapshot, gameIndex, player1Score, player2Score, reason = null}) {
+    if (gameSending || s.gamePending) return {ok: false, unknown: true, message: 'An earlier game is unconfirmed. Check its receipt before sending anything else.'};
+    if (!canWrite()) return {ok: false, message: 'The connection is not confirmed; no game was sent.'};
+    const row = s.desk.find(m => m.matchId === matchId);
+    if (!row || !row.table || !snapshot || snapshot.match_id !== row.matchId
+      || snapshot.generation !== row.generation || snapshot.match_version !== row.version
+      || snapshot.best_of !== row.bestOf || snapshot.points_to_win !== row.points || snapshot.match_status !== 'pending'
+      || !Number.isSafeInteger(snapshot.revision) || !Number.isSafeInteger(snapshot.epoch)) {
+      return {ok: false, message: 'Assign a table or refresh this match before saving a game.'};
+    }
+    if (!Number.isSafeInteger(gameIndex) || ![player1Score,player2Score].every(x => Number.isSafeInteger(x) && x >= 0 && x <= 99)) {
+      return {ok: false, message: 'Enter both players\' scores for a completed game.'};
+    }
+    const previous = snapshot.games;
+    if (!Array.isArray(previous) || gameIndex > previous.length + 1 || gameIndex < 1
+      || gameIndex > row.bestOf) return {ok: false, message: 'Only the next completed game can be saved.'};
+    const correction = gameIndex <= previous.length;
+    if (correction && s.role !== 'organizer') return {ok: false, message: 'Only the organizer can correct an already saved game.'};
+    if ((correction && (typeof reason !== 'string' || reason.trim().length < 10 || reason.trim().length > 500))
+      || (!correction && reason !== null)) return {ok: false, message: 'Corrections require a reason of at least 10 characters.'};
+    const next = previous.map(g => [...g]);
+    if (correction) next[gameIndex - 1] = [player1Score, player2Score];
+    else next.push([player1Score, player2Score]);
+    const summary = summarizeGameProgress(next, row.bestOf, row.points);
+    if (!summary.ok) return {ok: false, message: summary.error};
+    const submissionId = randomId(), eventId = s.eventId;
+    const intent = {eventId,matchId,submissionId,generation:row.generation,
+      matchVersion:row.version,epoch:snapshot.epoch,revision:snapshot.revision,
+      bestOf:row.bestOf,points:row.points,gameIndex,player1Score,player2Score,
+      reason:correction ? reason.trim() : null};
+    const rec = {submissionId,matchId,gameIndex,at:now(),code:row.code};
+    if (!gameLedger?.write(eventId,rec)) {
+      return {ok: false, message: 'This device cannot preserve an uncertain game submission. No game was sent.'};
+    }
+    gameSending = true; s.gamePending = rec; s.busy = true; emit();
+    try {
+      try { await session.authorized(ctx => scoreTransport.submitCompletedGame(ctx.token,intent)); }
+      catch (e) { if (isSessionEnded(e)) endSession(e.kind); /* even a missing reply is unknown */ }
+      return await checkPendingGame();
+    } finally { gameSending = false; s.busy = false; emit(); }
+  }
+  async function checkPendingGame() {
+    const rec = s.gamePending || (s.eventId ? gameLedger?.read(s.eventId) : null);
+    if (!rec || !s.eventId) return {ok: false, message: 'No unresolved completed-game submission.'};
+    if (!s.signedIn || s.paused || !isOnline()) return {ok: false, unknown: true, message: 'Reconnect and check the server receipt. Do not resend.'};
+    try {
+      const receipt = await session.authorized(ctx =>
+        scoreTransport.readGameDecision(ctx.token, {eventId: ctx.eventId, submissionId: rec.submissionId}), {wait: false});
+      if (receipt.status === 'unconfirmed') return {ok: false, unknown: true, message: 'No server decision yet. Do not resend this game. Ask the organizer to reconcile the match.'};
+      if (receipt.match_id !== rec.matchId) return {ok: false, unknown: true, message: 'The receipt does not match this game. Ask the organizer.'};
+      gameLedger?.clear(s.eventId); s.gamePending = null; emit();
+      await refresh({force: true});
+      if (receipt.status === 'rejected') return {ok: false, rejected: true, message: 'Another score or match change won the race. Nothing from this submission was saved. Reopen the match.'};
+      return {ok: true, message: `Game ${rec.gameIndex} saved on the server.`};
+    } catch (e) {
+      if (isSessionEnded(e)) endSession(e.kind);
+      return {ok: false, unknown: true, message: 'Cannot confirm this game yet. Do not resend. Check the server receipt when reconnected.'};
+    }
+  }
+  function dismissPendingGame() {
+    // Manual reconciliation only. The server's progress-revision CAS prevents late duplicate writes.
+    if (s.eventId) gameLedger?.clear(s.eventId);
+    s.gamePending = null; emit();
+    void refresh({force: true});
+  }
   // ---------------------------------------------------------------- scoring
   /** Validate and stage a score. Nothing is sent until confirmScore(). */
   /** `expect` {bestOf, points}: the format the person was shown. If the organizer changed it meanwhile, nothing is staged. */
@@ -822,6 +925,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     get state() { return s; },
     connection, canWrite, refresh, started, selectEvent, loadEvents, pause, resume, signedOut, endSession,
     actions, prepareScore, cancelPreparedScore, confirmScore, checkPendingScore, dismissPendingScore,
+    readGameProgress, saveCompletedGame, checkPendingGame, dismissPendingGame,
     organizerOnly,
   });
 }

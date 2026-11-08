@@ -16,9 +16,11 @@ test('real-event SQL: isolated creation, role denial, Google source, scoring and
     const result = spawnSync('python3', ['tools/release/build_real_event_candidate.py', '--candidate', '--out', out],
       {encoding: 'utf8', cwd: path.resolve(''), timeout: 30000});
     assert.equal(result.status, 0, result.stderr || result.stdout);
-    const paths = SQL_FILES.map((source, i) => path.join(out, String(i + 1).padStart(2, '0') + '_' + path.basename(source)));
+    // The release generator pins V1–V5 only; V6 is a separately reviewed, non-deployable proposal.
+    const paths = SQL_FILES.slice(0, -1).map((source, i) =>
+      path.join(out, String(i + 1).padStart(2, '0') + '_' + path.basename(source)));
     for (const file of paths) assert.ok(fs.existsSync(file), 'file generated: ' + file);
-    db = await createLocalDb({sqlFiles: paths});
+    db = await createLocalDb({sqlFiles: [...paths, SQL_FILES.at(-1)]});
 
     const org = await db.addUser('organizer@fftt-production-test.invalid', {platformOrganizer: true});
     const scorer = await db.addUser('scorer@fftt-production-test.invalid');

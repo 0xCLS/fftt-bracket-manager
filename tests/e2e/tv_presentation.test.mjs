@@ -172,6 +172,34 @@ test('final verified Bo3 2–1 and 2–0 display exactly three dots per player',
     assert.deepEqual(await fits(page),[]);
   } finally {await w.close();}
 });
+
+test('premium match cards show only server-confirmed active games and dots; stale state is visibly marked', {timeout:60000}, async()=>{
+  const f=fixture(), active=f[0].brackets[0].matches;
+  active[0].game_progress={games:[[11,7]],version:1,epoch:0,updated_at:'2026-11-07T12:00:00Z'};
+  active[1].game_progress={games:[[11,7],[9,11]],version:2,epoch:0,updated_at:'2026-11-07T12:00:00Z'};
+  const w=await world(f,{width:1280,height:720}), {page}=w;
+  try{
+    assert.deepEqual(await page.locator('.broadcast-match .live-game-progress strong').allInnerTexts(),['1–0','1–1']);
+    assert.match(await page.locator('.broadcast-match').nth(1).innerText(),/G1 11–7.*G2 9–11/);
+    const c=page.locator('.broadcast-match.active');
+    assert.equal(await c.nth(0).locator('.match-player').nth(0).locator('.win-dot.earned').count(),1);
+    assert.equal(await c.nth(0).locator('.match-player').nth(1).locator('.win-dot.earned').count(),0);
+    assert.equal(await c.nth(1).locator('.match-player').nth(0).locator('.win-dot.earned').count(),1);
+    assert.equal(await c.nth(1).locator('.match-player').nth(1).locator('.win-dot.earned').count(),1);
+    assert.equal(w.requests.filter(x=>x.method==='POST'&&x.url.startsWith(project)).length,0);
+    assert.deepEqual(await fits(page),[], 'confirmed progress must fit 720p premium layout');
+    await page.setViewportSize({width:1920,height:1080});
+    assert.equal(await c.nth(0).locator('.player-name.stacked').count(),2,'new stacked-name layout remains in the active card');
+    assert.deepEqual(await fits(page),[], 'confirmed progress must fit 1080p premium layout');
+    w.setMode('offline');
+    await page.clock.fastForward(21000);
+    assert.match(await page.locator('.broadcast-match .progress-kicker').first().innerText(),/OUT OF DATE/);
+    await page.clock.fastForward(101000);
+    assert.equal(await page.locator('#live').innerText(),'NO CURRENT DATA');
+    assert.equal(await page.locator('.broadcast-match .live-game-progress').count(),0,'expired progress hidden');
+  }finally{await w.close();}
+});
+
 test('Bo1, malformed final and active score states never render fabricated dots', {timeout:60000}, async () => {
   const alt=fixture();
   const one=alt[0].brackets[0].matches.find(m=>m.match_id==='result-1');

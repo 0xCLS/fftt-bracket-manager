@@ -10,6 +10,23 @@
 
 **Source integration:** The current integration reconciles the verified production Staff lineage with `main` public-site changes. Merging source does not change any live event, data or deployment. Older checkpoints below are historical.
 
+## Private backup before game-by-game scoring (draft PR #59)
+
+The new source-controlled Mac command is `./tools/ops/fftt-backup` (after
+checkout of PR #59). Initial setup is `./tools/ops/fftt-backup --setup` to
+supply an FFTT project-scoped `database_read` token through macOS Keychain.
+It exports read-only data to a private location outside the repository,
+checks a disposable pre-V6 restore and migration, and optionally verifies a
+second copy using `FFTT_BACKUP_MIRROR_DIR`. **Nothing is applied to Supabase.**
+The proof-bearing `registration_gate.secret`, Auth password hashes and
+Cloudflare credentials are excluded intentionally. See
+[FFTT backup and recovery](docs/launch/FFTT3_BACKUP_RECOVERY.md).
+
+Source implementation is in draft PR #59; a **real private backup has not been
+run or verified on the owner's Mac**, and this code is not released to `main`.
+The prior exact-head focused CI passed; the new exact-head manual comprehensive
+run and live-backup restoration remain release gates.
+
 ## Historical hosted/source status — October 29, 2026 (superseded November 6)
 
 [PR #19](https://github.com/0xCLS/fftt-bracket-manager/pull/19) was **approved and merged into public `main`** on October 29, 2026, at merge commit `1dfb269205f9d1b5d31e013dff56d86276fa2fa6`. The original GitHub Pages browser-local application's root `index.html` remains byte-identical to the pre-merge version and its Pages rebuild passed. The source integration did **not** trigger a new Cloudflare deployment or activate real event data. [PR #20](https://github.com/0xCLS/fftt-bracket-manager/pull/20) was closed without merging because its CSS was already present in PR #19.

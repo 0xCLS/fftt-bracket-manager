@@ -6,12 +6,112 @@
 Supabase Free has no downloadable managed backups, and this Mac has no `pg_dump`/`psql`/Docker (and the hosted database password is not held by the assistant). The backup therefore uses the one door that is already open and owner-controlled: a **read-only query in the Supabase SQL editor**, whose result is saved privately and **proven restorable** by loading it into a throw-away PostgreSQL (PGlite) built from the repository's SQL.
 
 ## What a backup contains (and does not)
-* All 14 private FFTT tables (`events`, `players`, `matches`, `brackets`, `event_staff`, `platform_organizers`, `score_decisions_v2`, `result_submissions`, `audit_events`, `consolation_reviews`, `doubles_finale`, `registration_links`, `registration_sources`, `deleted_events`), row for row.
+* The 14 reviewed application-data tables (explicitly **excluding** `fftt_private.registration_gate`, which holds a secret): (`events`, `players`, `matches`, `brackets`, `event_staff`, `platform_organizers`, `score_decisions_v2`, `result_submissions`, `audit_events`, `consolation_reviews`, `doubles_finale`, `registration_links`, `registration_sources`, `deleted_events`), row for row.
 * The Auth identities the staff grants refer to: **id, email, created_at, is_anonymous only** (no password hashes, tokens or secrets), so grants stay meaningful after a restore.
 * Not included: Cloudflare secrets, Google credentials, the Supabase Auth password hashes, any Google Form answer (registration answers are never stored).
 * Contains staff e-mail addresses and, for a real event, **player names and results** → it is private data. **Never commit it, never paste it in chat, never email it.**
 
-## Take a backup (about 2 minutes)
+## One-command Mac backup (recommended; V6 preparation)
+
+From the repository checkout, run `./tools/ops/fftt-backup`. The script calls only
+Supabase's dedicated `/database/query/read-only` endpoint using a project-scoped
+`database_read` token. It never links the Supabase CLI, runs hosted SQL writes, or
+accepts database passwords. Before the first run, store such a token securely with
+`./tools/ops/fftt-backup --setup` (macOS Keychain prompt; never pass a token as a
+command-line argument). An existing `SUPABASE_ACCESS_TOKEN` environment value
+takes precedence; a private mode-600 `~/.supabase/access-token` is an optional fallback.
+
+The command writes private mode-600 JSON and a non-sensitive report beneath
+`~/Documents/FFTT-private/backups` (mode 700), captures the hosted schema
+fingerprint, and auto-installs pinned local test dependencies only if needed. It
+verifies a disposable pre-V6 real-mode restore and attempts V6 **only on the
+clone**, checking original rows, fingerprint integrity, authorization and
+publication flags. If schema definitions differ, the restore or API read fails,
+it leaves the private backup marked **UNVERIFIED** and blocks release.
+
+For an independently checked second copy, set `FFTT_BACKUP_MIRROR_DIR` to a
+private directory on encrypted removable storage or an owner-controlled
+encrypted cloud storage mount. Alternatively run `./tools/ops/fftt-backup
+--mirror-dir /absolute/path/to/private/mirror`. Without a verified second
+copy, the result is `LOCAL_VERIFIED`, not complete release-readiness.
+Never upload raw backup JSON to GitHub, chat, email or CI.
+
+This is a logical FFTT app-data backup. It excludes Auth password hashes,
+Cloudflare secrets and public projection caches (which must be rebuilt and
+re-reviewed in recovery). The Management API's dedicated read-only endpoint
+is currently Beta; a permission failure or missing endpoint blocks the
+automation rather than falling back to write-capable SQL.
+
+## Explicit secret exclusion and future schema changes
+
+The live schema currently has 15 private tables: 14 application tables
+in this JSON export, plus `fftt_private.registration_gate`.
+The latter contains a `secret bytea` proof credential and is deliberately
+**not exported**. Its key must be protected or re-established using a
+separate owner-controlled procedure if the hosted database is ever rebuilt.
+The backup tool checks an unprivileged read-only inventory of all private
+tables and refuses success if an unfamiliar table appears. This is **not**
+a full Supabase Auth, Cloudflare or proof-secret disaster-recovery export.
+
+## Reverify an already saved backup after an offline verifier fix
+
+If the export succeeded but verification failed, **do not export or paste it
+again**. After updating the same private Mac worktree to a reviewed verifier
+commit, run `./tools/ops/fftt-backup --verify-existing /absolute/private/path.json`.
+The command reuses the original file and checks its SHA-256 against the original
+private report; it does not query Supabase, require another access token, write to
+the hosted database, or modify the source backup. Only after a successful
+disposable restore and V6 rehearsal does it write a new independent
+`.reverified-<timestamp>.report.json` with `LOCAL_VERIFIED`. The original
+failure report is retained. If verification still fails, it emits only a
+predefined safe stage and schema category (never player rows or secret values).
+A local verified file **still needs a separate encrypted/off-device copy**.
+
+The November 7 verifier initially omitted the already-deployed Bracket Manager
+role, event-day delegation, and registration-gate schema additions; an exact
+hosted schema comparison therefore failed before restored rows were loaded.
+The updated verifier applies these three reviewed SQL files only to the
+disposable clone. It never copies or synthesizes the registration proof secret.
+
+## Google Drive for desktop — encrypted private copy
+
+If Google Drive already appears in Finder on macOS, run the separate offline
+helper from the reviewed PR #59 checkout:
+
+`./tools/ops/fftt-cloud-copy --backup /absolute/private/verified-export.json`
+
+The helper will first require an existing **LOCAL_VERIFIED** restore report and
+confirm its SHA-256 against the original JSON; it will **not query Supabase**.
+It detects exactly one Google Drive File Provider account in
+`~/Library/CloudStorage` (or the usual legacy Google Drive mount) or refuses
+ambiguity. With multiple Drive accounts, use `--drive-root "/Finder/My Drive/path"`.
+
+macOS `hdiutil` creates an **AES-256** encrypted, compressed, read-only `.dmg`
+containing only the verified export JSON and its verified report. It prompts
+interactively for a **separate, strong archive passphrase**, never in a command
+argument, GitHub file or chat. Store that passphrase in your password manager,
+independent of Google Drive; without it recovery is impossible.
+
+Only after `hdiutil isencrypted` and `hdiutil verify` pass does the tool
+copy the **encrypted `.dmg` only** into Drive's `FFTT Private Backups`
+folder and read both local hashes back. The original JSON and original
+verification proof stay untouched in their private folder.
+
+`FFTT ENCRYPTED COPY: LOCAL HASH VERIFIED` certifies the encrypted file
+was copied intact into the **local** Google Drive mount. It explicitly
+prints **`CLOUD SYNC: UNCONFIRMED`** because Drive for desktop can take
+additional time to upload. Confirm the actual `.dmg` appears in the
+Google Drive website and Google Drive for desktop reports synchronization
+completed. Keep multiple dated encrypted copies. Never move the raw JSON,
+password or unencrypted `.zip` into Google Drive.
+
+Apple documents the `hdiutil -encryption AES-256 -stdinpass` options; its
+image integrity check does not by itself demonstrate that the owner remembers
+the passphrase. After cloud sync, perform an owner-controlled recovery test
+by opening a **copy** of the encrypted `.dmg` and comparing the contained
+JSON's SHA-256 against the original report.
+
+## Legacy manual backup (fallback)
 1. Open the SQL editor of `fftt-bracket-manager-dev`, paste the contents of `tools/ops/hosted_export.sql`, **Run**. (Read-only; it changes nothing.)
 2. Copy the result into one JSON document (`format: "fftt-hosted-export-v1"`, `tables: {name: {count, fingerprint, rows}}`) and save it as a **mode-600 file in a private folder outside any Git repository**, e.g. `~/Documents/FFTT-private/backups/hosted-export-<purpose>-<UTC-timestamp>.json` (folder mode 700). Record its `shasum -a 256`.
 3. Keep at least: one pre-migration copy, one taken right before the Nov 22 doors open, and one after the final result is entered. Copy the newest one to a second private place (an encrypted USB drive or the owner's private cloud storage) — a laptop-only backup is not a backup.

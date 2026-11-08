@@ -110,6 +110,73 @@ export function createGamedayScoreTransport({projectUrl = C3_HOST, publishableKe
         return r;
       });
     },
+    /** Event-scoped, signed, read-only snapshot of server-confirmed completed games. */
+    async readGameProgress(token, {eventId, matchId} = {}) {
+      if (!UUID.test(eventId || '') || !UUID.test(matchId || '')) fail('Invalid game progress request');
+      reads++;
+      const r = await post('/rest/v1/rpc/fftt_game_progress_v1', token,
+        {p_event_id: eventId, p_match_id: matchId}, 'game progress');
+      const keys = ['event_id','match_id','generation','match_version','epoch','best_of',
+        'points_to_win','match_status','revision','games','updated_at','event_revision'];
+      if (!sameKeys(r, keys) || r.event_id !== eventId || r.match_id !== matchId
+        || !natural(r.generation) || !natural(r.match_version) || !natural(r.epoch)
+        || !natural(r.revision) || !natural(r.event_revision) || ![1,3,5].includes(r.best_of)
+        || ![11,21].includes(r.points_to_win) || !['pending','complete','bye','empty'].includes(r.match_status)
+        || !Array.isArray(r.games) || r.games.length > r.best_of
+        || !r.games.every(g => Array.isArray(g) && g.length === 2 && g.every(x => Number.isSafeInteger(x) && x >= 0 && x <= 99))
+        || !(r.updated_at === null || (typeof r.updated_at === 'string' && r.updated_at.length < 65))) {
+        fail('Invalid game progress snapshot');
+      }
+      return Object.freeze({...r, games: Object.freeze(r.games.map(g => Object.freeze([...g])))});
+    },
+    /** One-shot write. Unknown outcomes MUST be settled with readGameDecision, never resent. */
+    async submitCompletedGame(token, x) {
+      if (!x || !UUID.test(x.eventId || '') || !UUID.test(x.matchId || '') || !UUID.test(x.submissionId || '')
+        || !natural(x.generation) || !natural(x.matchVersion) || !natural(x.epoch)
+        || !natural(x.revision) || ![1,3,5].includes(x.bestOf) || ![11,21].includes(x.points)
+        || !Number.isSafeInteger(x.gameIndex) || x.gameIndex < 1 || x.gameIndex > x.bestOf
+        || ![x.player1Score,x.player2Score].every(n => Number.isSafeInteger(n) && n >= 0 && n <= 99)
+        || !(x.reason === null || (typeof x.reason === 'string' && x.reason.length <= 500))) {
+        fail('Invalid completed game request');
+      }
+      if (attempted.has(x.submissionId)) fail('Duplicate submission is forbidden, even after a timeout');
+      attempted.add(x.submissionId);
+      scoreRequests++;
+      const r = await post('/rest/v1/rpc/fftt_save_completed_game_v1', token, {
+        p_event_id: x.eventId, p_match_id: x.matchId, p_generation: x.generation,
+        p_expected_match_version: x.matchVersion, p_expected_epoch: x.epoch,
+        p_expected_progress_version: x.revision, p_expected_best_of: x.bestOf,
+        p_expected_points_to_win: x.points, p_submission_id: x.submissionId,
+        p_game_index: x.gameIndex, p_player_1_score: x.player1Score,
+        p_player_2_score: x.player2Score, p_reason: x.reason,
+      }, 'game');
+      if (!sameKeys(r, ['submission_id','status','reason','match_id','revision','event_revision'])
+        || r.submission_id !== x.submissionId || r.match_id !== x.matchId
+        || !['accepted','rejected'].includes(r.status)
+        || !natural(r.revision) || !natural(r.event_revision)
+        || (r.status === 'accepted' ? (r.reason !== null || r.revision <= x.revision)
+          : r.reason !== 'stale-progress')) {
+        fail('Invalid game-save response; outcome unknown');
+      }
+      return Object.freeze(r);
+    },
+    /** Caller-owned, event-scoped receipt only; absence never proves the write failed. */
+    async readGameDecision(token, {eventId, submissionId} = {}) {
+      if (!UUID.test(eventId || '') || !UUID.test(submissionId || '')) fail('Invalid game receipt request');
+      reads++;
+      const r = await post('/rest/v1/rpc/fftt_game_progress_decision_v1', token,
+        {p_event_id: eventId, p_submission_id: submissionId}, 'game receipt');
+      if (sameKeys(r, ['submission_id','status']) && r.submission_id === submissionId && r.status === 'unconfirmed')
+        return Object.freeze(r);
+      if (!sameKeys(r, ['submission_id','status','reason','match_id','revision','event_revision'])
+        || r.submission_id !== submissionId || !UUID.test(r.match_id || '')
+        || !['accepted','rejected'].includes(r.status) || !natural(r.revision)
+        || !natural(r.event_revision)
+        || (r.status === 'accepted' ? r.reason !== null : r.reason !== 'stale-progress')) {
+        fail('Invalid game receipt');
+      }
+      return Object.freeze(r);
+    },
     get stats() { return Object.freeze({scoreRequests, reads, automaticRetries: 0, queuedScores: 0}); },
   });
 }

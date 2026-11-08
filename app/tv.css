@@ -1452,3 +1452,22 @@ body.tv .cinematic-results .lead-result .result-player-name{
   line-height:1.08;
   font-stretch:normal;
 }
+
+/* Server-confirmed game progress within the current broadcast cards. */
+body.tv .broadcast-match-center .match-player{flex-direction:column;gap:clamp(3px,.55vh,8px)}
+body.tv .broadcast-match-center .match-player .game-win-dots{display:flex;justify-content:center;min-height:clamp(7px,.8vh,12px)}
+body.tv .broadcast-match-center .match-player .win-dot{width:clamp(7px,.65vw,11px);height:clamp(7px,.65vw,11px)}
+body.tv .broadcast-match-center .live-game-progress{
+  position:relative;z-index:1;display:flex;align-items:baseline;justify-content:center;
+  flex-wrap:wrap;gap:clamp(5px,.65vw,12px);max-width:100%;padding:0 clamp(8px,.8vw,14px);
+  color:#d9ebf1;font-size:clamp(11px,.9vw,16px);font-weight:700;line-height:1.15;text-align:center;
+}
+body.tv .broadcast-match-center .progress-kicker{font-size:clamp(10px,.72vw,13px);letter-spacing:.1em;color:var(--bc-cyan,#61e4d4)}
+body.tv .broadcast-match-center .progress-tally{font:900 clamp(18px,1.7vw,30px)/1 var(--bc-head,inherit);color:#f5fbff}
+body.tv .broadcast-match-center .progress-lines{white-space:normal;color:#d7e9f1}
+body.tv .broadcast-match-center .progress-next{font-size:clamp(10px,.7vw,13px);color:#e9d77c;letter-spacing:.04em}
+@media(max-height:760px){
+  body.tv .broadcast-match-center .match-player{gap:3px}
+  body.tv .broadcast-match-center .live-game-progress{gap:3px 7px;font-size:11px}
+  body.tv .broadcast-match-center .progress-tally{font-size:18px}
+}

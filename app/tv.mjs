@@ -8,7 +8,7 @@ import {parseGames} from './game_tiles.mjs';
 const wanted = new URLSearchParams(location.search).get('e');
 const durations = {match: 30000, results: 12000, championship: 18000, consolation: 18000};
 const labels = {match: 'MATCH CENTER', results: 'COMPLETED RESULTS', championship: 'CHAMPIONSHIP BRACKET', consolation: 'CONSOLATION BRACKET'};
-let view, event, board, screen = 'match', paused = false, deadline = Date.now() + durations.match, signature = '', segment = 0;
+let view, event, board, screen = 'match', paused = false, deadline = Date.now() + durations.match, signature = '', lastRenderedState = '', segment = 0;
 const bracketLabel = m => `${m.bracket === 'championship' ? 'Championship' : 'Consolation'} Bracket`;
 const roundLabel = (m, ev) => roundName(Math.max(...ev[m.bracket].map(x => x.round), 0) + 1, m.round, m.bracket);
 const details = (m, ev) => [bracketLabel(m), roundLabel(m, ev), m.bestOf && m.points ? formatLabel({bestOf: m.bestOf, points: m.points}) : null].filter(Boolean).join(' · ');
@@ -20,17 +20,17 @@ function tally(m) {
   if (!parsed?.length || !normalizeGameScores(m.scores, m.bestOf, m.winnerName === m.name1, m.points).ok) return null;
   return [parsed.filter(g => g.a > g.b).length, parsed.filter(g => g.b > g.a).length];
 }
-/**
- * Dots reflect FINAL, contract-validated best-of-three games only. PR #59
- * owns intermediate public progress and can later supply a verified adapter.
- */
+/** Dots use validated saved games for active matches and official final scores for completed matches. */
 function winDots(m, player) {
   if (m.bestOf !== 3) return null;
-  const wins = tally(m);
+  const active = m.phase === 'playing' && m.status === 'pending'
+    && view && (view.state === 'current' || view.state === 'stale') && m.progress?.games?.length;
+  const wins = active ? m.progress.won : tally(m);
   if (!wins) return null;
   const n = wins[player];
+  const qualifier = active ? (view.state === 'stale' ? 'last confirmed, out of date' : 'confirmed while match is active') : 'verified final';
   return h('span', {class:'game-win-dots',role:'img',
-    'aria-label': `${name(player === 0 ? m.name1 : m.name2)}: ${n} verified game win${n === 1 ? '' : 's'} in the final best-of-three result`},
+    'aria-label': `${name(player === 0 ? m.name1 : m.name2)}: ${n} ${qualifier} game win${n === 1 ? '' : 's'}`},
     Array.from({length:3}, (_,i)=>h('span',{class:'win-dot' + (i<n ? ' earned' : ''),'aria-hidden':'true'})));
 }
 function games(m) {
@@ -39,7 +39,20 @@ function games(m) {
 }
 
 const tableWord = number => number === 1 ? 'ONE' : number === 2 ? 'TWO' : String(number);
-const matchFormat = m => m.bestOf === 3 ? 'BEST OF THREE' : m.bestOf === 1 ? 'SINGLE GAME' : m.bestOf ? 'BEST OF ' + m.bestOf : 'MATCH FORMAT PENDING';
+const matchFormat = m => {
+  const format = m.bestOf === 3 ? 'BEST OF THREE' : m.bestOf === 1 ? 'SINGLE GAME' : m.bestOf ? 'BEST OF ' + m.bestOf : 'MATCH FORMAT PENDING';
+  return m.bestOf && m.points ? `${format} · TO ${m.points}` : format;
+};
+function liveGameProgress(m) {
+  if (m.status !== 'pending' || m.phase !== 'playing' ||
+      !m.progress?.games?.length || !['current','stale'].includes(view?.state)) return null;
+  const {games, won, decided} = m.progress;
+  return h('div',{class:'live-game-progress',role:'status','aria-live':'polite'},
+    h('span',{class:'progress-kicker',text:view.state === 'stale' ? 'LAST CONFIRMED · OUT OF DATE' : 'CONFIRMED GAMES'}),
+    h('strong',{class:'progress-tally',text:won.join('–')}),
+    h('span',{class:'progress-lines',text:games.map((g,i)=>`G${i+1} ${g[0]}–${g[1]}`).join('  ·  ')}),
+    h('span',{class:'progress-next',text:decided ? 'AWAITING OFFICIAL MATCH CONFIRMATION' : `GAME ${games.length+1} NEXT`}));
+}
 
 function tablePlayerName(raw) {
   const full=name(raw), parts=full.trim().split(/\s+/);
@@ -60,9 +73,10 @@ function tableCard(table) {
       h('span',{class:'status-label',text:m?(sample?'● SAMPLE MATCH':'● NOW PLAYING'):'AVAILABLE'})),
     m?h('div',{class:'match-content'},
       h('div',{class:'players'},
-        h('div',{class:'match-player'},tablePlayerName(m.name1)),
+        h('div',{class:'match-player'},tablePlayerName(m.name1),winDots(m,0)),
         h('div',{class:'versus-line'},h('span',{class:'versus',text:'VS'})),
-        h('div',{class:'match-player'},tablePlayerName(m.name2))),
+        h('div',{class:'match-player'},tablePlayerName(m.name2),winDots(m,1))),
+      liveGameProgress(m),
       h('div',{class:'match-meta',text:matchFormat(m)}))
     :h('div',{class:'empty-table'},h('strong',{text:'Table open'}),h('span',{text:'Waiting for the next match'})));
   return h('div',{class:'table-stage table-stage-'+table},
@@ -283,4 +297,4 @@ window.addEventListener('resize', () => { document.querySelector('.bracket-conne
 document.addEventListener('keydown', e => { if (e.target.tagName === 'BUTTON') return; if (e.key === 'ArrowRight') move(1); else if (e.key === 'ArrowLeft') move(-1); else if (e.key === ' ') { e.preventDefault(); toggle(); } else if (e.key === '1') select('match'); else if (e.key === '2') select('results'); else if (e.key === '3') select('championship'); else if (e.key === '4') select('consolation'); });
 setInterval(() => { if (paused || Date.now() < deadline) return; if (screen === 'championship' || screen === 'consolation') { const ms = event?.[screen] || []; const pages = bracketWindows(ms.filter(m => m.status !== 'empty'),screen).length;  if (segment + 1 < pages) { segment++; deadline = Date.now() + durations[screen]; render(); return; } } move(1); }, 250);
 startPublicFeed({onUpdate(next) { view = next; const picked = pickEvent(view.events, wanted); const flag = $('live'); flag.className = `feed-status ${picked ? view.state : 'empty'}`; flag.textContent = !picked ? 'NO CURRENT DATA' : view.state === 'current' ? (isShowcase(picked) ? 'DEMO DATA' : '●  LIVE') : view.state === 'stale' ? `OUT OF DATE · ${Math.round(view.ageMs / 1000)}s` : 'NO CURRENT DATA';
-  const nextSignature = JSON.stringify(picked); if (nextSignature === signature) return; signature = nextSignature; event = picked; board = event ? deriveBoard(event) : null; if (event && (screen === 'championship' || screen === 'consolation')) segment = Math.min(segment, Math.max(0, bracketWindows(event[screen].filter(m => m.status !== 'empty'),screen).length - 1)); if (!available().includes(screen)) { screen = 'match'; segment = 0; deadline = Date.now() + durations.match; } render(); }});
+  const nextSignature = JSON.stringify(picked); if (nextSignature === signature && lastRenderedState === view.state) return; signature = nextSignature; lastRenderedState = view.state; event = picked; board = event ? deriveBoard(event) : null; if (event && (screen === 'championship' || screen === 'consolation')) segment = Math.min(segment, Math.max(0, bracketWindows(event[screen].filter(m => m.status !== 'empty'),screen).length - 1)); if (!available().includes(screen)) { screen = 'match'; segment = 0; deadline = Date.now() + durations.match; } render(); }});
