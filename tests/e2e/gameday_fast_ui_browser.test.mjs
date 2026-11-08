@@ -253,3 +253,39 @@ test('registration Edit/Close and level choice: no page jump, focus stays on the
     assert.deepEqual(w.pageErrors, [], 'no JavaScript exceptions');
   } finally { await w.close(); }
 });
+
+
+test('Staff switcher hides archived events while Overview can open and restore them', {timeout: 180000}, async () => {
+  const w = await createBrowserWorld();
+  try {
+    const name = 'Archived Picker Fixture';
+    const created = await w.fake.local.rpc(w.ids.org, 'fftt_create_event_v3',
+      {p_name: name, p_date: '2099-09-18', p_table_count: 2});
+    const d = await w.device('archived-switcher', {viewport: {width: 390, height: 844}, mobile: true});
+    await d.signIn('org', {event: w.eventId});
+    const page = d.page, select = page.locator('#eventSelect');
+    await page.locator('.events-card').waitFor();
+    const archivedOption = page.locator(`#eventSelect option[value="${created.event_id}"]`);
+    await archivedOption.waitFor({state: 'attached'});
+
+    const row = page.locator('.events-card tbody tr', {hasText: name});
+    await row.locator('button', {hasText: 'Archive'}).click();
+    await page.locator('dialog[open] button', {hasText: 'Archive'}).click();
+    await archivedOption.waitFor({state: 'detached'});
+    assert.equal(await select.locator('option').count(), 1, 'only the unarchived event remains in the switcher');
+
+    await page.locator('.events-card .chip', {hasText: /^Archived \(1\)$/}).click();
+    await row.locator('button', {hasText: 'Open'}).click();
+    await page.locator(`#eventSelect option[value="${created.event_id}"]:checked`).waitFor({state: 'attached'});
+    assert.match(await select.locator('option:checked').innerText(), /\(archived\)/,
+      'opening the archive keeps its own selection visible');
+
+    await select.selectOption(w.eventId);
+    await page.locator(`#eventSelect option[value="${w.eventId}"]:checked`).waitFor({state: 'attached'});
+    await archivedOption.waitFor({state: 'detached'});
+    await page.locator('.events-card .chip', {hasText: /^Archived \(1\)$/}).click();
+    await row.locator('button', {hasText: 'Restore'}).click();
+    await archivedOption.waitFor({state: 'attached'});
+    assert.deepEqual(w.pageErrors, []);
+  } finally { await w.close(); }
+});

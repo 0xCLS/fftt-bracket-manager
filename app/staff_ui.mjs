@@ -132,7 +132,9 @@ export function createStaffUi({core, els, config, signOut}) {
       s.role === 'scorekeeper' && s.brief ? pill(s.brief.lifecycle === 'complete' ? 'Event complete' : 'Match Desk only', s.brief.lifecycle === 'complete' ? 'warn' : 'blue') : null,
       s.pending ? pill('Unconfirmed score', 'warn') : null,
       snapshot?.event?.publicVisible ? pill('Public view ON', 'blue') : null);
-    const evs = s.events;
+    // Archived events remain in Overview → Your events. Keep the currently open one in the
+    // switcher so its selection stays accurate until another event is opened.
+    const evs = s.events.filter(e => e.lifecycle !== 'archived' || e.eventId === s.eventId);
     const eventOptionsKey = JSON.stringify(evs.map(e => [e.eventId, e.name, e.date, e.lifecycle]));
     // The iPhone's native option picker may still be dismissing when a new
     // event becomes active. Do not destroy its options for a selection-only
