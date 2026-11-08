@@ -272,12 +272,12 @@ export function createStaffUi({core, els, config, signOut}) {
         h('p', {class: 'format-footnote', text: 'Ratings stay private. Consolation matchups are reviewed before the bracket is built.'})),
       stand.champion ? h('div', {class: 'champion-banner'},
         h('h2', {text: 'Champion: ' + stand.champion}), h('p', {text: 'Runner-up: ' + stand.runnerUp})) : null,
+      h('section', {class: 'overview-formats', 'aria-label': 'Match scoring formats'}, formatsCard(sn)),
+      h('section', {class: 'overview-history'}, eventsCard()),
       isOrganizer() && s.eventId === 'e6bd40cf-4107-43ea-8c87-057dc38ef31b' ? h('section', {class:'card overview-settings', 'aria-label':'Reset Showcase'},
         h('h2', {text:'Reset Showcase'}),
         h('p', {text:'Restore the fictional players, brackets, scores, tables and public presentation to their original state. Current demo scoring progress will be cleared from the presentation.'}),
-        h('button', {type:'button', class:'danger', disabled:!core.canWrite(), on:{click:openShowcaseReset}}, 'Reset Showcase')) : null,
-      h('section', {class: 'overview-formats', 'aria-label': 'Match scoring formats'}, formatsCard(sn)),
-      h('section', {class: 'overview-history'}, eventsCard()));
+        h('button', {type:'button', class:'danger', disabled:!core.canWrite(), on:{click:openShowcaseReset}}, 'Reset Showcase')) : null);
   }
 
   function openShowcaseReset() {
