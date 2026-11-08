@@ -273,6 +273,7 @@ test('events: filter by status, archive, restore (never public), delete only emp
       const select = document.querySelector('#eventSelect');
       return select.value === active && ![...select.options].some(o => o.value === archived);
     }, {active: w.eventId, archived: busy.event_id});
+    await chip(d.page, /^Archived \(1\)$/).click();
     await eventRow(d.page, 'Busy Draft').locator('button', {hasText: 'Restore'}).click();
     await toast(d.page, /Restored\. It is not public/);
     await chip(d.page, /^Draft \(2\)$/).waitFor({timeout: T});
