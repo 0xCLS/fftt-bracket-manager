@@ -19,6 +19,39 @@ class RoutingTests(unittest.TestCase):
             self.assertEqual(p['lanes'], ['tv', 'public'])
             self.assertFalse(p['manual'])
 
+    def test_archived_event_picker_only_gets_focused_staff_lane_after_trusted_blob_check(self):
+        before = "unchanged header\n" + ci.STAFF_PICKER_BEFORE + "unchanged footer\n"
+        after = before.replace(ci.STAFF_PICKER_BEFORE, ci.STAFF_PICKER_AFTER)
+        self.assertTrue(ci.approved_staff_picker_delta(before, after))
+        self.assertFalse(ci.approved_staff_picker_delta(before, after + "new permission check\n"))
+        self.assertFalse(ci.approved_staff_picker_delta(before, before))
+        self.assertFalse(ci.approved_staff_picker_delta(before + ci.STAFF_PICKER_BEFORE, after))
+        self.assertFalse(ci.approved_staff_picker_delta(before, after.replace("'archived'", "'active'")))
+        # The exception must NEVER be trusted from paths alone.
+        self.assertTrue(ci.select(['app/staff_ui.mjs'])['manual'])
+        chosen = ci.select(['app/staff_ui.mjs', 'tests/e2e/gameday_fast_ui_browser.test.mjs'],
+                           verified_staff_picker=True)
+        self.assertEqual(chosen['lanes'], ['staff'])
+        self.assertFalse(chosen['manual'])
+        self.assertTrue(ci.select(['app/staff_ui.mjs', 'app/staff_core.mjs'],
+                                  verified_staff_picker=True)['manual'])
+        self.assertTrue(ci.select(['app/staff_ui.mjs', 'tools/ci_v2.py'],
+                                  verified_staff_picker=True)['manual'])
+
+    def test_verified_staff_picker_reads_exact_git_blobs_and_fails_closed(self):
+        before = "header\n" + ci.STAFF_PICKER_BEFORE + "footer\n"
+        after = before.replace(ci.STAFF_PICKER_BEFORE, ci.STAFF_PICKER_AFTER)
+        with patch.object(ci.subprocess, 'check_output', side_effect=[before, after]) as read:
+            self.assertTrue(ci.verified_staff_picker_delta('a' * 40, 'b' * 40))
+            self.assertEqual(read.call_count, 2)
+        with patch.object(ci.subprocess, 'check_output', side_effect=[before, after + 'unsafe']):
+            self.assertFalse(ci.verified_staff_picker_delta('a' * 40, 'b' * 40))
+        with patch.object(ci.subprocess, 'check_output') as read:
+            self.assertFalse(ci.verified_staff_picker_delta('not-a-sha', 'b' * 40))
+            read.assert_not_called()
+        with patch.object(ci.subprocess, 'check_output', side_effect=subprocess.CalledProcessError(1, 'git')):
+            self.assertFalse(ci.verified_staff_picker_delta('a' * 40, 'b' * 40))
+
     def test_scoring_auth_database_and_unknown_do_not_autorun_full(self):
         for path in ('contracts/gameday_engine.mjs', 'app/staff_core.mjs',
                      'server/api.mjs', 'supabase/proposals/v6.sql',
