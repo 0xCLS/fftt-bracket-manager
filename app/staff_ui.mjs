@@ -461,13 +461,15 @@ export function createStaffUi({core, els, config, signOut}) {
     if (s.pending) children.push(pendingBanner());
     if (s.gamePending) children.push(pendingGameBanner());
     if (s.deskStatus === 'not-active') children.push(h('div', {class: 'notice warn', text: s.brief?.lifecycle === 'complete'
-      ? 'Event complete. New scoring and table assignments are closed; contact the organizer if a recorded result needs correction.'
+      ? 'Event complete. New scoring and table assignments are closed; ask the organizer or a Bracket Manager if a recorded result needs correction.'
       : 'No bracket is active yet. The organizer builds it from the Championship tab.'}));
     if (s.deskStatus === 'denied') children.push(h('div', {class: 'notice bad', role: 'alert', text: 'The Match Desk could not be loaded. Pull to refresh or sign in again.'}));
     const usage = new Map(rows.filter(r => r.table).map(r => [r.table, r]));
     children.push(h('section', {class: 'card', 'aria-labelledby': 'tablesTitle'}, h('h2', {id: 'tablesTitle', class: 'card-title', text: 'Tables'}), h('div', {class: 'row'},
       Array.from({length: tables}, (_, i) => { const m = usage.get(i + 1);
         return pill(m ? `Table ${i + 1} · ${m.players[0].name} v ${m.players[1].name}` : `Table ${i + 1} · free`, (m ? 'blue' : 'good') + ' table-pill'); }))));
+    const doublesCard = doublesDeskCard(canAdjudicate);
+    if (doublesCard) children.push(doublesCard);
     children.push(h('h2', {class: 'page-h2', text: `Ready to play (${rows.length})`}));
     children.push(rows.length ? h('div', {class: 'queue'}, rows.map(r => queueCard(r, tables, canAdjudicate)))
       : h('div', {class: 'empty-state', text:
@@ -619,7 +621,7 @@ export function createStaffUi({core, els, config, signOut}) {
         if (!tableSel.value) { status('Choose an available table before recording this game.', 'bad'); return; }
         const [a,b] = draftGames[index - 1].map(Number);
         const correction = index <= verified.games.length;
-        const reason = correction ? (dlg.querySelector('#gameCorrectionReason')?.value ?? '') : null;
+        const reason = correction ? ((dlg.querySelector('#gameCorrectionReason')?.value ?? '').trim() || null) : null;
         if (draftGames[index - 1].some(v => !/^\d{1,2}$/.test(v.trim()))) {
           status('Enter both completed-game scores, using whole numbers.', 'bad'); return;
         }
@@ -655,7 +657,7 @@ export function createStaffUi({core, els, config, signOut}) {
         const nextGame = summary?.nextGame ?? 1;
         const grid = h('div', {class: 'games'}, h('span'), h('b', {text: row.players[0].name}), h('span'), h('b', {text: row.players[1].name}));
         for (let g = 1; g <= best; g++) {
-          const saved = g <= count, editable = !saved || (s.role === 'organizer' && correctionIndex === g);
+          const saved = g <= count, editable = !saved || correctionIndex === g;
           const a = h('input', {type: 'text', inputmode: 'numeric', maxlength: 2,
             'aria-label': `Game ${g}, ${row.players[0].name}`, pattern: '[0-9]*',
             disabled: !editable || busyGame, value: draftGames[g - 1][0], on: {input: () => { draftGames[g - 1][0] = a.value; persistDraft(); }}});
@@ -673,9 +675,9 @@ export function createStaffUi({core, els, config, signOut}) {
           for (let g = 1; g <= best; g++) {
             if (g <= count) {
               steps.push(h('div', {class: 'game-step'}, h('span', {text: `Game ${g} · ${verified.games[g-1].join('–')} · Saved`}),
-                s.role === 'organizer' ? h('button', {type: 'button', class: 'small', disabled: busyGame,
+                h('button', {type: 'button', class: 'small', disabled: busyGame,
                   text: correctionIndex === g ? 'Cancel correction' : 'Correct…',
-                  on: {click: () => { rememberFields(); correctionIndex = correctionIndex === g ? null : g; form(); }}}) : null));
+                  on: {click: () => { rememberFields(); correctionIndex = correctionIndex === g ? null : g; form(); }}})));
             } else if (g === nextGame && correctionIndex === null) {
               steps.push(h('div', {class: 'game-step'},
                 h('span', {text: `Game ${g} · Unconfirmed`}),
@@ -684,8 +686,8 @@ export function createStaffUi({core, els, config, signOut}) {
             }
           }
           if (correctionIndex !== null) {
-            steps.push(h('label', {for: 'gameCorrectionReason', text: `Reason for correcting Game ${correctionIndex} (required)`}),
-              h('textarea', {id: 'gameCorrectionReason', rows: 2, placeholder: 'Describe the mistake (at least 10 characters).'}),
+            steps.push(h('label', {for: 'gameCorrectionReason', text: `Reason for correcting Game ${correctionIndex} (optional)`}),
+              h('textarea', {id: 'gameCorrectionReason', rows: 2, placeholder: 'Optional: what was wrong? The old and new scores are always logged.', maxlength: 500}),
               h('button', {type: 'button', class: 'primary', disabled: busyGame, text: `Save corrected Game ${correctionIndex}`,
                 on: {click: () => void saveGame(correctionIndex)}}));
           }
@@ -745,6 +747,141 @@ export function createStaffUi({core, els, config, signOut}) {
     const total = s.snapshot ? Math.max(...s.snapshot.matches.filter(m => m.bracket === r.bracket).map(m => m.round)) + 1 : r.round + 2;
     return `${r.bracket === 'championship' ? 'Championship' : 'Consolation'} ${roundName(total, r.round, r.bracket)}`;
   };
+  // ------------------------------------------------------------ Mixed-Skill Doubles on the Match Desk
+  // Same game-by-game flow as a singles match. Scorekeepers, Bracket Managers and Organizers may record games and correct
+  // saved games; only Organizers and Bracket Managers are offered a correction of a FINALIZED doubles result. Partner choice
+  // stays on the Doubles Finale tab (Organizer/Bracket Manager). Every permission is enforced by the database.
+  const teamName = (names, i) => `${i === 0 ? 'Team A' : 'Team B'} · ${names.join(' + ')}`;
+  function doublesDeskCard(canAdjudicate) {
+    const dd = s.doublesDesk;
+    if (!dd) return null;
+    const fmt = {bestOf: dd.best_of, points: dd.points_to_win};
+    if (dd.status === 'ready') {
+      return h('section', {class: 'card doubles-desk', 'aria-labelledby': 'doublesDeskTitle'},
+        h('h2', {id: 'doublesDeskTitle', class: 'card-title', text: 'Mixed-Skill Doubles'}),
+        h('p', {text: `${dd.teams[0].join(' + ')}  vs  ${dd.teams[1].join(' + ')}`}),
+        h('p', {class: 'muted', text: `${formatText(fmt)}${dd.games.length ? ` · ${dd.games.length} game${dd.games.length === 1 ? '' : 's'} saved` : ''}`}),
+        h('button', {type: 'button', class: 'primary', disabled: !core.canWrite(), text: 'Record doubles', 'aria-label': 'Record the Mixed-Skill Doubles match',
+          on: {click: () => openDoublesScoring()}}));
+    }
+    return h('section', {class: 'card doubles-desk', 'aria-labelledby': 'doublesDeskTitle'},
+      h('h2', {id: 'doublesDeskTitle', class: 'card-title', text: 'Mixed-Skill Doubles'}),
+      h('p', {text: `Result recorded: ${dd.winner_team === 1 ? 'Team A' : 'Team B'} won · ${dd.game_scores || 'no game scores'}`}),
+      canAdjudicate ? h('button', {type: 'button', class: 'small', disabled: !core.canWrite(), text: 'Correct…', 'aria-label': 'Correct the Mixed-Skill Doubles result',
+        on: {click: () => openDoublesCorrection({winnerTeam: dd.winner_team, scores: dd.game_scores}, fmt)}}) : null);
+  }
+  function openDoublesScoring() {
+    let verified = null, correctionIndex = null, busy = false, best = 3;
+    let draft = [];
+    openDialog((dlg, close) => {
+      const body = h('div', {class: 'dlg'}); dlg.append(body);
+      const msg = h('p', {class: 'status', role: 'status', 'aria-live': 'polite'});
+      const inputs = [];
+      const status = (text, kind = '') => { msg.textContent = text; msg.className = 'status' + (kind ? ' ' + kind : ''); };
+      const remember = () => inputs.forEach(([a, b], i) => { draft[i] = [a.value, b.value]; });
+      async function load() {
+        const r = await core.readDoublesProgress();
+        if (!r.ok) { verified = null; form(); status(r.message, 'bad'); return false; }
+        verified = r.data; best = verified.best_of;
+        draft = Array.from({length: best}, (_, i) => verified.games[i] ? verified.games[i].map(String) : ['', '']);
+        correctionIndex = null; form(); return true;
+      }
+      async function save(index) {
+        if (busy || s.gamePending || !verified) return;
+        remember();
+        const [a, b] = draft[index - 1];
+        if (![a, b].every(v => /^\d{1,2}$/.test(String(v).trim()))) { status('Enter both teams\' completed-game scores, using whole numbers.', 'bad'); return; }
+        const correction = index <= verified.games.length;
+        const reason = correction ? ((dlg.querySelector('#doublesCorrectionReason')?.value ?? '').trim() || null) : null;
+        busy = true; form(); status(`Saving Game ${index}…`);
+        try {
+          const r = await core.saveDoublesGame({snapshot: verified, gameIndex: index, team1Score: Number(a), team2Score: Number(b), reason});
+          if (r.ok) {
+            const loaded = await load();
+            status(loaded ? `Game ${index} saved and confirmed by the server.` : 'Game saved on the server; refresh to check the current games.', loaded ? 'good' : '');
+          } else status(r.message, r.unknown ? 'warn' : 'bad');
+        } finally { busy = false; if (verified && dlg.isConnected) form(); }
+      }
+      function form() {
+        inputs.length = 0;
+        const summary = verified ? summarizeGameProgress(verified.games, best, verified.points_to_win) : null;
+        const count = verified?.games.length ?? 0, nextGame = summary?.nextGame ?? 1;
+        const names = verified?.teams ?? [['Team A'], ['Team B']];
+        const grid = h('div', {class: 'games'}, h('span'), h('b', {text: teamName(names[0], 0)}), h('span'), h('b', {text: teamName(names[1], 1)}));
+        for (let g = 1; g <= best; g++) {
+          const saved = g <= count, editable = !saved || correctionIndex === g;
+          const a = h('input', {type: 'text', inputmode: 'numeric', maxlength: 2, 'aria-label': `Game ${g}, Team A`, pattern: '[0-9]*',
+            disabled: !editable || busy, value: draft[g - 1]?.[0] ?? '', on: {input: () => { draft[g - 1] = [a.value, b.value]; }}});
+          const b = h('input', {type: 'text', inputmode: 'numeric', maxlength: 2, 'aria-label': `Game ${g}, Team B`, pattern: '[0-9]*',
+            disabled: !editable || busy, value: draft[g - 1]?.[1] ?? '', on: {input: () => { draft[g - 1] = [a.value, b.value]; }}});
+          inputs.push([a, b]);
+          grid.append(h('span', {class: 'muted', text: best === 1 ? 'Game 1' : `G${g}`}), a, h('span', {text: '–'}), b);
+        }
+        const steps = [];
+        if (verified) {
+          steps.push(h('div', {class: 'game-tally', role: 'status'}, h('strong', {text: `Games won · ${summary.won.join('–')}`}),
+            h('span', {class: 'muted', text: summary.decided ? 'Match decided · official result not yet confirmed' : `Game ${nextGame} next`})));
+          for (let g = 1; g <= best; g++) {
+            if (g <= count) {
+              steps.push(h('div', {class: 'game-step'}, h('span', {text: `Game ${g} · ${verified.games[g - 1].join('–')} · Saved`}),
+                h('button', {type: 'button', class: 'small', disabled: busy, text: correctionIndex === g ? 'Cancel correction' : 'Correct…',
+                  on: {click: () => { remember(); correctionIndex = correctionIndex === g ? null : g; form(); }}})));
+            } else if (g === nextGame && correctionIndex === null) {
+              steps.push(h('div', {class: 'game-step'}, h('span', {text: `Game ${g} · Unconfirmed`}),
+                h('button', {type: 'button', class: 'primary small', disabled: busy || !!s.gamePending || !core.canWrite(), text: `Save Game ${g}`, on: {click: () => void save(g)}})));
+            }
+          }
+          if (correctionIndex !== null) {
+            steps.push(h('label', {for: 'doublesCorrectionReason', text: `Reason for correcting Game ${correctionIndex} (optional)`}),
+              h('textarea', {id: 'doublesCorrectionReason', rows: 2, maxlength: 500, placeholder: 'Optional: what was wrong? The old and new scores are always logged.'}),
+              h('button', {type: 'button', class: 'primary', disabled: busy, text: `Save corrected Game ${correctionIndex}`, on: {click: () => void save(correctionIndex)}}));
+          }
+        } else steps.push(h('p', {class: 'notice warn', text: 'Loading verified game scores… Do not resend an uncertain game.'}));
+        clear(body).append(h('h3', {text: 'Record Mixed-Skill Doubles'}),
+          h('p', {class: 'help', text: `${verified ? formatText({bestOf: best, points: verified.points_to_win}) : 'Doubles'}. Save each completed game as it happens. Only confirming the final result records the doubles winner.`}),
+          grid, h('div', {class: 'score-game-actions'}, steps), msg,
+          h('div', {class: 'dlg-actions'}, h('button', {type: 'button', text: 'Close', on: {click: close}}),
+            verified && summary?.decided && correctionIndex === null ? h('button', {type: 'button', class: 'primary', disabled: busy || !core.canWrite(), text: 'Review result',
+              on: {click: () => review(summary)}}) : null));
+      }
+      function review(summary) {
+        const team = summary.winnerIndex + 1, text = verified.games.map(g => g.join('-')).join(', ');
+        const out = h('p', {class: 'status', role: 'status'});
+        clear(body).append(h('h3', {text: 'Check before sending'}),
+          h('div', {class: 'review'}, `${teamName(verified.teams[team - 1], team - 1)} won`, h('br'), text),
+          h('p', {class: 'help', text: 'The completed games are already saved. This final confirmation records the doubles winner. It is sent once.'}),
+          h('div', {class: 'dlg-actions'}, h('button', {type: 'button', text: 'Back — edit', on: {click: () => form()}}),
+            h('button', {type: 'button', class: 'primary', text: 'Confirm and send', on: {click: async ev => {
+              ev.target.disabled = true; out.textContent = 'Sending…';
+              const r = await core.actions.recordDoubles(team, text);
+              toast(r.ok ? 'Doubles result recorded.' : r.message, r.ok ? '' : 'bad'); close(); render(true);
+            }}})), out);
+      }
+      form();
+      void load();
+    }, {label: 'Record doubles'});
+  }
+  // Finalized doubles result: Organizer or Bracket Manager only (the database refuses anyone else). Reason optional.
+  function openDoublesCorrection(current, fmt) {
+    let winnerTeam = current.winnerTeam;
+    openDialog((dlg, close) => {
+      const scores = h('input', {type: 'text', id: 'dcScores', value: current.scores ?? '',
+        placeholder: fmt.bestOf === 1 ? `${fmt.points}-${fmt.points - 6}` : `${fmt.points}-8, 9-${fmt.points}, ${fmt.points}-7`});
+      const reason = h('input', {type: 'text', id: 'dcReason', maxlength: 300, placeholder: 'Optional: why is this being corrected?'});
+      const msg = h('p', {class: 'status bad', role: 'alert'});
+      dlg.append(h('div', {class: 'dlg'}, h('h3', {text: 'Correct Mixed-Skill Doubles result'}),
+        h('p', {class: 'help', text: `The organizer or a Bracket Manager can correct a result. The old and new results are always written to the audit log; a reason is optional. Played as ${formatText(fmt)}.`}),
+        h('div', {class: 'winner-pick', role: 'radiogroup', 'aria-label': 'Winning team'},
+          [[1, 'Team A won'], [2, 'Team B won']].map(([v, t]) => h('label', {}, h('input', {type: 'radio', name: 'dcWinner', value: v, checked: v === winnerTeam, on: {change: () => { winnerTeam = v; }}}), h('span', {text: t})))),
+        h('label', {for: 'dcScores', text: 'Game scores'}), scores, h('label', {for: 'dcReason', text: 'Reason (optional)'}), reason, msg,
+        h('div', {class: 'dlg-actions'}, h('button', {type: 'button', text: 'Cancel', on: {click: close}}),
+          h('button', {type: 'button', class: 'primary', text: 'Save correction', on: {click: async () => {
+            const norm = normalizeGameScores(scores.value, fmt.bestOf, winnerTeam === 1, fmt.points);
+            if (!norm.ok) { msg.textContent = norm.error; return; }
+            const r = await core.actions.correctDoubles(current.winnerTeam, current.scores, winnerTeam, scores.value, reason.value.trim() || null);
+            if (r.ok) { toast('Correction saved.'); close(); render(true); } else msg.textContent = r.message; }}}))));
+    }, {label: 'Correct doubles result'});
+  }
   function openForfeit(row) {
     let absent = null;
     openDialog((dlg, close) => {
@@ -768,19 +905,19 @@ export function createStaffUi({core, els, config, signOut}) {
     const fmt = {bestOf: m.bestOf ?? 3, points: m.points ?? 11};
     openDialog((dlg, close) => {
       const scores = h('input', {type: 'text', id: 'crScores', value: m.scores === 'W/O' ? '' : m.scores, placeholder: fmt.bestOf === 1 ? `${fmt.points}-${fmt.points - 6}` : `${fmt.points}-8, 9-${fmt.points}, ${fmt.points}-7`});
-      const reason = h('input', {type: 'text', id: 'crReason', maxlength: 300, placeholder: 'Why is this being corrected?'});
+      const reason = h('input', {type: 'text', id: 'crReason', maxlength: 300, placeholder: 'Optional: why is this being corrected?'});
       const msg = h('p', {class: 'status bad', role: 'alert'});
       dlg.append(h('div', {class: 'dlg'}, h('h3', {text: `Correct result · ${m.name1} vs ${m.name2}`}),
-        h('p', {class: 'help', text: `Only the organizer can correct a result. The change and your reason are written to the audit log. This match was played as ${formatText(fmt)}${m.formatLegacy ? ' (historical format)' : ''}.`}),
+        h('p', {class: 'help', text: `The organizer or a Bracket Manager can correct a result. The old and new results are always written to the audit log; a reason is optional. This match was played as ${formatText(fmt)}${m.formatLegacy ? ' (historical format)' : ''}.`}),
         h('div', {class: 'winner-pick', role: 'radiogroup', 'aria-label': 'Winner'},
           [[m.p1, m.name1], [m.p2, m.name2]].map(([id, nm]) => h('label', {}, h('input', {type: 'radio', name: 'crWinner', value: id, checked: id === m.winner, on: {change: () => { winnerId = id; }}}), h('span', {text: `${nm} won`})))),
-        h('label', {for: 'crScores', text: 'Game scores (optional)'}), scores, h('label', {for: 'crReason', text: 'Reason (required)'}), reason, msg,
+        h('label', {for: 'crScores', text: 'Game scores (optional)'}), scores, h('label', {for: 'crReason', text: 'Reason (optional)'}), reason, msg,
         h('div', {class: 'dlg-actions'}, h('button', {type: 'button', text: 'Cancel', on: {click: close}}),
           h('button', {type: 'button', class: 'primary', text: 'Save correction', on: {click: async () => {
             const norm = normalizeGameScores(scores.value, fmt.bestOf, winnerId === m.p1, fmt.points);
             if (!norm.ok) { msg.textContent = norm.error; return; }
             const live = sn.matches.find(x => x.id === m.id);
-            const r = await core.actions.correct(m.id, live.version, winnerId, scores.value, reason.value);
+            const r = await core.actions.correct(m.id, live.version, winnerId, scores.value, reason.value.trim() || null);
             if (r.ok) { toast('Correction saved.'); close(); render(true); } else msg.textContent = r.message; }}}))));
     }, {label: 'Correct a result'});
   }
@@ -822,7 +959,8 @@ export function createStaffUi({core, els, config, signOut}) {
         h('div', {class: 'grid two'}, h('div', {class: 'stat ice'}, h('b', {text: 'Team A'}), h('span', {text: teamLine(d.finalist1, d.partner1)})),
           h('div', {class: 'stat lav'}, h('b', {text: 'Team B'}), h('span', {text: teamLine(d.finalist2, d.partner2)}))),
         locked ? h('div', {class: 'notice good', id: 'doublesResult'}, h('p', {text: `Result: ${d.winnerTeam === 1 ? 'Team A' : 'Team B'} won · ${formatText(fmt)}.`}),
-          d.scores ? scoreTiles(d.scores, {left: 'Team A', right: 'Team B'}) : null)
+          d.scores ? scoreTiles(d.scores, {left: 'Team A', right: 'Team B'}) : null,
+          h('button', {type: 'button', class: 'small', disabled: !core.canWrite(), text: 'Correct result…', on: {click: () => openDoublesCorrection({winnerTeam: d.winnerTeam, scores: d.scores}, fmt)}}))
           : h('form', {on: {submit: async ev => { ev.preventDefault(); msg.textContent = '';
               const team = Number(new FormData(ev.target).get('team'));
               if (!team) { msg.textContent = 'Choose the winning team.'; return; }

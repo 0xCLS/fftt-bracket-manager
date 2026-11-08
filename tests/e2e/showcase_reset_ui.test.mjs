@@ -11,7 +11,11 @@ test('reset control is restricted to showcase and requires explicit typed confir
   const org=await w.device('org'); await org.signIn('org',{event:w.eventId}); await org.page.locator('#evName').waitFor();
   assert.equal(await org.page.getByRole('button',{name:'Reset Showcase',exact:true}).count(),0);
   await org.page.locator('#eventSelect').selectOption(id);
-  const control=org.page.getByRole('button',{name:'Reset Showcase',exact:true}); await control.waitFor(); await control.click();
+  const control=org.page.getByRole('button',{name:'Reset Showcase',exact:true}); await control.waitFor();
+  // Organizer Overview order: the Reset Showcase card is last, immediately below the Your events card.
+  const place=await org.page.evaluate(()=>{const c=document.querySelector('section[aria-label="Reset Showcase"]'); return {afterEvents:!!c?.previousElementSibling?.classList.contains('overview-history')&&!!c.previousElementSibling.querySelector('.events-card'),last:!!c&&!c.nextElementSibling};});
+  assert.deepEqual(place,{afterEvents:true,last:true},'Reset Showcase sits at the bottom, directly below Your events');
+  await control.click();
   const dlg=org.page.locator('dialog[open]'), confirm=dlg.getByRole('button',{name:'Confirm reset'});
   assert.equal(await confirm.isDisabled(),true); await dlg.locator('#showcaseResetConfirm').fill('RESET'); assert.equal(await confirm.isDisabled(),true);
   await dlg.locator('#showcaseResetConfirm').fill('RESET SHOWCASE'); assert.equal(await confirm.isEnabled(),true);

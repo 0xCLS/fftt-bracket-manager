@@ -16,7 +16,11 @@ Let the Organizer participate in the tournament rather than operate the applicat
 | First-time Championship and Consolation build | Yes | No |
 | Assign free tables / record ordinary results | Yes | Yes |
 | Record no-show (reason required) | Yes | No |
-| Correct recorded singles result (reason and version required) | Yes | No |
+| Correct a saved game while its match is open (reason optional) | Yes | Yes |
+| Correct a finalized singles result (version required; reason optional) | Yes | No |
+| Record Mixed-Skill Doubles games and the doubles result from the Match Desk (game by game) | Yes | Yes |
+| Correct a finalized Mixed-Skill Doubles result (reason optional) | Yes | No |
+| Choose or change the doubles partners | Yes | No |
 | Adjust a single unplayed match format | Yes | No |
 | Select / record Doubles Finale | Yes | Match Desk scoring only |
 | View/download public-safe results and mark a *finished* event complete | Yes | No |
