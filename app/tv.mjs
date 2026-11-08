@@ -43,7 +43,10 @@ function games(m) {
 }
 
 const tableWord = number => number === 1 ? 'ONE' : number === 2 ? 'TWO' : String(number);
-const matchFormat = m => m.bestOf === 3 ? 'BEST OF THREE' : m.bestOf === 1 ? 'SINGLE GAME' : m.bestOf ? 'BEST OF ' + m.bestOf : 'MATCH FORMAT PENDING';
+const matchFormat = m => {
+  const format = m.bestOf === 3 ? 'BEST OF THREE' : m.bestOf === 1 ? 'SINGLE GAME' : m.bestOf ? 'BEST OF ' + m.bestOf : 'MATCH FORMAT PENDING';
+  return m.bestOf && m.points ? `${format} · TO ${m.points}` : format;
+};
 function liveGameProgress(m) {
   if (m.status !== 'pending' || m.phase !== 'playing' ||
       !m.progress?.games?.length || !['current','stale'].includes(view?.state)) return null;
