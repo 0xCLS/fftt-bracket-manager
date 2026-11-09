@@ -112,7 +112,7 @@ test('formats: configured on Overview, applied to the bracket, shown to scorekee
     await a.page.waitForTimeout(9500);   // the scorekeeper's desk refreshes in the background while the dialog stays untouched
     await dlg2.locator('button', {hasText: 'Review result'}).click();
     await dlg2.locator('.status.bad', {hasText: /organizer changed this match to Best of 3, games to 11/}).waitFor({timeout: T});
-    await dlg2.locator('button', {hasText: 'Cancel'}).click();
+    await dlg2.locator('button', {hasText: 'Close'}).click();
     await a.page.locator('.queue-card', {hasText: 'Best of 3 · to 11'}).first().waitFor({timeout: T});
 
     // a recorded match's format is locked everywhere

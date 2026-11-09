@@ -241,8 +241,8 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
     await nsCard.locator('button', {hasText: 'No-show…'}).click();
     const dlg = org.page.locator('dialog[open]');
     await dlg.locator('.winner-pick label').first().click();
-    await dlg.locator('button', {hasText: 'Record no-show'}).click();
-    await waitToast(org.page, /No-show recorded/);
+    await dlg.locator('button', {hasText: 'Record walkover'}).click();
+    await waitToast(org.page, /Walkover recorded/);
     await org.page.locator('button', {hasText: 'Correct…'}).first().click();
     const cd = org.page.locator('dialog[open]');
     await cd.locator('#crReason').fill('Scorekeeper tapped the wrong player');

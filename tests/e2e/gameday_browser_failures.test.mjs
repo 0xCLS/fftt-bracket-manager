@@ -158,7 +158,7 @@ test('heartbeat preserves the organizer opening-round preview and occupied table
     await cards.nth(1).locator('button', {hasText: 'Record result'}).click();
     assert.equal(await org.page.locator('dialog[open] #scTable option[value="1"]').isDisabled(), true,
       'the score dialog also prevents selecting an occupied table');
-    await org.page.locator('dialog[open] button', {hasText: 'Cancel'}).click();
+    await org.page.locator('dialog[open] button', {hasText: 'Close'}).click();
 
     // With all three tables in use, the fourth ready match must not reach Review/Send.
     await cards.nth(1).locator('select[aria-label^="Table for"]').selectOption('2');
@@ -172,7 +172,7 @@ test('heartbeat preserves the organizer opening-round preview and occupied table
     assert.equal(await full.locator('#scTable').isDisabled(), true, 'the table picker is unavailable');
     assert.equal(await full.locator('button', {hasText: 'Review result'}).isDisabled(), true, 'no invalid score review is possible');
     assert.equal(await full.locator('button', {hasText: 'Confirm and send'}).count(), 0, 'no send action is available');
-    await full.locator('button', {hasText: 'Cancel'}).click();
+    await full.locator('button', {hasText: 'Close'}).click();
   } finally { await w.close(); }
 });
 

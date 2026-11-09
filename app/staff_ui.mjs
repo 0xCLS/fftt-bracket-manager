@@ -219,7 +219,7 @@ export function createStaffUi({core, els, config, signOut}) {
     if (!sn.players.length) next = 'Load the registrations or add players on the Players tab. Never import actual FFTT3 registrations into staging.';
     else if (checked < 2) next = 'Check in at least two players on the Players tab.';
     else if (!champ) next = 'Build the championship bracket on the Championship tab.';
-    else if (champ.status === 'active') next = pendingFirst > 0 && !cons ? 'Record results on the Match Desk. Consolation unlocks when everyone has played once.' : 'Keep recording results on the Match Desk.';
+    else if (champ.status === 'active') next = pendingFirst > 0 && !cons ? 'Record match outcomes on the Match Desk. Consolation unlocks when every entrant has a Championship outcome, including verified walkovers.' : 'Keep recording results on the Match Desk.';
     else if (sn.candidates.length >= 2 && !cons) next = 'Championship is decided. Build the consolation bracket.';
     else if (cons?.status === 'active') next = 'Finish the consolation bracket on the Match Desk.';
     else if (!sn.doubles?.partner1) next = 'Choose the Mixed-Skill Doubles teams on the Doubles Finale tab.';
@@ -413,7 +413,32 @@ export function createStaffUi({core, els, config, signOut}) {
             : isOrganizer() ? h('button', {class: 'danger', type: 'button', disabled: !core.canWrite(), text: 'Rebuild (replaces the bracket)', on: {click: async () => {
               const text = played ? `This replaces the bracket and discards ${played} completed result(s) from the current bracket, the consolation bracket and the doubles teams. Scorekeepers will need to refresh. Export a backup first.` : 'This replaces the current bracket.';
               if (await confirmDialog('Rebuild the championship bracket?', text, 'Rebuild', {danger: true})) result(await core.actions.buildChampionship({confirm: true}), 'Bracket rebuilt.'); }}}) : null)),
+      champ && played === 0 && field.length > 2 ? h('section', {class: 'card', 'aria-label': 'Withdraw before play'},
+        h('h3', {text: 'Someone left before play?'}),
+        h('p', {class: 'help', text: 'Withdraw a checked-in player and safely regenerate the unplayed Championship bracket. Saved games or completed results block this action; existing registrations are preserved.'}),
+        h('button', {type: 'button', disabled: !core.canWrite(), text: 'Withdraw before play…', on: {click: () => openWithdrawPreplay(field)}})) : null,
       champ ? h('section', {class: 'card', 'aria-label': 'Championship bracket'}, bracketView(normalized('championship'), 'championship')) : null);
+  }
+  function openWithdrawPreplay(field) {
+    openDialog((dlg, close) => {
+      const target = h('select', {id: 'withdrawTarget'}, field.map(p => h('option', {value: p.id, text: p.name})));
+      const reason = h('input', {type: 'text', id: 'withdrawReason', maxlength: 300, value: 'Left after practice before tournament play'});
+      const msg = h('p', {class: 'status bad', role: 'alert'});
+      dlg.append(h('div', {class: 'dlg'}, h('h3', {text: 'Withdraw and regenerate unplayed bracket'}),
+        h('p', {class: 'help', text: 'This retains the player registration and the original unplayed bracket in the audit history. It is refused if any completed result or saved game exists, even in a prior bracket generation.'}),
+        h('label', {for: 'withdrawTarget', text: 'Player leaving'}), target,
+        h('label', {for: 'withdrawReason', text: 'Reason (required)'}), reason, msg,
+        h('div', {class: 'dlg-actions'},
+          h('button', {type: 'button', text: 'Keep bracket', on: {click: close}}),
+          h('button', {type: 'button', class: 'danger', text: 'Withdraw and regenerate', on: {click: async ev => {
+            const note = reason.value.trim();
+            if (note.length < 3) { msg.textContent = 'Enter a reason for this withdrawal.'; return; }
+            ev.target.disabled = true;
+            const r = await core.actions.withdrawPreplay(target.value, note);
+            if (r.ok) { toast('Player withdrawn; unplayed Championship regenerated.'); close(); render(true); }
+            else { msg.textContent = r.message; ev.target.disabled = false; }
+          }}}))));
+    }, {label: 'Withdraw before play'});
   }
   const pairs = a => a.reduce((out, x, i) => i % 2 ? out : [...out, [x, a[i + 1] ?? null]], []);
 
@@ -437,8 +462,8 @@ export function createStaffUi({core, els, config, signOut}) {
           : h('div', {class: 'chips static', 'aria-label': 'Formats in this bracket'}, formatSummary(sn, 'consolation').map(t => pill(t, 'blue'))),
         h('div', {class: 'notice ' + (pending.length ? 'warn' : 'good')},
           h('b', {text: `${cands.length}`}), ` first-match loser${cands.length === 1 ? '' : 's'}. `,
-          pending.length ? `${pending.length} player(s) have not yet played their first championship match: ${pending.slice(0, 6).map(nameOf).join(', ')}${pending.length > 6 ? '…' : ''}.`
-            : 'Everyone has played a first match.'),
+          pending.length ? `${pending.length} player(s) still await their first Championship match outcome: ${pending.slice(0, 6).map(nameOf).join(', ')}${pending.length > 6 ? '…' : ''}.`
+            : 'Every player has a Championship match outcome (played or walkover).'),
         cands.length ? h('div', {class: 'scroll-x'}, h('table', {class: 'responsive-table'}, h('thead', {}, h('tr', {}, ['Include', 'Player', 'Level'].map(t => h('th', {scope: 'col', text: t})))),
           h('tbody', {}, cands.map(c => h('tr', {}, h('td', {'data-label': 'Include'}, cons ? pill(c.state, c.state === 'placed' ? 'good' : '') : checks.get(c.playerId)), h('td', {'data-label': 'Player'}, c.p.name), h('td', {'data-label': 'Level'}, h('span', {class: 'cons-level', role: 'img', 'aria-label': `Level ${c.p.rating}`, title: `Level ${c.p.rating}`}, levelShield(c.p.rating)))))))) : h('div', {class: 'empty-state', text: 'No candidates yet. They appear as first-round matches are decided.'}),
         h('div', {class: 'row'},
@@ -702,7 +727,8 @@ export function createStaffUi({core, els, config, signOut}) {
           h('label', {for: 'scTable', text: 'Table'}), tableSel,
           ...(noFreeTable ? [h('p', {class: 'notice warn', id: 'scNoFreeTable', role: 'status', text: 'All tables are occupied. No game can be saved until a table becomes available.'})] : []),
           msg,
-          h('div', {class: 'dlg-actions'}, h('button', {type: 'button', text: 'Cancel', on: {click: close}}),
+          count > 0 ? h('p', {class: 'help', text: 'Saved games are preserved when you close this window. Return to this match to continue.'}) : null,
+          h('div', {class: 'dlg-actions'}, h('button', {type: 'button', text: 'Close', on: {click: close}}),
             h('button', {type: 'button', class: 'primary', text: 'Review result',
               disabled: busyGame || !!s.gamePending || !verified || (count > 0 && !summary.decided) || noFreeTable,
               on: {click: review}})));
@@ -885,19 +911,33 @@ export function createStaffUi({core, els, config, signOut}) {
   function openForfeit(row) {
     let absent = null;
     openDialog((dlg, close) => {
-      const reason = h('input', {type: 'text', id: 'ffReason', value: 'Did not arrive at the table', maxlength: 300});
+      const reason = h('select', {id: 'ffReason'}, [
+        ['Did not arrive at the table', 'Did not arrive at the table'],
+        ['Left the tournament early', 'Left the tournament early'],
+        ['Unable to continue (injury)', 'Unable to continue (injury)'],
+        ['Other', 'Other (describe below)'],
+      ].map(([value, text]) => h('option', {value, text})));
+      const details = h('input', {type: 'text', id: 'ffDetails', maxlength: 250, placeholder: 'Additional details (optional)'});
       const msg = h('p', {class: 'status bad', role: 'alert'});
-      dlg.append(h('div', {class: 'dlg'}, h('h3', {text: 'Record a no-show'}),
-        h('p', {text: 'The opponent advances without a score. This is recorded in the audit log.'}),
-        h('div', {class: 'winner-pick', role: 'radiogroup', 'aria-label': 'Who did not show up'},
-          row.players.map(p => h('label', {}, h('input', {type: 'radio', name: 'absent', value: p.id, on: {change: () => { absent = p.id; }}}), h('span', {text: `${p.name} did not show`})))),
-        h('label', {for: 'ffReason', text: 'Reason'}), reason, msg,
+      dlg.append(h('div', {class: 'dlg'}, h('h3', {text: 'Record a no-show or withdrawal'}),
+        h('p', {text: 'The opponent advances by walkover without a played score. An accepted walkover is not automatically reversed if the player returns; decisions are audited.'}),
+        h('div', {class: 'winner-pick', role: 'radiogroup', 'aria-label': 'Who cannot play'},
+          row.players.map(p => h('label', {}, h('input', {type: 'radio', name: 'absent', value: p.id, on: {change: () => { absent = p.id; }}}), h('span', {text: p.name})))),
+        h('label', {for: 'ffReason', text: 'Reason'}), reason,
+        h('label', {for: 'ffDetails', text: 'Details (optional, required for Other)'}), details, msg,
         h('div', {class: 'dlg-actions'}, h('button', {type: 'button', text: 'Cancel', on: {click: close}}),
-          h('button', {type: 'button', class: 'danger', text: 'Record no-show', on: {click: async () => {
-            if (!absent) { msg.textContent = 'Choose who did not show.'; return; }
-            const r = await core.actions.forfeit(row.matchId, row.version, absent, reason.value);
-            if (r.ok) { toast('No-show recorded.'); close(); render(true); } else msg.textContent = r.message; }}}))));
-    }, {label: 'Record a no-show'});
+          h('button', {type: 'button', class: 'danger', text: 'Record walkover', on: {click: async ev => {
+            if (!absent) { msg.textContent = 'Choose the player who cannot play.'; return; }
+            const note = details.value.trim();
+            if (reason.value === 'Other' && note.length < 3) { msg.textContent = 'Describe the reason for this walkover.'; return; }
+            const reasonText = reason.value === 'Other' ? note : reason.value + (note ? ' — ' + note : '');
+            if (reasonText.length > 300) { msg.textContent = 'Keep the reason under 300 characters.'; return; }
+            ev.target.disabled = true;
+            const r = await core.actions.forfeit(row.matchId, row.version, absent, reasonText);
+            if (r.ok) { toast('Walkover recorded.'); close(); render(true); }
+            else { msg.textContent = r.message; ev.target.disabled = false; }
+          }}}))));
+    }, {label: 'Record a no-show or withdrawal'});
   }
   function openCorrection(m) {
     const sn = s.snapshot;

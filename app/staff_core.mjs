@@ -25,7 +25,13 @@ const UNRESOLVED = new Set(['prepared', 'sending', 'needs-own-receipt', 'unknown
 // ---------------------------------------------------------------- plain-language errors
 const DETAIL = Object.freeze({
   'rebuild-requires-confirmation': 'This replaces the existing bracket. Confirm the rebuild to continue.',
-  'first-matches-pending': 'Every player must play a first championship match before the consolation bracket is built.',
+  'first-matches-pending': 'Some players still await a Championship match outcome. Complete their match or record a verified walkover first.',
+  'preplay-results-exist': 'A score, saved game, or Consolation result exists. The bracket cannot be regenerated through pre-play withdrawal.',
+  'game-already-saved': 'This match has saved games. Resolve an interruption with the Bracket Manager; do not overwrite the game scores with a walkover.',
+  'no-active-championship': 'There is no active Championship bracket to regenerate.',
+  'not-checked-in': 'That player is not checked in.',
+  'not-enough-players': 'At least two checked-in players must remain.',
+  'player-not-in-bracket': 'That player is not in the current Championship bracket.',
   'consolation-has-results': 'The consolation bracket already has results, so it cannot be rebuilt.',
   'downstream-complete': 'The winner already played the next round, so this result can no longer be changed here.',
   'consolation-built': 'The consolation bracket is built from these results, so a winner cannot be changed now.',
@@ -445,6 +451,15 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
       if (field.length < 2) return Promise.resolve({ok: false, message: 'Check in at least two players first.'});
       const slots = seedSlots(enginePlayers(snap.players.filter(p => p.checkedIn).map(p => ({id: p.id, name: p.name, rating: p.rating, rating_status: p.ratingStatus}))));
       return act(ctx => api.buildChampionship(ctx.token, {p_event_id: E(), p_slots: slots, p_expected_generation: snap.event.generation, p_confirm: confirm}));
+    },
+    withdrawPreplay: (playerId, reason) => {
+      const snap = s.snapshot;
+      if (!snap) return Promise.resolve({ok: false, message: 'Still loading. Refresh before withdrawing a player.'});
+      const remaining = snap.players.filter(p => p.checkedIn && p.id !== playerId);
+      if (remaining.length < 2) return Promise.resolve({ok: false, message: 'At least two players must remain.'});
+      const slots = seedSlots(enginePlayers(remaining.map(p => ({id: p.id, name: p.name, rating: p.rating, rating_status: p.ratingStatus}))));
+      return act(ctx => api.withdrawPreplay(ctx.token, {p_event_id: E(), p_player_id: playerId,
+        p_expected_generation: snap.event.generation, p_slots: slots, p_reason: reason}));
     },
     buildConsolation: ({entrantIds = null, confirm = false} = {}) => {
       const snap = s.snapshot;
