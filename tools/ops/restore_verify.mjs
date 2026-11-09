@@ -64,7 +64,7 @@ const fingerprint = async (db, table) => {
 const fingerprintAll = async db => Object.fromEntries(await Promise.all(Object.keys(doc.tables).map(async t => [t, await fingerprint(db, t)])));
 const schemaFp = async db => Object.fromEntries((await db.admin(fs.readFileSync(path.join(ROOT, 'tools/ops/schema_fingerprint.sql'), 'utf8'))).map(r => [r.kind, `${r.n}:${r.fingerprint}`]));
 
-import {APPLIED_PRE_V6_LAYERS} from './restore_verify_helpers.mjs';
+import {APPLIED_PRE_V6_LAYERS, hostedIcuFingerprint} from './restore_verify_helpers.mjs';
 
 // An owner-held pre-V6 backup must first verify against a pre-V6 *real-mode* schema.
 // Never silently normalize the source fingerprint against already-added V6 columns.
@@ -116,7 +116,15 @@ try {
   const restored = await fingerprintAll(db);
   for (const [t, v] of Object.entries(doc.tables)) {
     check(restored[t].n === v.count, `${t}: ${v.count} rows`, `restored ${restored[t].n}`);
-    if (v.count) check(restored[t].fp === v.fingerprint, `${t}: fingerprint equal`);
+    if (v.count) {
+      // Hosted PostgreSQL uses ICU en-US, while PGlite's default collation
+      // sorts JSONB text differently. Preserve the original MD5 by also
+      // checking the hosted sort order, never bypassing the source checksum.
+      const matchedDefault = restored[t].fp === v.fingerprint;
+      const matchedHosted = !matchedDefault && currentPreflight
+        ? (await hostedIcuFingerprint(db, t)) === v.fingerprint : false;
+      check(matchedDefault || matchedHosted, `${t}: fingerprint equal`);
+    }
   }
 
   stage = 'verify foreign keys and API visibility';

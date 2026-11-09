@@ -11,7 +11,7 @@ import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {setupEvent, buildChampionship, playAllPlayable, buildConsolation, roster} from './helpers.mjs';
 import {createLocalDb, SQL_FILES} from './localdb.mjs';
-import {APPLIED_PRE_V6_LAYERS} from '../../tools/ops/restore_verify_helpers.mjs';
+import {APPLIED_PRE_V6_LAYERS, hostedIcuFingerprint} from '../../tools/ops/restore_verify_helpers.mjs';
 import {createHostedEquivalentDb} from './hosted_equivalent.mjs';
 import {PROJECT_REF, TABLES as CURRENT_TABLES} from '../../tools/ops/fftt_backup.mjs';
 import {seedSlots, enginePlayers} from '../../contracts/gameday_engine.mjs';
@@ -233,4 +233,53 @@ test('disposable CURRENT schema matches November 9 read-only hosted metadata, in
     assert.deepEqual(actual,hosted,
       'current live schema metadata differs from the disposable reviewed SQL; refuse release');
   } finally {await db.db.close();}
+});
+
+test('original hosted ICU en-US aggregate fingerprint verifies a restored fictional registration link set', {timeout:240000}, async () => {
+  const db = await createHostedEquivalentDb({corrections:true});
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fftt-icu-link-proof-'));
+  try {
+    const refs = ['AA','aA','ab','Ab','B','b','1','10','2'];
+    const collator = new Intl.Collator('en-US', {usage:'sort',sensitivity:'variant',numeric:false,ignorePunctuation:false});
+    assert.deepEqual([...refs].sort((a,b)=>collator.compare(JSON.stringify({ref:a}),JSON.stringify({ref:b}))),
+      ['1','10','2','aA','AA','ab','Ab','b','B']);
+    const hostedSynthetic = (await db.admin('select md5($1::jsonb::text) as fp',
+      [JSON.stringify(['1','10','2','aA','AA','ab','Ab','b','B'].map(ref=>({ref})))]))[0].fp;
+    assert.equal(hostedSynthetic, '8167c8ebf324f627a452fbe2e76f2733',
+      'synthetic hosted-en-US aggregate fingerprint pinned from read-only PostgreSQL');
+
+    const org = await db.addUser('icu-proof-organizer@fftt-staging.invalid', {platformOrganizer:true});
+    const ev = await db.rpc(org,'fftt_create_event_v3',{
+      p_name:'Fictional ICU registration proof',p_date:'2026-11-22',p_table_count:2});
+    await db.rpc(org,'fftt_upsert_players_v3',{p_event_id:ev.event_id,p_players:roster(2)});
+    const player = (await db.rpc(org,'fftt_organizer_snapshot_v3',{p_event_id:ev.event_id})).players[0].id;
+    for (const suffix of refs) await db.admin(
+      'insert into fftt_private.registration_links(event_id,ref,player_id,linked_by,linked_at) values ($1,$2,$3,$4,$5)',
+      [ev.event_id,'FictionalLink2026_'+suffix,player,org,'2026-11-09T12:00:00.000Z']);
+
+    const doc = await exportDoc(db, true);
+    assert.equal(doc.tables.registration_links.count,refs.length);
+    const originalPglite = doc.tables.registration_links.fingerprint;
+    const hostedIcu = await hostedIcuFingerprint(db,'registration_links');
+    assert.notEqual(hostedIcu,originalPglite,
+      'fictional mixed-case refs demonstrate different database collations');
+    doc.tables.registration_links.fingerprint = hostedIcu;
+    const good=path.join(dir,'hosted-icu-export.json');
+    fs.writeFileSync(good,JSON.stringify(doc),{mode:0o600});
+    const valid=spawnSync(process.execPath,[TOOL,good,'--current-preflight'],{encoding:'utf8',timeout:240000});
+    assert.equal(valid.status,0,valid.stdout+'\n'+valid.stderr);
+    assert.match(valid.stdout,/PASS  registration_links: fingerprint equal/);
+    assert.match(valid.stdout,/ALL CHECKS PASSED/);
+
+    const changed=structuredClone(doc);
+    changed.tables.registration_links.rows[0].ref='fixture-tampered';
+    const altered=path.join(dir,'tampered-icu-export.json');
+    fs.writeFileSync(altered,JSON.stringify(changed),{mode:0o600});
+    const fail=spawnSync(process.execPath,[TOOL,altered,'--current-preflight'],{encoding:'utf8',timeout:240000});
+    assert.notEqual(fail.status,0,'altered text must fail the original hosted fingerprint');
+    assert.match(fail.stdout,/FAIL  registration_links: fingerprint equal/);
+  } finally {
+    await db.db.close();
+    fs.rmSync(dir,{recursive:true,force:true});
+  }
 });
