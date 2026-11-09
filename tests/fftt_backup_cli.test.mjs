@@ -157,3 +157,9 @@ test('reverifying a saved failed export keeps original bytes and failure record,
     assert.equal(calls,3,'tampering must not contact hosted services');
   } finally {fs.rmSync(parent,{recursive:true,force:true});}
 });
+
+test('new current exports pin C collation for both record order and fingerprint',()=>{
+  const sql=fs.readFileSync(new URL('../tools/ops/hosted_export.sql',import.meta.url),'utf8');
+  assert.equal([...sql.matchAll(/jsonb_agg\(j order by j::text collate "C"\)/g)].length,2,
+    'new source export hashes and row arrays must use the same stable bytewise sort');
+});
