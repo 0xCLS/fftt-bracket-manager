@@ -727,7 +727,8 @@ export function createStaffUi({core, els, config, signOut}) {
           h('label', {for: 'scTable', text: 'Table'}), tableSel,
           ...(noFreeTable ? [h('p', {class: 'notice warn', id: 'scNoFreeTable', role: 'status', text: 'All tables are occupied. No game can be saved until a table becomes available.'})] : []),
           msg,
-          h('div', {class: 'dlg-actions'}, h('button', {type: 'button', text: 'Cancel', on: {click: close}}),
+          count > 0 ? h('p', {class: 'help', text: 'Saved games are preserved when you close this window. Return to this match to continue.'}) : null,
+          h('div', {class: 'dlg-actions'}, h('button', {type: 'button', text: 'Close', on: {click: close}}),
             h('button', {type: 'button', class: 'primary', text: 'Review result',
               disabled: busyGame || !!s.gamePending || !verified || (count > 0 && !summary.decided) || noFreeTable,
               on: {click: review}})));
