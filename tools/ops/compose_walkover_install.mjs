@@ -20,17 +20,17 @@ export const EXPECTED_HISTORY = Object.freeze([
 export const PINNED_PROPOSAL_GIT_BLOB = '1d545444bf4aa2c8f737f6c632bc599812b8fe27';
 const SOURCE = new URL('../../supabase/proposals/FFTT3_REHEARSAL_WALKOVER_WITHDRAWAL_20261109_DO_NOT_APPLY.sql',import.meta.url);
 const sha256 = s => crypto.createHash('sha256').update(s).digest('hex');
-const gitBlob = s => crypto.createHash('sha1').update('blob '+Buffer.byteLength(s)+'\\0'+s).digest('hex');
+const gitBlob = s => crypto.createHash('sha1').update('blob '+Buffer.byteLength(s)+'\0'+s).digest('hex');
 
 export function compose(proposal) {
   if (gitBlob(proposal) !== PINNED_PROPOSAL_GIT_BLOB)
     throw Error('Refusing changed or unreviewed walkover source body');
   const m = proposal.trim();
-  if (!/^(?:--[^\\n]*\\n)*\\s*begin;/i.test(m) || !/commit;\\s*$/i.test(m))
+  if (!/^(?:--[^\n]*\n)*\s*begin;/i.test(m) || !/commit;\s*$/i.test(m))
     throw Error('Expected one reviewed begin/commit transaction');
-  const body = m.replace(/^((?:--[^\\n]*\\n)*\\s*)begin;/i,'$1').replace(/commit;\\s*$/i,'');
-  const withoutFunctions = body.replace(/\\$[a-z_]*\\$[\\s\\S]*?\\$[a-z_]*\\$/gi,'');
-  if (/(^|\\n)\\s*(begin|commit|rollback)\\s*;/i.test(withoutFunctions))
+  const body = m.replace(/^((?:--[^\n]*\n)*\s*)begin;/i,'$1').replace(/commit;\s*$/i,'');
+  const withoutFunctions = body.replace(/\$[a-z_]*\$[\s\S]*?\$[a-z_]*\$/gi,'');
+  if (/(^|\n)\s*(begin|commit|rollback)\s*;/i.test(withoutFunctions))
     throw Error('Unexpected nested transaction control');
   const expected = EXPECTED_HISTORY.map(x=>"'"+x+"'").join(',');
   return `begin;
