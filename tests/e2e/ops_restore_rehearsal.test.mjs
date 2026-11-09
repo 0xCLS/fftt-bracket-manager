@@ -253,9 +253,9 @@ test('original hosted ICU en-US aggregate fingerprint verifies a restored fictio
       p_name:'Fictional ICU registration proof',p_date:'2026-11-22',p_table_count:2});
     await db.rpc(org,'fftt_upsert_players_v3',{p_event_id:ev.event_id,p_players:roster(2)});
     const player = (await db.rpc(org,'fftt_organizer_snapshot_v3',{p_event_id:ev.event_id})).players[0].id;
-    for (const ref of refs) await db.admin(
+    for (const suffix of refs) await db.admin(
       'insert into fftt_private.registration_links(event_id,ref,player_id,linked_by,linked_at) values ($1,$2,$3,$4,$5)',
-      [ev.event_id,ref,player,org,'2026-11-09T12:00:00.000Z']);
+      [ev.event_id,'FictionalLink2026_'+suffix,player,org,'2026-11-09T12:00:00.000Z']);
 
     const doc = await exportDoc(db, true);
     assert.equal(doc.tables.registration_links.count,refs.length);
