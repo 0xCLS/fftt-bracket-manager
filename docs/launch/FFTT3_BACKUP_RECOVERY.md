@@ -1,5 +1,21 @@
 # FFTT3 — private backup, restore proof and rollback
 
+## Current procedure — November 9, 2026 (PR #81; source under review)
+
+**Do not follow the October 27-era 14-table SQL restore instructions farther down this document.** They are retained as historical provenance only. The hosted project now contains **20 private tables**; `registration_gate` holds a protected proof secret and remains deliberately excluded. The current protected export covers **19 private tables plus limited referenced Auth identities**, giving **20 table groups**. These include the V6 saved-game progress/decision tables and all three showcase-reset tables. It never exports Auth password hashes, Cloudflare/Google credentials or the registration proof secret.
+
+The protected one-command **owner-local** flow is still `./tools/ops/fftt-backup`, using the owner-controlled project-scoped **read-only** Management API credentials and a mode-700 private directory outside Git. It writes a mode-600 **`fftt-hosted-export-v2`** file with the current schema fingerprints. Verification now uses `restore_verify.mjs <private-export.json> --current-preflight`: a disposable post-V6, post-showcase-reset, post-scoring-permissions database, with all 20 group counts and fingerprints, referential integrity, event-scoped APIs, saved games and append-only decisions, and deny-direct-read RLS checked. The protected tool fails closed on unknown/missing private tables, schema drift, failed restore, unverifiable private file, or inability to reach the read-only endpoint; it does **not** fall back to a write-capable SQL session.
+
+Legacy `fftt-hosted-export-v1` backups (15 groups) remain readable by the separate historical `--v6-preflight` or `--rehearse` verification mode, but **cannot certify readiness for the current 20-table hosted release**. `--verify-existing` chooses the appropriate validation mode by the saved format, preserves the original file and first report, and emits a separate verification record. A local-only verified backup is **not** an encrypted off-device backup. For release readiness, produce and verify a second protected encrypted copy and prove a fresh disposable restore; keep all raw data, contacts, baseline fixtures and credentials out of Git, chat, CI and emailed documents.
+
+**Destructive hosted recovery is not authorized by these instructions.** In particular, the outdated `truncate <the 14 tables>` example below **must not be used** against the current 20-table project. Actual hosted restoration requires a separately reviewed, current-schema, exact-project, all-table recovery transaction and explicit owner approval, with current-state backup, downtime plan, credentials, sequence/foreign-key checks and post-restore verification. Do not improvise a 14-table or partial restore or use `db push` / `migration repair` to bypass migration-history safeguards.
+
+**Release checkpoint:** PR #81 is source preparation, not a hosted backup or rollout. The database remains unchanged until a later explicitly approved target-specific installation. The main-source PR #80 walkover/withdrawal proposal is **not yet installed**.
+
+---
+
+## Historical October 27 procedure (superseded for current releases)
+
 **Status:** procedure written and executed on October 27, 2026 against the existing project `fftt-bracket-manager-dev` (read-only) and a disposable local database. Nothing in this procedure writes to the hosted project.
 
 ## Why this shape
