@@ -38,7 +38,10 @@ test('historical showcase: reset progress, final scores, stale writes and receip
   await db.admin("update fftt_private.consolation_reviews set reviewed_by=null where event_id=$1",[eid]);
   const reset=(who,id=crypto.randomUUID())=>db.rpc(who,'fftt_reset_showcase_v1',{p_confirmation:'RESET SHOWCASE',p_request_id:id});
   await assert.rejects(reset(null)); await assert.rejects(reset(score)); await assert.rejects(reset(outsider));
-  const originalPublic=(await db.publicTournaments())[0].brackets;
+  const publicShowcase=async()=>(await db.publicTournaments()).find(r=>r.event_id==='9c25613c-6543-4d6c-84cf-97ba49017509');
+  const originalRow=await publicShowcase(); assert.ok(originalRow,'showcase is publicly listed'); const originalPublic=originalRow.brackets;
+  // Revision and timestamp legitimately advance; everything else a spectator or TV can see must return exactly.
+  const visible=({revision,updated_at,...rest})=>rest;
   const other=await db.rpc(outsider,'fftt_create_event_v3',{p_name:'Independent fixture',p_date:'2026-11-22',p_table_count:2});
   const otherBefore=await db.admin('select revision,lifecycle from fftt_private.events where id=$1',[other.event_id]);
   const desk=await db.rpc(score,'fftt_matchdesk_v2',{p_event_id:eid},{rows:true});
@@ -65,6 +68,9 @@ test('historical showcase: reset progress, final scores, stale writes and receip
   const available=(await db.rpc(score,'fftt_matchdesk_v2',{p_event_id:eid},{rows:true})).find(m=>m.match_id!==row.match_id && m.table_number===null && m.player_1_id && m.player_2_id);
   assert.ok(available,'another fictional match is ready');
   await db.rpc(org,'fftt_assign_table_v3',{p_event_id:eid,p_match_id:available.match_id,p_table_number:1});
+  const midRow=await publicShowcase();
+  assert.notDeepEqual(visible(midRow),visible(originalRow),'public projection really changed before the reset');
+  assert.ok(JSON.stringify(midRow.brackets).includes('"game_progress":{')||midRow.brackets.some(x=>x.matches.some(m=>m.status==='complete')),'mid-state shows scoring progress');
   await reset(org);
   const staleResult=await db.rpc(score,'fftt_submit_match_result_v2',{p_event_id:eid,p_match_id:row.match_id,p_bracket_generation:row.bracket_generation,p_expected_match_version:middle.match_version,p_submission_id:crypto.randomUUID(),p_winner_id:row.player_1_id,p_game_scores:'11-7, 11-8',p_table_number:1});
   assert.equal(staleResult.status,'rejected');
@@ -72,7 +78,10 @@ test('historical showcase: reset progress, final scores, stale writes and receip
   const matches=await db.admin('select id,player_1_id,player_2_id,winner_id,game_scores,status,table_number from fftt_private.matches where event_id=$1',[eid]);
   const baseline=new Map(fixture.matches.map(m=>[m.id,m]));
   assert.ok(matches.every(m=>['player_1_id','player_2_id','winner_id','game_scores','status','table_number'].every(k=>m[k]===baseline.get(m.id)[k])),'original match presentation restored');
-  const published=(await db.publicTournaments())[0];
+  const published=await publicShowcase();
+  assert.deepEqual(visible(published),visible(originalRow),'entire anonymous Spectator/TV row restored');
+  assert.ok(published.revision>originalRow.revision&&published.revision>midRow.revision,'public revision advances monotonically');
+  assert.ok(published.brackets.every(b=>b.matches.every(m=>m.game_progress==null)),'no live game progress remains public');
   assert.ok(JSON.stringify(published.brackets)===JSON.stringify(originalPublic),'public projection restored');
   assert.ok(!/rating|email|actor_id|submission_id|player_1_id/i.test(JSON.stringify(published)),'public projection excludes private fields');
   const finalReceipts=await db.admin('select count(*)::int as n from fftt_private.score_decisions_v2 where event_id=$1',[eid]); assert.equal(finalReceipts[0].n,2);
