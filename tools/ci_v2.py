@@ -92,6 +92,12 @@ def select(paths):
             lanes.add('auth')
             manual = True
             reasons.add('authentication or access-control tests')
+        elif path in {'tools/ops/fftt_backup.mjs','tools/ops/restore_verify.mjs',
+                      'tools/ops/hosted_export.sql','tests/fftt_backup_cli.test.mjs',
+                      'tests/e2e/ops_restore_rehearsal.test.mjs'}:
+            lanes.add('database')
+            manual = True
+            reasons.add('protected private backup/restore tooling')
         elif path.startswith(('.github/', 'tools/')) or path.startswith('tests/') or path.endswith(('package.json', 'package-lock.json')):
             manual = True
             reasons.add('test infrastructure, dependency, or unknown test')
