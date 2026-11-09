@@ -27,8 +27,26 @@ with t as (
   union all select 'showcase_reset_decisions', to_jsonb(x) from fftt_private.showcase_reset_decisions x
   union all select 'auth_users', jsonb_build_object('id', u.id, 'email', u.email, 'created_at', u.created_at, 'is_anonymous', u.is_anonymous)
     from auth.users u
-    where u.id in (select user_id from fftt_private.event_staff union select user_id from fftt_private.platform_organizers
-                   union select created_by from fftt_private.events where created_by is not null)
+    where u.id in (
+      -- All owner/staff, match, audit and recovery actors, including former staff.
+      -- Restore must not silently omit an Auth identity referenced by any private FK.
+      select actor_id from fftt_private.audit_events
+      union select created_by from fftt_private.brackets
+      union select reviewed_by from fftt_private.consolation_reviews
+      union select completed_by from fftt_private.doubles_finale
+      union select progress_updated_by from fftt_private.doubles_finale
+      union select granted_by from fftt_private.event_staff
+      union select user_id from fftt_private.event_staff
+      union select created_by from fftt_private.events
+      union select actor_id from fftt_private.game_progress_decisions
+      union select updated_by from fftt_private.match_game_progress
+      union select user_id from fftt_private.platform_organizers
+      union select linked_by from fftt_private.registration_links
+      union select updated_by from fftt_private.registration_sources
+      union select actor_id from fftt_private.result_submissions
+      union select actor_id from fftt_private.score_decisions_v2
+      union select actor_id from fftt_private.showcase_reset_decisions
+    )
 )
  , grouped as (
   select tbl, count(*) as n, md5(coalesce(jsonb_agg(j order by j::text)::text, '')) as fp,
