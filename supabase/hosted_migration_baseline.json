@@ -1,7 +1,7 @@
 {
   "project": "FFTT Bracket Manager synthetic development",
   "project_ref": "copmkalfkkrkzheohwuc",
-  "captured_date": "2026-11-08",
+  "captured_date": "2026-11-09",
   "hosted_push_approved": false,
   "hosted_migrations": [
     {
@@ -39,6 +39,10 @@
     {
       "version": "20261108150000",
       "name": "staff_scoring_permissions"
+    },
+    {
+      "version": "20261109170000",
+      "name": "fftt_rehearsal_walkover_withdrawal"
     }
   ],
   "version_aliases": {
@@ -57,7 +61,8 @@
     "supabase/proposals/MILESTONE1_DURABLE_SCORING_V2_DO_NOT_APPLY.sql": "af46f1d2cf7de1387086a6e2416f358a00e59b1a",
     "supabase/migrations/20261108114950_showcase_reset.sql": "29f5661750b58e8561363a01686daaee36e13ef1",
     "supabase/proposals/GAMEDAY_V6_GAME_PROGRESS_DO_NOT_APPLY.sql": "fc201b785be6dc84ad34219f1e28a47cf25be00d",
-    "supabase/migrations/20261108150000_staff_scoring_permissions.sql": "69dfdd4db6bbf85e854b69f959905b719432d865"
+    "supabase/migrations/20261108150000_staff_scoring_permissions.sql": "69dfdd4db6bbf85e854b69f959905b719432d865",
+    "supabase/proposals/FFTT3_REHEARSAL_WALKOVER_WITHDRAWAL_20261109_DO_NOT_APPLY.sql": "1d545444bf4aa2c8f737f6c632bc599812b8fe27"
   },
   "review_notes": [
     "Four hosted migration bodies match repository SQL byte-for-byte; the hosted helper-hardening migration differs from the local conditional DO block.",
@@ -66,6 +71,8 @@
     "On 2026-11-08 the seventh hosted migration (gameday_v6_game_progress) was verified read-only to match supabase/proposals/GAMEDAY_V6_GAME_PROGRESS_DO_NOT_APPLY.sql byte-for-byte (identical length and MD5); its DO NOT APPLY gate remains in force.",
     "On 2026-11-08 supabase/migrations/20261108114950_showcase_reset.sql (SHA-256 35a6506035cf07d8d7b33d3e1bc4dfdab4670fee53c5a277a82052223b8e043b) was installed once on the named project by the owner-approved target-specific transaction in docs/SHOWCASE_RESET_RELEASE.md, registered with the same version and null statements. This records history that already exists; it does not authorize any further hosted write.",
     "On 2026-11-08 supabase/migrations/20261108150000_staff_scoring_permissions.sql (SHA-256 a0f88d5090fb7d1c348b016b298205c1df2bbc06bb71369c9f3da129f6d90d72) was installed once on the named project by the owner-approved target-specific transaction in docs/STAFF_SCORING_PERMISSIONS_RELEASE.md after exact history and function-fingerprint guards, registered with the same version and null statements (so no hosted body exists to compare byte-for-byte; verification was by the four replaced and six new function fingerprints, grants, and a value-identical restore-proved backup comparison). This records history that already exists; it does not authorize any further hosted write.",
+    "On 2026-11-09 the Organizer explicitly approved one exact-target guarded transaction on project copmkalfkkrkzheohwuc. Pinned original SQL proposal blob 1d545444bf4aa2c8f737f6c632bc599812b8fe27 was composed with the exact nine-version migration-history guard; transaction committed once and recorded version 20261109170000 as fftt_rehearsal_walkover_withdrawal. This does not authorize any replay or new migration.",
+    "Immediate independent post-install read-only verification found ten exactly expected migrations, twenty private tables, both withdrawal RPCs callable only by authenticated (anon denied), and the new function fingerprints submit ec324798cd69b8a572f9b95ea05989c4, forfeit 314b5f7fe07a883bb9a858163574d621, correct 910d89a38c513e0fb1e06111e9f542c1. All nineteen non-secret FFTT table counts matched their previous values, and both real event lifecycle/score/staff metrics were unchanged. Staff deployment remained unapproved and unperformed.",
     "hosted_push_approved remains false and --mode gate still denies. Do not run db push or migration repair; the historical ID differences above are unchanged and no historical record was rewritten."
   ]
 }
