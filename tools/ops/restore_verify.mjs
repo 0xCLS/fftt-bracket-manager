@@ -13,20 +13,30 @@ import os from 'node:os';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {createLocalDb, SQL_FILES} from '../../tests/e2e/localdb.mjs';
+import {createHostedEquivalentDb} from '../../tests/e2e/hosted_equivalent.mjs';
+import {PROJECT_REF, TABLES as CURRENT_TABLES} from './fftt_backup.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const args = process.argv.slice(2);
 const rehearse = args.includes('--rehearse');
 const v6Preflight = args.includes('--v6-preflight');
-if (v6Preflight && rehearse) throw new Error('Use --v6-preflight alone; the older launch-upgrade rehearsal is separate.');
+const currentPreflight = args.includes('--current-preflight');
+if ([rehearse,v6Preflight,currentPreflight].filter(Boolean).length > 1)
+  throw new Error('Choose exactly one restore mode; no mixed legacy/current upgrades.');
 const file = args.find(a => !a.startsWith('--'));
-if (!file) { console.error('usage: restore_verify.mjs <export.json> [--rehearse | --v6-preflight]'); process.exit(2); }
+if (!file) { console.error('usage: restore_verify.mjs <export.json> [--rehearse | --v6-preflight | --current-preflight]'); process.exit(2); }
 
 const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
-if (doc.format !== 'fftt-hosted-export-v1') throw new Error('unknown export format');
-const EXPECTED = ['platform_organizers','events','event_staff','players','brackets','matches',
+const LEGACY = ['platform_organizers','events','event_staff','players','brackets','matches',
   'consolation_reviews','doubles_finale','registration_links','registration_sources',
   'result_submissions','score_decisions_v2','audit_events','deleted_events','auth_users'];
+const EXPECTED = currentPreflight ? CURRENT_TABLES : LEGACY;
+if (currentPreflight) {
+  if (doc.format !== 'fftt-hosted-export-v2' || doc.project !== PROJECT_REF || doc.read_only !== true ||
+      JSON.stringify(doc.excluded_private_tables) !== JSON.stringify(['registration_gate']) ||
+      !doc.schema_fingerprint || typeof doc.schema_fingerprint !== 'object')
+    throw new Error('Current backup lacks required source, exclusion or schema provenance');
+} else if (doc.format !== 'fftt-hosted-export-v1') throw new Error('Legacy restore requires a legacy export');
 if (JSON.stringify(Object.keys(doc.tables ?? {}).sort()) !== JSON.stringify([...EXPECTED].sort()))
   throw new Error('backup table set is incomplete or contains unknown identifiers');
 for (const [table, part] of Object.entries(doc.tables)) {
@@ -35,8 +45,11 @@ for (const [table, part] of Object.entries(doc.tables)) {
     throw new Error('backup row count or table fingerprint malformed: ' + table);
 }
 // Parents before children. Triggers and FK checks are off during the load (replica role); FKs are verified afterwards.
-const ORDER = ['platform_organizers', 'events', 'event_staff', 'players', 'brackets', 'matches', 'consolation_reviews', 'doubles_finale',
-  'registration_links', 'registration_sources', 'result_submissions', 'score_decisions_v2', 'audit_events', 'deleted_events'];
+const ORDER = ['platform_organizers', 'events', 'event_staff', 'players', 'brackets', 'matches',
+  'consolation_reviews', 'doubles_finale', 'registration_links', 'registration_sources',
+  'result_submissions', 'score_decisions_v2', 'game_progress_decisions', 'match_game_progress',
+  'showcase_progress_watermarks', 'showcase_reset_baseline', 'showcase_reset_decisions',
+  'audit_events', 'deleted_events'];
 
 let failures = 0;
 let stage = 'prepare disposable database';
@@ -56,7 +69,9 @@ import {APPLIED_PRE_V6_LAYERS} from './restore_verify_helpers.mjs';
 // An owner-held pre-V6 backup must first verify against a pre-V6 *real-mode* schema.
 // Never silently normalize the source fingerprint against already-added V6 columns.
 const preV6SqlFiles = SQL_FILES.filter(f => !f.endsWith('/GAMEDAY_V6_GAME_PROGRESS_DO_NOT_APPLY.sql'));
-const db = await createLocalDb(v6Preflight ? {sqlFiles: preV6SqlFiles, upgraded: true} : {});
+const db = currentPreflight
+  ? await createHostedEquivalentDb({corrections: true})
+  : await createLocalDb(v6Preflight ? {sqlFiles: preV6SqlFiles, upgraded: true} : {});
 try {
   stage = 'replay approved hosted pre-V6 schema layers';
   if (v6Preflight) {
@@ -79,7 +94,9 @@ try {
       console.log('FAIL  schema parity differs in categories: ' + changed.join(', '));
       throw new Error('hosted schema differs from verified disposable baseline; release blocked');
     }
-    check(true,'hosted schema fingerprint matches disposable pre-V6 baseline');
+    check(true, currentPreflight
+      ? 'hosted schema fingerprint matches complete post-scoring current baseline'
+      : 'hosted schema fingerprint matches disposable pre-V6 baseline');
   }
   stage = 'restore private application records';
   await db.admin('begin');
@@ -139,6 +156,23 @@ try {
     'private publication flags preserved (' + clonePublished + ' published event record(s))');
   check((await db.publicTournaments()).length === 0,
     'no public cache is repopulated by private-only restoration');
+  if (currentPreflight) {
+    const safe = await db.admin(`select c.relname, c.relrowsecurity as rls,
+      has_table_privilege('anon',c.oid,'select') as anon_read,
+      has_table_privilege('authenticated',c.oid,'select') as staff_read
+      from pg_class c join pg_namespace n on n.oid=c.relnamespace
+      where n.nspname='fftt_private' and c.relkind='r'
+        and c.relname in ('match_game_progress','game_progress_decisions',
+          'showcase_reset_baseline','showcase_reset_decisions','showcase_progress_watermarks')`);
+    check(safe.length === 5 && safe.every(x => x.rls && !x.anon_read && !x.staff_read),
+      'current V6/showcase private tables keep deny-direct-read RLS');
+    check((await db.admin('select count(*)::int n from fftt_private.registration_gate'))[0].n === 0,
+      'registration proof secret excluded from current disposable restore');
+    check((await db.admin("select count(*)::int n from fftt_private.match_game_progress"))[0].n ===
+      doc.tables.match_game_progress.count, 'saved individual games preserved by current restore');
+    check((await db.admin("select count(*)::int n from fftt_private.game_progress_decisions"))[0].n ===
+      doc.tables.game_progress_decisions.count, 'append-only game decisions preserved by current restore');
+  }
 
   stage = 'verify V6 proposal in disposable copy';
   if (v6Preflight) {

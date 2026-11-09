@@ -10,8 +10,10 @@ import {fileURLToPath} from 'node:url';
 export const PROJECT_REF = 'copmkalfkkrkzheohwuc';
 export const TABLES = Object.freeze([
   'audit_events','brackets','consolation_reviews','deleted_events','doubles_finale',
-  'event_staff','events','matches','platform_organizers','players','registration_links',
-  'registration_sources','result_submissions','score_decisions_v2','auth_users'
+  'event_staff','events','game_progress_decisions','match_game_progress','matches',
+  'platform_organizers','players','registration_links','registration_sources',
+  'result_submissions','score_decisions_v2','showcase_progress_watermarks',
+  'showcase_reset_baseline','showcase_reset_decisions','auth_users'
 ]);
 const KINDS = ['column','constraint','function','rls','trigger','view'];
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -24,7 +26,7 @@ const check = (ok,message) => { if (!ok) throw new Error(message); };
 export function normalizeExport(rows, project=PROJECT_REF, now=new Date()) {
   check(project === PROJECT_REF,'Refusing backup from an unknown project');
   check(Array.isArray(rows) && rows.length === TABLES.length,
-    'Incomplete export: all 15 table groups are required, even if empty');
+    'Incomplete export: all 20 current table groups are required, even if empty');
   const seen = new Map();
   for (const row of rows) {
     check(row && TABLES.includes(row.tbl) && !seen.has(row.tbl),'Unexpected or duplicate table');
@@ -42,7 +44,7 @@ export function normalizeExport(rows, project=PROJECT_REF, now=new Date()) {
     {count:0,fingerprint:EMPTY_FP,rows:[]}]));
   check(tables.events.count > 0 && tables.platform_organizers.count > 0,
     'No events or organizer: refusing possibly wrong project');
-  return {format:'fftt-hosted-export-v1',project,taken_at:now.toISOString(),read_only:true,tables};
+  return {format:'fftt-hosted-export-v2',project,taken_at:now.toISOString(),read_only:true,tables};
 }
 export function normalizeSchema(rows) {
   check(Array.isArray(rows),'Invalid schema fingerprint response');
@@ -139,7 +141,9 @@ function verifyLocal(file) {
   const env={...process.env};
   delete env.SUPABASE_ACCESS_TOKEN;
   delete env.SUPABASE_DB_PASSWORD;
-  const r=spawnSync(process.execPath,[path.join(ROOT,'tools/ops/restore_verify.mjs'),file,'--v6-preflight'],
+  const mode=JSON.parse(fs.readFileSync(file,'utf8')).format === 'fftt-hosted-export-v1'
+    ? '--v6-preflight' : '--current-preflight';
+  const r=spawnSync(process.execPath,[path.join(ROOT,'tools/ops/restore_verify.mjs'),file,mode],
     {cwd:ROOT,env,encoding:'utf8',timeout:240000,maxBuffer:4*1024*1024});
   const safeStage = (r.stdout ?? '').split(/\r?\n/).find(line =>
     /^FAIL  safe verification stage: (?:prepare disposable database|replay approved hosted pre-V6 schema layers|compare approved schema fingerprints|restore private application records|verify data fingerprints|verify foreign keys and API visibility|verify V6 proposal in disposable copy)$/.test(line));
@@ -167,7 +171,7 @@ export async function createBackup({token,fetchImpl=fetch,backupDir,mirrorDir,
   doc.schema_fingerprint=normalizeSchema(schema);
   doc.excluded_private_tables=[EXCLUDED_SECRET_TABLE];
   const dir=secureDir(backupDir??path.join(os.homedir(),'Documents/FFTT-private/backups'));
-  const stem='fftt-pre-v6-'+now.toISOString().replace(/[:.]/g,'-')+'-'+crypto.randomBytes(4).toString('hex');
+  const stem='fftt-current-'+now.toISOString().replace(/[:.]/g,'-')+'-'+crypto.randomBytes(4).toString('hex');
   const file=path.join(dir,stem+'.json'),reportFile=path.join(dir,stem+'.report.json');
   const contents=JSON.stringify(doc,null,2)+'\n',digest=sha256(contents);
   save(file,contents);
@@ -225,7 +229,9 @@ export function reverifySavedBackup(input,{verify=verifyLocal,printer=console.lo
   const proof=file.slice(0,-5)+'.reverified-'+now.toISOString().replace(/[:.]/g,'-')+'.report.json';
   save(proof,JSON.stringify({...report,verified:true,mirrored:false,
     verification_time:now.toISOString(),result:'LOCAL_VERIFIED',
-    previous_result:report.result,verification_mode:'disposable-v6-preflight'},null,2)+'\n');
+    previous_result:report.result,
+    verification_mode:JSON.parse(bytes.toString()).format === 'fftt-hosted-export-v1'
+      ? 'disposable-v6-preflight' : 'disposable-current-preflight'},null,2)+'\n');
   printer('FFTT BACKUP: LOCAL_VERIFIED (existing private file)');
   printer('SHA-256: '+report.sha256);
   printer('Verification report: '+proof);

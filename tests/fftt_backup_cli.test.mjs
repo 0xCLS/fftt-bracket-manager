@@ -19,9 +19,13 @@ const inventory=()=>[...TABLES.filter(t=>t!=='auth_users'),'registration_gate'].
 const schema=()=>['column','constraint','function','rls','trigger','view']
   .map((kind,i)=>({kind,n:i+1,fingerprint:md5(kind)}));
 const response=(data,status=201)=>({ok:status===201,status,json:async()=>data});
-test('builds a complete backup with 15 tables, including empty tables and published flags',()=>{
+test('builds a complete current backup with 20 table groups, including empty V6/showcase and publication flags',()=>{
   const doc=normalizeExport(rows(),PROJECT_REF,new Date('2026-11-07T00:00:00Z'));
+  assert.equal(doc.format,'fftt-hosted-export-v2');
+  assert.equal(TABLES.length,20);
   assert.deepEqual(Object.keys(doc.tables).sort(),[...TABLES].sort());
+  for (const t of ['match_game_progress','game_progress_decisions','showcase_progress_watermarks',
+    'showcase_reset_baseline','showcase_reset_decisions']) assert.deepEqual(doc.tables[t].rows,[]);
   assert.equal(doc.tables.events.rows[0].public_visible,true);
   assert.deepEqual(doc.tables.matches.rows,[]);
   assert.equal(doc.tables.matches.fingerprint,md5(''));
@@ -37,13 +41,19 @@ test('wrong project, incomplete content, and bad schema metadata fail closed',()
   assert.throws(()=>normalizeExport(rows().map((r,i)=>i===0?{...r,data:'not-json'}:r)),/Malformed table JSON/);
   assert.throws(()=>normalizeSchema(schema().slice(1)),/Incomplete/);
   assert.throws(()=>verifyPrivateInventory(inventory().slice(1)),/Unexpected or missing/);
+  assert.throws(()=>verifyPrivateInventory(inventory().filter(x=>x.relname!=='showcase_reset_baseline')),
+    /Unexpected or missing/);
+  assert.throws(()=>normalizeExport(rows().filter(x=>x.tbl!=='match_game_progress')),
+    /Incomplete export/);
+  assert.throws(()=>normalizeExport(rows().filter(x=>x.tbl!=='showcase_reset_baseline')),
+    /Incomplete export/);
   assert.throws(()=>verifyPrivateInventory([...inventory(),{relname:'new_unknown_table'}]),/Unexpected or missing/);
 });
 test('only calls the dedicated read-only SQL API and never exposes response details',async()=>{
   const calls=[];
   const mock=async (url,opts)=>{calls.push([url,opts]);return response(rows());};
   const sql='select many required records from fftt_private.events';
-  assert.equal((await readOnlyQuery(sql,'fictional-testing-token',{fetchImpl:mock})).length,15);
+  assert.equal((await readOnlyQuery(sql,'fictional-testing-token',{fetchImpl:mock})).length,20);
   assert.equal(calls[0][1].method,'POST');
   assert.match(calls[0][0],/\/database\/query\/read-only$/);
   assert.deepEqual(JSON.parse(calls[0][1].body),{query:sql});
