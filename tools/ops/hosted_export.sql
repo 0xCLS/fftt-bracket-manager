@@ -49,8 +49,10 @@ with t as (
     )
 )
  , grouped as (
-  select tbl, count(*) as n, md5(coalesce(jsonb_agg(j order by j::text)::text, '')) as fp,
-         coalesce(jsonb_agg(j order by j::text)::text, '[]') as data
+  -- Pin a bytewise sort for NEW backups; old ICU-sorted exports remain
+  -- verifiable with the strict compatibility path in restore_verify.mjs.
+  select tbl, count(*) as n, md5(coalesce(jsonb_agg(j order by j::text collate "C")::text, '')) as fp,
+         coalesce(jsonb_agg(j order by j::text collate "C")::text, '[]') as data
   from t group by 1
 ), expected(tbl) as (values
   ('audit_events'),('brackets'),('consolation_reviews'),('deleted_events'),('doubles_finale'),
