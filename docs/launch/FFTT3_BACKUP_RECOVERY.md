@@ -1,6 +1,6 @@
 # FFTT3 — private backup, restore proof and rollback
 
-## Current procedure — November 9, 2026 (PR #81 merged and tested; actual new backup still required)
+## Current procedure — November 9, 2026 (PRs #81/#82 merged; owner-held current backup and independent off-device recovery verified)
 
 **Do not follow the October 27-era 14-table SQL restore instructions farther down this document.** They are retained as historical provenance only. The hosted project now contains **20 private tables**; `registration_gate` holds a protected proof secret and remains deliberately excluded. The current protected export covers **19 private tables plus limited referenced Auth identities**, giving **20 table groups**. These include the V6 saved-game progress/decision tables and all three showcase-reset tables. It never exports Auth password hashes, Cloudflare/Google credentials or the registration proof secret.
 
@@ -10,7 +10,7 @@ Legacy `fftt-hosted-export-v1` backups (15 groups) remain readable by the separa
 
 **Destructive hosted recovery is not authorized by these instructions.** In particular, the outdated `truncate <the 14 tables>` example below **must not be used** against the current 20-table project. Actual hosted restoration requires a separately reviewed, current-schema, exact-project, all-table recovery transaction and explicit owner approval, with current-state backup, downtime plan, credentials, sequence/foreign-key checks and post-restore verification. Do not improvise a 14-table or partial restore or use `db push` / `migration repair` to bypass migration-history safeguards.
 
-**Release checkpoint:** PR #81 merged as `83cc9a585a633d41f140dcf127052813ba9f5341`, with comprehensive, focused, and release-risk checks green. The November 9 read-only target preflight is documented in `docs/REHEARSAL_WALKOVER_RELEASE.md`. This does **not** establish a fresh privately held backup. The target database remains unchanged until a separately approved exact-target installation; PR #80's walkover/withdrawal SQL remains **uninstalled**, and the associated Staff update is **not deployed**.
+**Release checkpoint (updated after Organizer recovery proof):** PRs #81 and #82 are merged; comprehensive, focused and release-risk checks passed. The Organizer completed the original full 20-group protected export, official separate `LOCAL_VERIFIED` disposable restore receipt, AES-256 archive, local mounted-Drive checksum, and independent browser Drive-download checksum/passphrase/mount/internal-content/receipt verification on November 9, 2026. The initial `VERIFICATION_FAILED` report remains intact. The full evidence and repeated read-only target preflight are in `docs/REHEARSAL_WALKOVER_RELEASE.md`. **This is the current protected recovery baseline; do not export again merely to duplicate it.** The hosted database remains unchanged until separately approved exact-target SQL installation; PR #80's walkover/withdrawal SQL remains **uninstalled**, and the associated Staff update is **not deployed**.
 
 ---
 
