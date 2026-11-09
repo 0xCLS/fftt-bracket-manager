@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {setupEvent, buildChampionship, deskOf, submit, scoreFor} from './helpers.mjs';
+import {createLocalDb} from './localdb.mjs';
 import {seedSlots, enginePlayers} from '../../contracts/gameday_engine.mjs';
 
 const migration = fs.readFileSync(new URL('../../supabase/migrations/20261109041500_rehearsal_walkover_withdrawal.sql', import.meta.url), 'utf8');
@@ -141,4 +142,46 @@ test('a saved individual game prevents bracket regeneration AND prevents a no-sh
     const retained=await ctx.db.rpc(ctx.skA,'fftt_game_progress_v1',{p_event_id:ctx.E,p_match_id:row.match_id});
     assert.deepEqual(retained.games,[[11,5]]);
   }finally{await ctx.db.db.close();}
+});
+
+
+test('delegated Bracket Manager can withdraw before play but cannot alter another event or retain scored results',async()=>{
+  const db=await createLocalDb({upgraded:true});
+  try{
+    const roleSql=fs.readFileSync(new URL('../../supabase/proposals/FFTT3_BRACKET_MANAGER_ROLE_20261030_DO_NOT_APPLY.sql',import.meta.url),'utf8');
+    const delegationSql=fs.readFileSync(new URL('../../supabase/proposals/FFTT3_EVENT_DAY_DELEGATION_20261105_DO_NOT_APPLY.sql',import.meta.url),'utf8');
+    await db.db.exec(roleSql);
+    await db.db.exec(delegationSql);
+    await db.db.exec(migration);
+    const org=await db.addUser('organizer@rehearsal-fiction.invalid',{platformOrganizer:true});
+    const bm=await db.addUser('manager@rehearsal-fiction.invalid');
+    const scorer=await db.addUser('scorer@rehearsal-fiction.invalid');
+    const E=(await db.rpc(org,'fftt_create_event_v3',{p_name:'Fictional rehearsal',p_date:'2026-11-08',p_table_count:2})).event_id;
+    const other=(await db.rpc(org,'fftt_create_event_v3',{p_name:'Fictional next event',p_date:'2026-11-22',p_table_count:2})).event_id;
+    await db.rpc(org,'fftt_set_staff_v3',{p_event_id:E,p_email:'manager@rehearsal-fiction.invalid',p_action:'grant',p_role:'bracket_manager'});
+    await db.rpc(org,'fftt_set_staff_v3',{p_event_id:E,p_email:'scorer@rehearsal-fiction.invalid',p_action:'grant',p_role:'scorekeeper'});
+    await db.rpc(org,'fftt_upsert_players_v3',{p_event_id:E,p_players:[
+      {name:'Fictional Alice',rating:3,rating_status:'provisional'},
+      {name:'Fictional Bob',rating:2,rating_status:'provisional'},
+      {name:'Fictional Cathy',rating:4,rating_status:'provisional'},
+      {name:'Fictional David',rating:1,rating_status:'provisional'}
+    ]});
+    let snap=await db.rpc(bm,'fftt_bracket_manager_snapshot_v1',{p_event_id:E});
+    for(const p of snap.players) await db.rpc(bm,'fftt_set_checkin_v3',{p_event_id:E,p_player_id:p.id,p_checked_in:true});
+    snap=await db.rpc(bm,'fftt_bracket_manager_snapshot_v1',{p_event_id:E});
+    await db.rpc(bm,'fftt_build_championship_v3',{p_event_id:E,
+      p_slots:seedSlots(enginePlayers(snap.players)),p_expected_generation:0,p_confirm:false});
+    snap=await db.rpc(bm,'fftt_bracket_manager_snapshot_v1',{p_event_id:E});
+    const leaving=snap.players[0].id;
+    const args={p_event_id:E,p_player_id:leaving,p_expected_generation:snap.event.generation,
+      p_slots:seedSlots(enginePlayers(snap.players.filter(p=>p.id!==leaving))),
+      p_reason:'Left before match calls'};
+    await mustFail(db.rpc(scorer,'fftt_withdraw_preplay_v7',args),'42501');
+    await mustFail(db.rpc(bm,'fftt_withdraw_preplay_v7',{...args,p_event_id:other}),'42501');
+    assert.equal((await db.rpc(bm,'fftt_withdraw_preplay_v7',args)).status,'rebuilt');
+    const fresh=await db.rpc(bm,'fftt_bracket_manager_snapshot_v1',{p_event_id:E});
+    assert.equal(fresh.event.generation,snap.event.generation+1);
+    assert.equal(fresh.players.find(p=>p.id===leaving).checked_in,false);
+    assert.equal((await db.rpc(org,'fftt_organizer_snapshot_v3',{p_event_id:other})).event.generation,0);
+  }finally{await db.db.close();}
 });
