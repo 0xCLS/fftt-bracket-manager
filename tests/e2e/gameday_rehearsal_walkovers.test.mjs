@@ -6,7 +6,7 @@ import {setupEvent, buildChampionship, deskOf, submit, scoreFor} from './helpers
 import {createLocalDb} from './localdb.mjs';
 import {seedSlots, enginePlayers} from '../../contracts/gameday_engine.mjs';
 
-const migration = fs.readFileSync(new URL('../../supabase/migrations/20261109041500_rehearsal_walkover_withdrawal.sql', import.meta.url), 'utf8');
+const migration = fs.readFileSync(new URL('../../supabase/proposals/FFTT3_REHEARSAL_WALKOVER_WITHDRAWAL_20261109_DO_NOT_APPLY.sql', import.meta.url), 'utf8');
 const mustFail = async (promise, code, reason) => {
   const error = await promise.then(() => null, e => e);
   assert.ok(error, 'operation must be rejected');
