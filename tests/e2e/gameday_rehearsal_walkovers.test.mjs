@@ -65,18 +65,19 @@ test('walkover victory is NOT a played win; losing first actual match qualifies 
 test('played win followed by withdrawal remains ineligible; no-show reason retained',async()=>{
   const ctx=await fresh();
   try{
-    const row=(await deskOf(ctx,ctx.skA))[0];
-    const winner=row.player_1_id;
+    const opening=await deskOf(ctx,ctx.skA);
+    const row=opening[0], other=opening[1], winner=row.player_1_id;
     assert.equal((await submit(ctx,ctx.skA,row,winner,scoreFor(3,11))).status,'accepted');
+    assert.equal((await submit(ctx,ctx.skA,other,other.player_1_id,scoreFor(3,11))).status,'accepted');
     const next=(await deskOf(ctx,ctx.skA)).find(r=>
-      r.player_1_id===winner || r.player_2_id===winner);
-    if(next){
-      assert.equal((await recordWalkover(ctx,next,winner,'Unable to continue (injury)')).status,'accepted');
-      const snap=await ctx.snap();
-      assert.equal(snap.consolation_candidates.some(c=>c.player_id===winner),false);
-      const audit=await ctx.db.admin("select reason from fftt_private.audit_events where event_id=$1 and operation='match_forfeited'",[ctx.E]);
-      assert.equal(audit[0].reason,'Unable to continue (injury)');
-    }
+      [r.player_1_id,r.player_2_id].includes(winner) &&
+      [r.player_1_id,r.player_2_id].includes(other.player_1_id));
+    assert.ok(next,'a played-match winner must reach a following match');
+    assert.equal((await recordWalkover(ctx,next,winner,'Unable to continue (injury)')).status,'accepted');
+    const snap=await ctx.snap();
+    assert.equal(snap.consolation_candidates.some(c=>c.player_id===winner),false);
+    const audit=await ctx.db.admin("select reason from fftt_private.audit_events where event_id=$1 and operation='match_forfeited'",[ctx.E]);
+    assert.equal(audit[0].reason,'Unable to continue (injury)');
   }finally{await ctx.db.db.close();}
 });
 
