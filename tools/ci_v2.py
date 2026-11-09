@@ -45,7 +45,8 @@ SUITES = {
     'database': ('tests/e2e/gameday_real_event_candidate.test.mjs',
                  'tests/fftt_backup_cli.test.mjs',
                  'tests/fftt_cloud_copy.test.mjs',
-                 'tests/e2e/ops_restore_rehearsal.test.mjs'),
+                 'tests/e2e/ops_restore_rehearsal.test.mjs',
+                 'tests/e2e/walkover_install_compose.test.mjs'),
 }
 
 
@@ -94,7 +95,9 @@ def select(paths):
             reasons.add('authentication or access-control tests')
         elif path in {'tools/ops/fftt_backup.mjs','tools/ops/restore_verify.mjs',
                       'tools/ops/hosted_export.sql','tests/fftt_backup_cli.test.mjs',
-                      'tests/e2e/ops_restore_rehearsal.test.mjs'}:
+                      'tests/e2e/ops_restore_rehearsal.test.mjs',
+                      'tools/ops/compose_walkover_install.mjs',
+                      'tests/e2e/walkover_install_compose.test.mjs'}:
             lanes.add('database')
             manual = True
             reasons.add('protected private backup/restore tooling')
