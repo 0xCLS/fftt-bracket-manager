@@ -1,6 +1,6 @@
 # FFTT3 — guarded walkover and pre-play withdrawal release
 
-**Status: SOURCE MERGES AND EXACT-HEAD TESTS COMPLETE; HOSTED RELEASE NOT AUTHORIZED.** PR #80 merged as `29a12d49a7bea4d3e969e6933f9c60118527f44e`, and backup/release prerequisite PR #81 merged as `83cc9a585a633d41f140dcf127052813ba9f5341`. The guarded server SQL is **not installed**, and the updated Staff UI is **not deployed**. Merges and this plan do not authorize a hosted change.
+**Status: SOURCE TESTS, VERIFIED CURRENT PRIVATE BACKUP, AND INDEPENDENT OFF-DEVICE RECOVERY COMPLETE; HOSTED RELEASE NOT AUTHORIZED.** PR #80 merged as `29a12d49a7bea4d3e969e6933f9c60118527f44e`, PR #81 merged as `83cc9a585a633d41f140dcf127052813ba9f5341`, and the strict backup fix PR #82 merged as `99cdecb6df40b5eeeee916e66ac180ae1f0f8149`. The guarded server SQL is **not installed**, and the updated Staff UI is **not deployed**. Source merges, tests, verified recovery and this plan do not authorize a hosted write.
 
 ## Released source and intended behavior
 
@@ -18,7 +18,7 @@
    `20261008201142`, `20261009044012`, `20261013101523`,
    `20261108101146`, `20261108114950`, `20261108150000`.
    No unexpected versions, schema drift or changes to the source-pinned proposal may be ignored.
-3. On the Organizer's private Mac, run the updated `./tools/ops/fftt-backup` with a scoped read-only Management API token. Require current format `fftt-hosted-export-v2`, **20 groups** (19 non-secret private tables plus limited referenced Auth identities), full current-schema parity, **successful disposable restore**, SHA-256 proof and a verified, encrypted off-device copy. No raw backup, baseline fixture or credentials in Git, CI, email or ChatGPT.
+3. **Complete and independently confirmed by the Organizer (Nov 9).** Original owner-local read-only `fftt-hosted-export-v2` includes **20 groups** (19 non-secret private tables plus limited referenced Auth identities); the fixed, merged verifier produced a separate official `LOCAL_VERIFIED` proof, preserving the original failed report and export bytes. Source export SHA-256: `d068084ae28f08edb0a20d33231f33079873a1c5c65718bd5883a33e006431be`. An AES-256 encrypted `.dmg` (SHA-256 `2bd5f0525be8fe3c5e94fbf5f0924fed7b1ef7d9551c05626510d166c9490b88`) was copied to the selected Drive mount with matching local checksum, then **independently downloaded from Google Drive** by the Organizer and verified: download SHA-256, `hdiutil verify`, passphrase-protected attachment, original contained backup SHA-256, all 20 group identifiers, and valid official restore receipt all **PASS**. No raw backup, credentials or personal records entered GitHub, CI, email or ChatGPT. The tool's earlier `CLOUD SYNC: UNCONFIRMED` statement was **superseded by the Organizer's independent remote download verification**, not by its local mounted copy.
 4. Independently confirm the existing production event IDs, event-state/score counts, current role grants and affected function fingerprints through **read-only** catalog queries. Pause if an event or software state is unexpected.
 5. The Organizer must separately and explicitly approve **one target-specific hosted SQL installation**, then a coordinated **Staff deployment**. Test approval and merge approval are not release authorization.
 
@@ -43,7 +43,13 @@ Only non-personal event metadata and aggregate counts were queried:
 
 Across all seven stored events, the database had 45 completed matches, two saved-game rows and 16 game-progress decisions. The Nov 8 attendance record is distinct from its 12-player software roster. This is a **read-only point-in-time checkpoint**, not a private backup. Recheck the target, version history, function fingerprints and event metadata immediately before any authorized write; any drift blocks the operation.
 
-**Unmet prerequisite:** Create a fresh `fftt-hosted-export-v2` owner-local 20-group backup, prove an isolated current-schema restore and verify an AES-256 encrypted off-device copy. No backup was created in this preflight. Production SQL and Staff deployment remain separately approval-gated.
+**Updated after independent off-device recovery (Nov 9):** This earlier *read-only* preflight did not itself create a backup, but the Organizer subsequently completed and proved the 20-group current-format owner-local backup and AES-256 Drive-download recovery described in prerequisite 3. **Do not re-export the private file merely to repeat completed evidence.** Exact-target schema/history/event checks must still be repeated immediately before an explicitly owner-approved SQL write. Hosted SQL and Staff deployment remain separately approval-gated.
+
+## November 9 — Recovery completed; repeated read-only target preflight
+
+After the Organizer independently downloaded the encrypted archive from Google Drive and confirmed **SHA-256 PASS**, `hdiutil verify` **PASS**, password-protected mount **PASS**, original 20-group data SHA-256 **PASS** and official restore receipt **PASS**, the connected target `copmkalfkkrkzheohwuc` was queried **read-only** again. Still exactly 20 private tables and the same nine migration versions, with original function hashes `20b83f89b587ca69cf7781ddc25a3951` / `1695adccb33e750d2f23f9c254f3acc7` / `8b22b8caf9bfa783ec8d6abe1e7c1fff`. Both new withdrawal RPCs remain absent. Event-level metadata remained equal to the prior November 9 snapshot: the Nov 8 rehearsal is active (generation 3, revision 86, 12 app players, 52 matches, 13 completed, 13 result submissions, 13 game decisions, 6 staff grants); the Nov 22 event is draft (generation 0, revision 59, zero app players/matches/scores, 4 staff grants). Neither event was modified in this check.
+
+**Decision gate remains:** One exact-project, source-pinned SQL installation needs a *separate explicit approval*, followed by a separately coordinated Staff deployment. The installer must recheck migration history, function bodies/rights and event state **at execution**, and abort on drift. No SQL execution or Staff release occurred during this checkpoint.
 
 ## Guarded, offline SQL composition (no hosted execution)
 
