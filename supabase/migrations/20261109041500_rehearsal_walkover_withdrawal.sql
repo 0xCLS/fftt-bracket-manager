@@ -5,14 +5,14 @@
 begin;
 do $guard$
 begin
-  if pg_catalog.position('prior.status=''complete''' in pg_catalog.pg_get_functiondef(
-    'fftt_private.submit_match_result_v1(uuid,uuid,integer,bigint,uuid,uuid,text,integer)'::regprocedure)) = 0
-    or pg_catalog.position('v_prior_real_match' in pg_catalog.pg_get_functiondef(
-    'fftt_private.submit_match_result_v1(uuid,uuid,integer,bigint,uuid,uuid,text,integer)'::regprocedure)) = 0
-    or pg_catalog.position('first_loss_match_id' in pg_catalog.pg_get_functiondef(
-    'fftt_private.correct_result_v3(uuid,uuid,bigint,uuid,text,text)'::regprocedure)) = 0
-    or pg_catalog.position('submit_match_result_v1' in pg_catalog.pg_get_functiondef(
-    'fftt_private.forfeit_match_v3(uuid,uuid,bigint,uuid,text)'::regprocedure)) = 0 then
+  if pg_catalog.strpos(pg_catalog.pg_get_functiondef(
+    'fftt_private.submit_match_result_v1(uuid,uuid,integer,bigint,uuid,uuid,text,integer)'::regprocedure),'prior.status=''complete''') = 0
+    or pg_catalog.strpos(pg_catalog.pg_get_functiondef(
+    'fftt_private.submit_match_result_v1(uuid,uuid,integer,bigint,uuid,uuid,text,integer)'::regprocedure),'v_prior_real_match') = 0
+    or pg_catalog.strpos(pg_catalog.pg_get_functiondef(
+    'fftt_private.correct_result_v3(uuid,uuid,bigint,uuid,text,text)'::regprocedure),'first_loss_match_id') = 0
+    or pg_catalog.strpos(pg_catalog.pg_get_functiondef(
+    'fftt_private.forfeit_match_v3(uuid,uuid,bigint,uuid,text)'::regprocedure),'submit_match_result_v1') = 0 then
     raise exception 'FFTT rehearsal fix: unexpected installed scorer definitions';
   end if;
 end;
