@@ -60,7 +60,7 @@ Only non-personal event metadata and aggregate counts were queried:
 
 Across all seven stored events, the database had 45 completed matches, two saved-game rows and 16 game-progress decisions. The Nov 8 attendance record is distinct from its 12-player software roster. This is a **read-only point-in-time checkpoint**, not a private backup. Recheck the target, version history, function fingerprints and event metadata immediately before any authorized write; any drift blocks the operation.
 
-**Updated after independent off-device recovery (Nov 9):** This earlier *read-only* preflight did not itself create a backup, but the Organizer subsequently completed and proved the 20-group current-format owner-local backup and AES-256 Drive-download recovery described in prerequisite 3. **Do not re-export the private file merely to repeat completed evidence.** Exact-target schema/history/event checks must still be repeated immediately before an explicitly owner-approved SQL write. Hosted SQL and Staff deployment remain separately approval-gated.
+**Historical pre-install checkpoint (Nov 9):** This earlier *read-only* preflight did not itself create a backup, but the Organizer subsequently completed and proved the 20-group current-format owner-local backup and AES-256 Drive-download recovery described in prerequisite 3. **Do not re-export the private file merely to repeat completed evidence.** At this checkpoint, SQL still required explicit approval and immediate prewrite schema/history/event checks. Those safeguards subsequently passed and the guarded SQL was installed once as recorded above. Staff deployment alone remains separately approval-gated.
 
 ## November 9 — Recovery completed; repeated read-only target preflight
 
@@ -90,4 +90,4 @@ The approved proposal source is `supabase/proposals/FFTT3_REHEARSAL_WALKOVER_WIT
 
 ## History
 
-This document tracks proposed release mechanics. It does not retroactively modify the November 8 rehearsal, supersede its event record, or claim deployment. The canonical historical notes remain in `0xCLS/forging-fellowship-table-tennis`.
+This document preserves the reviewed proposed release mechanics **and** records the subsequently approved, completed and verified SQL installation. It does not retroactively modify the November 8 rehearsal, supersede its event record, or claim that Staff has been deployed. The canonical historical notes remain in `0xCLS/forging-fellowship-table-tennis`.
