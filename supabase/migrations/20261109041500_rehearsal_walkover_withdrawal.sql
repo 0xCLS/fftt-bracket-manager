@@ -5,6 +5,20 @@
 begin;
 do $guard$
 begin
+  -- A real-mode hosted install must match these exact read-only inspected function bodies.
+  -- Disposable synthetic fixtures retain the structural guard below because their
+  -- historical proposal functions predate the hosted release composition.
+  if exists (select 1 from fftt_private.events where synthetic_only = false)
+     and (
+       pg_catalog.md5(pg_catalog.pg_get_functiondef(
+         'fftt_private.submit_match_result_v1(uuid,uuid,integer,bigint,uuid,uuid,text,integer)'::regprocedure)) <> '20b83f89b587ca69cf7781ddc25a3951'
+       or pg_catalog.md5(pg_catalog.pg_get_functiondef(
+         'fftt_private.forfeit_match_v3(uuid,uuid,bigint,uuid,text)'::regprocedure)) <> '1695adccb33e750d2f23f9c254f3acc7'
+       or pg_catalog.md5(pg_catalog.pg_get_functiondef(
+         'fftt_private.correct_result_v3(uuid,uuid,bigint,uuid,text,text)'::regprocedure)) <> '8b22b8caf9bfa783ec8d6abe1e7c1fff'
+     ) then
+    raise exception 'FFTT rehearsal fix: hosted function fingerprints differ from reviewed source';
+  end if;
   if pg_catalog.strpos(pg_catalog.pg_get_functiondef(
     'fftt_private.submit_match_result_v1(uuid,uuid,integer,bigint,uuid,uuid,text,integer)'::regprocedure),'prior.status=''complete''') = 0
     or pg_catalog.strpos(pg_catalog.pg_get_functiondef(
