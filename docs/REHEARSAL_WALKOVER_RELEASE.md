@@ -1,6 +1,6 @@
 # FFTT3 — guarded walkover and pre-play withdrawal release
 
-**Status: SOURCE PREPARATION ONLY.** PR #80 merged the code to `main` as `29a12d49a7bea4d3e969e6933f9c60118527f44e`. Its server-authoritative SQL is **not installed** and the updated Staff UI is **not deployed**. This plan does not itself approve a hosted change.
+**Status: SOURCE MERGES AND EXACT-HEAD TESTS COMPLETE; HOSTED RELEASE NOT AUTHORIZED.** PR #80 merged as `29a12d49a7bea4d3e969e6933f9c60118527f44e`, and backup/release prerequisite PR #81 merged as `83cc9a585a633d41f140dcf127052813ba9f5341`. The guarded server SQL is **not installed**, and the updated Staff UI is **not deployed**. Merges and this plan do not authorize a hosted change.
 
 ## Released source and intended behavior
 
@@ -12,7 +12,7 @@
 
 ## Release prerequisites (all required)
 
-1. The consolidated prerequisite PR #81 must be **reviewed, merged and checked** without bypassing GitHub's release-risk gate. One owner-authorized successful comprehensive run on **its exact final commit** is required; earlier full CI #42641895268 establishes the merged PR #80 source only.
+1. **Complete.** PR #81 was reviewed and merged into `main` as `83cc9a585a633d41f140dcf127052813ba9f5341` from exact tested head `801162cbe83ccdc87a7f6a1c42ec5e26ddb84b34`. [Comprehensive #42664018612](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/42664018612) passed all three major jobs; [focused CI #42662280815, attempt 2](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/42662280815) passed (65/65 and release-risk gate). The reviewed current-backup and installer sources are now on `main`.
 2. The hosted database history must still be exactly the nine reviewed versions:
    `20261008183821`, `20261008183851`, `20261008195706`,
    `20261008201142`, `20261009044012`, `20261013101523`,
@@ -21,6 +21,29 @@
 3. On the Organizer's private Mac, run the updated `./tools/ops/fftt-backup` with a scoped read-only Management API token. Require current format `fftt-hosted-export-v2`, **20 groups** (19 non-secret private tables plus limited referenced Auth identities), full current-schema parity, **successful disposable restore**, SHA-256 proof and a verified, encrypted off-device copy. No raw backup, baseline fixture or credentials in Git, CI, email or ChatGPT.
 4. Independently confirm the existing production event IDs, event-state/score counts, current role grants and affected function fingerprints through **read-only** catalog queries. Pause if an event or software state is unexpected.
 5. The Organizer must separately and explicitly approve **one target-specific hosted SQL installation**, then a coordinated **Staff deployment**. Test approval and merge approval are not release authorization.
+
+## November 9, 2026 — Read-only hosted preflight checkpoint
+
+The connected target project `copmkalfkkrkzheohwuc` (`fftt-bracket-manager-dev`) reported **ACTIVE_HEALTHY**. Direct read-only SQL verified the **exact nine reviewed migration names and versions** (ending in `20261108150000`), 20 private tables, and that neither new `public.fftt_withdraw_preplay_v7` nor private `withdraw_preplay_v7` is installed.
+
+The three source-required original function body fingerprints match exactly:
+
+| Existing function | Live md5(pg_get_functiondef) |
+| --- | --- |
+| `fftt_private.submit_match_result_v1(uuid,uuid,integer,bigint,uuid,uuid,text,integer)` | `20b83f89b587ca69cf7781ddc25a3951` |
+| `fftt_private.forfeit_match_v3(uuid,uuid,bigint,uuid,text)` | `1695adccb33e750d2f23f9c254f3acc7` |
+| `fftt_private.correct_result_v3(uuid,uuid,bigint,uuid,text,text)` | `8b22b8caf9bfa783ec8d6abe1e7c1fff` |
+
+Only non-personal event metadata and aggregate counts were queried:
+
+| Existing real event | Lifecycle/generation/revision | Players | Matches/completed | Saved games / game decision receipts |
+| --- | --- | ---: | ---: | ---: |
+| Nov 8 rehearsal, `d1169a31-032d-4ac7-866b-dc6cab34d588` | `active` / 3 / 86 | 12 | 52 / 13 | 0 / 13 |
+| Nov 22 FFTT3, `e81a2f62-84e6-4338-9847-d437897110c2` | `draft` / 0 / 59 | 0 | 0 / 0 | 0 / 0 |
+
+Across all seven stored events, the database had 45 completed matches, two saved-game rows and 16 game-progress decisions. The Nov 8 attendance record is distinct from its 12-player software roster. This is a **read-only point-in-time checkpoint**, not a private backup. Recheck the target, version history, function fingerprints and event metadata immediately before any authorized write; any drift blocks the operation.
+
+**Unmet prerequisite:** Create a fresh `fftt-hosted-export-v2` owner-local 20-group backup, prove an isolated current-schema restore and verify an AES-256 encrypted off-device copy. No backup was created in this preflight. Production SQL and Staff deployment remain separately approval-gated.
 
 ## Guarded, offline SQL composition (no hosted execution)
 
