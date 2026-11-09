@@ -430,6 +430,12 @@ jobs:
         run: |
           psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres \
             -f supabase/proposals/GAMEDAY_V6_GAME_PROGRESS_DO_NOT_APPLY.sql
+      - name: Apply rehearsal walkover and withdrawal proposal only after V6 (disposable PostgreSQL; never hosted)
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres \
+            -f supabase/proposals/FFTT3_REHEARSAL_WALKOVER_WITHDRAWAL_20261109_DO_NOT_APPLY.sql
       - name: Apply showcase reset schema after V6 (local PostgreSQL only; no private fixture)
         env:
           PGPASSWORD: postgres
