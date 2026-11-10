@@ -44,7 +44,7 @@ const MESSAGE_KIND = Object.freeze({
 const WRITE_ROUTES = Object.freeze([
   'fftt_reset_showcase_v1', 'fftt_create_event_v3', 'fftt_update_event_v3', 'fftt_rename_completed_event_v1', 'fftt_set_lifecycle_v3', 'fftt_set_visibility_v3',
   'fftt_upsert_players_v3', 'fftt_remove_player_v3', 'fftt_set_checkin_v3', 'fftt_set_checkin_bulk_v3', 'fftt_event_day_walkin_v1', 'fftt_build_championship_v3',
-  'fftt_build_consolation_v3', 'fftt_withdraw_preplay_v7', 'fftt_assign_table_v3', 'fftt_forfeit_match_v3', 'fftt_correct_result_v3',
+  'fftt_build_consolation_v3', 'fftt_withdraw_preplay_v7', 'fftt_set_player_departure_v1', 'fftt_assign_table_v3', 'fftt_forfeit_match_v3', 'fftt_correct_result_v3',
   'fftt_set_doubles_teams_v3', 'fftt_record_doubles_result_v3', 'fftt_correct_doubles_result_v1', 'fftt_set_staff_v3',
   'fftt_set_formats_v4', 'fftt_set_match_format_v4', 'fftt_checkin_registrants_v4', 'fftt_confirm_ratings_v4',
   'fftt_restore_event_v4', 'fftt_delete_event_v4', 'fftt_set_registration_source_v5', 'fftt_clear_registration_source_v5',
@@ -52,10 +52,32 @@ const WRITE_ROUTES = Object.freeze([
 const READ_ROUTES = Object.freeze([
   'fftt_my_events_v3', 'fftt_my_events_v4', 'fftt_event_brief_v3', 'fftt_organizer_snapshot_v3', 'fftt_bracket_manager_snapshot_v1', 'fftt_audit_log_v3',
   'fftt_export_event_v3', 'fftt_matchdesk_v1', 'fftt_matchdesk_v2', 'fftt_registration_source_v5',
-  'fftt_preplay_withdrawal_eligibility_v1',
+  'fftt_preplay_withdrawal_eligibility_v1', 'fftt_player_departures_v1',
 ]);
 
 // ---------------------------------------------------------------- response models
+/** Only Organizers and Bracket Managers may read the private departure ledger.
+ * Never infer attendance or tournament outcomes from this status: W/Os remain final. */
+export function parsePlayerDepartures(raw) {
+  if (!only(raw, ['event_id','revision','players']) || !uuid(raw.event_id)
+    || !int(raw.revision) || !Array.isArray(raw.players) || raw.players.length > 64) bad();
+  const seen = new Set();
+  const players = raw.players.map(p => {
+    if (!only(p, ['player_id','withdrawn','reason','recorded_at','returned_at','return_reason'])
+      || !uuid(p.player_id) || seen.has(p.player_id) || typeof p.withdrawn !== 'boolean'
+      || !text(p.reason, 300) || p.reason.trim().length < 3
+      || typeof p.recorded_at !== 'string' || !Number.isFinite(Date.parse(p.recorded_at))
+      || !(p.returned_at === null || (typeof p.returned_at === 'string' && Number.isFinite(Date.parse(p.returned_at))))
+      || !(p.return_reason === null || (text(p.return_reason,300) && p.return_reason.trim().length >= 3))
+      || (p.withdrawn ? p.returned_at !== null || p.return_reason !== null
+          : p.returned_at === null || p.return_reason === null)) bad();
+    seen.add(p.player_id);
+    return Object.freeze({playerId:p.player_id, withdrawn:p.withdrawn,
+      reason:p.reason, recordedAt:p.recorded_at, returnedAt:p.returned_at, returnReason:p.return_reason});
+  });
+  return Object.freeze({eventId:raw.event_id, revision:raw.revision, players:Object.freeze(players)});
+}
+
 /** Server verdict on pre-play withdrawal for this event. Strict: anything unexpected is refused, so the UI fails closed. */
 export function parsePreplayEligibility(raw) {
   if (!only(raw, ['event_id', 'eligible', 'reason', 'generation', 'revision'])
@@ -260,6 +282,8 @@ export function createGamedayApi({projectUrl = C3_HOST, publishableKey, fetchImp
     auditLog: r('fftt_audit_log_v3', parseAuditLog),
     exportEvent: r('fftt_export_event_v3', x => { if (!plain(x) || x.format !== 'fftt-event-export-v3') bad(); return x; }),
     preplayEligibility: r('fftt_preplay_withdrawal_eligibility_v1', parsePreplayEligibility),
+    playerDepartures: r('fftt_player_departures_v1', parsePlayerDepartures),
+    setPlayerDeparture: w('fftt_set_player_departure_v1'),
     resetShowcase: w('fftt_reset_showcase_v1', raw => {
       if (!only(raw, ['status','revision','request_id']) || raw.status !== 'reset' || !int(raw.revision) || !uuid(raw.request_id))
         throw new GamedayApiError('malformed', {outcomeUnknown: true});
