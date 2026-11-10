@@ -794,8 +794,19 @@ export function createStaffUi({core, els, config, signOut}) {
     }, {label: 'Record result', closeButton: true});
   }
   const roundLabel = r => {
-    const total = s.snapshot ? Math.max(...s.snapshot.matches.filter(m => m.bracket === r.bracket).map(m => m.round)) + 1 : r.round + 2;
-    return `${r.bracket === 'championship' ? 'Championship' : 'Consolation'} ${roundName(total, r.round, r.bracket)}`;
+    const kind = r.bracket === 'championship' ? 'Championship' : 'Consolation';
+    // Organizers/BMs have the bracket snapshot; Scorers get only two aggregate round
+    // counts from their role-gated event brief (never a privileged roster/snapshot).
+    const matches = s.snapshot?.matches.filter(m => m.bracket === r.bracket) ?? [];
+    const total = matches.length ? Math.max(...matches.map(m => m.round)) + 1 : s.brief?.rounds?.[r.bracket];
+    if (!Number.isInteger(total) || total <= r.round) {
+      // Older servers omit round counts. Never guess a semifinal from a round index;
+      // Championship isFinal is independently confirmed by the Match Desk server.
+      return r.bracket === 'championship' && r.isFinal ? 'Championship Final' : `${kind} Round ${r.round + 1}`;
+    }
+    // roundName's consolation final already includes "Consolation"; use its neutral
+    // form and supply the prefix exactly once.
+    return `${kind} ${roundName(total, r.round, 'championship')}`;
   };
   // ------------------------------------------------------------ Mixed-Skill Doubles on the Match Desk
   // Same game-by-game flow as a singles match. Scorekeepers, Bracket Managers and Organizers may record games and correct
