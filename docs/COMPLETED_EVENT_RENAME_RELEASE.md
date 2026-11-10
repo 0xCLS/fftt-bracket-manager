@@ -53,6 +53,19 @@ The singles review said "The completed games are already saved" even when scores
 - Browser level: with 250 ms added to every request, the unfixed code fails the scoring-dialog flow **3/3**; with the fix it passes **3/3** (`tests/e2e/staff_dialog_slow_network_browser.test.mjs`, now permanent).
 - The two CI-failing tests did not fail on the faster development machine even at CI's `--test-concurrency=2` (it needs a slow lock holder), which is why they were missed locally.
 
+### G. Comprehensive run on `7abef37…` failed on a browser-version assertion (test-only fix)
+**Run.** The Organizer-approved comprehensive regression ([run 42769620324](https://github.com/0xCLS/fftt-bracket-manager/actions/runs/42769620324), `workflow_dispatch`, exact SHA `7abef37ae8054613bd4bb6506da2462106aaa230`) finished **failure**: *Select safe CI lane*, *Full regression — game-day and launch workflows* and *Disposable synthetic PostgreSQL* **passed**; *Full regression — browser and security foundation* **failed** at step 25 "Check UI, labels and dropdowns" (`python tests/ui_smoke.py`), so steps 26 "Check tournament safety" and 27 "Rehearse tournament brackets" were **skipped** (not run) in that run.
+
+**Failure.** `tests/ui_smoke.py:175` asserted the status bar's computed `justify-content` equals `flex-end`; the browser reported `flow-end`. Every other smoke check before it passed.
+
+**Cause: browser drift, not this PR.** The workflow installs Playwright unpinned. The previous green comprehensive run (the day before) used Playwright 1.64.1 / Chrome 156; this run used Playwright 1.65.0 / **Chrome 158.0.8127.18**, which reports the computed value of `justify-content: flex-end` as `flow-end` (a new alias with the same meaning). The CSS still specifies `flex-end`; this PR changes neither `tests/ui_smoke.py` (before this fix) nor any status-bar CSS (its only CSS change is the four `dialog .dlg-x` rules). The failure was reproduced locally with the identical Chrome 158.0.8127.18 against the unchanged test.
+
+**Fix (test only).** `tests/ui_smoke.py` now accepts `"flex-end"` **or** `"flow-end"` for that one computed value, with a comment explaining it. The position assertion (`fixed`) on the same line and every geometric, positioning, scrolling and visual assertion are unchanged; Playwright is **not** pinned or downgraded and no application CSS was modified.
+
+**Verified locally on Chrome 158.0.8127.18 (the CI browser), unpinned current Playwright:** `python tests/ui_smoke.py` — all 35 checks PASS (previously failed at check 22); `python tests/safety.py` and `python tests/rehearsal.py` (the two steps skipped in CI) — both PASS, exit 0.
+
+**Status.** The change after `7abef37…` is this test-only correction, so the head SHA differs and **a new comprehensive run on the new SHA requires separate Organizer approval; none has been dispatched.** The earlier approval covered exactly one run on `7abef37…`.
+
 ## 2. Required deployment prerequisites (none performed)
 
 **Order matters: SQL first, then Staff.** A Staff build deployed before the SQL would show the rename control but the call would fail, and would hide "Withdraw before play…" (no readable verdict). Deploying only the X, `null` fix and review wording needs no SQL, but this PR ships as one build.
@@ -78,7 +91,7 @@ Disposable PGlite, real FFTT SQL layered like the hosted project, fictional data
 - `tests/e2e/interactive_reads_not_skipped_core.test.mjs` — **2/2 pass** and `tests/e2e/staff_dialog_slow_network_browser.test.mjs` — **1/1 pass** (change F; both fail on the unfixed code, see F).
 - **CI-equivalent run** (the exact 25 files CI v2 selects for this PR's lanes, `node --test --test-concurrency=2`, `FFTT_CHROME_CHANNEL=none`): **147/147 pass, twice** with the fix. On the previous head's code the same set failed only on a host-specific symlinked-temp-directory check in `fftt_backup_cli.test.mjs` (a macOS-only environment effect, passes on CI); the two CI-reported failures needed a slow lock holder to occur and were reproduced with request latency (see F).
 - Related existing suites re-run and passing: `correction_permissions_browser` 3/3, `gameday_rehearsal_walkovers` 6/6, `gameday_fast_ui_browser` 4/4, `gameday_events_browser` 4/4, `gameday_v6_browser` 1/1, `gameday_polish_browser` 7/7, `gameday_ui_audit` 2/2, `doubles_scoring` 4/4, `walkover_install_compose` 2/2, `gameday_core` 11/11, `test_ci_v2.py` 9/9.
-- **Not run:** the legacy comprehensive suites (not required by a gate for this work); they are required as the exact-head proof before merge/release (see 2.2).
+- **Comprehensive suites:** one approved run on `7abef37…` failed only on the Chrome 158 assertion described in G (a test-only fix follows it); a **new** run on the final head still needs separate approval and is required as the exact-head proof before merge/release (see 2.2).
 
 ## 4. Live Organizer acceptance on a fictional event — COMPLETED (Organizer role only)
 
