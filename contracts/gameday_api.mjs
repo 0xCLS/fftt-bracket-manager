@@ -82,12 +82,22 @@ export function parseMyEvents(raw) {
   }));
 }
 
+/** Scorer-safe bracket depth; no participant names, seeds or scores. Older servers omit it. */
+function parseBriefRounds(raw) {
+  if (raw === undefined) return null;
+  if (!only(raw, ['championship', 'consolation']) || Object.keys(raw).length !== 2) bad();
+  for (const kind of ['championship', 'consolation'])
+    if (raw[kind] !== null && !int(raw[kind], 1, 8)) bad();
+  return Object.freeze({championship: raw.championship, consolation: raw.consolation});
+}
+
 export function parseEventBrief(raw) {
-  if (!only(raw, ['event_id', 'name', 'date', 'tables', 'lifecycle', 'generation', 'revision']) || !uuid(raw.event_id)
+  if (!only(raw, ['event_id', 'name', 'date', 'tables', 'lifecycle', 'generation', 'revision', 'rounds']) || !uuid(raw.event_id)
     || !text(raw.name, 160) || !/^\d{4}-\d{2}-\d{2}$/.test(raw.date) || !int(raw.tables, 1, 12)
     || !['draft', 'active', 'complete', 'archived'].includes(raw.lifecycle) || !int(raw.generation) || !int(raw.revision)) bad();
   return Object.freeze({eventId: raw.event_id, name: raw.name, date: raw.date, tables: raw.tables,
-    lifecycle: raw.lifecycle, generation: raw.generation, revision: raw.revision});
+    lifecycle: raw.lifecycle, generation: raw.generation, revision: raw.revision,
+    rounds: parseBriefRounds(raw.rounds)});
 }
 
 const FORMAT_CATEGORIES = ['champ', 'champ_final', 'cons', 'cons_final', 'doubles'];
