@@ -448,8 +448,11 @@ export function createStaffUi({core, els, config, signOut}) {
     const recorded = s.departures?.players ?? [];
     const byId = new Map(sn.players.map(p => [p.id, p.name]));
     const active = new Set(recorded.filter(p => p.withdrawn).map(p => p.playerId));
+    const unresolved = sn.matches.filter(m => m.status === 'pending' &&
+      (active.has(m.p1) || active.has(m.p2))).length;
     return h('section', {class:'card', 'aria-label':'Player departures during play'},
       h('h3',{text:'Player departures during play'}),
+      unresolved ? h('p',{class:'notice warn',role:'status',text:unresolved+' pending bracket match(es) involve recorded withdrawn players. Staff must resolve them on the Match Desk. This status never awards a win automatically.'}) : null,
       h('p',{class:'help',text:'Record a person who leaves or cannot continue, even if they have already played. This is an audited event-level note, not a match result. For an unplayed match, use Match Desk → No-show… to award an appropriate walkover; saved games must not be overwritten.'}),
       recorded.length ? h('div',{class:'scroll-x'},h('table',{class:'responsive-table','aria-label':'Recorded player departures'},
         h('thead',{},h('tr',{},['Player','Event status','Action'].map(v=>h('th',{scope:'col',text:v})))),
