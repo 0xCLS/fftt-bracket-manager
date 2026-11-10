@@ -714,7 +714,8 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
   async function readDoublesProgress() {
     if (!s.signedIn || s.paused || !isOnline()) return {ok: false, message: 'Reconnect before reading completed games.'};
     try {
-      const data = await session.authorized(ctx => scoreTransport.readDoublesDesk(ctx.token, {eventId: ctx.eventId}), {wait: false});
+      // Person-initiated (opening the dialog): QUEUE behind any background poll. Only the polling refresh may be skipped when busy.
+      const data = await session.authorized(ctx => scoreTransport.readDoublesDesk(ctx.token, {eventId: ctx.eventId}));
       if (data.status !== 'ready' || !summarizeGameProgress(data.games, data.best_of, data.points_to_win).ok) {
         return {ok: false, message: 'The doubles finale is not open for scoring. Refresh the Match Desk.'};
       }
@@ -764,8 +765,10 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     if (!s.signedIn || s.paused || !isOnline()) return {ok: false, message: 'Reconnect before reading completed games.'};
     if (!s.desk.some(m => m.matchId === matchId)) return {ok: false, message: 'This match is no longer playable. Refresh the Match Desk.'};
     try {
+      // Person-initiated (opening the dialog): QUEUE behind any background poll instead of being skipped as "busy"; a skipped
+      // read left the dialog stuck on "Loading verified game scores…" with a misleading "records unavailable" message.
       const data = await session.authorized(ctx =>
-        scoreTransport.readGameProgress(ctx.token, {eventId: ctx.eventId, matchId}), {wait: false});
+        scoreTransport.readGameProgress(ctx.token, {eventId: ctx.eventId, matchId}));
       const row = s.desk.find(m => m.matchId === matchId);
       if (!row || data.generation !== row.generation || data.match_version !== row.version
         || data.best_of !== row.bestOf || data.points_to_win !== row.points || data.match_status !== 'pending'
@@ -830,7 +833,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     if (!s.signedIn || s.paused || !isOnline()) return {ok: false, unknown: true, message: 'Reconnect and check the server receipt. Do not resend.'};
     try {
       const receipt = await session.authorized(ctx =>
-        scoreTransport.readGameDecision(ctx.token, {eventId: ctx.eventId, submissionId: rec.submissionId}), {wait: false});
+        scoreTransport.readGameDecision(ctx.token, {eventId: ctx.eventId, submissionId: rec.submissionId}));   // queues: a skipped receipt check would leave a saved game "unconfirmed"
       if (receipt.status === 'unconfirmed') return {ok: false, unknown: true, message: 'No server decision yet. Do not resend this game. Ask the organizer to reconcile the match.'};
       if (receipt.match_id !== rec.matchId) return {ok: false, unknown: true, message: 'The receipt does not match this game. Ask the organizer.'};
       gameLedger?.clear(s.eventId); s.gamePending = null; emit();
