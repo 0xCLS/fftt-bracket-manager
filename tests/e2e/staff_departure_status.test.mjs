@@ -36,7 +36,18 @@ test('Strict private departure response parser fails closed',()=>{
 test('Role guards, revision guard, departure/return audit, no score or bracket rewrite', {timeout:240000},async()=>{
   const {w,db,E,current,read,set}=await world();
   try {
-    const before=await current(),player=before.players[0].id;
+    // Record an actual fictional W/O first. The later event-level return
+    // must never turn this accepted result back into a pending match.
+    const ready=await db.rpc(w.ids.org,'fftt_matchdesk_v2',{p_event_id:E},{rows:true});
+    const match=ready.find(m=>m.player_1_id&&m.player_2_id);
+    assert.ok(match);
+    const player=match.player_2_id;
+    const wo=await db.rpc(w.ids.org,'fftt_forfeit_match_v3',{
+      p_event_id:E,p_match_id:match.match_id,p_expected_match_version:match.match_version,
+      p_absent_player_id:player,p_reason:'Unable to continue (injury)'});
+    assert.equal(wo.status,'accepted');
+    const before=await current();
+    assert.equal(before.matches.find(m=>m.id===match.match_id).game_scores,'W/O');
     assert.deepEqual((await read(w.ids.org)).players,[]);
     assert.deepEqual((await read(w.ids.bm)).players,[]);
     await assert.rejects(read(w.ids.a));
@@ -63,6 +74,7 @@ test('Role guards, revision guard, departure/return audit, no score or bracket r
     assert.deepEqual(after.matches,before.matches,'no bracket or result rewritten');
     assert.deepEqual(after.players,before.players,'no roster or check-in rewritten');
     assert.equal(after.event.generation,before.event.generation,'generation unchanged');
+    assert.equal(after.matches.find(m=>m.id===match.match_id).game_scores,'W/O','return does not undo accepted walkover');
     const audits=await db.admin("select operation,reason,event_revision from fftt_private.audit_events where event_id=$1 and operation='player_departure_changed' order by event_revision",[E]);
     assert.deepEqual(audits.map(x=>x.reason),['Unable to continue (injury)','Player returned to venue','Left tournament early']);
     assert.deepEqual(audits.map(x=>x.operation),['player_departure_changed','player_departure_changed','player_departure_changed']);
