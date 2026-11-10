@@ -52,9 +52,20 @@ const WRITE_ROUTES = Object.freeze([
 const READ_ROUTES = Object.freeze([
   'fftt_my_events_v3', 'fftt_my_events_v4', 'fftt_event_brief_v3', 'fftt_organizer_snapshot_v3', 'fftt_bracket_manager_snapshot_v1', 'fftt_audit_log_v3',
   'fftt_export_event_v3', 'fftt_matchdesk_v1', 'fftt_matchdesk_v2', 'fftt_registration_source_v5',
+  'fftt_preplay_withdrawal_eligibility_v1',
 ]);
 
 // ---------------------------------------------------------------- response models
+/** Server verdict on pre-play withdrawal for this event. Strict: anything unexpected is refused, so the UI fails closed. */
+export function parsePreplayEligibility(raw) {
+  if (!only(raw, ['event_id', 'eligible', 'reason', 'generation', 'revision'])
+    || !uuid(raw.event_id) || typeof raw.eligible !== 'boolean'
+    || !(raw.reason === null || (typeof raw.reason === 'string' && /^[a-z0-9-]{1,48}$/.test(raw.reason)))
+    || (raw.eligible === true) !== (raw.reason === null)
+    || !int(raw.generation) || !int(raw.revision)) bad();
+  return Object.freeze({eventId: raw.event_id, eligible: raw.eligible, reason: raw.reason, generation: raw.generation, revision: raw.revision});
+}
+
 export function parseMyEvents(raw) {
   if (!Array.isArray(raw) || raw.length > 50) bad();
   return Object.freeze(raw.map(e => {
@@ -238,6 +249,7 @@ export function createGamedayApi({projectUrl = C3_HOST, publishableKey, fetchImp
     bracketManagerSnapshot: r('fftt_bracket_manager_snapshot_v1', parseOrganizerSnapshot),
     auditLog: r('fftt_audit_log_v3', parseAuditLog),
     exportEvent: r('fftt_export_event_v3', x => { if (!plain(x) || x.format !== 'fftt-event-export-v3') bad(); return x; }),
+    preplayEligibility: r('fftt_preplay_withdrawal_eligibility_v1', parsePreplayEligibility),
     resetShowcase: w('fftt_reset_showcase_v1', raw => {
       if (!only(raw, ['status','revision','request_id']) || raw.status !== 'reset' || !int(raw.revision) || !uuid(raw.request_id))
         throw new GamedayApiError('malformed', {outcomeUnknown: true});

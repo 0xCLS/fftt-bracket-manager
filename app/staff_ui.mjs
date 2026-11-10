@@ -426,10 +426,17 @@ export function createStaffUi({core, els, config, signOut}) {
             : isOrganizer() ? h('button', {class: 'danger', type: 'button', disabled: !core.canWrite(), text: 'Rebuild (replaces the bracket)', on: {click: async () => {
               const text = played ? `This replaces the bracket and discards ${played} completed result(s) from the current bracket, the consolation bracket and the doubles teams. Scorekeepers will need to refresh. Export a backup first.` : 'This replaces the current bracket.';
               if (await confirmDialog('Rebuild the championship bracket?', text, 'Rebuild', {danger: true})) result(await core.actions.buildChampionship({confirm: true}), 'Bracket rebuilt.'); }}}) : null)),
-      champ && played === 0 && field.length > 2 ? h('section', {class: 'card', 'aria-label': 'Withdraw before play'},
+      champ && field.length > 2 && core.preplayWithdrawal().available ? h('section', {class: 'card', 'aria-label': 'Withdraw before play'},
         h('h3', {text: 'Someone left before play?'}),
         h('p', {class: 'help', text: 'Withdraw a checked-in player and safely regenerate the unplayed Championship bracket. Saved games or completed results block this action; existing registrations are preserved.'}),
-        h('button', {type: 'button', disabled: !core.canWrite(), text: 'Withdraw before play…', on: {click: () => openWithdrawPreplay(field)}})) : null,
+        h('button', {type: 'button', disabled: !core.canWrite(), text: 'Withdraw before play…', on: {click: async ev => {
+          // Re-confirm with the server at click time; the dialog opens only on a fresh eligible verdict.
+          ev.target.disabled = true;
+          const check = await core.actions.checkPreplayWithdrawal();
+          if (ev.target.isConnected) ev.target.disabled = !core.canWrite();
+          if (!check.ok || !check.eligible) { toast(check.message, 'bad'); render(true); return; }
+          openWithdrawPreplay(field);
+        }}})) : null,
       champ ? h('section', {class: 'card', 'aria-label': 'Championship bracket'}, bracketView(normalized('championship'), 'championship')) : null);
   }
   function openWithdrawPreplay(field) {
@@ -763,11 +770,15 @@ export function createStaffUi({core, els, config, signOut}) {
         if (!p.ok) { status(p.message, 'bad'); return; }
         prepared = p;
         const winner = row.players.find(x => x.id === winnerId), loser = row.players.find(x => x.id !== winnerId);
+        // Two honest cases. Server-confirmed saved games, or scores typed on this form that are NOT saved individually.
+        const reviewNote = verified.games.length
+          ? 'These games were already saved one by one and confirmed by the server. This final confirmation alone advances the bracket. It is sent once; an unknown result is never resent automatically.'
+          : 'These scores were typed on this form and have not been saved as individual games. Nothing is recorded until you confirm; the confirmation records the result and advances the bracket. It is sent once; an unknown result is never resent automatically.';
         const out = h('p', {class: 'status', role: 'status'});
         fill(body, h('h3', {text: 'Check before sending'}),
           h('div', {class: 'review'}, `${winner.name} beat ${loser.name}`, h('br'), p.text, h('br'),
             `Table ${p.tableNumber} · ${roundLabel(row)} · ${formatText(fmt)}`),
-          h('p', {class: 'help', text: 'The completed games are already saved. This final confirmation alone advances the bracket. It is sent once; an unknown result is never resent automatically.'}), out,
+          h('p', {class: 'help', id: 'reviewSavedNote', text: reviewNote}), out,
           h('div', {class: 'dlg-actions'},
             h('button', {type: 'button', text: 'Back — edit', on: {click: () => { core.cancelPreparedScore(); form(); }}}),
             h('button', {type: 'button', class: 'primary', text: 'Confirm and send', on: {click: async ev => {
@@ -888,7 +899,7 @@ export function createStaffUi({core, els, config, signOut}) {
         const out = h('p', {class: 'status', role: 'status'});
         fill(body, h('h3', {text: 'Check before sending'}),
           h('div', {class: 'review'}, `${teamName(verified.teams[team - 1], team - 1)} won`, h('br'), text),
-          h('p', {class: 'help', text: 'The completed games are already saved. This final confirmation records the doubles winner. It is sent once.'}),
+          h('p', {class: 'help', text: 'These games were already saved one by one and confirmed by the server. This final confirmation records the doubles winner. It is sent once.'}),
           h('div', {class: 'dlg-actions'}, h('button', {type: 'button', text: 'Back — edit', on: {click: () => form()}}),
             h('button', {type: 'button', class: 'primary', text: 'Confirm and send', on: {click: async ev => {
               ev.target.disabled = true; out.textContent = 'Sending…';
