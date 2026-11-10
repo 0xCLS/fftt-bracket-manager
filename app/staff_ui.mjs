@@ -437,8 +437,79 @@ export function createStaffUi({core, els, config, signOut}) {
           if (!check.ok || !check.eligible) { toast(check.message, 'bad'); render(true); return; }
           openWithdrawPreplay(field);
         }}})) : null,
+      champ && sn.event.lifecycle === 'active' && s.departures?.eventId === s.eventId
+        && s.departures.revision === sn.event.revision ? viewPlayerDepartures(sn) : null,
       champ ? h('section', {class: 'card', 'aria-label': 'Championship bracket'}, bracketView(normalized('championship'), 'championship')) : null);
   }
+  /** Administrative departure state NEVER changes saved games or accepted results. */
+  function viewPlayerDepartures(sn) {
+    const available = sn.players.filter(p => p.checkedIn
+      && sn.matches.some(m => m.p1 === p.id || m.p2 === p.id));
+    const recorded = s.departures?.players ?? [];
+    const byId = new Map(sn.players.map(p => [p.id, p.name]));
+    const active = new Set(recorded.filter(p => p.withdrawn).map(p => p.playerId));
+    return h('section', {class:'card', 'aria-label':'Player departures during play'},
+      h('h3',{text:'Player departures during play'}),
+      h('p',{class:'help',text:'Record a person who leaves or cannot continue, even if they have already played. This is an audited event-level note, not a match result. For an unplayed match, use Match Desk → No-show… to award an appropriate walkover; saved games must not be overwritten.'}),
+      recorded.length ? h('div',{class:'scroll-x'},h('table',{class:'responsive-table','aria-label':'Recorded player departures'},
+        h('thead',{},h('tr',{},['Player','Event status','Action'].map(v=>h('th',{scope:'col',text:v})))),
+        h('tbody',{},recorded.map(p=>h('tr',{},
+          h('td',{'data-label':'Player',text:byId.get(p.playerId) ?? 'Former roster entry'}),
+          h('td',{'data-label':'Event status'},pill(p.withdrawn?'Withdrawn':'Returned',p.withdrawn?'warn':'good')),
+          h('td',{'data-label':'Action'},p.withdrawn ? h('button',{type:'button',class:'small',
+            disabled:!core.canWrite(),text:'Mark returned…',
+            on:{click:()=>openPlayerDeparture(p.playerId,byId.get(p.playerId) ?? 'Player','returned')}}) : 'Recorded')))))
+      ) : h('p',{class:'help',text:'No player departures recorded.'}),
+      available.filter(p=>!active.has(p.id)).length ?
+        h('button',{type:'button',class:'small',disabled:!core.canWrite(),text:'Record event withdrawal…',
+          on:{click:()=>openPlayerDeparture(null,null,'withdrawn',available.filter(p=>!active.has(p.id)))}}) : null,
+      h('p',{class:'help',text:'A returning participant does not automatically regain a forfeited match or a lost bracket place. Earlier decisions stay recorded; the Bracket Manager must review any request to reverse a walkover separately.'}));
+  }
+  function openPlayerDeparture(playerId,name,state,available=[]) {
+    const withdrawing = state === 'withdrawn';
+    openDialog((dlg,close)=>{
+      const chosen = withdrawing ? h('select',{id:'departurePlayer'},
+        available.map(p=>h('option',{value:p.id,text:p.name}))) : null;
+      const reason = withdrawing ? h('select',{id:'departureReason'},
+        [['Left tournament early','Left tournament early'],['Unable to continue (injury)','Unable to continue (injury)'],
+         ['Other','Other (describe below)']].map(([v,t])=>h('option',{value:v,text:t}))) : null;
+      const details=h('input',{id:'departureDetails',type:'text',maxlength:250,
+        value:withdrawing?'':'Player returned to the venue',
+        placeholder:withdrawing?'Details (optional; required for Other)':'Reason for return (required)'});
+      const msg=h('p',{class:'status bad',role:'alert'});
+      dlg.append(h('div',{class:'dlg'},
+        h('h3',{text:withdrawing?'Record event withdrawal':'Record a player returning'}),
+        h('p',{class:'help',text:withdrawing
+          ? 'This records the event-level departure but does not resolve any pending match. Record a walkover separately when appropriate; saved game records cannot be overwritten.'
+          : name+' may return to fellowship, but this action never reverses a walkover or restores an eliminated bracket position.'}),
+        chosen ? h('label',{for:'departurePlayer',text:'Player leaving'}):null,chosen,
+        reason ? h('label',{for:'departureReason',text:'Reason'}):null,reason,
+        h('label',{for:'departureDetails',text:'Details / reason'}),details,msg,
+        h('div',{class:'dlg-actions'},
+          h('button',{type:'button',text:'Cancel',on:{click:close}}),
+          h('button',{type:'button',class:withdrawing?'danger':'primary',
+            text:withdrawing?'Record withdrawal':'Mark returned',
+            on:{click:async ev=>{
+              const note=details.value.trim();
+              if(withdrawing && reason.value==='Other' && note.length<3) {
+                msg.textContent='Describe the reason for this departure.'; return;
+              }
+              const explanation=withdrawing
+                ? (reason.value==='Other'?note:reason.value+(note?' — '+note:''))
+                : note;
+              if(explanation.length<3 || explanation.length>300) {
+                msg.textContent='Enter a reason between 3 and 300 characters.';return;
+              }
+              const id=withdrawing?chosen?.value:playerId;
+              if(!id) {msg.textContent='Choose a player.';return;}
+              ev.target.disabled=true;
+              const r=await core.actions.setPlayerDeparture(id,state,explanation);
+              if(r.ok){toast(withdrawing?'Withdrawal recorded; review pending matches.':'Return recorded; existing walkovers remain unchanged.');close();render(true);}
+              else {msg.textContent=r.message;ev.target.disabled=false;}
+            }}}))));
+    },{label:withdrawing?'Record event withdrawal':'Record player return',closeButton:true});
+  }
+
   function openWithdrawPreplay(field) {
     openDialog((dlg, close) => {
       const target = h('select', {id: 'withdrawTarget'}, field.map(p => h('option', {value: p.id, text: p.name})));
