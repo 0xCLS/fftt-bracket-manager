@@ -38,6 +38,7 @@ const DETAIL = Object.freeze({
   'first-matches-pending': 'Some players still await a Championship match outcome. Complete their match or record a verified walkover first.',
   'preplay-results-exist': 'A score, saved game, or Consolation result exists. The bracket cannot be regenerated through pre-play withdrawal.',
   'game-already-saved': 'This match has saved games. Resolve an interruption with the Bracket Manager; do not overwrite the game scores with a walkover.',
+  'player-withdrawn': 'A participating player has been recorded as withdrawn. Staff must review the match; a score cannot be saved until the player is marked returned or a permitted walkover is recorded.',
   'no-active-championship': 'There is no active Championship bracket to regenerate.',
   'not-checked-in': 'That player is not checked in.',
   'not-enough-players': 'At least two checked-in players must remain.',

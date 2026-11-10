@@ -83,6 +83,48 @@ test('Role guards, revision guard, departure/return audit, no score or bracket r
     assert.equal(rights[0].can_select,false);
   }finally{await w.close();await db.db.close();}
 });
+test('Active withdrawal blocks new singles scores and saved games without changing accepted W/O', {timeout:240000}, async()=>{
+  const {w,db,E,current,set}=await world();
+  try {
+    const rows=await db.rpc(w.ids.a,'fftt_matchdesk_v2',{p_event_id:E},{rows:true});
+    const row=rows.find(r=>r.player_1_id && r.player_2_id);
+    assert.ok(row,'there must be a ready two-player singles match');
+    const absent=row.player_2_id;
+    await db.rpc(w.ids.org,'fftt_assign_table_v3',{p_event_id:E,p_match_id:row.match_id,p_table_number:1});
+    const before=await current();
+    assert.equal((await set(w.ids.bm,absent,'withdrawn','Left tournament early')).status,'updated');
+    const params={p_event_id:E,p_match_id:row.match_id,p_bracket_generation:before.event.generation,
+      p_expected_match_version:row.match_version,p_submission_id:crypto.randomUUID(),
+      p_winner_id:row.player_1_id,p_game_scores:'11-7, 11-8',p_table_number:1};
+    await assert.rejects(db.rpc(w.ids.a,'fftt_submit_match_result_v2',params),
+      err=>err.code==='P0001' && /player-withdrawn/.test(err.detail??''));
+    const progress=await db.rpc(w.ids.a,'fftt_game_progress_v1',{p_event_id:E,p_match_id:row.match_id});
+    await assert.rejects(db.rpc(w.ids.a,'fftt_save_completed_game_v1',{
+      p_event_id:E,p_match_id:row.match_id,p_generation:before.event.generation,
+      p_expected_match_version:row.match_version,p_expected_epoch:progress.epoch,
+      p_expected_progress_version:progress.revision,p_expected_best_of:progress.best_of,
+      p_expected_points_to_win:progress.points_to_win,p_submission_id:crypto.randomUUID(),
+      p_game_index:1,p_player_1_score:11,p_player_2_score:7,p_reason:null}),
+      err=>err.code==='P0001' && /player-withdrawn/.test(err.detail??''));
+    const frozen=await current();
+    assert.equal(frozen.matches.find(m=>m.id===row.match_id).status,'pending');
+    assert.deepEqual((await db.rpc(w.ids.a,'fftt_game_progress_v1',{p_event_id:E,p_match_id:row.match_id})).games,[]);
+    // The already authorized no-show remains the ONLY way to advance a withdrawal.
+    // It must still work despite the status guard and preserve a W/O result.
+    const currentDesk=await db.rpc(w.ids.org,'fftt_matchdesk_v2',{p_event_id:E},{rows:true});
+    const now=currentDesk.find(m=>m.match_id===row.match_id);
+    assert.equal((await db.rpc(w.ids.bm,'fftt_forfeit_match_v3',{
+      p_event_id:E,p_match_id:now.match_id,p_expected_match_version:now.match_version,
+      p_absent_player_id:absent,p_reason:'Left tournament early'})).status,'accepted');
+    const after=await current();
+    assert.equal(after.matches.find(m=>m.id===row.match_id).game_scores,'W/O');
+    await assert.rejects(db.rpc(w.ids.a,'fftt_submit_match_result_v2', {...params,p_submission_id:crypto.randomUUID()}));
+    assert.equal((await set(w.ids.org,absent,'returned','Player returned to venue')).status,'updated');
+    assert.equal((await current()).matches.find(m=>m.id===row.match_id).game_scores,'W/O');
+    assert.deepEqual(w.pageErrors,[]);
+  } finally {await w.close();await db.db.close();}
+});
+
 test('Real Staff Chrome: Organizer may mark withdrawal and return, Scorer never sees control', {timeout:240000},async()=>{
   const {w,db,E,current}=await world();
   try {

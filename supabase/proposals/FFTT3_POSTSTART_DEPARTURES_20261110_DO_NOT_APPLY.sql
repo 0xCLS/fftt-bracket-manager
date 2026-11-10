@@ -171,7 +171,143 @@ BEGIN
 END;
 $f$;
 
--- API adapters: leave existing match/result functions untouched.
+
+-- ------------------------------------------------------------------------
+-- Authoritative scoring hold: never accept a NEW result/game or assign doubles
+-- while any active participating player has an unresolved event withdrawal.
+-- Keep existing saved games and accepted receipts. Role-gated match-level W/Os
+-- still advance via the internal v1 engine (which is not user-callable).
+-- All five functions below already lock the event before this call, serializing
+-- status updates and score writes across clients.
+CREATE FUNCTION fftt_private.assert_players_present_v1(p_event_id uuid,p_players uuid[])
+RETURNS void LANGUAGE plpgsql STABLE SECURITY INVOKER SET search_path TO ''
+AS $present$
+BEGIN
+  IF EXISTS (SELECT 1 FROM fftt_private.player_departures_v1 d
+    WHERE d.event_id=p_event_id AND d.withdrawn
+      AND d.player_id=ANY(p_players)) THEN
+    PERFORM fftt_private.v3_err('conflict','player-withdrawn');
+  END IF;
+END;
+$present$;
+REVOKE ALL ON FUNCTION fftt_private.assert_players_present_v1(uuid,uuid[])
+  FROM PUBLIC,anon,authenticated;
+
+-- Existing versioned scoring logic stays intact. We insert one fail-closed
+-- check at each already-serialized authorization boundary. The installed
+-- function body must contain exactly one known insertion point, not already
+-- contain the hold, and retain SECURITY DEFINER + fixed search_path.
+-- On hosted Supabase (with migration-history catalog), compare five verified
+-- exact source fingerprints; local disposable PGlite uses equivalent fixtures.
+DO $patch_scoring$
+DECLARE
+  v_sig pg_catalog.regprocedure; v_source text; v_anchor text;
+  v_insert text; v_label text; v_expected_md5 text;
+  v_hosted boolean := to_regclass('supabase_migrations.schema_migrations') IS NOT NULL;
+BEGIN
+  IF has_function_privilege('authenticated',
+      'fftt_private.submit_match_result_v1(uuid,uuid,integer,bigint,uuid,uuid,text,integer)'::regprocedure,
+      'EXECUTE') OR has_function_privilege('authenticated',
+      'public.fftt_submit_match_result_v1(uuid,uuid,integer,bigint,uuid,uuid,text,integer)'::regprocedure,
+      'EXECUTE') THEN
+    RAISE EXCEPTION 'FFTT departure guard: legacy direct result scoring must stay inaccessible';
+  END IF;
+
+  v_label := 'fftt_private.submit_match_result_v2(uuid,uuid,integer,bigint,uuid,uuid,text,integer)';
+  v_sig := to_regprocedure(v_label);
+  v_expected_md5 := 'ba6ef3c7a20046f9275fa28ebac330f8';
+  v_anchor := '      v_accepted := fftt_private.submit_match_result_v1(';
+  v_insert := '      PERFORM fftt_private.assert_players_present_v1(p_event_id,
+        ARRAY[v_match.player_1_id,v_match.player_2_id]);
+';
+  IF v_sig IS NULL THEN RAISE EXCEPTION 'missing guarded score function: %',v_label; END IF;
+  v_source := pg_get_functiondef(v_sig);
+  IF strpos(v_source,'SECURITY DEFINER')=0
+     OR strpos(v_source,'SET search_path TO')=0
+     OR strpos(v_source,'assert_players_present_v1')>0
+     OR (length(v_source)-length(replace(v_source,v_anchor,''))) <> length(v_anchor)
+     OR (v_hosted AND md5(v_source) <> v_expected_md5) THEN
+    RAISE EXCEPTION 'FFTT departure score-source drift for %',v_label;
+  END IF;
+  EXECUTE replace(v_source,v_anchor,v_insert || v_anchor);
+
+  v_label := 'fftt_private.game_progress_save_v1(uuid,uuid,integer,bigint,bigint,bigint,integer,integer,uuid,integer,integer,integer,text)';
+  v_sig := to_regprocedure(v_label);
+  v_expected_md5 := '556a7111dccf1513212614c2d25bca8b';
+  v_anchor := '  if not exists (select 1 from fftt_private.brackets b where b.id=m.bracket_id';
+  v_insert := '  PERFORM fftt_private.assert_players_present_v1(p_event_id,
+    ARRAY[m.player_1_id,m.player_2_id]);
+';
+  IF v_sig IS NULL THEN RAISE EXCEPTION 'missing guarded score function: %',v_label; END IF;
+  v_source := pg_get_functiondef(v_sig);
+  IF strpos(v_source,'SECURITY DEFINER')=0
+     OR strpos(v_source,'SET search_path TO')=0
+     OR strpos(v_source,'assert_players_present_v1')>0
+     OR (length(v_source)-length(replace(v_source,v_anchor,''))) <> length(v_anchor)
+     OR (v_hosted AND md5(v_source) <> v_expected_md5) THEN
+    RAISE EXCEPTION 'FFTT departure score-source drift for %',v_label;
+  END IF;
+  EXECUTE replace(v_source,v_anchor,v_insert || v_anchor);
+
+  v_label := 'fftt_private.doubles_game_save_v1(uuid,text,bigint,integer,integer,uuid,integer,integer,integer,text)';
+  v_sig := to_regprocedure(v_label);
+  v_expected_md5 := 'f2bb9a325797a89a5c9825a8c67346a5';
+  v_anchor := '  v_key := pg_catalog.md5(coalesce(d.progress_epoch::text,'''')||';
+  v_insert := '  PERFORM fftt_private.assert_players_present_v1(p_event_id,
+    ARRAY[d.championship_finalist_1,d.championship_finalist_2,
+          d.consolation_partner_1,d.consolation_partner_2]);
+';
+  IF v_sig IS NULL THEN RAISE EXCEPTION 'missing guarded score function: %',v_label; END IF;
+  v_source := pg_get_functiondef(v_sig);
+  IF strpos(v_source,'SECURITY DEFINER')=0
+     OR strpos(v_source,'SET search_path TO')=0
+     OR strpos(v_source,'assert_players_present_v1')>0
+     OR (length(v_source)-length(replace(v_source,v_anchor,''))) <> length(v_anchor)
+     OR (v_hosted AND md5(v_source) <> v_expected_md5) THEN
+    RAISE EXCEPTION 'FFTT departure score-source drift for %',v_label;
+  END IF;
+  EXECUTE replace(v_source,v_anchor,v_insert || v_anchor);
+
+  v_label := 'fftt_private.record_doubles_result_v3(uuid,integer,text)';
+  v_sig := to_regprocedure(v_label);
+  v_expected_md5 := 'e8b8df90af248ffc5640d8c4a7407ef5';
+  v_anchor := '    -- Game-by-game scoring: when games were saved for the current teams,';
+  v_insert := '    PERFORM fftt_private.assert_players_present_v1(p_event_id,
+      ARRAY[d.championship_finalist_1,d.championship_finalist_2,
+            d.consolation_partner_1,d.consolation_partner_2]);
+';
+  IF v_sig IS NULL THEN RAISE EXCEPTION 'missing guarded score function: %',v_label; END IF;
+  v_source := pg_get_functiondef(v_sig);
+  IF strpos(v_source,'SECURITY DEFINER')=0
+     OR strpos(v_source,'SET search_path TO')=0
+     OR strpos(v_source,'assert_players_present_v1')>0
+     OR (length(v_source)-length(replace(v_source,v_anchor,''))) <> length(v_anchor)
+     OR (v_hosted AND md5(v_source) <> v_expected_md5) THEN
+    RAISE EXCEPTION 'FFTT departure score-source drift for %',v_label;
+  END IF;
+  EXECUTE replace(v_source,v_anchor,v_insert || v_anchor);
+
+  v_label := 'fftt_private.set_doubles_teams_v3(uuid,uuid,uuid)';
+  v_sig := to_regprocedure(v_label);
+  v_expected_md5 := 'cdd8ddbb635b4103a09191b5097ea386';
+  v_anchor := '  insert into fftt_private.doubles_finale(event_id, championship_finalist_1, championship_finalist_2,';
+  v_insert := '  PERFORM fftt_private.assert_players_present_v1(p_event_id,
+    ARRAY[v_final.player_1_id,v_final.player_2_id,p_partner_1,p_partner_2]);
+';
+  IF v_sig IS NULL THEN RAISE EXCEPTION 'missing guarded score function: %',v_label; END IF;
+  v_source := pg_get_functiondef(v_sig);
+  IF strpos(v_source,'SECURITY DEFINER')=0
+     OR strpos(v_source,'SET search_path TO')=0
+     OR strpos(v_source,'assert_players_present_v1')>0
+     OR (length(v_source)-length(replace(v_source,v_anchor,''))) <> length(v_anchor)
+     OR (v_hosted AND md5(v_source) <> v_expected_md5) THEN
+    RAISE EXCEPTION 'FFTT departure score-source drift for %',v_label;
+  END IF;
+  EXECUTE replace(v_source,v_anchor,v_insert || v_anchor);
+END;
+$patch_scoring$;
+
+-- Existing scoring/result APIs retain their signatures; their internal new-write paths are now guarded.
 CREATE FUNCTION public.fftt_player_departures_v1(p_event_id uuid)
 RETURNS jsonb LANGUAGE sql STABLE SECURITY INVOKER SET search_path TO ''
 AS $f$ SELECT fftt_private.player_departures_read_v1(p_event_id); $f$;
