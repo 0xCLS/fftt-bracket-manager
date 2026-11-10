@@ -48,35 +48,43 @@ Disposable PGlite, real FFTT SQL layered like the hosted project, fictional data
 - Related existing suites re-run and passing: `correction_permissions_browser` 3/3, `gameday_rehearsal_walkovers` 6/6, `gameday_fast_ui_browser` 4/4, `gameday_events_browser` 4/4, `gameday_v6_browser` 1/1, `gameday_polish_browser` 7/7, `gameday_ui_audit` 2/2, `doubles_scoring` 4/4, `test_ci_v2.py` 9/9.
 - **Not run:** the legacy comprehensive suites (not required by a gate for this work); they are required as the exact-head proof before merge/release (see 2.2).
 
-## 4. Acceptance walkthrough on a fictional event — STATUS: BLOCKED (live), partially evidenced
+## 4. Live Organizer acceptance on a fictional event — COMPLETED (Organizer role only)
 
-**Planned event:** `FFTT Staff Acceptance Test — SYNTHETIC ONLY`, date `2099-11-09`, 2 tables, 4–6 fictional players. **Event ID: none — the event was NOT created.**
+Performed on 2026-11-10 in the Organizer's authenticated Chrome session against the **currently deployed** Staff build (`fftt-staff.clslifestyle.com`, deployment `41d5acf0…`, source `29a12d49`), entirely through the Staff interface. The X, `null` fix and rename were **not** part of what was exercised live (not deployed / SQL not installed); see 4.4.
 
-**Why:** the Claude-in-Chrome automation tab opened `https://fftt-staff.clslifestyle.com/app/staff` signed out (no session in that tab's storage). Entering a password is outside what automation may do, and an Organizer session cannot be borrowed from another tab. No credentials were requested or used, no role was impersonated and no real grant was changed.
+### 4.1 Event
+- **Name:** `FFTT Staff Acceptance Test — SYNTHETIC ONLY` · **Date:** 2099-11-09 · **Tables:** 2 · **ID: `be622bf2-ebd5-4706-8d4a-2f046cd78249`**
+- **Initial state (read-only SQL right after creation):** `draft`, `public_visible = false`, bracket generation 0, revision 0. A pre-creation check found no event of that name (no duplicate possible).
+- **Players:** six fictional names (Ada Quill, Ben Marlow, Cy Fennel, Dee Larkin, Eli Brandt, Fay Holloway), entered by hand via Players › Paste a list, all checked in. No registration source was loaded.
+- **Never published.** `public_visible` stayed `false` throughout; the Publish/visibility control was never used. Building the bracket moved the event to `active` automatically (not a publish).
+- **Final state:** **archived** through Overview › Your events › Archive (confirmation named the event), `public_visible = false`, generation 2, revision 17, 6 players, 5 completed matches and the full audit trail preserved. Nothing was deleted.
 
-**Read-only preflight completed (SQL `SELECT` only, 2026-11-09):**
-- No event named `FFTT Staff Acceptance Test…` exists, so none needs reusing and no duplicate can arise.
-- Seven events exist. Only `FFTT Showcase: Demo Tournament` is `public_visible = true`. `FFTT 3 (Rehearsal)` (`d1169a31-032d-4ac7-866b-dc6cab34d588`, active, generation 3, revision 86) and `FFTT 3` (`e81a2f62-84e6-4338-9847-d437897110c2`, draft, generation 0, revision 59) are not visible. These match the last recorded state exactly.
-- Public selection (`app/public_core.mjs: pickEvent`) ranks only **published** events. A new event starts unpublished and **must stay unpublished** (the walkthrough must never use Publish/visibility); creating and activating it therefore cannot change the featured Spectator/TV event. If a publish toggle were ever needed, stop and report instead.
+### 4.2 Results
 
-**Existing live Organizer findings (reported by the Organizer, not repeated):** navigation across all major Staff sections works; the bottom Record Result button reads **Close**; all four no-show reasons display; the returning-player warning displays; **Withdraw before play** is hidden after scoring; verified game-score loading clears normally; the stray `null` was reproduced twice in the live Record Result dialog (see B).
+| # | Check | Result | Evidence |
+| --- | --- | --- | --- |
+| 1 | Championship generated before any scoring | **PASS** | “Championship bracket built.” Two opening matches plus byes; generation 1 |
+| 2 | Pre-play withdrawal + regeneration (Organizer) | **PASS** | Withdrew Ada Quill with a reason → generation 2; registration kept (6 players, 5 checked in) |
+| 3 | Superseded bracket and audit preserved | **PASS** | `brackets`: gen 1 `superseded`, gen 2 `active`; audit `bracket_rebuilt` + `checkin_changed` both carry the reason |
+| 4 | Save an individual game | **PASS** | Game 1 11–7 “Saved… confirmed by the server”; survived closing and reopening the dialog |
+| 5 | Pre-play withdrawal refused once a game is saved | **PASS (server)** | Server refused: “A score, saved game, or Consolation result exists. The bracket cannot be regenerated…”; generation unchanged. **UI gap, see 4.3-b** |
+| 6 | Saved game cannot be overwritten by a no-show | **PASS** | “This match has saved games… do not overwrite the game scores with a walkover.” |
+| 7 | Walkover reasons | **PARTIAL PASS** | *Other*: empty details refused (“Describe the reason…”), recorded with details; *injury* recorded (audit `Unable to continue (injury)`). *Absence* and *early departure* were **not** recorded in this run (the Organizer confirmed all four labels earlier) |
+| 8 | Consolation eligibility | **PASS** | After Eli’s played loss: only Eli. Fay (unplayed walkover loss) never listed. After Dee (walkover winner) lost the Final, her first **played** match: entrants = Eli + Dee |
+| 9 | Existing scoring and corrections | **PASS (partial scope)** | Corrected a saved game (11–7 → 11–9, reason “Fictional scoring slip”, audit `game_corrected`); saved Game 2; review → confirm; typed-score results; walkovers; Consolation bracket built |
 
-**Evidence for the nine acceptance items, from the disposable-database suites (NOT live-browser acceptance):**
+**Not exercised:** correction of a *finalized* match result, Mixed-Skill Doubles scoring and finale, marking the event Complete, Results & Export, and the exports. These keep their disposable-database/browser coverage in section 3.
 
-| # | Item | Evidence (`gameday_rehearsal_walkovers.test.mjs` unless noted) |
-| --- | --- | --- |
-| 1 | Championship before scoring | `fresh()` builds generation 1 before any score |
-| 2 | Pre-play withdrawal and regeneration | “pre-play withdrawal regenerates ONLY the unplayed bracket and keeps player registration” |
-| 3 | Superseded bracket and audit preserved | same test (superseded generation and audit rows retained) |
-| 4 | Save an individual fictional game | `gameday_v6_browser` / `correction_permissions_browser` |
-| 5 | Pre-play withdrawal refused after a saved game | “a saved individual game prevents bracket regeneration…” |
-| 6 | Saved game cannot be overwritten by a no-show | same test |
-| 7 | Absence / early departure / injury / Other reasons | absence (“Did not arrive at table”) and injury reasons are asserted as stored in the audit log; early departure and Other travel the same free-text path but are **not separately asserted**; all four UI labels were confirmed live by the Organizer |
-| 8 | Consolation eligibility: played loss vs unplayed walkover | “walkover victory is NOT a played win…” and “played win followed by withdrawal remains ineligible” |
-| 9 | Existing scoring and corrections | `correction_permissions_browser`, `doubles_scoring`, `gameday_v6_browser` |
+### 4.3 Observations on the deployed build (no data was harmed)
+- **a. Stray `null` confirmed live.** The literal text “null” appeared above Close/Review result in every Record Result dialog that had no saved game (reproduced on four different matches); it was absent once a game was saved. This is defect B; the PR fixes it. It also shows the live review dialog has no close control besides **Back — edit**, and the scoring dialog has no X (the PR adds one).
+- **b. “Withdraw before play…” is still offered after a game is saved** (the control is hidden only once a *completed* match exists: `played === 0` in `app/staff_ui.mjs`). The server correctly refuses, so this is a UX gap, not a safety defect. **Not changed in this PR**; hiding it when saved games exist needs game-progress data on the Championship tab and would be a separate change.
+- **c. One transient load error.** On the first open of the Final’s dialog: “Completed-game records are unavailable. Nothing was changed; check the connection and migration.” The dialog correctly blocked the action; closing and reopening loaded normally. Not reproduced; cause unknown (browser console was not being captured at that moment).
+- **d. Misleading review text.** When scores are typed directly (without “Save Game n”) the review dialog still says “The completed games are already saved.” Existing wording, not changed here.
 
-**Still to do live (needs a signed-in Organizer in the automation browser):** create the fictional event through Overview/Events, add 4–6 fictional players, and walk items 1–9 and the new X, `null` and rename behaviours on that event; then archive it (never delete scored history). **Untested roles:** Bracket Manager and Scorer signed-in sessions (no authorized sessions were available); only their server-side refusals and permitted actions are covered by disposable-database tests.
+### 4.4 Roles and features NOT tested
+- **Bracket Manager and Scorer: no browser acceptance.** No authenticated sessions for those roles were available; none were impersonated, and no real grant was altered. Their server-side permissions are covered only by disposable-database tests (section 3).
+- The **Record Result X, the `null` fix and the completed-event rename** have **not** been exercised on the live system: the SQL is not installed and the new Staff build is not deployed. They are verified only by the disposable tests in section 3.
 
 ## 5. Real events
 
-Only `SELECT` statements were run against the hosted project (function definitions, a check constraint, event metadata). No write, migration, deployment, secret, DNS or configuration change occurred. The November 8 rehearsal, the November 22 FFTT3 draft, the Showcase and all player records and results were not modified; their observed metadata matches the prior record.
+Read-only `SELECT` statements were run against the hosted project (function definitions, a check constraint, event metadata and the acceptance event's own audit rows). The only writes were the Staff-interface actions on the fictional event in section 4; no migration, deployment, secret, DNS or configuration change occurred. The November 8 rehearsal (active, generation 3, revision 86, 12 players, 13 completed), the November 22 FFTT3 draft (generation 0, revision 59, no players) and the Showcase (active, public, revision 17, 20 players, 14 completed) were re-read after the walkthrough and are unchanged; all player records and results are untouched.

@@ -4,7 +4,7 @@
 
 ## Follow-on source PR (not deployed): Record Result X, `null` fix, completed-event rename
 
-A separate source-only PR adds the top-right X on Record Result dialogs, fixes the stray literal `null`, and adds an Organizer-only rename of Completed events (additive SQL proposal, not installed). See [`COMPLETED_EVENT_RENAME_RELEASE.md`](COMPLETED_EVENT_RENAME_RELEASE.md) for details, deployment prerequisites and the acceptance status. The signed-in fictional-event role walkthrough recorded below as pending is still pending.
+A separate source-only PR adds the top-right X on Record Result dialogs, fixes the stray literal `null`, and adds an Organizer-only rename of Completed events (additive SQL proposal, not installed). See [`COMPLETED_EVENT_RENAME_RELEASE.md`](COMPLETED_EVENT_RENAME_RELEASE.md) for details, deployment prerequisites and the acceptance status. A live **Organizer** walkthrough on a fictional, archived event (`be622bf2-ebd5-4706-8d4a-2f046cd78249`) was completed on 2026-11-10 and is recorded there; **Bracket Manager and Scorer browser acceptance remains pending** (no authenticated sessions for those roles).
 
 ## November 9, 2026 — Production Staff deployment: COMPLETED (asset-verified)
 
