@@ -40,6 +40,8 @@ const DETAIL = Object.freeze({
   'match-version': 'The match changed since you opened it. Refresh and try again.',
   'player-in-bracket': 'That player is already in the bracket.',
   'lifecycle': 'The event is not in the right state for that.',
+  'name-changed': 'The event name was changed by someone else. Refresh and check the current name before renaming.',
+  'event-name': 'Enter an event name of 1 to 120 characters with no control characters.',
   'no-bracket': 'Build the championship bracket first.',
   'championship-incomplete': 'The championship final has not been played yet.',
   'roster-full': 'The roster is full (64 players).',
@@ -429,6 +431,15 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
       });
     },
     async updateEvent(name, date, tables) { const r = await act(ctx => api.updateEvent(ctx.token, {p_event_id: E(), p_name: name, p_date: date, p_table_count: tables})); if (r.ok) await loadEvents(); return r; },
+    /** Organizer-only administrative rename of a COMPLETED event. Sends only the name (never date/tables/lifecycle);
+     * the server enforces role + lifecycle and rejects a name that changed since this one was read. */
+    async renameCompletedEvent(name) {
+      const current = s.snapshot?.event;
+      if (!current || current.lifecycle !== 'complete' || s.role !== 'organizer') return {ok: false, message: 'Only an Organizer can rename a completed event.'};
+      const r = await act(ctx => api.renameCompletedEvent(ctx.token, {p_event_id: E(), p_expected_name: current.name, p_name: name}));
+      if (r.ok) await loadEvents();
+      return r;
+    },
     createEvent: async (name, date, tables) => {
       const r = await act(ctx => api.createEvent(ctx.token, {p_name: name, p_date: date, p_table_count: tables}), {refreshAfter: false});
       if (!r.ok) return r;

@@ -77,7 +77,7 @@ export function createStaffUi({core, els, config, signOut}) {
 
   // ------------------------------------------------------------ dialogs
   let dialogSeq = 0;
-  function openDialog(build, {label}) {
+  function openDialog(build, {label, closeButton = false} = {}) {
     const dlg = h('dialog', {'aria-label': label});
     const opener = document.activeElement;
     dirtyDialog++;
@@ -91,8 +91,13 @@ export function createStaffUi({core, els, config, signOut}) {
     dlg.addEventListener('cancel', () => { /* Escape closes; nothing is sent */ });
     document.body.append(dlg);
     build(dlg, close);
+    // Top-right X: same safe `close` as the bottom Close button. It lives on the dialog itself, outside the
+    // re-rendered body, so it stays available during result review, saving and error states.
+    if (closeButton) dlg.prepend(h('button', {type: 'button', class: 'dlg-x', 'aria-label': 'Close', title: 'Close', text: '×', on: {click: close}}));
     dialogSeq++;
     dlg.showModal();
+    // showModal() focuses the first focusable control; keep that the working control, not the X.
+    if (closeButton) dlg.querySelector('input:not([disabled]),select:not([disabled]),textarea:not([disabled]),button:not(.dlg-x):not([disabled])')?.focus();
     return dlg;
   }
   const confirmDialog = (title, text, okLabel, {danger = false} = {}) => new Promise(resolve => {
@@ -230,6 +235,10 @@ export function createStaffUi({core, els, config, signOut}) {
       date: h('input', {type: 'date', value: e.date, id: 'evDate'}),
       tables: h('input', {type: 'number', min: 1, max: 12, value: e.tables, id: 'evTables'}),
     };
+    // Completed events: an Organizer may change ONLY the display name (administrative rename). Everything else stays
+    // locked; the server enforces role + lifecycle independently of this view.
+    const renameOnly = e.lifecycle === 'complete' && s.role === 'organizer';
+    if (renameOnly) { form.date.disabled = true; form.tables.disabled = true; }
     const field = (label, id, input, cls) => h('div', {class: cls}, h('label', {'for': id, text: label}), input);
     const kpi = (number, label) => h('div', {class: 'kpi'}, h('strong', {text: String(number)}), h('span', {text: label}));
     const format = (number, label, description) => h('li', {},
@@ -251,12 +260,16 @@ export function createStaffUi({core, els, config, signOut}) {
               h('span', {class: 'section-icon', 'aria-hidden': 'true', text: '01'}),
               h('div', {}, h('span', {class: 'section-overline', text: 'EVENT DETAILS'}), h('h2', {id: 'setupTitle', text: 'Set up your tournament'}))),
             h('p', {class: 'section-description', text: 'Choose the event details before building the bracket.'}),
-            h('form', {class: 'form-grid', on: {submit: async ev => { ev.preventDefault(); if (result(await core.actions.updateEvent(form.name.value, form.date.value, Number(form.tables.value)), 'Event saved.')) forget('ev'); }}},
+            renameOnly ? h('p', {class: 'notice', id: 'evRenameNote', role: 'note', text: 'This event is completed. You can correct its name here; the date, tables, players, brackets and results are locked. The old and new names are recorded in the audit log.'}) : null,
+            h('form', {class: 'form-grid', on: {submit: async ev => { ev.preventDefault();
+              const saved = renameOnly ? result(await core.actions.renameCompletedEvent(form.name.value), 'Event renamed.')
+                : result(await core.actions.updateEvent(form.name.value, form.date.value, Number(form.tables.value)), 'Event saved.');
+              if (saved) forget('ev'); }}},
               field('Event name', 'evName', form.name, 'wide'),
               field('Event date', 'evDate', h('div', {class: 'native-date-frame'}, form.date), 'date-field'),
               field('Tables in use', 'evTables', form.tables, 'third'),
               h('div', {class: 'setup-save'},
-                h('button', {class: 'primary', type: 'submit', disabled: !core.canWrite(), text: 'Save event setup  →'})))),
+                h('button', {class: 'primary', type: 'submit', disabled: !core.canWrite(), text: renameOnly ? 'Rename completed event  →' : 'Save event setup  →'})))),
           ),
         h('section', {class: 'overview-snapshot', 'aria-label': 'Tournament at a glance'},
           h('div', {class: 'side-section-heading'}, h('span', {class: 'section-overline', text: 'LIVE SNAPSHOT'}), h('h2', {text: 'At a glance'})),
@@ -717,7 +730,7 @@ export function createStaffUi({core, els, config, signOut}) {
                 on: {click: () => void saveGame(correctionIndex)}}));
           }
         } else steps.push(h('p', {class: 'notice warn', text: 'Loading verified game scores… Do not resend an uncertain game.'}));
-        clear(body).append(h('h3', {text: `Record result · ${roundLabel(row)}`}),
+        fill(body, h('h3', {text: `Record result · ${roundLabel(row)}`}),
           h('p', {class: 'help', text: `${formatText(fmt)}. Save each completed game as it happens. Only confirming the final result advances the bracket.`}),
           grid, h('div', {class: 'score-game-actions'}, steps),
           h('div', {class: 'winner-pick', role: 'radiogroup', 'aria-label': 'Winner'},
@@ -751,7 +764,7 @@ export function createStaffUi({core, els, config, signOut}) {
         prepared = p;
         const winner = row.players.find(x => x.id === winnerId), loser = row.players.find(x => x.id !== winnerId);
         const out = h('p', {class: 'status', role: 'status'});
-        clear(body).append(h('h3', {text: 'Check before sending'}),
+        fill(body, h('h3', {text: 'Check before sending'}),
           h('div', {class: 'review'}, `${winner.name} beat ${loser.name}`, h('br'), p.text, h('br'),
             `Table ${p.tableNumber} · ${roundLabel(row)} · ${formatText(fmt)}`),
           h('p', {class: 'help', text: 'The completed games are already saved. This final confirmation alone advances the bracket. It is sent once; an unknown result is never resent automatically.'}), out,
@@ -767,7 +780,7 @@ export function createStaffUi({core, els, config, signOut}) {
       dlg.addEventListener('close', () => { if (core.state.score.status === 'prepared') core.cancelPreparedScore(); });
       form();
       void reloadProgress({initialLoad: true});
-    }, {label: 'Record result'});
+    }, {label: 'Record result', closeButton: true});
   }
   const roundLabel = r => {
     const total = s.snapshot ? Math.max(...s.snapshot.matches.filter(m => m.bracket === r.bracket).map(m => m.round)) + 1 : r.round + 2;
@@ -863,7 +876,7 @@ export function createStaffUi({core, els, config, signOut}) {
               h('button', {type: 'button', class: 'primary', disabled: busy, text: `Save corrected Game ${correctionIndex}`, on: {click: () => void save(correctionIndex)}}));
           }
         } else steps.push(h('p', {class: 'notice warn', text: 'Loading verified game scores… Do not resend an uncertain game.'}));
-        clear(body).append(h('h3', {text: 'Record Mixed-Skill Doubles'}),
+        fill(body, h('h3', {text: 'Record Mixed-Skill Doubles'}),
           h('p', {class: 'help', text: `${verified ? formatText({bestOf: best, points: verified.points_to_win}) : 'Doubles'}. Save each completed game as it happens. Only confirming the final result records the doubles winner.`}),
           grid, h('div', {class: 'score-game-actions'}, steps), msg,
           h('div', {class: 'dlg-actions'}, h('button', {type: 'button', text: 'Close', on: {click: close}}),
@@ -873,7 +886,7 @@ export function createStaffUi({core, els, config, signOut}) {
       function review(summary) {
         const team = summary.winnerIndex + 1, text = verified.games.map(g => g.join('-')).join(', ');
         const out = h('p', {class: 'status', role: 'status'});
-        clear(body).append(h('h3', {text: 'Check before sending'}),
+        fill(body, h('h3', {text: 'Check before sending'}),
           h('div', {class: 'review'}, `${teamName(verified.teams[team - 1], team - 1)} won`, h('br'), text),
           h('p', {class: 'help', text: 'The completed games are already saved. This final confirmation records the doubles winner. It is sent once.'}),
           h('div', {class: 'dlg-actions'}, h('button', {type: 'button', text: 'Back — edit', on: {click: () => form()}}),
@@ -885,7 +898,7 @@ export function createStaffUi({core, els, config, signOut}) {
       }
       form();
       void load();
-    }, {label: 'Record doubles'});
+    }, {label: 'Record doubles', closeButton: true});
   }
   // Finalized doubles result: Organizer or Bracket Manager only (the database refuses anyone else). Reason optional.
   function openDoublesCorrection(current, fmt) {

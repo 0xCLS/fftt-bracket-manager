@@ -42,7 +42,7 @@ const MESSAGE_KIND = Object.freeze({
 });
 
 const WRITE_ROUTES = Object.freeze([
-  'fftt_reset_showcase_v1', 'fftt_create_event_v3', 'fftt_update_event_v3', 'fftt_set_lifecycle_v3', 'fftt_set_visibility_v3',
+  'fftt_reset_showcase_v1', 'fftt_create_event_v3', 'fftt_update_event_v3', 'fftt_rename_completed_event_v1', 'fftt_set_lifecycle_v3', 'fftt_set_visibility_v3',
   'fftt_upsert_players_v3', 'fftt_remove_player_v3', 'fftt_set_checkin_v3', 'fftt_set_checkin_bulk_v3', 'fftt_event_day_walkin_v1', 'fftt_build_championship_v3',
   'fftt_build_consolation_v3', 'fftt_withdraw_preplay_v7', 'fftt_assign_table_v3', 'fftt_forfeit_match_v3', 'fftt_correct_result_v3',
   'fftt_set_doubles_teams_v3', 'fftt_record_doubles_result_v3', 'fftt_correct_doubles_result_v1', 'fftt_set_staff_v3',
@@ -245,6 +245,7 @@ export function createGamedayApi({projectUrl = C3_HOST, publishableKey, fetchImp
     }),
     createEvent: w('fftt_create_event_v3'),
     updateEvent: w('fftt_update_event_v3'),
+    renameCompletedEvent: w('fftt_rename_completed_event_v1'),
     setLifecycle: w('fftt_set_lifecycle_v3'),
     setVisibility: w('fftt_set_visibility_v3'),
     upsertPlayers: w('fftt_upsert_players_v3'),

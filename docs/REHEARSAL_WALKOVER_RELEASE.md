@@ -2,6 +2,10 @@
 
 **Status: GUARDED HOSTED SQL INSTALLED AND VERIFIED ON 2026-11-09; STAFF DEPLOYED AND ASSET-VERIFIED ON 2026-11-09 (Cloudflare deployment `41d5acf0-88f3-4ee3-85ce-634c55b7fe3a`); SIGNED-IN ROLE ACCEPTANCE STILL PENDING.** PR #80 merged as `29a12d49a7bea4d3e969e6933f9c60118527f44e`, PR #81 merged as `83cc9a585a633d41f140dcf127052813ba9f5341`, and private-backup verifier PR #82 merged as `99cdecb6df40b5eeeee916e66ac180ae1f0f8149`. The Organizer separately authorized exactly one target-specific source-pinned SQL installation on project `copmkalfkkrkzheohwuc`. It completed and is recorded as migration `20261109170000`. The Organizer then separately approved the coordinated Staff deployment, recorded below. No tournament history was edited.
 
+## Follow-on source PR (not deployed): Record Result X, `null` fix, completed-event rename
+
+A separate source-only PR adds the top-right X on Record Result dialogs, fixes the stray literal `null`, and adds an Organizer-only rename of Completed events (additive SQL proposal, not installed). See [`COMPLETED_EVENT_RENAME_RELEASE.md`](COMPLETED_EVENT_RENAME_RELEASE.md) for details, deployment prerequisites and the acceptance status. The signed-in fictional-event role walkthrough recorded below as pending is still pending.
+
 ## November 9, 2026 — Production Staff deployment: COMPLETED (asset-verified)
 
 **Deployed:** Staff only, to Cloudflare Pages project `fftt-staff` (production branch `main`; `fftt-staff.clslifestyle.com` and `fftt-staff.pages.dev`), built from exact commit `29a12d49a7bea4d3e969e6933f9c60118527f44e` (identical tree to the tested PR #80 head `191e1ca`). **Deployment ID `41d5acf0-88f3-4ee3-85ce-634c55b7fe3a`** (`https://41d5acf0.fftt-staff.pages.dev`). The previous good Staff deployment for rollback remains listed: `10ed3cf8-ef91-44af-8e95-f1db531548bf` (source `3af6444b37f6f55d955941db87a649e68fcf465f`).
