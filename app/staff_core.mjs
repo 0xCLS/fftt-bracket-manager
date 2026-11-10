@@ -201,7 +201,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
   randomId = () => crypto.randomUUID(), isOnline = () => true, onChange = () => {}} = {}) {
   const s = {
     signedIn: false, role: null, eventId: null, events: [], snapshot: null, brief: null, pulse: null,
-    desk: [], doublesDesk: null, preplay: null, deskStatus: 'idle', score: {status: 'idle', pendingSubmissionId: null}, pending: null, gamePending: null,
+    desk: [], doublesDesk: null, preplay: null, departures: null, deskStatus: 'idle', score: {status: 'idle', pendingSubmissionId: null}, pending: null, gamePending: null,
     lastGoodAt: 0, lastError: null, busy: false, paused: false, endedReason: null, audit: null,
     lastScoreMessage: null,
     // organizer-only, in memory only, dropped with every other private view: {status, payload, error, at}
@@ -274,7 +274,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
   const canWrite = () => s.signedIn && !s.busy && connection() === 'live';
 
   function clearPrivate(reason = null) {
-    s.snapshot = null; s.brief = null; s.pulse = null; s.desk = []; s.doublesDesk = null; s.preplay = null; s.deskStatus = 'idle'; s.audit = null;
+    s.snapshot = null; s.brief = null; s.pulse = null; s.desk = []; s.doublesDesk = null; s.preplay = null; s.departures = null; s.deskStatus = 'idle'; s.audit = null;
     s.registrations = {status: 'idle', payload: null, error: null, at: 0};
     s.registrationLookup = {status: 'idle', payload: null, error: null, code: null, at: 0, rev: 0, busyRef: null};
     s.registrationSettings = {status: 'idle', source: null, capabilities: null, capabilitiesError: null, diagnostic: null, error: null, busy: null};
@@ -324,6 +324,13 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
             if (e instanceof GamedayApiError && e.kind === 'access-rejected') throw e;
           }
         }
+        // Private departure ledger: only Organizer/Bracket Manager; fail closed
+        // when an older host has not installed the proposal.
+        res.departures = null;
+        if (ctx.role === 'organizer' || ctx.role === 'bracket_manager') {
+          try { res.departures = await api.playerDepartures(ctx.token, {p_event_id: ctx.eventId}); }
+          catch (e) { if (e instanceof GamedayApiError && e.kind === 'access-rejected') throw e; }
+        }
         return res;
       }, {wait: false});
       s.lastGoodAt = now(); s.lastError = null; s.endedReason = null;
@@ -334,6 +341,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
         if (out.brief) s.brief = out.brief;
         s.doublesDesk = out.doubles && out.doubles.status !== 'no-teams' ? out.doubles : null;
         s.preplay = out.preplay ?? null;
+        s.departures = out.departures?.eventId === s.eventId && out.departures.revision === out.pulse.revision ? out.departures : null;
         if (out.events) {
           if(staffScope(s.events)!==staffScope(out.events)) s.staffDirectory={status:'idle',people:[],error:null,version:s.staffDirectory.version+1};
           s.events = out.events;
@@ -510,6 +518,18 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
       const slots = seedSlots(enginePlayers(remaining.map(p => ({id: p.id, name: p.name, rating: p.rating, rating_status: p.ratingStatus}))));
       return act(ctx => api.withdrawPreplay(ctx.token, {p_event_id: E(), p_player_id: playerId,
         p_expected_generation: snap.event.generation, p_slots: slots, p_reason: reason}));
+    },
+    setPlayerDeparture: (playerId, state, reason) => {
+      const sn = s.snapshot;
+      if (!['organizer','bracket_manager'].includes(s.role) || !sn || s.departures?.eventId !== s.eventId
+          || sn.event.revision !== s.departures.revision) {
+        return Promise.resolve({ok:false,message:'Reload the private departure record before changing a player status.'});
+      }
+      return act(ctx => api.setPlayerDeparture(ctx.token, {
+        p_event_id:E(), p_player_id:playerId,
+        p_expected_revision:sn.event.revision, p_expected_generation:sn.event.generation,
+        p_state:state, p_reason:reason
+      }));
     },
     buildConsolation: ({entrantIds = null, confirm = false} = {}) => {
       const snap = s.snapshot;
