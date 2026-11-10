@@ -8,7 +8,7 @@ BEGIN
     RAISE EXCEPTION 'trusted administrator required';
   END IF;
   SELECT pg_get_functiondef('fftt_private.event_brief_v3(uuid)'::regprocedure) INTO v_sql;
-  IF v_sql IS NULL OR position("'rounds'" in v_sql)=0 THEN
+  IF v_sql IS NULL OR position('''rounds''' in v_sql)=0 THEN
     RAISE EXCEPTION 'expected installed round metadata extension absent';
   END IF;
 END;
@@ -19,12 +19,13 @@ LANGUAGE plpgsql
 STABLE SECURITY DEFINER
 SET search_path TO ''
 AS $function$
-DECLARE e fftt_private.events%rowtype;
-BEGIN
-  SELECT * INTO e FROM fftt_private.events WHERE id=p_event_id;
-  PERFORM fftt_private.staff_role_for_event(p_event_id);
-  RETURN pg_catalog.jsonb_build_object('event_id',e.id,'name',e.event_name,'date',e.event_date,
-    'tables',e.table_count,'lifecycle',e.lifecycle,'generation',e.bracket_generation,'revision',e.revision);
-END;
+declare e fftt_private.events%rowtype;
+begin
+  select * into e from fftt_private.events where id = p_event_id;
+  perform fftt_private.staff_role_for_event(p_event_id);
+  return pg_catalog.jsonb_build_object('event_id', e.id, 'name', e.event_name, 'date', e.event_date,
+    'tables', e.table_count, 'lifecycle', e.lifecycle, 'generation', e.bracket_generation, 'revision', e.revision);
+end;
 $function$;
+-- Restores the hosted baseline byte-for-byte: md5(pg_get_functiondef) = e00fe3f2f144e0e001fb7d5b75c722dc.
 COMMIT;

@@ -16,8 +16,13 @@ BEGIN
      AND pg_get_function_identity_arguments(p.oid)='p_event_id uuid';
   IF v_sql IS NULL OR position('SECURITY DEFINER' in v_sql)=0
      OR position('staff_role_for_event' in v_sql)=0
-     OR position("'rounds'" in v_sql)>0 THEN
+     OR position('''rounds''' in v_sql)>0 THEN
     RAISE EXCEPTION 'event brief baseline drift or already installed';
+  END IF;
+  -- A real-mode (hosted) install must match the exact read-only inspected baseline (hosted, 2026-11-10).
+  IF EXISTS (SELECT 1 FROM fftt_private.events WHERE synthetic_only = false)
+     AND pg_catalog.md5(v_sql) <> 'e00fe3f2f144e0e001fb7d5b75c722dc' THEN
+    RAISE EXCEPTION 'event brief hosted fingerprint differs from reviewed baseline';
   END IF;
 END;
 $rounds_guard$;
