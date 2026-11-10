@@ -39,6 +39,53 @@ CREATE TABLE fftt_private.player_departures_v1 (
     (withdrawn AND returned_at IS NULL AND return_reason IS NULL AND returned_by IS NULL)
     OR (NOT withdrawn AND returned_at IS NOT NULL AND return_reason IS NOT NULL))
 );
+-- The existing audit ledger has a strict allowed-operation CHECK. Expand it
+-- transactionally for this new audited event type; preserve EVERY old operation.
+DO $audit_guard$
+DECLARE v_check text;
+BEGIN
+  SELECT pg_get_constraintdef(c.oid) INTO v_check FROM pg_constraint c
+    WHERE c.conrelid='fftt_private.audit_events'::regclass
+    AND c.conname='audit_events_operation_check';
+  IF v_check IS NULL OR position('doubles_result_corrected' IN v_check)=0
+     OR position('match_forfeited' IN v_check)=0
+     OR position('player_departure_changed' IN v_check)>0 THEN
+    RAISE EXCEPTION 'FFTT departure audit: unexpected operation baseline';
+  END IF;
+END;
+$audit_guard$;
+ALTER TABLE fftt_private.audit_events DROP CONSTRAINT audit_events_operation_check;
+ALTER TABLE fftt_private.audit_events ADD CONSTRAINT audit_events_operation_check
+  CHECK (operation IN (
+    'result_accepted',
+    'result_corrected',
+    'bracket_built',
+    'bracket_rebuilt',
+    'consolation_reviewed',
+    'staff_grant_changed',
+    'event_created',
+    'event_updated',
+    'player_changed',
+    'checkin_changed',
+    'table_assigned',
+    'match_forfeited',
+    'doubles_updated',
+    'doubles_result',
+    'lifecycle_changed',
+    'visibility_changed',
+    'format_changed',
+    'registration_checkin',
+    'rating_confirmed',
+    'event_restored',
+    'registration_source_changed',
+    'game_saved',
+    'game_corrected',
+    'showcase_reset',
+    'doubles_game_saved',
+    'doubles_game_corrected',
+    'doubles_result_corrected',
+    'player_departure_changed'
+  ));
 -- Defense in depth. Neither anon nor authenticated may read/write this table directly.
 ALTER TABLE fftt_private.player_departures_v1 ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON fftt_private.player_departures_v1 FROM PUBLIC,anon,authenticated;
