@@ -172,7 +172,9 @@ with sync_playwright() as p:
     assert layout["format"]["y"] >= max(layout["setupBottom"],layout["snapshotBottom"]) - 1, layout
     assert layout["format"]["width"] >= layout["setupWidth"] + layout["snapshotWidth"], layout
     assert layout["formatColumns"].count("px") == 3, layout
-    assert layout["statusPosition"] == "fixed" and layout["statusAlignment"] == "flex-end", layout
+    # Chrome 158 serializes the computed value of `justify-content: flex-end` as "flow-end", a new alias with the same meaning
+    # (CSS still specifies flex-end). Accept both spellings; the status bar's position, geometry (y, full width) are still asserted below.
+    assert layout["statusPosition"] == "fixed" and layout["statusAlignment"] in ("flex-end", "flow-end"), layout
     assert abs(layout["status"]["y"]) < 1, layout
     assert abs(layout["status"]["x"] + layout["status"]["width"] - 1440) <= 45, layout
     original_pills = page.locator(".statusline").bounding_box()

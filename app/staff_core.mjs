@@ -22,6 +22,16 @@ const FULL_REFRESH_MS = 45000;
 const UNRESOLVED = new Set(['prepared', 'sending', 'needs-own-receipt', 'unknown', 'checking-receipt',
   'confirmed-accepted', 'confirmed-rejected']);
 
+const PREPLAY_WHY = Object.freeze({
+  'lifecycle': 'The event is not active, so a player cannot be withdrawn this way.',
+  'no-active-championship': 'There is no active Championship bracket to regenerate.',
+  'results-exist': 'A completed result exists, so the bracket can no longer be regenerated.',
+  'saved-games-exist': 'A game has been saved, so the bracket can no longer be regenerated.',
+  'consolation-exists': 'The Consolation bracket exists, so the bracket can no longer be regenerated.',
+  'doubles-exists': 'Doubles has started, so the bracket can no longer be regenerated.',
+  'not-enough-players': 'At least two checked-in players must remain.',
+});
+
 // ---------------------------------------------------------------- plain-language errors
 const DETAIL = Object.freeze({
   'rebuild-requires-confirmation': 'This replaces the existing bracket. Confirm the rebuild to continue.',
@@ -40,6 +50,8 @@ const DETAIL = Object.freeze({
   'match-version': 'The match changed since you opened it. Refresh and try again.',
   'player-in-bracket': 'That player is already in the bracket.',
   'lifecycle': 'The event is not in the right state for that.',
+  'name-changed': 'The event name was changed by someone else. Refresh and check the current name before renaming.',
+  'event-name': 'Enter an event name of 1 to 120 characters with no control characters.',
   'no-bracket': 'Build the championship bracket first.',
   'championship-incomplete': 'The championship final has not been played yet.',
   'roster-full': 'The roster is full (64 players).',
@@ -189,7 +201,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
   randomId = () => crypto.randomUUID(), isOnline = () => true, onChange = () => {}} = {}) {
   const s = {
     signedIn: false, role: null, eventId: null, events: [], snapshot: null, brief: null, pulse: null,
-    desk: [], doublesDesk: null, deskStatus: 'idle', score: {status: 'idle', pendingSubmissionId: null}, pending: null, gamePending: null,
+    desk: [], doublesDesk: null, preplay: null, deskStatus: 'idle', score: {status: 'idle', pendingSubmissionId: null}, pending: null, gamePending: null,
     lastGoodAt: 0, lastError: null, busy: false, paused: false, endedReason: null, audit: null,
     lastScoreMessage: null,
     // organizer-only, in memory only, dropped with every other private view: {status, payload, error, at}
@@ -262,7 +274,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
   const canWrite = () => s.signedIn && !s.busy && connection() === 'live';
 
   function clearPrivate(reason = null) {
-    s.snapshot = null; s.brief = null; s.pulse = null; s.desk = []; s.doublesDesk = null; s.deskStatus = 'idle'; s.audit = null;
+    s.snapshot = null; s.brief = null; s.pulse = null; s.desk = []; s.doublesDesk = null; s.preplay = null; s.deskStatus = 'idle'; s.audit = null;
     s.registrations = {status: 'idle', payload: null, error: null, at: 0};
     s.registrationLookup = {status: 'idle', payload: null, error: null, code: null, at: 0, rev: 0, busyRef: null};
     s.registrationSettings = {status: 'idle', source: null, capabilities: null, capabilitiesError: null, diagnostic: null, error: null, busy: null};
@@ -304,6 +316,14 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
         } else res.notActive = true;
         // Mixed-Skill Doubles (game-by-game). Failure-tolerant: a database without it simply shows no doubles card.
         try { res.doubles = await scoreTransport.readDoublesDesk(ctx.token, {eventId: ctx.eventId}); } catch { res.doubles = null; }
+        // Server verdict on pre-play withdrawal. Any failure (missing function, network, malformed answer) leaves it null,
+        // and null hides the control: the UI never guesses eligibility.
+        res.preplay = null;
+        if ((ctx.role === 'organizer' || ctx.role === 'bracket_manager') && pulse.lifecycle === 'active') {
+          try { res.preplay = await api.preplayEligibility(ctx.token, {p_event_id: ctx.eventId}); } catch (e) {
+            if (e instanceof GamedayApiError && e.kind === 'access-rejected') throw e;
+          }
+        }
         return res;
       }, {wait: false});
       s.lastGoodAt = now(); s.lastError = null; s.endedReason = null;
@@ -313,6 +333,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
         if (out.snapshot) s.snapshot = out.snapshot;
         if (out.brief) s.brief = out.brief;
         s.doublesDesk = out.doubles && out.doubles.status !== 'no-teams' ? out.doubles : null;
+        s.preplay = out.preplay ?? null;
         if (out.events) {
           if(staffScope(s.events)!==staffScope(out.events)) s.staffDirectory={status:'idle',people:[],error:null,version:s.staffDirectory.version+1};
           s.events = out.events;
@@ -429,6 +450,15 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
       });
     },
     async updateEvent(name, date, tables) { const r = await act(ctx => api.updateEvent(ctx.token, {p_event_id: E(), p_name: name, p_date: date, p_table_count: tables})); if (r.ok) await loadEvents(); return r; },
+    /** Organizer-only administrative rename of a COMPLETED event. Sends only the name (never date/tables/lifecycle);
+     * the server enforces role + lifecycle and rejects a name that changed since this one was read. */
+    async renameCompletedEvent(name) {
+      const current = s.snapshot?.event;
+      if (!current || current.lifecycle !== 'complete' || s.role !== 'organizer') return {ok: false, message: 'Only an Organizer can rename a completed event.'};
+      const r = await act(ctx => api.renameCompletedEvent(ctx.token, {p_event_id: E(), p_expected_name: current.name, p_name: name}));
+      if (r.ok) await loadEvents();
+      return r;
+    },
     createEvent: async (name, date, tables) => {
       const r = await act(ctx => api.createEvent(ctx.token, {p_name: name, p_date: date, p_table_count: tables}), {refreshAfter: false});
       if (!r.ok) return r;
@@ -451,6 +481,26 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
       if (field.length < 2) return Promise.resolve({ok: false, message: 'Check in at least two players first.'});
       const slots = seedSlots(enginePlayers(snap.players.filter(p => p.checkedIn).map(p => ({id: p.id, name: p.name, rating: p.rating, rating_status: p.ratingStatus}))));
       return act(ctx => api.buildChampionship(ctx.token, {p_event_id: E(), p_slots: slots, p_expected_generation: snap.event.generation, p_confirm: confirm}));
+    },
+    /** Click-time re-check straight from the server (the on-screen verdict may be a few seconds old). Fails closed. */
+    async checkPreplayWithdrawal() {
+      if (s.role !== 'organizer' && s.role !== 'bracket_manager') return {ok: false, eligible: false, message: 'Only an Organizer or Bracket Manager can withdraw a player before play.'};
+      try {
+        const verdict = await session.authorized(ctx => api.preplayEligibility(ctx.token, {p_event_id: ctx.eventId}));
+        if (verdict.eventId !== s.eventId) return {ok: false, eligible: false, message: 'Could not confirm that withdrawal is still allowed. Refresh and try again.'};
+        const current = s.snapshot?.event;
+        if (verdict.eligible && (!current || current.generation !== verdict.generation)) {
+          void refresh({force: true});
+          return {ok: true, eligible: false, reason: 'stale', message: 'The bracket changed. Refresh and try again.'};
+        }
+        s.preplay = verdict; emit();
+        if (!verdict.eligible) { void refresh({force: true}); return {ok: true, eligible: false, reason: verdict.reason, message: PREPLAY_WHY[verdict.reason] ?? 'Withdrawal before play is no longer available.'}; }
+        return {ok: true, eligible: true, generation: verdict.generation};
+      } catch (e) {
+        if (isSessionEnded(e)) { endSession(e.kind); return {ok: false, eligible: false, message: describeError(e)}; }
+        s.preplay = null; emit();
+        return {ok: false, eligible: false, message: 'Could not confirm that withdrawal is still allowed, so it is not offered. Refresh and try again.'};
+      }
     },
     withdrawPreplay: (playerId, reason) => {
       const snap = s.snapshot;
@@ -664,7 +714,8 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
   async function readDoublesProgress() {
     if (!s.signedIn || s.paused || !isOnline()) return {ok: false, message: 'Reconnect before reading completed games.'};
     try {
-      const data = await session.authorized(ctx => scoreTransport.readDoublesDesk(ctx.token, {eventId: ctx.eventId}), {wait: false});
+      // Person-initiated (opening the dialog): QUEUE behind any background poll. Only the polling refresh may be skipped when busy.
+      const data = await session.authorized(ctx => scoreTransport.readDoublesDesk(ctx.token, {eventId: ctx.eventId}));
       if (data.status !== 'ready' || !summarizeGameProgress(data.games, data.best_of, data.points_to_win).ok) {
         return {ok: false, message: 'The doubles finale is not open for scoring. Refresh the Match Desk.'};
       }
@@ -714,8 +765,10 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     if (!s.signedIn || s.paused || !isOnline()) return {ok: false, message: 'Reconnect before reading completed games.'};
     if (!s.desk.some(m => m.matchId === matchId)) return {ok: false, message: 'This match is no longer playable. Refresh the Match Desk.'};
     try {
+      // Person-initiated (opening the dialog): QUEUE behind any background poll instead of being skipped as "busy"; a skipped
+      // read left the dialog stuck on "Loading verified game scores…" with a misleading "records unavailable" message.
       const data = await session.authorized(ctx =>
-        scoreTransport.readGameProgress(ctx.token, {eventId: ctx.eventId, matchId}), {wait: false});
+        scoreTransport.readGameProgress(ctx.token, {eventId: ctx.eventId, matchId}));
       const row = s.desk.find(m => m.matchId === matchId);
       if (!row || data.generation !== row.generation || data.match_version !== row.version
         || data.best_of !== row.bestOf || data.points_to_win !== row.points || data.match_status !== 'pending'
@@ -765,6 +818,8 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     if (!gameLedger?.write(eventId,rec)) {
       return {ok: false, message: 'This device cannot preserve an uncertain game submission. No game was sent.'};
     }
+    // A game is about to exist (or may already, if the reply is lost): withdrawal is no longer known to be eligible.
+    s.preplay = null;
     gameSending = true; s.gamePending = rec; s.busy = true; emit();
     try {
       try { await session.authorized(ctx => scoreTransport.submitCompletedGame(ctx.token,intent)); }
@@ -778,7 +833,7 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     if (!s.signedIn || s.paused || !isOnline()) return {ok: false, unknown: true, message: 'Reconnect and check the server receipt. Do not resend.'};
     try {
       const receipt = await session.authorized(ctx =>
-        scoreTransport.readGameDecision(ctx.token, {eventId: ctx.eventId, submissionId: rec.submissionId}), {wait: false});
+        scoreTransport.readGameDecision(ctx.token, {eventId: ctx.eventId, submissionId: rec.submissionId}));   // queues: a skipped receipt check would leave a saved game "unconfirmed"
       if (receipt.status === 'unconfirmed') return {ok: false, unknown: true, message: 'No server decision yet. Do not resend this game. Ask the organizer to reconcile the match.'};
       if (receipt.match_id !== rec.matchId) return {ok: false, unknown: true, message: 'The receipt does not match this game. Ask the organizer.'};
       gameLedger?.clear(s.eventId); s.gamePending = null; emit();
@@ -1004,8 +1059,24 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     void refresh({force: true});
   }
 
+  /** Is "Withdraw before play" actionable right now? Only on a fresh, server-confirmed, event-matching, eligible verdict for the
+   * current bracket generation and revision, for an Organizer or Bracket Manager. Loading, unknown, failed, stale or mismatched
+   * all mean NO (the server still decides every actual withdrawal). */
+  function preplayWithdrawal() {
+    const p = s.preplay, sn = s.snapshot;
+    const none = status => ({available: false, status, reason: p?.reason ?? null});
+    if (!s.signedIn || (s.role !== 'organizer' && s.role !== 'bracket_manager')) return none('not-permitted');
+    if (!sn || !s.pulse) return none('loading');
+    if (!sn.brackets.some(b => b.kind === 'championship' && b.status === 'active')) return none('no-bracket');
+    if (!p) return none('unknown');
+    if (p.eventId !== s.eventId || p.revision !== s.pulse.revision || p.generation !== s.pulse.generation
+      || sn.event.generation !== p.generation) return none('stale');
+    return p.eligible ? {available: true, status: 'eligible', reason: null} : none('ineligible');
+  }
+
   return Object.freeze({
     get state() { return s; },
+    preplayWithdrawal,
     connection, canWrite, refresh, started, selectEvent, loadEvents, pause, resume, signedOut, endSession,
     actions, prepareScore, cancelPreparedScore, confirmScore, checkPendingScore, dismissPendingScore,
     readGameProgress, saveCompletedGame, readDoublesProgress, saveDoublesGame, checkPendingGame, dismissPendingGame,
