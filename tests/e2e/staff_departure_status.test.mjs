@@ -7,6 +7,7 @@ import {seedSlots, enginePlayers} from '../../contracts/gameday_engine.mjs';
 import {parsePlayerDepartures} from '../../contracts/gameday_api.mjs';
 
 const SQL=fs.readFileSync(new URL('../../supabase/proposals/FFTT3_POSTSTART_DEPARTURES_20261110_DO_NOT_APPLY.sql',import.meta.url),'utf8');
+const ROLLBACK_SQL=fs.readFileSync(new URL('../../supabase/proposals/FFTT3_POSTSTART_DEPARTURES_ACCESS_ROLLBACK_20261110_DO_NOT_APPLY.sql',import.meta.url),'utf8');
 const T=30000;
 async function world() {
   const w=await createBrowserWorld({players:8,staffRoles:true});
@@ -33,6 +34,90 @@ test('Strict private departure response parser fails closed',()=>{
   assert.throws(()=>parsePlayerDepartures({event_id:e,revision:1,players:[{player_id:e,withdrawn:true}]}));
   assert.throws(()=>parsePlayerDepartures({event_id:e,revision:1,players:[],contacts:[]}));
 });
+test('Departure response validates an exact mid-match saved-game snapshot',()=>{
+  const e='00000000-0000-4000-8000-000000000001',m='00000000-0000-4000-8000-000000000002';
+  const p={player_id:e,withdrawn:true,reason:'Unable to continue (injury)',
+    recorded_at:'2099-11-12T13:00:00Z',returned_at:null,return_reason:null,
+    interrupted_match_id:m,saved_games_at_departure:1};
+  assert.equal(parsePlayerDepartures({event_id:e,revision:2,players:[p]}).players[0].savedGamesAtDeparture,1);
+  assert.throws(()=>parsePlayerDepartures({event_id:e,revision:2,players:[{...p,interrupted_match_id:null}]}));
+  assert.throws(()=>parsePlayerDepartures({event_id:e,revision:2,players:[{...p,saved_games_at_departure:0}]}));
+  assert.throws(()=>parsePlayerDepartures({event_id:e,revision:2,players:[{...p,saved_games_at_departure:6}]}));
+});
+
+test('Injury retirement after saved Game 1 keeps the match pending, preserves scores, and records its match', {timeout:240000},async()=>{
+  const {w,db,E,current,read,set}=await world();
+  try {
+    const desk=await db.rpc(w.ids.a,'fftt_matchdesk_v2',{p_event_id:E},{rows:true});
+    const m=desk.find(x=>x.player_1_id && x.player_2_id);
+    assert.ok(m);
+    await db.rpc(w.ids.org,'fftt_assign_table_v3',{p_event_id:E,p_match_id:m.match_id,p_table_number:1});
+    const before=await db.rpc(w.ids.a,'fftt_game_progress_v1',{p_event_id:E,p_match_id:m.match_id});
+    const saved=await db.rpc(w.ids.a,'fftt_save_completed_game_v1',{
+      p_event_id:E,p_match_id:m.match_id,p_generation:before.generation,
+      p_expected_match_version:before.match_version,p_expected_epoch:before.epoch,
+      p_expected_progress_version:before.revision,p_expected_best_of:before.best_of,
+      p_expected_points_to_win:before.points_to_win,p_submission_id:crypto.randomUUID(),
+      p_game_index:1,p_player_1_score:before.points_to_win,p_player_2_score:7,p_reason:null});
+    assert.equal(saved.status,'accepted');
+    const original=await db.rpc(w.ids.a,'fftt_game_progress_v1',{p_event_id:E,p_match_id:m.match_id});
+    assert.equal(original.games.length,1);
+    assert.equal((await set(w.ids.bm,m.player_2_id,'withdrawn','Unable to continue (injury)')).status,'updated');
+    const ledger=(await read(w.ids.org)).players.find(x=>x.player_id===m.player_2_id);
+    assert.equal(ledger.interrupted_match_id,m.match_id);
+    assert.equal(ledger.saved_games_at_departure,1);
+    const match=(await current()).matches.find(x=>x.id===m.match_id);
+    assert.equal(match.status,'pending','no automatic winner or fake result');
+    assert.deepEqual((await db.rpc(w.ids.a,'fftt_game_progress_v1',{p_event_id:E,p_match_id:m.match_id})).games,
+      original.games,'saved game is never deleted');
+    const audit=await db.admin("SELECT after_state FROM fftt_private.audit_events WHERE event_id=$1 AND operation='player_departure_changed' ORDER BY event_revision DESC LIMIT 1",[E]);
+    assert.equal(audit[0].after_state.interrupted_match_id,m.match_id);
+    assert.equal(audit[0].after_state.saved_games_at_departure,1);
+    const newer=await db.rpc(w.ids.a,'fftt_save_completed_game_v1',{
+      p_event_id:E,p_match_id:m.match_id,p_generation:original.generation,
+      p_expected_match_version:original.match_version,p_expected_epoch:original.epoch,
+      p_expected_progress_version:original.revision,p_expected_best_of:original.best_of,
+      p_expected_points_to_win:original.points_to_win,p_submission_id:crypto.randomUUID(),
+      p_game_index:2,p_player_1_score:original.points_to_win,p_player_2_score:7,p_reason:null
+    }).then(()=>null,e=>e);
+    assert.ok(newer,'a new game is held during retirement');
+    assert.equal((await set(w.ids.org,m.player_2_id,'returned','Player returned to finish play')).status,'updated');
+    assert.equal((await read(w.ids.bm)).players[0].saved_games_at_departure,1,'the historical interruption persists');
+    assert.deepEqual((await db.rpc(w.ids.a,'fftt_game_progress_v1',{p_event_id:E,p_match_id:m.match_id})).games,original.games);
+  }finally{await w.close();await db.db.close();}
+});
+
+test('Emergency rollback restores five exact score functions, disables only new RPCs and keeps saved data', {timeout:240000},async()=>{
+  const {w,db,E,current,read,set}=await world();
+  try {
+    const desk=await db.rpc(w.ids.a,'fftt_matchdesk_v2',{p_event_id:E},{rows:true});
+    const m=desk.find(x=>x.player_1_id&&x.player_2_id);
+    assert.ok(m);
+    await db.rpc(w.ids.org,'fftt_assign_table_v3',{p_event_id:E,p_match_id:m.match_id,p_table_number:1});
+    assert.equal((await set(w.ids.org,m.player_2_id,'withdrawn','Left tournament early')).status,'updated');
+    const ledgerBefore=await read(w.ids.org);
+    assert.equal(ledgerBefore.players.length,1);
+    const backups=await db.admin('SELECT signature,original_md5,guarded_md5 FROM fftt_private.departure_guard_restore_v1');
+    assert.equal(backups.length,5);
+    assert.ok(backups.every(x=>x.original_md5!==x.guarded_md5));
+    await db.db.exec(ROLLBACK_SQL);
+    await assert.rejects(read(w.ids.org),'private departure RPC is revoked');
+    await assert.rejects(set(w.ids.org,m.player_2_id,'returned','Returned'),'write RPC is revoked');
+    const backupAfter=await db.admin('SELECT signature FROM fftt_private.departure_guard_restore_v1');
+    assert.equal(backupAfter.length,5,'original score sources remain in evidence ledger');
+    const savedLedger=await db.admin('SELECT player_id,withdrawn FROM fftt_private.player_departures_v1 WHERE event_id=$1',[E]);
+    assert.equal(savedLedger.length,1,'departure history preserved');
+    assert.equal(savedLedger[0].withdrawn,true);
+    const snap=await current();
+    const result=await db.rpc(w.ids.a,'fftt_submit_match_result_v2',{
+      p_event_id:E,p_match_id:m.match_id,p_bracket_generation:snap.event.generation,
+      p_expected_match_version:m.match_version,p_submission_id:crypto.randomUUID(),
+      p_winner_id:m.player_1_id,p_game_scores:'11-7, 11-8',p_table_number:1});
+    assert.equal(result.status,'accepted','the previous scoring functions are working after rollback');
+    assert.equal((await current()).matches.find(x=>x.id===m.match_id).status,'complete');
+  }finally{await w.close();await db.db.close();}
+});
+
 test('Role guards, revision guard, departure/return audit, no score or bracket rewrite', {timeout:240000},async()=>{
   const {w,db,E,current,read,set}=await world();
   try {

@@ -63,17 +63,21 @@ export function parsePlayerDepartures(raw) {
     || !int(raw.revision) || !Array.isArray(raw.players) || raw.players.length > 64) bad();
   const seen = new Set();
   const players = raw.players.map(p => {
-    if (!only(p, ['player_id','withdrawn','reason','recorded_at','returned_at','return_reason'])
+    if (!only(p, ['player_id','withdrawn','reason','recorded_at','returned_at','return_reason','interrupted_match_id','saved_games_at_departure'])
       || !uuid(p.player_id) || seen.has(p.player_id) || typeof p.withdrawn !== 'boolean'
       || !text(p.reason, 300) || p.reason.trim().length < 3
       || typeof p.recorded_at !== 'string' || !Number.isFinite(Date.parse(p.recorded_at))
       || !(p.returned_at === null || (typeof p.returned_at === 'string' && Number.isFinite(Date.parse(p.returned_at))))
+      || !(p.interrupted_match_id === null || uuid(p.interrupted_match_id))
+      || !int(p.saved_games_at_departure,0,5)
+      || (p.interrupted_match_id === null) !== (p.saved_games_at_departure === 0)
       || !(p.return_reason === null || (text(p.return_reason,300) && p.return_reason.trim().length >= 3))
       || (p.withdrawn ? p.returned_at !== null || p.return_reason !== null
           : p.returned_at === null || p.return_reason === null)) bad();
     seen.add(p.player_id);
     return Object.freeze({playerId:p.player_id, withdrawn:p.withdrawn,
-      reason:p.reason, recordedAt:p.recorded_at, returnedAt:p.returned_at, returnReason:p.return_reason});
+      reason:p.reason, recordedAt:p.recorded_at, returnedAt:p.returned_at, returnReason:p.return_reason,
+      interruptedMatchId:p.interrupted_match_id, savedGamesAtDeparture:p.saved_games_at_departure});
   });
   return Object.freeze({eventId:raw.event_id, revision:raw.revision, players:Object.freeze(players)});
 }

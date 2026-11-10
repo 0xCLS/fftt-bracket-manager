@@ -453,12 +453,15 @@ export function createStaffUi({core, els, config, signOut}) {
     return h('section', {class:'card', 'aria-label':'Player departures during play'},
       h('h3',{text:'Player departures during play'}),
       unresolved ? h('p',{class:'notice warn',role:'status',text:unresolved+' pending bracket match(es) involve recorded withdrawn players. Staff must resolve them on the Match Desk. This status never awards a win automatically.'}) : null,
-      h('p',{class:'help',text:'Record a person who leaves or cannot continue, even if they have already played. This is an audited event-level note, not a match result. For an unplayed match, use Match Desk → No-show… to award an appropriate walkover; saved games must not be overwritten.'}),
+      h('p',{class:'help',text:'Record early departure or an injury retirement even after games have been saved. The affected match and saved-game count are captured in the audit. No winner is awarded and previously saved games stay intact. Unplayed matches may be adjudicated separately through Match Desk → No-show…; a match with saved games requires staff review.'}),
       recorded.length ? h('div',{class:'scroll-x'},h('table',{class:'responsive-table','aria-label':'Recorded player departures'},
-        h('thead',{},h('tr',{},['Player','Event status','Action'].map(v=>h('th',{scope:'col',text:v})))),
+        h('thead',{},h('tr',{},['Player','Event status','Interrupted match','Action'].map(v=>h('th',{scope:'col',text:v})))),
         h('tbody',{},recorded.map(p=>h('tr',{},
           h('td',{'data-label':'Player',text:byId.get(p.playerId) ?? 'Former roster entry'}),
           h('td',{'data-label':'Event status'},pill(p.withdrawn?'Withdrawn':'Returned',p.withdrawn?'warn':'good')),
+          h('td',{'data-label':'Interrupted match'},p.interruptedMatchId
+            ? p.savedGamesAtDeparture+' saved game(s) preserved. Match unresolved; staff must review.'
+            : 'No saved game interruption recorded'),
           h('td',{'data-label':'Action'},p.withdrawn ? h('button',{type:'button',class:'small',
             disabled:!core.canWrite(),text:'Mark returned…',
             on:{click:()=>openPlayerDeparture(p.playerId,byId.get(p.playerId) ?? 'Player','returned')}}) : 'Recorded')))))
@@ -483,7 +486,7 @@ export function createStaffUi({core, els, config, signOut}) {
       dlg.append(h('div',{class:'dlg'},
         h('h3',{text:withdrawing?'Record event withdrawal':'Record a player returning'}),
         h('p',{class:'help',text:withdrawing
-          ? 'This records the event-level departure but does not resolve any pending match. Record a walkover separately when appropriate; saved game records cannot be overwritten.'
+          ? 'For a retirement after play begins, this saves the interrupted match and number of completed games without assigning a winner. The match remains pending for staff review. Do not replace saved games with a walkover.'
           : name+' may return to fellowship, but this action never reverses a walkover or restores an eliminated bracket position.'}),
         chosen ? h('label',{for:'departurePlayer',text:'Player leaving'}):null,chosen,
         reason ? h('label',{for:'departureReason',text:'Reason'}):null,reason,

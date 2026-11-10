@@ -30,6 +30,11 @@ CREATE TABLE fftt_private.player_departures_v1 (
   recorded_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   returned_at timestamptz,
   returned_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  interrupted_match_id uuid,
+  saved_games_at_departure integer NOT NULL DEFAULT 0
+    CHECK (saved_games_at_departure BETWEEN 0 AND 5),
+  CONSTRAINT player_departures_v1_interrupted_consistency CHECK
+    ((interrupted_match_id IS NULL) = (saved_games_at_departure = 0)),
   return_reason text CHECK(return_reason IS NULL OR
     (length(btrim(return_reason)) BETWEEN 3 AND 300 AND return_reason !~ '[[:cntrl:]]')),
   CONSTRAINT player_departures_v1_pkey PRIMARY KEY(event_id,player_id),
@@ -106,7 +111,9 @@ BEGIN
       SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
          'player_id',d.player_id,'withdrawn',d.withdrawn,
          'reason',d.departure_reason,'recorded_at',d.recorded_at,
-         'returned_at',d.returned_at,'return_reason',d.return_reason
+         'returned_at',d.returned_at,'return_reason',d.return_reason,
+         'interrupted_match_id',d.interrupted_match_id,
+         'saved_games_at_departure',d.saved_games_at_departure
       ) ORDER BY d.recorded_at,d.player_id)
       FROM fftt_private.player_departures_v1 d WHERE d.event_id=p_event_id
     ), '[]'::jsonb));
@@ -120,6 +127,7 @@ RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path TO ''
 AS $f$
 DECLARE e fftt_private.events%rowtype; d fftt_private.player_departures_v1%rowtype;
   v_reason text:=pg_catalog.btrim(COALESCE(p_reason,'')); v_rev bigint;
+  v_interrupted uuid; v_game_count integer := 0; v_interrupted_count integer := 0;
 BEGIN
   e := fftt_private.v3_begin(p_event_id, ARRAY['organizer','bracket_manager'], ARRAY['active']);
   IF e.revision <> p_expected_revision OR e.bracket_generation <> p_expected_generation THEN
@@ -145,14 +153,42 @@ BEGIN
    WHERE event_id=p_event_id AND player_id=p_player_id FOR UPDATE;
   IF p_state='withdrawn' THEN
     IF FOUND AND d.withdrawn THEN PERFORM fftt_private.v3_err('conflict','already-withdrawn'); END IF;
+    -- A completed, server-confirmed individual game is immutable. Record the
+    -- interrupted match and exact saved-game count in the private departure
+    -- ledger; never synthesize a remaining game or assign a match winner.
+    SELECT count(*) INTO v_interrupted_count
+      FROM fftt_private.matches m JOIN fftt_private.match_game_progress g
+        ON g.event_id=m.event_id AND g.match_id=m.id
+       AND g.generation=m.generation AND g.match_version=m.match_version
+       AND g.match_epoch=m.game_progress_epoch
+     WHERE m.event_id=p_event_id AND m.generation=e.bracket_generation
+       AND m.status='pending' AND (m.player_1_id=p_player_id OR m.player_2_id=p_player_id)
+       AND pg_catalog.jsonb_array_length(g.games)>0;
+    IF v_interrupted_count>1 THEN
+      PERFORM fftt_private.v3_err('conflict','multiple-interrupted-matches');
+    END IF;
+    SELECT m.id, pg_catalog.jsonb_array_length(g.games)
+      INTO v_interrupted,v_game_count
+      FROM fftt_private.matches m JOIN fftt_private.match_game_progress g
+        ON g.event_id=m.event_id AND g.match_id=m.id
+       AND g.generation=m.generation AND g.match_version=m.match_version
+       AND g.match_epoch=m.game_progress_epoch
+     WHERE m.event_id=p_event_id AND m.generation=e.bracket_generation
+       AND m.status='pending' AND (m.player_1_id=p_player_id OR m.player_2_id=p_player_id)
+       AND pg_catalog.jsonb_array_length(g.games)>0
+     LIMIT 1;
+    v_game_count:=COALESCE(v_game_count,0);
     INSERT INTO fftt_private.player_departures_v1(
       event_id,player_id,withdrawn,departure_reason,recorded_at,recorded_by,
-      returned_at,returned_by,return_reason)
-    VALUES(p_event_id,p_player_id,true,v_reason,now(),auth.uid(),NULL,NULL,NULL)
+      returned_at,returned_by,return_reason,interrupted_match_id,saved_games_at_departure)
+    VALUES(p_event_id,p_player_id,true,v_reason,now(),auth.uid(),NULL,NULL,NULL,
+           v_interrupted,v_game_count)
     ON CONFLICT(event_id,player_id) DO UPDATE SET
       withdrawn=true,departure_reason=EXCLUDED.departure_reason,
       recorded_at=now(),recorded_by=auth.uid(),
-      returned_at=NULL,returned_by=NULL,return_reason=NULL;
+      returned_at=NULL,returned_by=NULL,return_reason=NULL,
+      interrupted_match_id=EXCLUDED.interrupted_match_id,
+      saved_games_at_departure=EXCLUDED.saved_games_at_departure;
   ELSE
     IF NOT FOUND OR NOT d.withdrawn THEN
       PERFORM fftt_private.v3_err('conflict','not-withdrawn');
@@ -165,7 +201,9 @@ BEGIN
   v_rev := fftt_private.v3_bump(p_event_id);
   PERFORM fftt_private.v3_audit(p_event_id,'player_departure_changed',NULL,
     pg_catalog.jsonb_build_object('player_id',p_player_id,'withdrawn',CASE WHEN d.player_id IS NULL THEN false ELSE d.withdrawn END),
-    pg_catalog.jsonb_build_object('player_id',p_player_id,'withdrawn',p_state='withdrawn'),
+    pg_catalog.jsonb_build_object('player_id',p_player_id,'withdrawn',p_state='withdrawn',
+      'interrupted_match_id',CASE WHEN p_state='withdrawn' THEN v_interrupted ELSE d.interrupted_match_id END,
+      'saved_games_at_departure',CASE WHEN p_state='withdrawn' THEN v_game_count ELSE d.saved_games_at_departure END),
     v_reason,v_rev);
   RETURN pg_catalog.jsonb_build_object('status','updated','event_revision',v_rev);
 END;
@@ -192,6 +230,19 @@ END;
 $present$;
 REVOKE ALL ON FUNCTION fftt_private.assert_players_present_v1(uuid,uuid[])
   FROM PUBLIC,anon,authenticated;
+
+-- Snapshot each exact pre-patch source definition with a fingerprint, and
+-- the installed guarded fingerprint. This is an atomic, auditable, data-preserving
+-- rollback plan. No API client can SELECT from this restore table.
+CREATE TABLE fftt_private.departure_guard_restore_v1 (
+  signature text PRIMARY KEY,
+  original_ddl text NOT NULL,
+  original_md5 text NOT NULL,
+  guarded_md5 text NOT NULL,
+  captured_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE fftt_private.departure_guard_restore_v1 ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON fftt_private.departure_guard_restore_v1 FROM PUBLIC,anon,authenticated;
 
 -- Existing versioned scoring logic stays intact. We insert one fail-closed
 -- check at each already-serialized authorization boundary. The installed
@@ -229,7 +280,12 @@ BEGIN
      OR (v_hosted AND md5(v_source) <> v_expected_md5) THEN
     RAISE EXCEPTION 'FFTT departure score-source drift for %',v_label;
   END IF;
+  INSERT INTO fftt_private.departure_guard_restore_v1(signature,original_ddl,original_md5,guarded_md5)
+    VALUES(v_label,v_source,md5(v_source),md5(v_source));
   EXECUTE replace(v_source,v_anchor,v_insert || v_anchor);
+  UPDATE fftt_private.departure_guard_restore_v1
+     SET guarded_md5=md5(pg_get_functiondef(v_sig))
+   WHERE signature=v_label;
 
   v_label := 'fftt_private.game_progress_save_v1(uuid,uuid,integer,bigint,bigint,bigint,integer,integer,uuid,integer,integer,integer,text)';
   v_sig := to_regprocedure(v_label);
@@ -247,7 +303,12 @@ BEGIN
      OR (v_hosted AND md5(v_source) <> v_expected_md5) THEN
     RAISE EXCEPTION 'FFTT departure score-source drift for %',v_label;
   END IF;
+  INSERT INTO fftt_private.departure_guard_restore_v1(signature,original_ddl,original_md5,guarded_md5)
+    VALUES(v_label,v_source,md5(v_source),md5(v_source));
   EXECUTE replace(v_source,v_anchor,v_insert || v_anchor);
+  UPDATE fftt_private.departure_guard_restore_v1
+     SET guarded_md5=md5(pg_get_functiondef(v_sig))
+   WHERE signature=v_label;
 
   v_label := 'fftt_private.doubles_game_save_v1(uuid,text,bigint,integer,integer,uuid,integer,integer,integer,text)';
   v_sig := to_regprocedure(v_label);
@@ -266,7 +327,12 @@ BEGIN
      OR (v_hosted AND md5(v_source) <> v_expected_md5) THEN
     RAISE EXCEPTION 'FFTT departure score-source drift for %',v_label;
   END IF;
+  INSERT INTO fftt_private.departure_guard_restore_v1(signature,original_ddl,original_md5,guarded_md5)
+    VALUES(v_label,v_source,md5(v_source),md5(v_source));
   EXECUTE replace(v_source,v_anchor,v_insert || v_anchor);
+  UPDATE fftt_private.departure_guard_restore_v1
+     SET guarded_md5=md5(pg_get_functiondef(v_sig))
+   WHERE signature=v_label;
 
   v_label := 'fftt_private.record_doubles_result_v3(uuid,integer,text)';
   v_sig := to_regprocedure(v_label);
@@ -285,7 +351,12 @@ BEGIN
      OR (v_hosted AND md5(v_source) <> v_expected_md5) THEN
     RAISE EXCEPTION 'FFTT departure score-source drift for %',v_label;
   END IF;
+  INSERT INTO fftt_private.departure_guard_restore_v1(signature,original_ddl,original_md5,guarded_md5)
+    VALUES(v_label,v_source,md5(v_source),md5(v_source));
   EXECUTE replace(v_source,v_anchor,v_insert || v_anchor);
+  UPDATE fftt_private.departure_guard_restore_v1
+     SET guarded_md5=md5(pg_get_functiondef(v_sig))
+   WHERE signature=v_label;
 
   v_label := 'fftt_private.set_doubles_teams_v3(uuid,uuid,uuid)';
   v_sig := to_regprocedure(v_label);
@@ -303,7 +374,12 @@ BEGIN
      OR (v_hosted AND md5(v_source) <> v_expected_md5) THEN
     RAISE EXCEPTION 'FFTT departure score-source drift for %',v_label;
   END IF;
+  INSERT INTO fftt_private.departure_guard_restore_v1(signature,original_ddl,original_md5,guarded_md5)
+    VALUES(v_label,v_source,md5(v_source),md5(v_source));
   EXECUTE replace(v_source,v_anchor,v_insert || v_anchor);
+  UPDATE fftt_private.departure_guard_restore_v1
+     SET guarded_md5=md5(pg_get_functiondef(v_sig))
+   WHERE signature=v_label;
 END;
 $patch_scoring$;
 
