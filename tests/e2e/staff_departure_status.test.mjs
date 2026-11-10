@@ -118,7 +118,9 @@ test('Active withdrawal blocks new singles scores and saved games without changi
       p_absent_player_id:absent,p_reason:'Left tournament early'})).status,'accepted');
     const after=await current();
     assert.equal(after.matches.find(m=>m.id===row.match_id).game_scores,'W/O');
-    await assert.rejects(db.rpc(w.ids.a,'fftt_submit_match_result_v2', {...params,p_submission_id:crypto.randomUUID()}));
+    const stale=await db.rpc(w.ids.a,'fftt_submit_match_result_v2', {...params,p_submission_id:crypto.randomUUID()});
+    assert.equal(stale.status,'rejected','a finalized walkover rejects a later attempt to score');
+    assert.equal(stale.reason,'stale-match-version');
     assert.equal((await set(w.ids.org,absent,'returned','Player returned to venue')).status,'updated');
     assert.equal((await current()).matches.find(m=>m.id===row.match_id).game_scores,'W/O');
     assert.deepEqual(w.pageErrors,[]);
