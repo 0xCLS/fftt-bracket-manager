@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import {verifiedSource,findDriveRoots,copyEncryptedToDrive} from '../tools/ops/fftt_cloud_copy.mjs';
+import {verifiedSource,findDriveRoots,copyEncryptedToDrive,promptArchivePassphrase} from '../tools/ops/fftt_cloud_copy.mjs';
 const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
 function fixture(){
   const home=fs.mkdtempSync(path.join(os.tmpdir(),'fftt-cloud-fixture-'));
@@ -20,7 +20,13 @@ function fixture(){
   fs.mkdirSync(drive,{recursive:true});
   return {home,file,proof,drive};
 }
-function fakeHdiutil(cmd,args){
+function fakeHdiutil(cmd,args,opts){
+  if(args[0]==='create'||args[0]==='verify'){
+    assert.ok(Buffer.isBuffer(opts.input),'secret transmitted only through stdin');
+    assert.equal(opts.input.toString('utf8'),'fictional-passphrase\0');
+    assert.ok(args.includes('-stdinpass'),'verify and create require private stdin');
+    assert.ok(!args.join(' ').includes('fictional-passphrase'));
+  }
   if(args[0]==='create'){
     assert.ok(args.includes('-encryption')&&args.includes('AES-256')&&args.includes('-stdinpass'));
     assert.ok(args.includes('-srcfolder'));
@@ -49,7 +55,8 @@ test('Google Drive receives only encrypted DMG bytes; original and verification 
   const fx=fixture(),original=fs.readFileSync(fx.file),printed=[];
   try{
     const result=copyEncryptedToDrive({backupFile:fx.file,home:fx.home,
-      spawn:fakeHdiutil,now:new Date('2026-11-07T23:00:00Z'),logger:s=>printed.push(s)});
+      spawn:fakeHdiutil,readPassphrase:()=>Buffer.from('fictional-passphrase\0'),
+      now:new Date('2026-11-07T23:00:00Z'),logger:s=>printed.push(s)});
     assert.equal(result.local_checksum_verified,true);
     assert.equal(result.drive_sync,'UNCONFIRMED');
     assert.deepEqual(fs.readFileSync(fx.file),original);
@@ -69,7 +76,53 @@ test('failed disk-image encryption never writes plaintext or unverified data to 
   };
   try{
     assert.throws(()=>copyEncryptedToDrive({backupFile:fx.file,home:fx.home,
-      spawn:fail,logger:()=>{}}),/did not confirm encryption/);
+      spawn:fail,readPassphrase:()=>Buffer.from('fictional-passphrase\0'),logger:()=>{}}),/did not confirm encryption/);
     assert.equal(fs.existsSync(path.join(fx.drive,'FFTT Private Backups')),false);
+  }finally{fs.rmSync(fx.home,{recursive:true,force:true});}
+});
+
+test('masked terminal prompt uses private TTY; headless failure destroys captured bytes',()=>{
+  const typed=Buffer.from('fictional-passphrase\0'),calls=[];
+  const received=promptArchivePassphrase({spawn:(program,args,opts)=>{
+    calls.push({program,args,opts});return {status:0,stdout:typed};
+  }});
+  assert.equal(received,typed);
+  assert.equal(calls[0].program,'/bin/bash');
+  assert.ok(calls[0].args[1].includes('read -r -s'));
+  assert.ok(calls[0].args[1].includes('/dev/tty'));
+  assert.equal(calls[0].args.join(' ').includes('fictional-passphrase'),false);
+  assert.deepEqual(calls[0].opts.stdio,['ignore','pipe','inherit']);
+  received.fill(0);
+  const failed=Buffer.from('fictional-secret');
+  assert.throws(()=>promptArchivePassphrase({spawn:()=>({status:1,stdout:failed})}),/interactive terminal/);
+  assert.ok(failed.every(x=>x===0));
+});
+test('verify failure rejects image, erases key, and cannot copy unverified data to Drive',()=>{
+  const fx=fixture(),key=Buffer.from('fictional-passphrase\0'),calls=[];
+  const fail=(cmd,args,opts)=>{
+    calls.push({args,input:Buffer.isBuffer(opts.input)?Buffer.from(opts.input):null});
+    if(args[0]==='create'){fs.writeFileSync(args.at(-1),'SYNTHETIC IMAGE');return {status:0};}
+    if(args[0]==='isencrypted')return {status:0,stdout:'encrypted: yes\n'};
+    if(args[0]==='verify')return {status:1};
+    throw Error('Unexpected hdiutil subcommand');
+  };
+  try{
+    assert.throws(()=>copyEncryptedToDrive({backupFile:fx.file,home:fx.home,spawn:fail,
+      readPassphrase:()=>key,logger:()=>{}}),/Encrypted disk image integrity check failed/);
+    assert.deepEqual(calls.map(x=>x.args[0]),['create','isencrypted','verify']);
+    assert.ok(calls[2].args.includes('-stdinpass'));
+    assert.deepEqual(calls[0].input,calls[2].input);
+    assert.ok(key.every(x=>x===0));
+    assert.deepEqual(fs.readdirSync(path.join(fx.home,'Documents','FFTT-private','encrypted-archives')),[]);
+    assert.equal(fs.existsSync(path.join(fx.drive,'FFTT Private Backups')),false);
+  }finally{fs.rmSync(fx.home,{recursive:true,force:true});}
+});
+test('successful verification also clears secret bytes before Drive receipt',()=>{
+  const fx=fixture(),key=Buffer.from('fictional-passphrase\0');
+  try{
+    const p=copyEncryptedToDrive({backupFile:fx.file,home:fx.home,spawn:fakeHdiutil,
+      readPassphrase:()=>key,logger:()=>{}});
+    assert.ok(key.every(x=>x===0));
+    assert.ok(p.local_checksum_verified&&fs.existsSync(p.drive_folder_copy));
   }finally{fs.rmSync(fx.home,{recursive:true,force:true});}
 });

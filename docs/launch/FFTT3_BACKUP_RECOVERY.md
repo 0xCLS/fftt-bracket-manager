@@ -105,9 +105,12 @@ It detects exactly one Google Drive File Provider account in
 ambiguity. With multiple Drive accounts, use `--drive-root "/Finder/My Drive/path"`.
 
 macOS `hdiutil` creates an **AES-256** encrypted, compressed, read-only `.dmg`
-containing only the verified export JSON and its verified report. It prompts
-interactively for a **separate, strong archive passphrase**, never in a command
-argument, GitHub file or chat. Store that passphrase in your password manager,
+containing only the verified export JSON and its verified report. The helper
+requires a private local TTY and prompts without echo for a new strong passphrase
+and confirmation. It supplies the same secret via standard input to both the
+create and integrity-verify commands, then clears the buffer. No secret enters
+arguments, environment, GitHub or chat, and no GUI dialog is assumed. Headless
+sessions without a TTY fail safely. Store that passphrase in your password manager,
 independent of Google Drive; without it recovery is impossible.
 
 Only after `hdiutil isencrypted` and `hdiutil verify` pass does the tool
