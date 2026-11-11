@@ -249,7 +249,9 @@ test('fictional Scorer sees the actual withdrawal refusal, keeps saved game and 
     await db.rpc(w.ids.org,'fftt_assign_table_v3',{p_event_id:E,p_match_id:other.match_id,p_table_number:2});
     const scorer=await w.device('a',{viewport:{width:390,height:844},mobile:true}); await scorer.signIn('a');
     const open=async name=>{await scorer.page.locator('.queue-card',{hasText:name}).getByRole('button',{name:'Record result'}).click(); return scorer.page.locator('dialog[open]');};
-    let dlg=await open(m.player_1_name); let input=dlg.locator('.games input');
+    let dlg=await open(m.player_1_name);
+    await dlg.getByText('Game 1 · Unconfirmed').waitFor({timeout:T});
+    let input=dlg.locator('.games input');
     await input.nth(0).fill('11'); await input.nth(1).fill('7'); await dlg.getByRole('button',{name:'Save Game 1'}).click();
     await dlg.getByText('Game 1 · 11–7 · Saved').waitFor({timeout:T});
     assert.equal((await set(w.ids.org,m.player_2_id,'withdrawn','Unable to continue (injury)')).status,'updated');
@@ -260,7 +262,9 @@ test('fictional Scorer sees the actual withdrawal refusal, keeps saved game and 
     assert.deepEqual((await db.rpc(w.ids.a,'fftt_game_progress_v1',{p_event_id:E,p_match_id:m.match_id})).games,[[11,7]]);
     await dlg.getByRole('button',{name:'Close',exact:true}).last().click();
     assert.equal(await scorer.page.getByText('Unconfirmed save',{exact:false}).count(),0);
-    dlg=await open(other.player_1_name); input=dlg.locator('.games input');
+    dlg=await open(other.player_1_name);
+    await dlg.getByText('Game 1 · Unconfirmed').waitFor({timeout:T});
+    input=dlg.locator('.games input');
     await input.nth(0).fill('11'); await input.nth(1).fill('6'); await dlg.getByRole('button',{name:'Save Game 1'}).click();
     await dlg.getByText('Game 1 · 11–6 · Saved').waitFor({timeout:T});
     assert.deepEqual((await db.rpc(w.ids.a,'fftt_game_progress_v1',{p_event_id:E,p_match_id:other.match_id})).games,[[11,6]]);
