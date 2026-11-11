@@ -12,7 +12,7 @@ import {fileURLToPath} from 'node:url';
 import {setupEvent, buildChampionship, playAllPlayable, buildConsolation, roster} from './helpers.mjs';
 import {createLocalDb, SQL_FILES} from './localdb.mjs';
 import {APPLIED_PRE_V6_LAYERS, hostedIcuFingerprint} from '../../tools/ops/restore_verify_helpers.mjs';
-import {createHostedEquivalentDb} from './hosted_equivalent.mjs';
+import {createHostedEquivalentDb, INSTALLED_AFTER_NOV8_LAYERS} from './hosted_equivalent.mjs';
 import {PROJECT_REF, TABLES as CURRENT_TABLES} from '../../tools/ops/fftt_backup.mjs';
 import {seedSlots, enginePlayers} from '../../contracts/gameday_engine.mjs';
 
@@ -152,7 +152,7 @@ test('the offline pre-V6 clone reproduces Nov 7 hosted catalog fingerprints (met
 
 
 test('CURRENT hosted backup restores all 20 groups including a saved individual game and its append-only receipt', {timeout:240000}, async () => {
-  const db = await createHostedEquivalentDb({corrections:true});
+  const db = await createHostedEquivalentDb({corrections:true,installed:true});
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fftt-current-restore-'));
   try {
     const org = await db.addUser('organizer-current@fftt-staging.invalid', {platformOrganizer:true});
@@ -215,8 +215,8 @@ test('CURRENT hosted backup restores all 20 groups including a saved individual 
   }
 });
 
-test('disposable CURRENT schema matches November 9 read-only hosted metadata, including all five new tables', {timeout:240000}, async () => {
-  const db = await createHostedEquivalentDb({corrections:true});
+test('disposable CURRENT schema matches the November 11 read-only hosted metadata (Nov 8 layers + installed walkover, rename and eligibility)', {timeout:240000}, async () => {
+  const db = await createHostedEquivalentDb({corrections:true,installed:true});
   try {
     const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
     const actual = Object.fromEntries((await db.admin(
@@ -225,7 +225,7 @@ test('disposable CURRENT schema matches November 9 read-only hosted metadata, in
     const hosted = {
       column:'186:bf380937c9a3bfe6224368720b51522c',
       constraint:'106:49fe836a309da3938668536e16d4a06f',
-      function:'124:76aa9fd56adb797cbd894c7420ef7423',
+      function:'130:b6acd83f50f5fbfcca798db2d4fa793b',
       rls:'20:f1a000f9e223f61b2c39b6b82c9a98a3',
       trigger:'12:93b786db8b1e3ba709d04c5d6e087490',
       view:'2:2b5bc9be73f733c02abefea565150d03',
@@ -236,7 +236,7 @@ test('disposable CURRENT schema matches November 9 read-only hosted metadata, in
 });
 
 test('original hosted ICU en-US aggregate fingerprint verifies a restored fictional registration link set', {timeout:240000}, async () => {
-  const db = await createHostedEquivalentDb({corrections:true});
+  const db = await createHostedEquivalentDb({corrections:true,installed:true});
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fftt-icu-link-proof-'));
   try {
     const refs = ['AA','aA','ab','Ab','B','b','1','10','2'];
@@ -282,4 +282,60 @@ test('original hosted ICU en-US aggregate fingerprint verifies a restored fictio
     await db.db.close();
     fs.rmSync(dir,{recursive:true,force:true});
   }
+});
+
+test('current-preflight: a backup taken from the pre-install (stale) schema, or from any unexpected schema change, still fails closed', {timeout:300000}, async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fftt-current-schema-guard-'));
+  const seed = async db => {
+    const org = await db.addUser('organizer-guard@fftt-staging.invalid', {platformOrganizer:true});
+    await db.rpc(org,'fftt_create_event_v3',{p_name:'Fictional schema guard',p_date:'2026-11-22',p_table_count:2});
+  };
+  const verify = (doc, name) => {
+    const file = path.join(dir,name);
+    fs.writeFileSync(file,JSON.stringify(doc),{mode:0o600});
+    return spawnSync(process.execPath,[TOOL,file,'--current-preflight'],{encoding:'utf8',timeout:240000});
+  };
+  try {
+    // Provenance: every installed layer is pinned by git blob id and the pins are exactly the reviewed order.
+    assert.deepEqual(INSTALLED_AFTER_NOV8_LAYERS.map(l => path.basename(l.file)),
+      ['FFTT3_REHEARSAL_WALKOVER_WITHDRAWAL_20261109_DO_NOT_APPLY.sql',
+       'FFTT3_COMPLETED_EVENT_RENAME_20261109_DO_NOT_APPLY.sql',
+       'FFTT3_PREPLAY_WITHDRAWAL_ELIGIBILITY_20261110_DO_NOT_APPLY.sql']);
+
+    // Matching current baseline passes.
+    const current = await createHostedEquivalentDb({corrections:true,installed:true});
+    let currentDoc; try { await seed(current); currentDoc = await exportDoc(current,true); } finally { await current.db.close(); }
+    const ok = verify(currentDoc,'current.json');
+    assert.equal(ok.status,0,ok.stdout+'\n'+ok.stderr);
+    assert.match(ok.stdout,/hosted schema fingerprint matches complete post-scoring current baseline/);
+
+    // A backup of the OLD (pre-install) schema must not certify the current release.
+    const stale = await createHostedEquivalentDb({corrections:true});
+    let staleDoc; try { await seed(stale); staleDoc = await exportDoc(stale,true); } finally { await stale.db.close(); }
+    const staleRun = verify(staleDoc,'stale.json');
+    assert.notEqual(staleRun.status,0,'a pre-install schema must be rejected');
+    assert.match(staleRun.stdout,/FAIL  schema parity differs in categories: function/);
+
+    // Any unexpected change on top of the current schema (added function, column) fails, naming only categories.
+    const drift = async mutate => {
+      const db = await createHostedEquivalentDb({corrections:true,installed:true});
+      try { await seed(db); await db.admin(mutate); return await exportDoc(db,true); } finally { await db.db.close(); }
+    };
+    const body = await drift(`create function fftt_private.drift_probe() returns integer language sql as 'select 1'`);
+    const bodyRun = verify(body,'body-drift.json');
+    assert.notEqual(bodyRun.status,0);
+    assert.match(bodyRun.stdout,/FAIL  schema parity differs in categories: function/);
+    const col = await drift('alter table fftt_private.players add column drift_probe text');
+    const colRun = verify(col,'column-drift.json');
+    assert.notEqual(colRun.status,0);
+    assert.match(colRun.stdout,/FAIL  schema parity differs in categories: .*column/);
+    assert.doesNotMatch(bodyRun.stdout + colRun.stdout,/drift_probe|fictional/i,'failure output names categories only');
+
+    // Row-count / data integrity checks are unchanged: a tampered restored record still fails.
+    const tampered = structuredClone(currentDoc);
+    tampered.tables.events.rows[0].event_name = 'Tampered';
+    const tamperedRun = verify(tampered,'tampered.json');
+    assert.notEqual(tamperedRun.status,0);
+    assert.match(tamperedRun.stdout,/FAIL  events: fingerprint equal/);
+  } finally { fs.rmSync(dir,{recursive:true,force:true}); }
 });
