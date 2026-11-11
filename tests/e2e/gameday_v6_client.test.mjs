@@ -106,3 +106,75 @@ test('unknown save survives reload, blocks repeats and demands manual reconcilia
     assert.ok(retry.ok,retry.message);
   }finally{await w.fake.local.db.close();}
 });
+
+test('definitive withdrawn-player refusal clears only the game incident and permits later scoring', async()=>{
+  const w=await createWorld(), org=w.device('org','org'), a=w.device('a','a');
+  try {
+    await org.signIn(); await stage(org); await a.signIn();
+    let [row,shot]=await first(org,a);
+    assert.ok((await score(a,row,shot,1,11,7)).ok);
+    shot=(await a.core.readGameProgress(row.matchId)).data;
+    w.fake.failNext('a','/rest/v1/rpc/fftt_save_completed_game_v1',400,
+      {code:'P0001',message:'fftt_conflict',details:'player-withdrawn',hint:null});
+    const refused=await score(a,row,shot,2,11,8);
+    assert.equal(refused.rejected,true); assert.match(refused.message,/No game was saved.*withdrawn/);
+    assert.equal(a.core.state.gamePending,null);
+    assert.deepEqual((await a.core.readGameProgress(row.matchId)).data.games,[[11,7]]);
+    const saved=await score(a,row,shot,2,11,8); assert.ok(saved.ok,saved.message);
+    assert.deepEqual((await a.core.readGameProgress(row.matchId)).data.games,[[11,7],[11,8]]);
+  } finally {await w.fake.local.db.close();}
+});
+
+test('malformed withdrawal conflict keeps the incident and blocks later writes', async()=>{
+  const w=await createWorld(), org=w.device('org','org'), a=w.device('a','a');
+  try {
+    await org.signIn(); await stage(org); await a.signIn(); const [row,shot]=await first(org,a);
+    w.fake.failNext('a','/rest/v1/rpc/fftt_save_completed_game_v1',400,
+      {message:'fftt_conflict',details:'player-withdrawn'});
+    assert.equal((await score(a,row,shot,1,11,7)).unknown,true);
+    const pending=a.core.state.gamePending; assert.ok(pending);
+    const count=a.scoreTransport.stats.scoreRequests;
+    assert.equal((await score(a,row,shot,1,11,7)).unknown,true);
+    assert.equal(a.scoreTransport.stats.scoreRequests,count); assert.equal(a.core.state.gamePending.submissionId,pending.submissionId);
+  } finally {await w.fake.local.db.close();}
+});
+
+test('definitive refusal never clears a different or unreadable pending record', async()=>{
+  const {createGamePendingLedger}=await import('../../app/staff_core.mjs');
+  let value=null, broken=false;
+  const storage={getItem(){if(broken) throw Error('unavailable');return value;},setItem(k,v){value=v;},removeItem(){value=null;}};
+  const ledger=createGamePendingLedger(storage), record={submissionId:'one',matchId:'match',gameIndex:1,at:1};
+  assert.equal(ledger.write('event',record),true);
+  assert.equal(ledger.clearIfMatches('event','other','match'),false);
+  assert.equal(ledger.read('event').submissionId,'one');
+  broken=true; assert.equal(ledger.clearIfMatches('event','one','match'),false);
+  broken=false; assert.equal(ledger.read('event').submissionId,'one');
+  assert.equal(ledger.clearIfMatches('event','one','match'),true); assert.equal(ledger.read('event'),null);
+});
+
+test('doubles game refusal clears the matching pending record and permits a later save', {timeout:120000}, async()=>{
+  const {playAllPlayable}=await import('./helpers.mjs');
+  const w=await createWorld(), db=w.fake.local, org=w.device('org','org'), a=w.device('a','a');
+  try {
+    const fs=await import('node:fs');
+    for (const path of ['proposals/FFTT3_BRACKET_MANAGER_ROLE_20261030_DO_NOT_APPLY.sql',
+      'proposals/FFTT3_EVENT_DAY_DELEGATION_20261105_DO_NOT_APPLY.sql',
+      'proposals/FFTT3_BRACKET_MANAGER_REGISTRATION_20261106_DO_NOT_APPLY.sql',
+      'migrations/20261108114950_showcase_reset.sql','migrations/20261108150000_staff_scoring_permissions.sql']) {
+      await db.db.exec(fs.readFileSync(new URL('../../supabase/'+path,import.meta.url),'utf8'));
+    }
+    await org.signIn(); await stage(org); await a.signIn();
+    const snap=()=>db.rpc(w.ids.org,'fftt_organizer_snapshot_v3',{p_event_id:w.eventId});
+    await playAllPlayable({db,E:w.eventId,org:w.ids.org,skA:w.ids.a,skB:w.ids.a,snap},{only:'championship'});
+    const s=await snap(), finalists=new Set(s.matches.filter(m=>m.is_final).flatMap(m=>[m.player_1_id,m.player_2_id]));
+    const partners=s.players.map(p=>p.id).filter(id=>!finalists.has(id));
+    await db.rpc(w.ids.org,'fftt_set_doubles_teams_v3',{p_event_id:w.eventId,p_partner_1:partners[0],p_partner_2:partners[1]});
+    await a.core.refresh({force:true}); const read=await a.core.readDoublesProgress(); assert.ok(read.ok,read.message);
+    const args={snapshot:read.data,gameIndex:1,team1Score:read.data.points_to_win,team2Score:7};
+    w.fake.failNext('a','/rest/v1/rpc/fftt_save_doubles_game_v1',400,{code:'P0001',message:'fftt_conflict',details:'player-withdrawn',hint:null});
+    const refused=await a.core.saveDoublesGame(args); assert.equal(refused.rejected,true); assert.match(refused.message,/No game was saved.*withdrawn/);
+    assert.equal(a.core.state.gamePending,null); assert.deepEqual((await a.core.readDoublesProgress()).data.games,[]);
+    const saved=await a.core.saveDoublesGame(args); assert.ok(saved.ok,saved.message);
+    assert.deepEqual((await a.core.readDoublesProgress()).data.games,[[read.data.points_to_win,7]]);
+  } finally {await db.db.close();}
+});
