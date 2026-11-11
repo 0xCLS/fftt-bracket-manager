@@ -62,6 +62,34 @@ function resolveDrive(explicit,home){
     'Multiple Google Drive accounts mounted; use --drive-root to choose one');
   return found[0];
 }
+/** Prompt silently on a local terminal, confirm, and return NUL-terminated bytes.
+ * No secret in CLI arguments, environment variables, files, or logs.
+ */
+export function promptArchivePassphrase({spawn=spawnSync}={}){
+  const script=String.raw`set -e
+exec 3</dev/tty
+IFS= read -r -s -p 'New FFTT archive passphrase: ' PASS <&3
+printf '\n' >/dev/tty
+IFS= read -r -s -p 'Confirm archive passphrase: ' CONFIRM <&3
+printf '\n' >/dev/tty
+if [[ -z "$PASS" || "$PASS" != "$CONFIRM" ]]; then
+  printf 'Archive passphrases must match. No archive created.\n' >&2
+  exit 1
+fi
+printf '%s\0' "$PASS"`;
+  const received=spawn('/bin/bash',['-c',script],
+    {stdio:['ignore','pipe','inherit'],timeout:180000,encoding:null});
+  if(received.status!==0||!Buffer.isBuffer(received.stdout)){
+    if(Buffer.isBuffer(received.stdout))received.stdout.fill(0);
+    throw new Error('A private interactive terminal is required for archive passphrase entry');
+  }
+  const key=received.stdout;
+  if(key.length<13||key.at(-1)!==0||key.subarray(0,-1).includes(0)){
+    key.fill(0);
+    throw new Error('Archive passphrase must contain at least 12 characters');
+  }
+  return key;
+}
 function ensureLocalPrivate(dir){
   const p=path.resolve(dir);
   die(!p.startsWith(ROOT+path.sep)&&p!==ROOT,'Never store private backups inside Git');
@@ -70,31 +98,37 @@ function ensureLocalPrivate(dir){
   return p;
 }
 export function copyEncryptedToDrive({backupFile,driveRoot,home=os.homedir(),
-  spawn=spawnSync,now=new Date(),logger=console.log}={}){
+  spawn=spawnSync,readPassphrase=promptArchivePassphrase,now=new Date(),logger=console.log}={}){
   die(process.platform==='darwin'||spawn!==spawnSync,'Encrypted cloud archive creation requires macOS');
   const source=verifiedSource(backupFile),drive=resolveDrive(driveRoot,home);
   const local=ensureLocalPrivate(path.join(home,'Documents','FFTT-private','encrypted-archives'));
   const name='fftt-private-'+now.toISOString().replace(/[:.]/g,'-')+'-'+crypto.randomBytes(4).toString('hex')+'.dmg';
   const output=path.join(local,name),stage=fs.mkdtempSync(path.join(os.tmpdir(),'fftt-encrypt-stage-'));
   fs.chmodSync(stage,0o700);
-  let archiveReady=false;
+  let archiveReady=false,secret=null;
   try{
     for(const f of [source.file,source.reportFile]){
       const to=path.join(stage,path.basename(f));
       fs.copyFileSync(f,to,fs.constants.COPYFILE_EXCL);fs.chmodSync(to,0o600);
     }
-    logger('Enter a NEW strong archive passphrase when macOS requests it. Save it in your password manager.');
+    logger('Enter and confirm a new private archive passphrase; save it in your password manager.');
+    secret=readPassphrase();
+    die(Buffer.isBuffer(secret)&&secret.length>=13&&secret.at(-1)===0
+      &&!secret.subarray(0,-1).includes(0),'No valid private archive passphrase');
+    // Both commands read the SAME key from stdin. No GUI prompts or argv secrets.
     const created=spawn('/usr/bin/hdiutil',['create','-srcfolder',stage,'-format','UDZO',
       '-encryption','AES-256','-stdinpass','-volname','FFTT Private Backup',output],
-      {stdio:'inherit',timeout:240000});
+      {input:secret,encoding:'utf8',timeout:240000});
     die(created.status===0&&existsFile(output),'AES-256 disk image creation failed');
     const encrypted=spawn('/usr/bin/hdiutil',['isencrypted',output],{encoding:'utf8',timeout:15000});
     die(encrypted.status===0&&/encrypted\s*:\s*(?:yes|true)\b/i.test(encrypted.stdout??''),
       'Disk image did not confirm encryption; Google Drive copy refused');
-    const checked=spawn('/usr/bin/hdiutil',['verify',output],{encoding:'utf8',timeout:90000});
+    const checked=spawn('/usr/bin/hdiutil',['verify','-stdinpass',output],
+      {input:secret,encoding:'utf8',timeout:90000});
     die(checked.status===0,'Encrypted disk image integrity check failed');
     archiveReady=true;
   }finally{
+    if(Buffer.isBuffer(secret))secret.fill(0);
     fs.rmSync(stage,{recursive:true,force:true});
     if(!archiveReady&&fs.existsSync(output))fs.rmSync(output,{force:true});
   }

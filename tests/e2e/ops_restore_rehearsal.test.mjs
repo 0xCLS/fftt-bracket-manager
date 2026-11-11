@@ -2,6 +2,8 @@
  * export in the exact format the hosted export query produces, restore into a fresh disposable database, compare counts and
  * fingerprints, rehearse the in-place upgrade and rollback; a tampered export must FAIL. Offline. */
 import test from 'node:test';
+// Verify encryption-helper guards in the existing full backup/restoration CI lane.
+import '../fftt_cloud_copy.test.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
