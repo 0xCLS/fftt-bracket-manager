@@ -437,8 +437,85 @@ export function createStaffUi({core, els, config, signOut}) {
           if (!check.ok || !check.eligible) { toast(check.message, 'bad'); render(true); return; }
           openWithdrawPreplay(field);
         }}})) : null,
+      champ && sn.event.lifecycle === 'active' && s.departures?.eventId === s.eventId
+        && s.departures.revision === sn.event.revision ? viewPlayerDepartures(sn) : null,
       champ ? h('section', {class: 'card', 'aria-label': 'Championship bracket'}, bracketView(normalized('championship'), 'championship')) : null);
   }
+  /** Administrative departure state NEVER changes saved games or accepted results. */
+  function viewPlayerDepartures(sn) {
+    const available = sn.players.filter(p => p.checkedIn
+      && sn.matches.some(m => m.p1 === p.id || m.p2 === p.id));
+    const recorded = s.departures?.players ?? [];
+    const byId = new Map(sn.players.map(p => [p.id, p.name]));
+    const active = new Set(recorded.filter(p => p.withdrawn).map(p => p.playerId));
+    const unresolved = sn.matches.filter(m => m.status === 'pending' &&
+      (active.has(m.p1) || active.has(m.p2))).length;
+    return h('section', {class:'card', 'aria-label':'Player departures during play'},
+      h('h3',{text:'Player departures during play'}),
+      unresolved ? h('p',{class:'notice warn',role:'status',text:unresolved+' pending bracket match(es) involve recorded withdrawn players. Staff must resolve them on the Match Desk. This status never awards a win automatically.'}) : null,
+      h('p',{class:'help',text:'Record early departure or an injury retirement even after games have been saved. The affected match and saved-game count are captured in the audit. No winner is awarded and previously saved games stay intact. Unplayed matches may be adjudicated separately through Match Desk → No-show…; a match with saved games requires staff review.'}),
+      recorded.length ? h('div',{class:'scroll-x'},h('table',{class:'responsive-table','aria-label':'Recorded player departures'},
+        h('thead',{},h('tr',{},['Player','Event status','Interrupted match','Action'].map(v=>h('th',{scope:'col',text:v})))),
+        h('tbody',{},recorded.map(p=>h('tr',{},
+          h('td',{'data-label':'Player',text:byId.get(p.playerId) ?? 'Former roster entry'}),
+          h('td',{'data-label':'Event status'},pill(p.withdrawn?'Withdrawn':'Returned',p.withdrawn?'warn':'good')),
+          h('td',{'data-label':'Interrupted match'},p.interruptedMatchId
+            ? p.savedGamesAtDeparture+' saved game(s) preserved. Match unresolved; staff must review.'
+            : 'No saved game interruption recorded'),
+          h('td',{'data-label':'Action'},p.withdrawn ? h('button',{type:'button',class:'small',
+            disabled:!core.canWrite(),text:'Mark returned…',
+            on:{click:()=>openPlayerDeparture(p.playerId,byId.get(p.playerId) ?? 'Player','returned')}}) : 'Recorded')))))
+      ) : h('p',{class:'help',text:'No player departures recorded.'}),
+      available.filter(p=>!active.has(p.id)).length ?
+        h('button',{type:'button',class:'small',disabled:!core.canWrite(),text:'Record event withdrawal…',
+          on:{click:()=>openPlayerDeparture(null,null,'withdrawn',available.filter(p=>!active.has(p.id)))}}) : null,
+      h('p',{class:'help',text:'A returning participant does not automatically regain a forfeited match or a lost bracket place. Earlier decisions stay recorded; the Bracket Manager must review any request to reverse a walkover separately.'}));
+  }
+  function openPlayerDeparture(playerId,name,state,available=[]) {
+    const withdrawing = state === 'withdrawn';
+    openDialog((dlg,close)=>{
+      const chosen = withdrawing ? h('select',{id:'departurePlayer'},
+        available.map(p=>h('option',{value:p.id,text:p.name}))) : null;
+      const reason = withdrawing ? h('select',{id:'departureReason'},
+        [['Left tournament early','Left tournament early'],['Unable to continue (injury)','Unable to continue (injury)'],
+         ['Other','Other (describe below)']].map(([v,t])=>h('option',{value:v,text:t}))) : null;
+      const details=h('input',{id:'departureDetails',type:'text',maxlength:250,
+        value:withdrawing?'':'Player returned to the venue',
+        placeholder:withdrawing?'Details (optional; required for Other)':'Reason for return (required)'});
+      const msg=h('p',{class:'status bad',role:'alert'});
+      dlg.append(h('div',{class:'dlg'},
+        h('h3',{text:withdrawing?'Record event withdrawal':'Record a player returning'}),
+        h('p',{class:'help',text:withdrawing
+          ? 'For a retirement after play begins, this saves the interrupted match and number of completed games without assigning a winner. The match remains pending for staff review. Do not replace saved games with a walkover.'
+          : name+' may return to fellowship, but this action never reverses a walkover or restores an eliminated bracket position.'}),
+        chosen ? h('label',{for:'departurePlayer',text:'Player leaving'}):null,chosen,
+        reason ? h('label',{for:'departureReason',text:'Reason'}):null,reason,
+        h('label',{for:'departureDetails',text:'Details / reason'}),details,msg,
+        h('div',{class:'dlg-actions'},
+          h('button',{type:'button',text:'Cancel',on:{click:close}}),
+          h('button',{type:'button',class:withdrawing?'danger':'primary',
+            text:withdrawing?'Record withdrawal':'Mark returned',
+            on:{click:async ev=>{
+              const note=details.value.trim();
+              if(withdrawing && reason.value==='Other' && note.length<3) {
+                msg.textContent='Describe the reason for this departure.'; return;
+              }
+              const explanation=withdrawing
+                ? (reason.value==='Other'?note:reason.value+(note?' — '+note:''))
+                : note;
+              if(explanation.length<3 || explanation.length>300) {
+                msg.textContent='Enter a reason between 3 and 300 characters.';return;
+              }
+              const id=withdrawing?chosen?.value:playerId;
+              if(!id) {msg.textContent='Choose a player.';return;}
+              ev.target.disabled=true;
+              const r=await core.actions.setPlayerDeparture(id,state,explanation);
+              if(r.ok){toast(withdrawing?'Withdrawal recorded; review pending matches.':'Return recorded; existing walkovers remain unchanged.');close();render(true);}
+              else {msg.textContent=r.message;ev.target.disabled=false;}
+            }}}))));
+    },{label:withdrawing?'Record event withdrawal':'Record player return',closeButton:true});
+  }
+
   function openWithdrawPreplay(field) {
     openDialog((dlg, close) => {
       const target = h('select', {id: 'withdrawTarget'}, field.map(p => h('option', {value: p.id, text: p.name})));
@@ -794,8 +871,19 @@ export function createStaffUi({core, els, config, signOut}) {
     }, {label: 'Record result', closeButton: true});
   }
   const roundLabel = r => {
-    const total = s.snapshot ? Math.max(...s.snapshot.matches.filter(m => m.bracket === r.bracket).map(m => m.round)) + 1 : r.round + 2;
-    return `${r.bracket === 'championship' ? 'Championship' : 'Consolation'} ${roundName(total, r.round, r.bracket)}`;
+    const kind = r.bracket === 'championship' ? 'Championship' : 'Consolation';
+    // Organizers/BMs have the bracket snapshot; Scorers get only two aggregate round
+    // counts from their role-gated event brief (never a privileged roster/snapshot).
+    const matches = s.snapshot?.matches.filter(m => m.bracket === r.bracket) ?? [];
+    const total = matches.length ? Math.max(...matches.map(m => m.round)) + 1 : s.brief?.rounds?.[r.bracket];
+    if (!Number.isInteger(total) || total <= r.round) {
+      // Older servers omit round counts. Never guess a semifinal from a round index;
+      // Championship isFinal is independently confirmed by the Match Desk server.
+      return r.bracket === 'championship' && r.isFinal ? 'Championship Final' : `${kind} Round ${r.round + 1}`;
+    }
+    // roundName's consolation final already includes "Consolation"; use its neutral
+    // form and supply the prefix exactly once.
+    return `${kind} ${roundName(total, r.round, 'championship')}`;
   };
   // ------------------------------------------------------------ Mixed-Skill Doubles on the Match Desk
   // Same game-by-game flow as a singles match. Scorekeepers, Bracket Managers and Organizers may record games and correct
