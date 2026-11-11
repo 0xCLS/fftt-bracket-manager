@@ -70,7 +70,7 @@ import {APPLIED_PRE_V6_LAYERS, hostedIcuFingerprint} from './restore_verify_help
 // Never silently normalize the source fingerprint against already-added V6 columns.
 const preV6SqlFiles = SQL_FILES.filter(f => !f.endsWith('/GAMEDAY_V6_GAME_PROGRESS_DO_NOT_APPLY.sql'));
 const db = currentPreflight
-  ? await createHostedEquivalentDb({corrections: true})
+  ? await createHostedEquivalentDb({corrections: true, installed: true})
   : await createLocalDb(v6Preflight ? {sqlFiles: preV6SqlFiles, upgraded: true} : {});
 try {
   stage = 'replay approved hosted pre-V6 schema layers';
