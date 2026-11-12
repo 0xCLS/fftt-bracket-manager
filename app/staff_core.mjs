@@ -135,6 +135,12 @@ export function createGamePendingLedger(storage) {
       storage.setItem(key(eventId), JSON.stringify({v: 1, ...rec}));
       return storage.getItem(key(eventId)) !== null;
     } catch { return false; } },
+    clearIfMatches(eventId, submissionId, matchId) { try {
+      const record = JSON.parse(storage.getItem(key(eventId)) ?? 'null');
+      if (!valid(record) || record.submissionId !== submissionId || record.matchId !== matchId) return false;
+      storage.removeItem(key(eventId));
+      return storage.getItem(key(eventId)) === null;
+    } catch { return false; } },
     clear(eventId) { try { storage.removeItem(key(eventId)); } catch { /* never hide unresolved server state */ } },
   });
 }
@@ -776,7 +782,11 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     gameSending = true; s.gamePending = rec; s.busy = true; emit();
     try {
       try { await session.authorized(ctx => scoreTransport.submitDoublesGame(ctx.token, intent)); }
-      catch (e) { if (isSessionEnded(e)) endSession(e.kind); /* even a missing reply is unknown */ }
+      catch (e) {
+        if (isSessionEnded(e)) endSession(e.kind);
+        const refused = definitiveGameRefusal(e, eventId, rec);
+        if (refused) return refused;
+      }
       return await checkPendingGame();
     } finally { gameSending = false; s.busy = false; emit(); }
   }
@@ -844,9 +854,23 @@ export function createStaffCore({session, api, scoreTransport, registrationClien
     gameSending = true; s.gamePending = rec; s.busy = true; emit();
     try {
       try { await session.authorized(ctx => scoreTransport.submitCompletedGame(ctx.token,intent)); }
-      catch (e) { if (isSessionEnded(e)) endSession(e.kind); /* even a missing reply is unknown */ }
+      catch (e) {
+        if (isSessionEnded(e)) endSession(e.kind);
+        const refused = definitiveGameRefusal(e, eventId, rec);
+        if (refused) return refused;
+      }
       return await checkPendingGame();
     } finally { gameSending = false; s.busy = false; emit(); }
+  }
+  function definitiveGameRefusal(error, eventId, rec) {
+    // Never clear a different event's or submission's incident, including after a session/event switch.
+    if (error?.definiteRefusal !== true || error.detail !== 'player-withdrawn') return null;
+    if (s.eventId !== eventId || s.gamePending?.submissionId !== rec.submissionId
+      || !gameLedger?.clearIfMatches(eventId, rec.submissionId, rec.matchId)) {
+      return {ok: false, unknown: true, message: 'The pending game could not be reconciled on this device. Ask the Organizer to check it.'};
+    }
+    s.gamePending = null; emit();
+    return {ok: false, rejected: true, message: 'No game was saved because a participating player is recorded as withdrawn. Ask the Organizer or Bracket Manager to review the match.'};
   }
   async function checkPendingGame() {
     const rec = s.gamePending || (s.eventId ? gameLedger?.read(s.eventId) : null);

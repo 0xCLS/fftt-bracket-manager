@@ -496,9 +496,14 @@ test('NOTIFICATIONS: compact, consistently positioned, non-obstructive, announce
       await org.page.locator('#evName').waitFor({timeout: T});
       await org.page.locator('button', {hasText: 'Save event setup'}).click();
       await toast(org.page, /Event saved/);
-      const box = await org.page.evaluate(() => { const t = document.querySelector('#toasts .toast'), r = t.getBoundingClientRect(), c = document.getElementById('toasts'); return {top: r.top, right: window.innerWidth - r.right, left: r.left, w: r.width, h: r.height, bottom: r.bottom, fixed: getComputedStyle(c).position, role: t.getAttribute('role'), live: c.getAttribute('aria-live'), close: !!t.querySelector('button[aria-label="Dismiss notification"]'), vw: window.innerWidth, vh: window.innerHeight}; });
+      await org.page.locator('#toasts .toast', {hasText: /Event saved/}).evaluate(async t => { await Promise.all(t.getAnimations().map(a => a.finished)); });
+      const box = await org.page.evaluate(() => { const t = document.querySelector('#toasts .toast'), r = t.getBoundingClientRect(), c = document.getElementById('toasts'); return {containerTop: c.getBoundingClientRect().top, barBottom: document.querySelector('.topbar').getBoundingClientRect().bottom, top: r.top, right: window.innerWidth - r.right, left: r.left, w: r.width, h: r.height, bottom: r.bottom, fixed: getComputedStyle(c).position, role: t.getAttribute('role'), live: c.getAttribute('aria-live'), close: !!t.querySelector('button[aria-label="Dismiss notification"]'), vw: window.innerWidth, vh: window.innerHeight}; });
       assert.equal(box.fixed, 'fixed'); assert.equal(box.live, 'polite'); assert.equal(box.role, 'status'); assert.ok(box.close);
-      assert.ok(box.top <= 120 && box.h <= 64, `compact (${box.h}px tall) and at the top (${box.top}px) @ ${vp}`);
+      assert.ok(box.h <= 64, `compact (${box.h}px tall) @ ${vp}`);
+      if (box.vw > 560) {
+        assert.ok(Math.abs(box.containerTop - (Math.round(box.barBottom) + 8)) <= 1, `toast container below top bar @ ${vp}`);
+        assert.ok(box.top >= box.barBottom - 1 && Math.abs(box.top - box.containerTop) <= 1, `settled toast below top bar @ ${vp}`);
+      } else assert.ok(box.top <= 120, `phone toast at the top (${box.top}px)`);
       const covers = await org.page.evaluate(() => { const t = document.querySelector('#toasts .toast').getBoundingClientRect(); return [...document.querySelectorAll('#statusline .pill')].filter(p => { const r = p.getBoundingClientRect(); return r.width && !(r.right < t.left || r.left > t.right || r.bottom < t.top || r.top > t.bottom); }).length; });
       if (vp !== 'phone') assert.equal(covers, 0, `the notification never covers the status pills @ ${vp}`);
       assert.ok(box.w <= Math.max(361, box.vw - 23) && box.right >= 8 && box.left >= 8, `bounded width, inside the viewport (${box.w}px, right ${box.right}, left ${box.left}) @ ${vp}`);

@@ -44,6 +44,16 @@ export function createGamedayScoreTransport({projectUrl = C3_HOST, publishableKe
         body: JSON.stringify(payload),
       });
     } catch { fail(what + ': network response unknown'); }
+    if (response?.status === 400 && what === 'game') {
+      // Only this exact PostgREST error is known to be raised by the withdrawal guard inside the
+      // game-save transaction. The exception rolls that transaction back. Other errors remain unknown.
+      let body = null; try { body = await response.json(); } catch { /* unknown */ }
+      if (sameKeys(body, ['code', 'message', 'details', 'hint']) && body.code === 'P0001'
+        && body.message === 'fftt_conflict' && body.details === 'player-withdrawn' && body.hint === null) {
+        throw Object.assign(new AuthorityGateError('game: player withdrawn'), {definiteRefusal: true, detail: 'player-withdrawn'});
+      }
+      fail(what + ': denied, expired or uncertain');
+    }
     if (response?.status === 400 && what === 'score') {
       // The database RAISED a validation error: the whole transaction rolled back, so nothing was recorded. That is the
       // one failure that is definite (every other non-200 stays "unknown" and is settled from the server's own receipt).

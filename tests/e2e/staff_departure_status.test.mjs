@@ -182,7 +182,7 @@ test('Active withdrawal blocks new singles scores and saved games without changi
       p_expected_match_version:row.match_version,p_submission_id:crypto.randomUUID(),
       p_winner_id:row.player_1_id,p_game_scores:'11-7, 11-8',p_table_number:1};
     await assert.rejects(db.rpc(w.ids.a,'fftt_submit_match_result_v2',params),
-      err=>err.code==='P0001' && /player-withdrawn/.test(err.detail??''));
+      err=>err.code==='P0001' && err.message==='fftt_conflict' && err.detail==='player-withdrawn');
     const progress=await db.rpc(w.ids.a,'fftt_game_progress_v1',{p_event_id:E,p_match_id:row.match_id});
     await assert.rejects(db.rpc(w.ids.a,'fftt_save_completed_game_v1',{
       p_event_id:E,p_match_id:row.match_id,p_generation:before.event.generation,
@@ -190,7 +190,7 @@ test('Active withdrawal blocks new singles scores and saved games without changi
       p_expected_progress_version:progress.revision,p_expected_best_of:progress.best_of,
       p_expected_points_to_win:progress.points_to_win,p_submission_id:crypto.randomUUID(),
       p_game_index:1,p_player_1_score:11,p_player_2_score:7,p_reason:null}),
-      err=>err.code==='P0001' && /player-withdrawn/.test(err.detail??''));
+      err=>err.code==='P0001' && err.message==='fftt_conflict' && err.detail==='player-withdrawn');
     const frozen=await current();
     assert.equal(frozen.matches.find(m=>m.id===row.match_id).status,'pending');
     assert.deepEqual((await db.rpc(w.ids.a,'fftt_game_progress_v1',{p_event_id:E,p_match_id:row.match_id})).games,[]);
@@ -238,4 +238,35 @@ test('Real Staff Chrome: Organizer may mark withdrawal and return, Scorer never 
     assert.equal(await scorer.page.getByText('Player departures during play').count(),0);
     assert.deepEqual(w.pageErrors,[]);
   }finally{await w.close();await db.db.close();}
+});
+
+test('fictional Scorer sees the actual withdrawal refusal, keeps saved game and can score another match', {timeout:240000},async()=>{
+  const {w,db,E,set}=await world();
+  try {
+    const rows=await db.rpc(w.ids.a,'fftt_matchdesk_v2',{p_event_id:E},{rows:true});
+    const [m,other]=rows.filter(x=>x.player_1_id&&x.player_2_id);
+    await db.rpc(w.ids.org,'fftt_assign_table_v3',{p_event_id:E,p_match_id:m.match_id,p_table_number:1});
+    await db.rpc(w.ids.org,'fftt_assign_table_v3',{p_event_id:E,p_match_id:other.match_id,p_table_number:2});
+    const scorer=await w.device('a',{viewport:{width:390,height:844},mobile:true}); await scorer.signIn('a');
+    const open=async name=>{await scorer.page.locator('.queue-card',{hasText:name}).getByRole('button',{name:'Record result'}).click(); return scorer.page.locator('dialog[open]');};
+    let dlg=await open(m.player_1_name);
+    await dlg.getByText('Game 1 · Unconfirmed').waitFor({timeout:T});
+    let input=dlg.locator('.games input');
+    await input.nth(0).fill('11'); await input.nth(1).fill('7'); await dlg.getByRole('button',{name:'Save Game 1'}).click();
+    await dlg.getByText('Game 1 · 11–7 · Saved').waitFor({timeout:T});
+    assert.equal((await set(w.ids.org,m.player_2_id,'withdrawn','Unable to continue (injury)')).status,'updated');
+    input=dlg.locator('.games input'); await input.nth(2).fill('11'); await input.nth(3).fill('8');
+    await dlg.getByRole('button',{name:'Save Game 2'}).click();
+    await dlg.getByText(/No game was saved because a participating player is recorded as withdrawn/).waitFor({timeout:T});
+    assert.equal(await scorer.page.getByText('No server decision yet',{exact:false}).count(),0);
+    assert.deepEqual((await db.rpc(w.ids.a,'fftt_game_progress_v1',{p_event_id:E,p_match_id:m.match_id})).games,[[11,7]]);
+    await dlg.getByRole('button',{name:'Close',exact:true}).last().click();
+    assert.equal(await scorer.page.getByText('Unconfirmed save',{exact:false}).count(),0);
+    dlg=await open(other.player_1_name);
+    await dlg.getByText('Game 1 · Unconfirmed').waitFor({timeout:T});
+    input=dlg.locator('.games input');
+    await input.nth(0).fill('11'); await input.nth(1).fill('6'); await dlg.getByRole('button',{name:'Save Game 1'}).click();
+    await dlg.getByText('Game 1 · 11–6 · Saved').waitFor({timeout:T});
+    assert.deepEqual((await db.rpc(w.ids.a,'fftt_game_progress_v1',{p_event_id:E,p_match_id:other.match_id})).games,[[11,6]]);
+  } finally {await w.close(); await db.db.close();}
 });
