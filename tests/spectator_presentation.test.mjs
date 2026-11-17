@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {formatEventDate} from '../app/date_format.mjs';
+import {spectatorGameWins} from '../app/spectator_game_dots.mjs';
 
 const read = p => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 const spectator = read('app/spectator.mjs');
@@ -31,4 +32,32 @@ test('spectator date is formatted as abbreviated month, day, year without timezo
   assert.equal(formatEventDate('2026-02-29'), '2026-02-29');
   assert.equal(formatEventDate('TBD'), 'TBD');
   assert.match(spectator, /formatEventDate\(ev\.date\)/);
+});
+
+test('spectator win dots reuse only confirmed best-of-three game progress', () => {
+  const base={bestOf:3, points:11, name1:'Player A',name2:'Player B',
+    status:'pending',phase:'playing',scores:'',winnerName:null,
+    progress:{games:[[11,7],[9,11]],won:[1,1]}};
+  assert.deepEqual(spectatorGameWins(base,'current')?.won,[1,1]);
+  assert.equal(spectatorGameWins(base,'current')?.source,'confirmed');
+  assert.equal(spectatorGameWins(base,'stale')?.source,'stale');
+  assert.equal(spectatorGameWins(base,'empty'),null);
+  assert.equal(spectatorGameWins({...base,progress:null},'current'),null);
+  assert.equal(spectatorGameWins({...base,bestOf:1},'current'),null);
+  assert.equal(spectatorGameWins({...base,progress:{games:[[11,7]],won:[2,0]}},'current'),null);
+});
+test('spectator dots validate official final scores and avoid walkovers', () => {
+  const m={bestOf:3,points:11,name1:'Player A',name2:'Player B',
+    status:'complete',phase:'done',winnerName:'Player A',scores:'11-6, 8-11, 11-9',progress:null};
+  assert.deepEqual(spectatorGameWins(m,'current')?.won,[2,1]);
+  assert.equal(spectatorGameWins(m,'current')?.source,'final');
+  assert.equal(spectatorGameWins({...m,scores:'W/O'},'current'),null);
+  assert.equal(spectatorGameWins({...m,winnerName:'Player B'},'current'),null);
+});
+test('spectator renders TV-style three dots only for supported matches', () => {
+  assert.match(spectator, /class: 'spectator-game-dots'/);
+  assert.match(spectator, /Array\.from\(\{length: 3\}/);
+  assert.match(spectator, /board\.playing\.map\(m => matchCard\(m, feedState\)\)/);
+  assert.match(spectator, /h\('td', \{\}, spectatorMatchup\(m, feedState\)\)/);
+  assert.match(css, /#main\.public-wrap \.spectator-win-dot\.earned/);
 });
