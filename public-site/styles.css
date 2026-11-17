@@ -305,7 +305,20 @@ h1,h2,h3{letter-spacing:-.026em;line-height:1.2}
 .prize-tier-media{width:208px;height:137px;background:#eaf0f5;border:0;overflow:hidden}
 .prize-tier-media img{display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:cover;object-position:center}
 /* Keep Mixed Doubles image framing natural while its container follows the Bonus card sizing. */
-.showcase-extra-doubles .showcase-extra-image img{transform:none;object-position:center}
+/* Match the STIGA bonus photograph's visible framing and scale. */
+.showcase-extra-doubles .showcase-extra-image img{transform:scale(1.35);object-position:center}
 @media(max-width:1050px){.prize-tier{grid-template-columns:minmax(0,1fr) 230px}.prize-tier-media{width:230px;height:151px}}
 @media(max-width:520px){.prize-tier{grid-template-columns:minmax(0,1fr) 138px}.prize-tier-media{width:138px;height:91px}}
 @media(max-width:370px){.prize-tier{grid-template-columns:minmax(0,1fr) 115px}.prize-tier-media{width:115px;height:76px}}
+
+/* On phones, keep both Mixed Doubles award boxes beside each other. */
+@media(max-width:520px){
+  .showcase-extra-doubles .doubles-award-pills{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;align-items:stretch;min-width:0}
+  .showcase-extra-doubles .doubles-award-pills span{width:auto;min-width:0;max-width:none;padding:6px 5px;font-size:10px;line-height:1.25;overflow-wrap:break-word}
+  .showcase-extra-doubles .doubles-award-pills strong{font-size:10px;line-height:1.25}
+}
+@media(max-width:370px){
+  .showcase-extra-doubles .doubles-award-pills{gap:4px}
+  .showcase-extra-doubles .doubles-award-pills span{padding:5px 3px;font-size:9px}
+  .showcase-extra-doubles .doubles-award-pills strong{font-size:9px}
+}
