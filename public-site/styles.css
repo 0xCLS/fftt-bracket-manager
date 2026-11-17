@@ -193,3 +193,66 @@ h1,h2,h3{letter-spacing:-.026em;line-height:1.2}
   html{scroll-behavior:auto}
   .nav-link,.button,.staff-link,.map-link{transition:none}
 }
+
+
+/* November 2026 event enhancement: additive, reusable content blocks. */
+.registration-spotlight{max-width:1180px;margin:28px auto 54px;padding:24px 32px;border:1px solid #dfe8ee;border-radius:15px;background:#eef5f7;display:grid;grid-template-columns:minmax(0,1fr) 232px;align-items:center;gap:24px}
+.registration-spotlight-copy h2{font-size:clamp(1.45rem,2.6vw,2rem);line-height:1.18;margin:8px 0 12px;color:#29313c}
+.registration-spotlight-copy p:last-child{margin:0;color:#526170;line-height:1.55;max-width:680px}
+.registration-count-panel{padding:23px 16px;border-radius:12px;background:#fbfcfd;display:flex;flex-direction:column;align-items:center;text-align:center;box-shadow:0 6px 20px rgba(30,45,60,.06)}
+.registration-count-number{color:#29313c;font-size:clamp(3.5rem,6vw,4.75rem);line-height:1;font-weight:850;letter-spacing:-.075em;font-variant-numeric:tabular-nums}
+.registration-count-panel strong{font-size:1rem;color:#29313c;margin-top:6px}
+.registration-count-caption{font-size:.79rem;color:#677685;margin-top:8px}
+.awards-section,.player-guide-teaser{max-width:1180px;margin:0 auto}
+.awards-section{padding:44px 0 46px}
+.section-heading{max-width:720px;margin:0 auto 30px;text-align:center}
+.section-heading h2{font-size:clamp(1.9rem,3.3vw,2.65rem);line-height:1.13;color:#29313c;margin:8px 0 12px}
+.section-heading>p:last-child{color:#526170;line-height:1.55}
+.award-group{margin:0 0 32px}
+.award-group-heading,.doubles-heading{display:flex;gap:12px;align-items:center;margin:0 0 16px;color:#29313c}
+.award-group-heading svg,.doubles-heading svg{width:29px;height:29px;flex:none;color:#758fa0}
+.award-group-heading h3,.doubles-heading h3{font-size:1.2rem;line-height:1.3;margin:0}
+.award-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.award-card{background:#fff;border:1px solid #e4e9ef;border-radius:13px;padding:20px;min-width:0}
+.award-art{width:72px;height:72px;display:grid;place-items:center;border-radius:14px;margin:0 0 18px;background:#f7e99b;color:#5a563b}
+.award-art svg{width:43px;height:43px}
+.award-ice .award-art{background:#d1eff5;color:#446b78}
+.award-rose .award-art{background:#f4dfe7;color:#8e5f70}
+.award-sage .award-art{background:#bbd98f;color:#4a6942}
+.award-lavender .award-art{background:#e9d7f3;color:#775f88}
+.award-card h3{font-size:1.12rem;color:#29313c;margin:0 0 3px}
+.award-subtitle{font-size:.85rem;color:#677685;margin:0 0 17px}
+.award-primary{font-size:1.08rem;font-weight:750;color:#29313c;line-height:1.35;margin:0 0 6px}
+.award-extras{color:#526170;line-height:1.5;font-size:.91rem;margin:0}
+.doubles-awards{background:#f3f6f9;border-radius:13px;padding:22px 24px;border:1px solid #e1e8ef}
+.doubles-heading{margin-bottom:13px}
+.doubles-heading p{margin:3px 0 0;color:#526170;font-size:.92rem}
+.doubles-medals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.doubles-medals p{background:#fff;border-radius:9px;padding:15px 17px;margin:0;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:#526170}
+.doubles-medals strong{color:#29313c}
+.award-note{margin:14px 0 0;color:#677685;font-size:.81rem;line-height:1.5}
+.player-guide-teaser{display:grid;grid-template-columns:72px minmax(0,1fr) auto;align-items:center;gap:22px;background:#edf4f8;border:1px solid #dfe8ef;border-radius:13px;padding:26px 28px;margin-bottom:50px}
+.guide-teaser-icon{height:72px;width:72px;display:grid;place-items:center;background:#d1eff5;border-radius:13px;color:#446b78}
+.guide-teaser-icon svg{width:38px;height:38px}
+.guide-teaser-copy h2{margin:7px 0;color:#29313c;font-size:1.4rem}
+.guide-teaser-copy p:last-child{margin:0;line-height:1.5;color:#526170}
+.guide-read-button{white-space:nowrap}
+.guide-page{max-width:950px;margin:34px auto 80px;background:#fff;border:1px solid #e4e9ef;border-radius:15px;padding:clamp(22px,4vw,58px);color:#29313c}
+.guide-back{display:inline-block;margin-bottom:24px;color:#425d6c;text-decoration:none;font-weight:650}
+.guide-page h1{font-size:clamp(1.9rem,3.5vw,2.75rem);line-height:1.16;margin:6px 0 8px}
+.guide-page h2{font-size:1.45rem;margin:35px 0 15px;line-height:1.25}
+.guide-page p,.guide-page li{line-height:1.68;color:#3c4a57}
+.guide-page ul,.guide-page ol{padding-left:23px}
+.guide-page li{margin:6px 0}
+.guide-page table{border-collapse:collapse;width:100%;font-size:.94rem}
+.guide-page th,.guide-page td{border:1px solid #dce4ea;padding:12px;text-align:left;vertical-align:top;line-height:1.5}
+.guide-page th{background:#eef5f7}
+.guide-page .guide-scroll{overflow-x:auto}
+.guide-page .guide-meta{color:#677685}
+.guide-page .guide-callout{background:#f4f7fa;border-left:4px solid #7eaaba;border-radius:6px;padding:13px 18px;margin:18px 0}
+.guide-page .guide-footer{padding-top:20px;margin-top:36px;border-top:1px solid #dde5ec}
+.guide-page .guide-print-note{font-size:.88rem;color:#677685}
+@media(max-width:1180px){.registration-spotlight,.awards-section,.player-guide-teaser,.guide-page{margin-left:24px;margin-right:24px}}
+@media(max-width:760px){.registration-spotlight{grid-template-columns:1fr;padding:22px;gap:18px}.registration-count-panel{padding:18px}.award-grid{grid-template-columns:1fr 1fr}.player-guide-teaser{grid-template-columns:60px 1fr}.guide-teaser-icon{height:60px;width:60px}.guide-read-button{grid-column:1/-1;text-align:center}.doubles-medals{grid-template-columns:1fr}}
+@media(max-width:520px){.registration-spotlight,.awards-section,.player-guide-teaser,.guide-page{margin-left:15px;margin-right:15px}.award-grid{grid-template-columns:1fr}.award-art{width:62px;height:62px}.guide-page{padding:20px}.guide-page th,.guide-page td{padding:8px}.player-guide-teaser{padding:20px;gap:13px}.award-group-heading h3{font-size:1.05rem}}
+@media print{.site-header,.footer,.guide-back,.guide-print-note{display:none!important}.guide-page{margin:0;padding:0;border:0}.guide-page h2{break-after:avoid}.guide-page table{break-inside:avoid}}
