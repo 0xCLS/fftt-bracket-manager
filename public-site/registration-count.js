@@ -14,7 +14,7 @@
         const res = await fetch(url, {cache: 'no-store'});
         if (!res.ok) continue;
         const obj = await res.json();
-        if (obj.eventDate !== '2026-11-22' || !Number.isSafeInteger(obj.count) || obj.count < 1 || obj.count > 2000 || !/^\\d{4}-\\d{2}-\\d{2}$/.test(obj.verifiedDate)) continue;
+        if (obj.eventDate !== '2026-11-22' || !Number.isSafeInteger(obj.count) || obj.count < 1 || obj.count > 2000 || !/^\d{4}-\d{2}-\d{2}$/.test(obj.verifiedDate)) continue;
         number.textContent = obj.count.toLocaleString('en-US');
         updated.textContent = 'Verified ' + formatDate(obj.verifiedDate);
         return;
