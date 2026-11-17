@@ -1268,3 +1268,21 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
 /* Fictional showcase identification; hidden for normal public events. */
 .showcase-notice:not([hidden]){display:inline-block;margin:.45rem 0;padding:.4rem .7rem;border:1px solid #94702b;border-radius:8px;background:#fff4d4;color:#533b0c;font-weight:800;font-size:.88rem}
 .showcase-notice span{font-weight:600;margin-left:.35rem}
+
+/* Spectator-only best-of-three game wins. Match the TV's earned/empty three-dot
+   vocabulary without copying TV's cinematic sizing or affecting Staff. */
+#main.public-wrap .spectator-matchup{display:flex;flex-direction:column;gap:7px;min-width:0}
+#main.public-wrap .spectator-player-row{display:flex;justify-content:space-between;align-items:center;gap:10px;min-width:0}
+#main.public-wrap .spectator-player-name{font-size:1rem;font-weight:750;line-height:1.35;color:#293d50;overflow-wrap:anywhere;min-width:0}
+#main.public-wrap .spectator-game-dots{display:inline-flex;flex-shrink:0;align-items:center;gap:5px;min-height:14px}
+#main.public-wrap .spectator-win-dot{width:10px;height:10px;border:1.5px solid #7e929f;border-radius:50%;background:transparent;display:block}
+#main.public-wrap .spectator-win-dot.earned{border-color:#267d72;background:#46bba8;box-shadow:0 0 0 1px rgba(46,156,132,.12)}
+#main.public-wrap .board-match .spectator-matchup{margin:9px 0 8px}
+#main.public-wrap .board-match .spectator-player-row+.spectator-player-row{border-top:1px solid #e8edf1;padding-top:7px}
+#main.public-wrap .scores-cell+.spectator-game-dots{margin-top:4px}
+@media(max-width:600px){
+  #main.public-wrap .spectator-player-row{gap:8px}
+  #main.public-wrap .spectator-player-name{font-size:.92rem}
+  #main.public-wrap .spectator-game-dots{gap:4px}
+  #main.public-wrap .spectator-win-dot{width:9px;height:9px}
+}
