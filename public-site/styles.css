@@ -296,3 +296,24 @@ h1,h2,h3{letter-spacing:-.026em;line-height:1.2}
 
 /* The directions section now closes the page after the invitation. */
 .closing-section + .venue-section{margin-top:22px;border-top:1px solid #dce2e8}
+
+
+/* Nov 17 prize-image corrections: suppress original package border; retain denominations.
+   Transform only the visible display, never the six archived source JPEGs. */
+.prize-tier-media img[src*="visa-gift-card"]{transform:scale(1.085);transform-origin:center 22%;object-position:center top}
+
+/* Photo-derived award medallions: frame only the appropriate medal from the supplied
+   original; the display contains no promotional heading or unintended medal colors. */
+.prize-tier-media-bronze{display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 4px;background:#f3f7fa}
+.medal-crop{display:block;flex:none;width:45%;aspect-ratio:4/5;border-radius:9px;background-image:url('./assets/prizes/gold-silver-bronze-medals.jpg');background-repeat:no-repeat;background-size:400% auto;background-color:#e8eef3;box-shadow:0 1px 3px rgba(42,58,76,.10)}
+.medal-crop-bronze{background-position:69% 81%}
+.medal-crop-gold{background-position:48% 49%}
+.medal-crop-silver{background-position:32% 69%}
+.doubles-medal-gallery{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:7px;background:#edf3f7}
+.doubles-medal-row{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:58px}
+.doubles-medal-gallery .medal-crop{width:48px;max-width:44%;height:56px;aspect-ratio:auto;border-radius:8px}
+.showcase-extra .doubles-no-bronze{font-size:11px;color:#5f7080;margin-top:9px}
+@media(max-width:1050px){.doubles-medal-gallery .medal-crop{width:43px;height:53px}}
+@media(max-width:760px){.doubles-medal-gallery .medal-crop{width:46px;height:56px}}
+@media(max-width:520px){.prize-tier-media-bronze{padding:5px 2px;gap:4px}.doubles-medal-gallery .medal-crop{width:40px;height:49px}.doubles-medal-row{min-height:51px;gap:4px}}
+@media(max-width:370px){.prize-tier-media-bronze{gap:2px}.doubles-medal-gallery .medal-crop{width:37px;height:45px}.doubles-medal-row{min-height:46px}}
