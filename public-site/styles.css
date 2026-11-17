@@ -298,22 +298,16 @@ h1,h2,h3{letter-spacing:-.026em;line-height:1.2}
 .closing-section + .venue-section{margin-top:22px;border-top:1px solid #dce2e8}
 
 
-/* Nov 17 prize-image corrections: suppress original package border; retain denominations.
-   Transform only the visible display, never the six archived source JPEGs. */
-.prize-tier-media img[src*="visa-gift-card"]{transform:scale(1.085);transform-origin:center 22%;object-position:center top}
-
-/* Photo-derived award medallions: frame only the appropriate medal from the supplied
-   original; the display contains no promotional heading or unintended medal colors. */
-.prize-tier-media-bronze{display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 4px;background:#f3f7fa}
-.medal-crop{display:block;flex:none;width:45%;aspect-ratio:4/5;border-radius:9px;background-image:url('./assets/prizes/gold-silver-bronze-medals.jpg');background-repeat:no-repeat;background-size:400% auto;background-color:#e8eef3;box-shadow:0 1px 3px rgba(42,58,76,.10)}
-.medal-crop-bronze{background-position:69% 81%}
-.medal-crop-gold{background-position:48% 49%}
-.medal-crop-silver{background-position:32% 69%}
-.doubles-medal-gallery{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:7px;background:#edf3f7}
-.doubles-medal-row{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:58px}
-.doubles-medal-gallery .medal-crop{width:48px;max-width:44%;height:56px;aspect-ratio:auto;border-radius:8px}
-.showcase-extra .doubles-no-bronze{font-size:11px;color:#5f7080;margin-top:9px}
-@media(max-width:1050px){.doubles-medal-gallery .medal-crop{width:43px;height:53px}}
-@media(max-width:760px){.doubles-medal-gallery .medal-crop{width:46px;height:56px}}
-@media(max-width:520px){.prize-tier-media-bronze{padding:5px 2px;gap:4px}.doubles-medal-gallery .medal-crop{width:40px;height:49px}.doubles-medal-row{min-height:51px;gap:4px}}
-@media(max-width:370px){.prize-tier-media-bronze{gap:2px}.doubles-medal-gallery .medal-crop{width:37px;height:45px}.doubles-medal-row{min-height:46px}}
+/* Nov 17 promotional prize renders: wide, text-free medal compositions and
+   full-width Visa prize images replace CSS snippets of the original photos.
+   The six historical originals remain unchanged in the repository. */
+.prize-tier{grid-template-columns:minmax(0,1fr) 208px}
+.prize-tier-media{width:208px;height:137px;background:#eaf0f5;border:0;overflow:hidden}
+.prize-tier-media img{display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:cover;object-position:center}
+.showcase-extra-doubles{grid-template-columns:170px minmax(0,1fr)}
+.showcase-extra-doubles .showcase-extra-image{width:170px;height:128px;overflow:hidden;border-radius:10px}
+.showcase-extra-doubles .showcase-extra-image img{width:100%;height:100%;max-width:100%;max-height:100%;object-fit:cover;object-position:center;transform:none}
+@media(max-width:1050px){.prize-tier{grid-template-columns:minmax(0,1fr) 230px}.prize-tier-media{width:230px;height:151px}.showcase-extra-doubles{grid-template-columns:120px minmax(0,1fr)}.showcase-extra-doubles .showcase-extra-image{width:120px;height:105px}}
+@media(max-width:760px){.showcase-extra-doubles{grid-template-columns:170px minmax(0,1fr)}.showcase-extra-doubles .showcase-extra-image{width:170px;height:128px}}
+@media(max-width:520px){.prize-tier{grid-template-columns:minmax(0,1fr) 138px}.prize-tier-media{width:138px;height:91px}.showcase-extra-doubles{grid-template-columns:115px minmax(0,1fr)}.showcase-extra-doubles .showcase-extra-image{width:115px;height:88px}}
+@media(max-width:370px){.prize-tier{grid-template-columns:minmax(0,1fr) 115px}.prize-tier-media{width:115px;height:76px}.showcase-extra-doubles{grid-template-columns:101px minmax(0,1fr)}.showcase-extra-doubles .showcase-extra-image{width:101px;height:76px}}
