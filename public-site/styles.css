@@ -307,8 +307,9 @@ h1,h2,h3{letter-spacing:-.026em;line-height:1.2}
 /* Keep Mixed Doubles image framing natural while its container follows the Bonus card sizing. */
 /* Match the STIGA bonus photograph's visible framing and scale. */
 /* Keep both award medals fully visible, regardless of their frame aspect ratio. */
-/* Square artwork keeps both complete medals visible in the existing Bonus-sized frame. */
-.showcase-extra-doubles .showcase-extra-image img{transform:none;object-fit:cover;object-position:center}
+/* Preserve the complete square medal artwork inside the unchanged Bonus-sized frame.
+   The navy image background fills the small aspect-ratio insets without white bands. */
+.showcase-extra-doubles .showcase-extra-image img{transform:none;object-fit:contain;object-position:center;background:#061a36}
 @media(max-width:1050px){.prize-tier{grid-template-columns:minmax(0,1fr) 230px}.prize-tier-media{width:230px;height:151px}}
 @media(max-width:520px){.prize-tier{grid-template-columns:minmax(0,1fr) 138px}.prize-tier-media{width:138px;height:91px}}
 @media(max-width:370px){.prize-tier{grid-template-columns:minmax(0,1fr) 115px}.prize-tier-media{width:115px;height:76px}}

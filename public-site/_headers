@@ -94,3 +94,6 @@
 
 /styles-eb0a7eba.css
   Cache-Control: public, max-age=31536000, immutable
+
+/styles-5ee37640.css
+  Cache-Control: public, max-age=31536000, immutable
