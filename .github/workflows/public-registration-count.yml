@@ -1,0 +1,70 @@
+name: Refresh FFTT public player count
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tools/ops/update_public_registration_count.mjs'
+      - 'tests/public_registration_count.test.mjs'
+      - '.github/workflows/public-registration-count.yml'
+permissions:
+  contents: read
+concurrency:
+  group: fftt-public-registration-count
+  cancel-in-progress: false
+jobs:
+  tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/public_registration_count.test.mjs
+  update:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check read-only Google source configuration
+        id: configured
+        env:
+          GOOGLE_KEY: ${{ secrets.FFTT_COUNT_SERVICE_ACCOUNT_JSON }}
+          SHEET_ID: ${{ secrets.FFTT_COUNT_SPREADSHEET_ID }}
+        run: |
+          if [ -n "$GOOGLE_KEY" ] && [ -n "$SHEET_ID" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Hourly count is disabled until FFTT_COUNT_* repository secrets are configured."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Fetch private sheet and refresh count-only JSON
+        if: steps.configured.outputs.ready == 'true'
+        env:
+          FFTT_COUNT_SERVICE_ACCOUNT_JSON: ${{ secrets.FFTT_COUNT_SERVICE_ACCOUNT_JSON }}
+          FFTT_COUNT_SPREADSHEET_ID: ${{ secrets.FFTT_COUNT_SPREADSHEET_ID }}
+        run: node tools/ops/update_public_registration_count.mjs
+      - name: Publish changed aggregate snapshot
+        if: steps.configured.outputs.ready == 'true'
+        run: |
+          if git diff --quiet -- public-site/data/registration-count.json; then
+            echo "No change in count or verified day"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- public-site/data/registration-count.json
+          git commit -m "chore(public): refresh verified registration total [skip ci]"
+          git push origin HEAD:main
