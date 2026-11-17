@@ -29,3 +29,9 @@ The user requested promotional-style **regenerated visual assets** to improve fr
 - `medals-two-bronze-promo.jpg`: two bronze medals only, used for each singles bracket's two non-advancing semifinalists.
 
 The originals listed above are retained byte-for-byte for provenance. Regenerated imagery replaces their display in the corresponding cards only, not the actual award assignments. STIGA remains unassigned.
+
+## November 17 square medal artwork — final fitting correction
+
+- `medals-gold-silver-square-800.webp` is a square 800 × 800 optimized promotional render created to fit the **unchanged Bonus Prize image container** at desktop, tablet, and phone sizes. It depicts **one complete silver medal and one complete gold medal with full red/white/blue ribbons**, and contains no bronze medals or promotional heading. Both medals and ribbons are kept comfortably inside a safe area; actual browser-equivalent `object-fit:cover` crops were reviewed at 157×145, 118×136, 112×124, and 94×110 pixels before updating the public source.
+- This source image replaces only the Mixed-Skill Doubles card's previous 510×333 landscape artwork. The previous landscape render and the six original uploaded prize photographs are retained for provenance. No STIGA Bonus Prize image, HTML, styling, container dimensions, or copy was changed. The Mixed Doubles award pills remain side by side on mobile.
+- As elsewhere in this folder, the graphic is a **promotional rendering**. It visually represents the gold/silver medal awards; each of the two Mixed Doubles teams is still awarded two medals of the correct color, as described outside the image.
