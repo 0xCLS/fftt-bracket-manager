@@ -304,10 +304,8 @@ h1,h2,h3{letter-spacing:-.026em;line-height:1.2}
 .prize-tier{grid-template-columns:minmax(0,1fr) 208px}
 .prize-tier-media{width:208px;height:137px;background:#eaf0f5;border:0;overflow:hidden}
 .prize-tier-media img{display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:cover;object-position:center}
-.showcase-extra-doubles{grid-template-columns:170px minmax(0,1fr)}
-.showcase-extra-doubles .showcase-extra-image{width:170px;height:128px;overflow:hidden;border-radius:10px}
-.showcase-extra-doubles .showcase-extra-image img{width:100%;height:100%;max-width:100%;max-height:100%;object-fit:cover;object-position:center;transform:none}
-@media(max-width:1050px){.prize-tier{grid-template-columns:minmax(0,1fr) 230px}.prize-tier-media{width:230px;height:151px}.showcase-extra-doubles{grid-template-columns:120px minmax(0,1fr)}.showcase-extra-doubles .showcase-extra-image{width:120px;height:105px}}
-@media(max-width:760px){.showcase-extra-doubles{grid-template-columns:170px minmax(0,1fr)}.showcase-extra-doubles .showcase-extra-image{width:170px;height:128px}}
-@media(max-width:520px){.prize-tier{grid-template-columns:minmax(0,1fr) 138px}.prize-tier-media{width:138px;height:91px}.showcase-extra-doubles{grid-template-columns:115px minmax(0,1fr)}.showcase-extra-doubles .showcase-extra-image{width:115px;height:88px}}
-@media(max-width:370px){.prize-tier{grid-template-columns:minmax(0,1fr) 115px}.prize-tier-media{width:115px;height:76px}.showcase-extra-doubles{grid-template-columns:101px minmax(0,1fr)}.showcase-extra-doubles .showcase-extra-image{width:101px;height:76px}}
+/* Keep Mixed Doubles image framing natural while its container follows the Bonus card sizing. */
+.showcase-extra-doubles .showcase-extra-image img{transform:none;object-position:center}
+@media(max-width:1050px){.prize-tier{grid-template-columns:minmax(0,1fr) 230px}.prize-tier-media{width:230px;height:151px}}
+@media(max-width:520px){.prize-tier{grid-template-columns:minmax(0,1fr) 138px}.prize-tier-media{width:138px;height:91px}}
+@media(max-width:370px){.prize-tier{grid-template-columns:minmax(0,1fr) 115px}.prize-tier-media{width:115px;height:76px}}
