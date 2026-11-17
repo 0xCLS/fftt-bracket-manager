@@ -75,7 +75,7 @@ h1,h2,h3{letter-spacing:-.026em;line-height:1.2}
 .fellowship-item h3{font-size:18px;font-weight:800;margin-bottom:9px}
 .fellowship-item p{font-size:13px;color:#63707a;line-height:1.65;max-width:31ch;margin:0 auto}
 /* Open editorial venue row: wider location copy + direction links, no embedded map or cards. */
-.venue-section{margin:40px 18px 0;border-top:1px solid #dce2e8}
+.venue-section{margin:40px 18px 0}
 .venue-layout{display:flex;flex-direction:column;align-items:stretch;gap:0;text-align:center}
 .venue-details{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);align-items:center;gap:clamp(22px,2.6vw,36px);width:min(100%,880px);margin:0 auto;padding:42px 20px 43px;text-align:left}
 .venue-copy{min-width:0}
@@ -295,7 +295,7 @@ h1,h2,h3{letter-spacing:-.026em;line-height:1.2}
 .guide-page .guide-footer .button{margin-top:22px}
 
 /* The directions section now closes the page after the invitation. */
-.closing-section + .venue-section{margin-top:22px;border-top:1px solid #dce2e8}
+.closing-section + .venue-section{margin-top:22px}
 
 
 /* Nov 17 promotional prize renders: wide, text-free medal compositions and
@@ -324,3 +324,7 @@ h1,h2,h3{letter-spacing:-.026em;line-height:1.2}
   .showcase-extra-doubles .doubles-award-pills span{padding:5px 3px;font-size:9px}
   .showcase-extra-doubles .doubles-award-pills strong{font-size:9px}
 }
+
+/* Nov 17: let the prize gallery breathe before the Player Guide, without changing cards. */
+.awards-showcase + .player-guide-teaser{margin-top:34px}
+@media(max-width:520px){.awards-showcase + .player-guide-teaser{margin-top:26px}}
