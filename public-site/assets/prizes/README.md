@@ -18,3 +18,14 @@ The STIGA four-player set is **not** part of an existing bracket award assignmen
 These images are hosted locally under the static public site. Do not include any original user uploads from other purposes, people/contact data, or private Google Sheets credentials.
 
 Public-site deployment remains an **isolated** `public-site/`-only Cloudflare Pages bundle; this source commit is not proof of production deployment.
+
+## Approved November 17 promotional website renders
+
+The user requested promotional-style **regenerated visual assets** to improve framing and remove non-prize medals/text. Four new images were created from a generated artwork and cropped into individual files. They are illustrations/marketing renders, **not photographs of physical gift cards or the medals that will necessarily be handed out**. Their labels in the public site are grounded in approved award descriptions; no card numbers, redemption credentials, QR codes, or activation details are displayed.
+
+- `visa-50-promo.jpg`: close-cropped silver $50 Visa gift card artwork.
+- `visa-25-promo.jpg`: close-cropped orange $25 Visa gift card artwork.
+- `medals-gold-silver-promo.jpg`: one gold and one silver medal only, overlapping ribbons, no bronze or promotional heading. Used for the Mixed-Skill Doubles **single finale** card; team awards remain two gold and two silver.
+- `medals-two-bronze-promo.jpg`: two bronze medals only, used for each singles bracket's two non-advancing semifinalists.
+
+The originals listed above are retained byte-for-byte for provenance. Regenerated imagery replaces their display in the corresponding cards only, not the actual award assignments. STIGA remains unassigned.
