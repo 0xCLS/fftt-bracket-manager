@@ -4,6 +4,7 @@ import {startPublicFeed, pickEvent, isShowcase} from './public_core.mjs';
 import {deriveBoard} from '../contracts/gameday_public.mjs';
 import {bracketView} from './bracket_view.mjs';
 import {scoreTiles} from './game_tiles.mjs';
+import {spectatorGameWins} from './spectator_game_dots.mjs';
 import {computeStandings} from '../contracts/gameday_engine.mjs';
 import {formatEventDate} from './date_format.mjs';
 
@@ -32,18 +33,34 @@ function standings(ev) {
   return computeStandings({matches, finale: f ? {team1: f.team1, team2: f.team2, winnerTeam: f.winnerTeam} : null});
 }
 const formatLine = m => (m?.bestOf && m?.points ? `Best of ${m.bestOf} · to ${m.points}` : '');
-const matchCard = m => h('div', {class: 'board-match'},
+const gameWinDots = (m, player, feedState) => {
+  const score = spectatorGameWins(m, feedState);
+  if (!score) return null;
+  const wins = score.won[player];
+  const name = player === 0 ? m.name1 : m.name2;
+  const detail = score.source === 'stale' ? 'last confirmed, may be out of date' :
+    score.source === 'final' ? 'verified final' : 'confirmed completed';
+  return h('span', {class: 'spectator-game-dots', role: 'img',
+    'aria-label': `${name}: ${wins} ${detail} game win${wins === 1 ? '' : 's'} (2 required to win the match)`},
+    Array.from({length: 3}, (_, i) => h('span',
+      {class: 'spectator-win-dot' + (i < wins ? ' earned' : ''), 'aria-hidden': 'true'})));
+};
+const spectatorMatchup = (m, feedState) => h('div', {class:'spectator-matchup'},
+  ...[0, 1].map(player => h('div', {class:'spectator-player-row'},
+    h('span', {class:'spectator-player-name', text: player === 0 ? m.name1 : m.name2}),
+    gameWinDots(m, player, feedState))));
+const matchCard = (m, feedState) => h('div', {class: 'board-match'},
   m.table ? h('div', {class: 'tbl', text: `Table ${m.table}`}) : null,
-  h('div', {class: 'names', text: `${m.name1} vs ${m.name2}`}),
+  spectatorMatchup(m, feedState),
   h('div', {class: 'muted', text: `${m.bracket === 'championship' ? 'Championship' : 'Consolation'} · Round ${m.round + 1}`}),
   formatLine(m) ? h('div', {class: 'fmt-line', text: formatLine(m)}) : null);
 
-function viewNow(ev, board) {
+function viewNow(ev, board, feedState) {
   return h('div', {},
     h('h2', {text: isShowcase(ev) ? 'Sample matches' : 'Now playing'}),
-    board.playing.length ? h('div', {class: 'now-grid'}, board.playing.map(matchCard)) : h('div', {class: 'empty-state', text: 'No matches are on a table right now.'}),
+    board.playing.length ? h('div', {class: 'now-grid'}, board.playing.map(m => matchCard(m, feedState))) : h('div', {class: 'empty-state', text: 'No matches are on a table right now.'}),
     h('h2', {text: 'Up next'}),
-    board.upNext.length ? h('div', {class: 'now-grid'}, board.upNext.slice(0, 8).map(matchCard)) : h('div', {class: 'empty-state', text: 'Nothing queued yet.'}),
+    board.upNext.length ? h('div', {class: 'now-grid'}, board.upNext.slice(0, 8).map(m => matchCard(m, feedState))) : h('div', {class: 'empty-state', text: 'Nothing queued yet.'}),
     ev.finale ? finaleCard(ev.finale) : null);
 }
 function finaleCard(f) {
@@ -62,7 +79,7 @@ function viewBracket(ev) {
       h('p', {class: 'help bracket-hint', text: 'Swipe sideways within the bracket to see later rounds.'}),
       bracketView(ev.consolation, 'consolation')) : null);
 }
-function viewResults(ev, board) {
+function viewResults(ev, board, feedState) {
   const st = standings(ev);
   return h('div', {},
     st.champion ? h('div', {class: 'champion-banner'}, h('h2', {text: `Champion: ${st.champion}`}), h('p', {text: `Runner-up: ${st.runnerUp}`}),
@@ -70,7 +87,7 @@ function viewResults(ev, board) {
       st.doubles ? h('p', {text: `Doubles winners: ${st.doubles.winners.join(' + ')}`}) : null) : null,
     h('div', {class: 'card'}, h('h2', {text: 'Completed matches'}),
       board.recent.length ? h('table', {}, h('tbody', {}, board.recent.map(m => h('tr', {}, h('td', {text: m.bracket === 'championship' ? 'Championship Bracket' : 'Consolation Bracket'}),
-        h('td', {text: `${m.name1} vs ${m.name2}`}), h('td', {text: `${m.winnerName} won`}), h('td', {class: 'scores-cell'}, scoreTiles(m.scores, {left: m.name1, right: m.name2, caption: false})))))) : h('div', {class: 'empty-state', text: 'No results yet.'})));
+        h('td', {}, spectatorMatchup(m, feedState)), h('td', {text: `${m.winnerName} won`}), h('td', {class: 'scores-cell'}, scoreTiles(m.scores, {left: m.name1, right: m.name2, caption: false})))))) : h('div', {class: 'empty-state', text: 'No results yet.'})));
 }
 
 function render(view) {
@@ -121,7 +138,7 @@ function render(view) {
   $('evMeta').textContent = `${formatEventDate(ev.date)} · ${isShowcase(ev) ? 'Fictional demonstration' : ev.status === 'complete' ? 'Final results' : 'In progress'}`;
   const board = deriveBoard(ev);
   fill(main, view.state === 'stale' ? h('div', {class: 'notice warn', text: 'The connection dropped. This is the last information received — it may be out of date.'}) : null,
-    tab === 'now' ? viewNow(ev, board) : tab === 'bracket' ? viewBracket(ev) : viewResults(ev, board));
+    tab === 'now' ? viewNow(ev, board, view.state) : tab === 'bracket' ? viewBracket(ev) : viewResults(ev, board, view.state));
   if (positions.length) [...main.querySelectorAll('.bracket')].forEach((node, i) => {
     if (positions[i] !== undefined) node.scrollLeft = positions[i];
   });
