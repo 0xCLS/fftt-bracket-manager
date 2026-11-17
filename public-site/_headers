@@ -3,7 +3,7 @@
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
   Permissions-Policy: camera=(), microphone=(), geolocation=()
-  Content-Security-Policy: default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'none'; style-src 'self'; script-src 'self'; connect-src https://raw.githubusercontent.com; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests
 
 # HTML and the compatibility stylesheet must revalidate so a changed layout
 # cannot be paired indefinitely with previous CSS in a browser cache.
@@ -40,3 +40,15 @@
 
 /styles-5538f192.css
   Cache-Control: public, max-age=31536000, immutable
+
+/styles-38cda2a1.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/registration-count.js
+  Cache-Control: no-cache, max-age=0, must-revalidate
+
+/data/registration-count.json
+  Cache-Control: no-cache, max-age=0, must-revalidate
+
+/guide.html
+  Cache-Control: no-cache, max-age=0, must-revalidate
