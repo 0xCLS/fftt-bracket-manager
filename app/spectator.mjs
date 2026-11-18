@@ -91,7 +91,7 @@ const matchCard = (m, feedState) => {
     spectatorMatchup(m, feedState),
     h('div', {class: 'spectator-now-meta'},
       h('span', {text: `${m.bracket === 'championship' ? 'Championship' : 'Consolation'} · Round ${m.round + 1}`}),
-      formatLine(m) ? h('span', {class: 'spectator-now-format', text: formatLine(m)}) : null));
+      formatLine(m) ? h('span', {class: 'fmt-line spectator-now-format', text: formatLine(m)}) : null));
 };
 
 function viewNow(ev, board, feedState) {
