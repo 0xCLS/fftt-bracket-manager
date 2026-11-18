@@ -13,7 +13,8 @@ test('spectator uses approved public copy and complete bracket names', () => {
   assert.match(html, /Forging Fellowship Table Tennis · Building community through fellowship/);
   assert.doesNotMatch(html, /Public view · names and results only · FFTT Bracket Manager/);
   assert.match(spectator, /Consolation bracket champion:/);
-  assert.match(spectator, /'Championship Bracket' : 'Consolation Bracket'/);
+  assert.match(spectator, /resultsGroup\('Championship Bracket', championship, feedState, completedFinal/);
+  assert.match(spectator, /resultsGroup\('Consolation Bracket', consolation, feedState, completedFinal/);
 });
 
 test('spectator score-pair separators reuse Staff Recent results shade and stay spectator-scoped', () => {
@@ -58,6 +59,75 @@ test('spectator renders TV-style three dots only for supported matches', () => {
   assert.match(spectator, /class: 'spectator-game-dots'/);
   assert.match(spectator, /Array\.from\(\{length: 3\}/);
   assert.match(spectator, /board\.playing\.map\(m => matchCard\(m, feedState\)\)/);
-  assert.match(spectator, /h\('td', \{\}, spectatorMatchup\(m, feedState\)\)/);
+  assert.match(spectator, /spectatorMatchup\(m, feedState, true, m\.id === finalId/);
   assert.match(css, /#main\.public-wrap \.spectator-win-dot\.earned/);
+});
+
+test('spectator Results groups complete matches into bracket sections without duplicate winner column', () => {
+  assert.match(spectator, /board\.recent\.filter\(m => m\.bracket === 'championship'\)/);
+  assert.match(spectator, /board\.recent\.filter\(m => m\.bracket === 'consolation'\)/);
+  assert.match(spectator, /h\('ol', \{class: 'spectator-results-list'\}/);
+  assert.match(spectator, /text: m\.id === finalId \? 'Final' : `Round \$\{m\.round \+ 1\}`/);
+  assert.match(spectator, /scoreTiles\(m\.scores, \{left: m\.name1, right: m\.name2, caption: false\}\)/);
+  // Retain V4 comprehensive regression's stable score-tile hook inside the new Results card.
+  assert.match(spectator, /class: 'spectator-result-scorebox scores-cell'/);
+  assert.match(spectator, /'aria-label': 'Match winner'/);
+  assert.doesNotMatch(spectator, /\$\{m\.winnerName\} won/);
+  assert.doesNotMatch(spectator, /board\.recent\.map\(m => h\('tr'/);
+});
+
+test('spectator Results styling remains scoped and responsive', () => {
+  assert.match(css, /#main\.public-wrap \.spectator-results-group\{/);
+  assert.match(css, /#main\.public-wrap \.spectator-result\{/);
+  assert.match(css, /#main\.public-wrap \.spectator-result-scorebox \.score-games\{/);
+  assert.match(css, /@media\(max-width:700px\)\{\s*#main\.public-wrap \.spectator-results-heading/);
+});
+
+test('spectator Now and next visually distinguishes actual playing from queued matches', () => {
+  assert.match(spectator, /const playing = m\.phase === 'playing'/);
+  assert.match(spectator, /class: 'spectator-now-live', text: 'Playing'/);
+  assert.match(spectator, /class: 'fmt-line spectator-now-format'/);
+  assert.match(spectator, /class: 'now-grid spectator-now-playing-grid'/);
+  assert.match(spectator, /class: 'now-grid spectator-now-queue-grid'/);
+  assert.match(spectator, /playing \? h\('div', \{class: 'spectator-now-status'/);
+  assert.match(css, /#main\.public-wrap \.spectator-now-card\.is-playing\{/);
+  assert.match(css, /#main\.public-wrap \.spectator-now-card\.is-up-next\{/);
+  assert.match(css, /#main\.public-wrap \.spectator-now-meta\{/);
+});
+
+test('spectator Bracket preserves shared renderer, compact byes, and accessible navigation', () => {
+  assert.match(spectator, /import \{bracketView, groupRounds\} from '\.\/bracket_view\.mjs'/);
+  assert.match(spectator, /spectatorBracket\(ev\.championship, 'championship'\)/);
+  assert.match(spectator, /spectatorBracket\(ev\.consolation, 'consolation'\)/);
+  assert.match(spectator, /class: 'spectator-bracket-shell'/);
+  assert.match(spectator, /'aria-label': 'Previous ' \+ kind \+ ' round'/);
+  assert.match(spectator, /'aria-label': 'Next ' \+ kind \+ ' round'/);
+  assert.match(spectator, /class: 'spectator-bracket-position span-'/);
+  assert.match(spectator, /children\.has\(2 \* m\.slot\) && children\.has\(2 \* m\.slot \+ 1\)/);
+  assert.match(spectator, /new Set\(slots\)\.size === slots\.length/);
+  assert.match(css, /#main\.public-wrap \.spectator-bracket-position\.is-bye \.playerline\.empty\{display:none\}/);
+  assert.match(css, /#main\.public-wrap \.spectator-bracket\.has-grounded-slots \.spectator-bracket-connector\{/);
+  assert.doesNotMatch(spectator, /\.innerHTML\s*=/);
+});
+
+test('finished singles finals get correct award icons without ribbons or badges', () => {
+  assert.match(spectator, /const completedFinal = matches =>/);
+  assert.match(spectator, /m\.status === 'complete' && m\.name1 && m\.name2/);
+  assert.match(spectator, /last\.length !== 1 \|\| last\[0\]\.slot !== 0/);
+  assert.match(spectator, /kind === 'championship' && place === 1/);
+  assert.match(spectator, /class: 'spectator-award-trophy'/);
+  assert.match(spectator, /class: 'spectator-award-disc ' \+ \(gold \? 'gold' : 'silver'\)/);
+  assert.match(spectator, /text: gold \? '1' : '2'/);
+  assert.match(spectator, /finalKind \? awardMark\(finalKind, winner \? 1 : 2\) : null/);
+  assert.match(spectator, /final = completedFinal\(matches\)/);
+  assert.match(css, /#main\.public-wrap \.spectator-award-disc\{/);
+  assert.match(css, /border-radius:50%;border:1px solid/);
+  assert.doesNotMatch(css, /spectator-award-ribbon/);
+});
+
+test('doubles awards only after official finale and one disc for each player', () => {
+  assert.match(spectator, /f\.winnerTeam \? awardMark\('doubles', f\.winnerTeam === number \? 1 : 2\) : null/);
+  assert.match(spectator, /\.\.\.st\.doubles\.winners\.map\(name/);
+  assert.match(spectator, /\.\.\.st\.doubles\.losers\.map\(name/);
+  assert.match(spectator, /Consolation bracket runner-up:/);
 });
