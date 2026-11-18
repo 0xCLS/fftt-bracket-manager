@@ -13,7 +13,8 @@ test('spectator uses approved public copy and complete bracket names', () => {
   assert.match(html, /Forging Fellowship Table Tennis · Building community through fellowship/);
   assert.doesNotMatch(html, /Public view · names and results only · FFTT Bracket Manager/);
   assert.match(spectator, /Consolation bracket champion:/);
-  assert.match(spectator, /'Championship Bracket' : 'Consolation Bracket'/);
+  assert.match(spectator, /resultsGroup\('Championship Bracket', championship, feedState\)/);
+  assert.match(spectator, /resultsGroup\('Consolation Bracket', consolation, feedState\)/);
 });
 
 test('spectator score-pair separators reuse Staff Recent results shade and stay spectator-scoped', () => {
@@ -58,6 +59,24 @@ test('spectator renders TV-style three dots only for supported matches', () => {
   assert.match(spectator, /class: 'spectator-game-dots'/);
   assert.match(spectator, /Array\.from\(\{length: 3\}/);
   assert.match(spectator, /board\.playing\.map\(m => matchCard\(m, feedState\)\)/);
-  assert.match(spectator, /h\('td', \{\}, spectatorMatchup\(m, feedState\)\)/);
+  assert.match(spectator, /spectatorMatchup\(m, feedState, true\)/);
   assert.match(css, /#main\.public-wrap \.spectator-win-dot\.earned/);
+});
+
+test('spectator Results groups complete matches into bracket sections without duplicate winner column', () => {
+  assert.match(spectator, /board\.recent\.filter\(m => m\.bracket === 'championship'\)/);
+  assert.match(spectator, /board\.recent\.filter\(m => m\.bracket === 'consolation'\)/);
+  assert.match(spectator, /h\('ol', \{class: 'spectator-results-list'\}/);
+  assert.match(spectator, /h\('span', \{class: 'spectator-result-round', text: `Round \$\{m\.round \+ 1\}`\}/);
+  assert.match(spectator, /scoreTiles\(m\.scores, \{left: m\.name1, right: m\.name2, caption: false\}\)/);
+  assert.match(spectator, /'aria-label': 'Match winner'/);
+  assert.doesNotMatch(spectator, /\$\{m\.winnerName\} won/);
+  assert.doesNotMatch(spectator, /board\.recent\.map\(m => h\('tr'/);
+});
+
+test('spectator Results styling remains scoped and responsive', () => {
+  assert.match(css, /#main\.public-wrap \.spectator-results-group\{/);
+  assert.match(css, /#main\.public-wrap \.spectator-result\{/);
+  assert.match(css, /#main\.public-wrap \.spectator-result-scorebox \.score-games\{/);
+  assert.match(css, /@media\(max-width:700px\)\{\s*#main\.public-wrap \.spectator-results-heading/);
 });
