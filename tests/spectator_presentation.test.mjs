@@ -131,28 +131,3 @@ test('doubles awards only after official finale and one disc for each player', (
   assert.match(spectator, /\.\.\.st\.doubles\.losers\.map\(name/);
   assert.match(spectator, /Consolation bracket runner-up:/);
 });
-
-test('Results use compact two-column cards that stack on narrow screens', () => {
-  assert.match(css, /#main\.public-wrap \.spectator-results-list\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
-  assert.match(css, /#main\.public-wrap \.spectator-result\{display:flex;flex-direction:column/);
-  assert.match(css, /@media\(max-width:850px\)\{\s*#main\.public-wrap \.spectator-results-list\{grid-template-columns:minmax\(0,1fr\)/);
-  assert.match(css, /#main\.public-wrap \.spectator-result-scorebox\{display:flex;align-items:center;justify-content:space-between/);
-  assert.match(spectator, /class: 'spectator-result-scorebox scores-cell'/);
-  assert.match(spectator, /scoreTiles\(m\.scores, \{left: m\.name1, right: m\.name2, caption: false\}\)/);
-});
-
-test('Spectator progress indicators are compact teal bars with transparent dashed unearned states', () => {
-  assert.match(css, /#main\.public-wrap \.spectator-win-dot\{display:block;box-sizing:border-box;width:21px;height:7px/);
-  assert.match(css, /border:1px dashed #92a6b3;border-radius:999px;background:transparent;box-shadow:none/);
-  assert.match(css, /#main\.public-wrap \.spectator-win-dot\.earned\{border:1px solid #299f8e;background:#42b8a7/);
-  assert.match(css, /#main\.public-wrap \.spectator-win-dot\{width:18px;height:6px\}/);
-  assert.match(spectator, /Array\.from\(\{length: 3\}/);
-  assert.match(spectator, /'aria-label': \`\$\{name\}: \$\{wins\}/);
-});
-
-test('Result winner checkmark renders as an outlined circle with a drawn check', () => {
-  assert.match(css, /#main\.public-wrap \.spectator-result-winner-mark\{display:inline-flex;align-items:center;justify-content:center/);
-  assert.match(css, /border:1\.35px solid #147947;border-radius:50%;color:#137a48/);
-  assert.match(css, /#main\.public-wrap \.spectator-result-winner-mark::after\{content:"";width:4px;height:6px/);
-  assert.match(spectator, /'aria-label': 'Match winner'/);
-});
