@@ -218,7 +218,7 @@ const resultMatch = (m, feedState, finalId) => h('li', {class: 'spectator-result
   h('span', {class: 'spectator-result-round', text: m.id === finalId ? 'Final' : `Round ${m.round + 1}`}),
   h('div', {class: 'spectator-result-main'},
     spectatorMatchup(m, feedState, true, m.id === finalId ? m.bracket : null),
-    h('div', {class: 'spectator-result-scorebox'},
+    h('div', {class: 'spectator-result-scorebox scores-cell'},
       h('span', {class: 'spectator-result-scorelabel', text: 'Game scores'}),
       scoreTiles(m.scores, {left: m.name1, right: m.name2, caption: false}))));
 
