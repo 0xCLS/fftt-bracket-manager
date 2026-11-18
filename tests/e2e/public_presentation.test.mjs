@@ -68,6 +68,19 @@ test('Spectator displays public matches, brackets and scores at desktop and phon
         };
       });
       assert.equal(visual.titleAlignment, 'center', 'Completed matches heading is centered');
+      const topPolish = await page.evaluate(() => {
+        const active = document.querySelector('#tabs button[aria-current="page"]');
+        const title = document.querySelector('.spectator-results-title');
+        return {
+          activeTabShadow: active ? getComputedStyle(active).boxShadow : '',
+          activeTabBackground: active ? getComputedStyle(active).backgroundColor : '',
+          titleFontPx: title ? parseFloat(getComputedStyle(title).fontSize) : 0
+        };
+      });
+      assert.equal(topPolish.activeTabShadow, 'none', 'selected Spectator tab has no bottom accent line');
+      assert.notEqual(topPolish.activeTabBackground, 'rgba(0, 0, 0, 0)', 'selected Spectator tab retains subtle active fill');
+      assert.ok(topPolish.titleFontPx >= 20 && topPolish.titleFontPx <= 24,
+        'Completed matches heading uses a modestly larger font');
       assert.ok(visual.cards >= 1 && visual.tiles >= 2, 'compact Results cards retain recorded score tiles');
       assert.equal(visual.columns, viewport.width > 850 ? 2 : 1, 'Results cards use two desktop columns, one mobile column');
       assert.equal(visual.checkWidth, 16, 'winner has the smaller outlined 16px check');
