@@ -84,6 +84,7 @@ test('spectator Results styling remains scoped and responsive', () => {
 test('spectator Now and next visually distinguishes actual playing from queued matches', () => {
   assert.match(spectator, /const playing = m\.phase === 'playing'/);
   assert.match(spectator, /class: 'spectator-now-live', text: 'Playing'/);
+  assert.match(spectator, /class: 'fmt-line spectator-now-format'/);
   assert.match(spectator, /class: 'now-grid spectator-now-playing-grid'/);
   assert.match(spectator, /class: 'now-grid spectator-now-queue-grid'/);
   assert.match(spectator, /playing \? h\('div', \{class: 'spectator-now-status'/);
