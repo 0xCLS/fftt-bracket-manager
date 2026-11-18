@@ -45,10 +45,18 @@ const gameWinDots = (m, player, feedState) => {
     Array.from({length: 3}, (_, i) => h('span',
       {class: 'spectator-win-dot' + (i < wins ? ' earned' : ''), 'aria-hidden': 'true'})));
 };
-const spectatorMatchup = (m, feedState) => h('div', {class:'spectator-matchup'},
-  ...[0, 1].map(player => h('div', {class:'spectator-player-row'},
-    h('span', {class:'spectator-player-name', text: player === 0 ? m.name1 : m.name2}),
-    gameWinDots(m, player, feedState))));
+const spectatorMatchup = (m, feedState, showWinner = false) => h('div',
+  {class: 'spectator-matchup' + (showWinner ? ' spectator-result-matchup' : '')},
+  ...[0, 1].map(player => {
+    const name = player === 0 ? m.name1 : m.name2;
+    const winner = showWinner && name === m.winnerName;
+    return h('div', {class: 'spectator-player-row' +
+      (showWinner ? (winner ? ' spectator-result-winner' : ' spectator-result-runner-up') : '')},
+      h('span', {class: 'spectator-player-name', text: name}),
+      winner ? h('span', {class: 'spectator-result-winner-mark', role: 'img',
+        'aria-label': 'Match winner', text: '✓'}) : null,
+      gameWinDots(m, player, feedState));
+  }));
 const matchCard = (m, feedState) => h('div', {class: 'board-match'},
   m.table ? h('div', {class: 'tbl', text: `Table ${m.table}`}) : null,
   spectatorMatchup(m, feedState),
@@ -79,15 +87,38 @@ function viewBracket(ev) {
       h('p', {class: 'help bracket-hint', text: 'Swipe sideways within the bracket to see later rounds.'}),
       bracketView(ev.consolation, 'consolation')) : null);
 }
+const resultMatch = (m, feedState) => h('li', {class: 'spectator-result'},
+  h('span', {class: 'spectator-result-round', text: `Round ${m.round + 1}`}),
+  h('div', {class: 'spectator-result-main'},
+    spectatorMatchup(m, feedState, true),
+    h('div', {class: 'spectator-result-scorebox'},
+      h('span', {class: 'spectator-result-scorelabel', text: 'Game scores'}),
+      scoreTiles(m.scores, {left: m.name1, right: m.name2, caption: false}))));
+
+const resultsGroup = (label, matches, feedState) => matches.length
+  ? h('section', {class: 'card spectator-results-group', 'aria-label': label},
+    h('div', {class: 'spectator-results-heading'},
+      h('h3', {text: label}),
+      h('span', {class: 'spectator-results-count',
+        text: `${matches.length} completed match${matches.length === 1 ? '' : 'es'}` } )),
+    h('ol', {class: 'spectator-results-list'},
+      ...matches.map(m => resultMatch(m, feedState))))
+  : null;
+
 function viewResults(ev, board, feedState) {
   const st = standings(ev);
-  return h('div', {},
+  const championship = board.recent.filter(m => m.bracket === 'championship');
+  const consolation = board.recent.filter(m => m.bracket === 'consolation');
+  return h('div', {class: 'spectator-results'},
     st.champion ? h('div', {class: 'champion-banner'}, h('h2', {text: `Champion: ${st.champion}`}), h('p', {text: `Runner-up: ${st.runnerUp}`}),
       st.consolationChampion ? h('p', {text: `Consolation bracket champion: ${st.consolationChampion}`}) : null,
       st.doubles ? h('p', {text: `Doubles winners: ${st.doubles.winners.join(' + ')}`}) : null) : null,
-    h('div', {class: 'card'}, h('h2', {text: 'Completed matches'}),
-      board.recent.length ? h('table', {}, h('tbody', {}, board.recent.map(m => h('tr', {}, h('td', {text: m.bracket === 'championship' ? 'Championship Bracket' : 'Consolation Bracket'}),
-        h('td', {}, spectatorMatchup(m, feedState)), h('td', {text: `${m.winnerName} won`}), h('td', {class: 'scores-cell'}, scoreTiles(m.scores, {left: m.name1, right: m.name2, caption: false})))))) : h('div', {class: 'empty-state', text: 'No results yet.'})));
+    h('h2', {class: 'spectator-results-title', text: 'Completed matches'}),
+    board.recent.length
+      ? h('div', {},
+        resultsGroup('Championship Bracket', championship, feedState),
+        resultsGroup('Consolation Bracket', consolation, feedState))
+      : h('div', {class: 'empty-state', text: 'No results yet.'}));
 }
 
 function render(view) {
