@@ -2,7 +2,7 @@
 import {h, clear, fill, $} from './dom.mjs';
 import {startPublicFeed, pickEvent, isShowcase} from './public_core.mjs';
 import {deriveBoard} from '../contracts/gameday_public.mjs';
-import {bracketView} from './bracket_view.mjs';
+import {bracketView, groupRounds} from './bracket_view.mjs';
 import {scoreTiles} from './game_tiles.mjs';
 import {spectatorGameWins} from './spectator_game_dots.mjs';
 import {computeStandings} from '../contracts/gameday_engine.mjs';
@@ -57,18 +57,30 @@ const spectatorMatchup = (m, feedState, showWinner = false) => h('div',
         'aria-label': 'Match winner', text: '✓'}) : null,
       gameWinDots(m, player, feedState));
   }));
-const matchCard = (m, feedState) => h('div', {class: 'board-match'},
-  m.table ? h('div', {class: 'tbl', text: `Table ${m.table}`}) : null,
-  spectatorMatchup(m, feedState),
-  h('div', {class: 'muted', text: `${m.bracket === 'championship' ? 'Championship' : 'Consolation'} · Round ${m.round + 1}`}),
-  formatLine(m) ? h('div', {class: 'fmt-line', text: formatLine(m)}) : null);
+const matchCard = (m, feedState) => {
+  const playing = m.phase === 'playing';
+  return h('article', {class: 'board-match spectator-now-card ' + (playing ? 'is-playing' : 'is-up-next')},
+    playing ? h('div', {class: 'spectator-now-status'},
+      m.table ? h('span', {class: 'tbl', text: `Table ${m.table}`}) : null,
+      h('span', {class: 'spectator-now-live', text: 'Playing'})) : null,
+    spectatorMatchup(m, feedState),
+    h('div', {class: 'spectator-now-meta'},
+      h('span', {text: `${m.bracket === 'championship' ? 'Championship' : 'Consolation'} · Round ${m.round + 1}`}),
+      formatLine(m) ? h('span', {class: 'spectator-now-format', text: formatLine(m)}) : null));
+};
 
 function viewNow(ev, board, feedState) {
-  return h('div', {},
-    h('h2', {text: isShowcase(ev) ? 'Sample matches' : 'Now playing'}),
-    board.playing.length ? h('div', {class: 'now-grid'}, board.playing.map(m => matchCard(m, feedState))) : h('div', {class: 'empty-state', text: 'No matches are on a table right now.'}),
-    h('h2', {text: 'Up next'}),
-    board.upNext.length ? h('div', {class: 'now-grid'}, board.upNext.slice(0, 8).map(m => matchCard(m, feedState))) : h('div', {class: 'empty-state', text: 'Nothing queued yet.'}),
+  return h('div', {class: 'spectator-now'},
+    h('section', {class: 'spectator-now-section'},
+      h('h2', {text: isShowcase(ev) ? 'Sample matches' : 'Now playing'}),
+      board.playing.length ? h('div', {class: 'now-grid spectator-now-playing-grid'},
+        board.playing.map(m => matchCard(m, feedState)))
+        : h('div', {class: 'empty-state', text: 'No matches are on a table right now.'})),
+    h('section', {class: 'spectator-now-section'},
+      h('h2', {text: 'Up next'}),
+      board.upNext.length ? h('div', {class: 'now-grid spectator-now-queue-grid'},
+        board.upNext.slice(0, 8).map(m => matchCard(m, feedState)))
+        : h('div', {class: 'empty-state', text: 'Nothing queued yet.'})),
     ev.finale ? finaleCard(ev.finale) : null);
 }
 function finaleCard(f) {
