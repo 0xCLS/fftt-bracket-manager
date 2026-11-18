@@ -90,14 +90,79 @@ function finaleCard(f) {
     f.winnerTeam ? h('div', {class: 'notice good'}, h('p', {text: `Winners: ${(f.winnerTeam === 1 ? f.team1 : f.team2).join(' + ')}`}),
       f.scores ? scoreTiles(f.scores, {left: 'Team A', right: 'Team B'}) : null) : h('p', {class: 'muted', text: 'Coming up after the championship final.'}));
 }
+/* Spectator-only bracket layout. Keep the Staff renderer, official match rows and
+ * scored results intact; links follow validated round/slot topology only. */
+function spectatorBracket(matches, kind) {
+  const bracket = bracketView(matches, kind);
+  if (!bracket.classList.contains('bracket')) return bracket;
+  bracket.classList.add('spectator-bracket');
+  const rounds = groupRounds(matches);
+  const roundEls = [...bracket.querySelectorAll(':scope > .round')];
+  // Refuse diagram connectors for partial or noncanonical slot layouts. The
+  // original official bracket remains readable, without speculative links.
+  const canonical = rounds.length === roundEls.length && rounds.length > 0 && rounds.length <= 7
+    && rounds.every((round, r) => {
+      const slots = round.map(m => m.slot);
+      const capacity = 2 ** (rounds.length - 1 - r);
+      return slots.every(slot => Number.isInteger(slot) && slot >= 0 && slot < capacity)
+        && new Set(slots).size === slots.length
+        && round.filter(m => m.status !== 'empty').length === roundEls[r].querySelectorAll(':scope > .match').length;
+    });
+  if (canonical) {
+    const links = rounds.map((round, r) => {
+      if (r === 0) return new Set();
+      const children = new Set(rounds[r - 1].filter(m => m.status !== 'empty').map(m => m.slot));
+      return new Set(round.filter(m => m.status !== 'empty'
+        && children.has(2 * m.slot) && children.has(2 * m.slot + 1)).map(m => m.slot));
+    });
+    rounds.forEach((round, r) => {
+      const roundEl = roundEls[r];
+      const cards = [...roundEl.querySelectorAll(':scope > .match')];
+      const bySlot = new Map(round.filter(m => m.status !== 'empty')
+        .map((m, i) => [m.slot, {match: m, card: cards[i]}]));
+      const positions = h('div', {class: 'spectator-bracket-positions'});
+      for (let slot = 0, count = 2 ** (rounds.length - 1 - r); slot < count; slot++) {
+        const entry = bySlot.get(slot);
+        const feeds = r + 1 < rounds.length && links[r + 1].has(Math.floor(slot / 2));
+        const paired = r > 0 && links[r].has(slot);
+        const position = h('div', {class: 'spectator-bracket-position span-' + (2 ** r)
+          + (entry?.match.status === 'bye' ? ' is-bye' : '')
+          + (feeds ? ' feeds-next' : '')
+          + (paired ? ' has-feeders' : '')
+          + (!entry ? ' is-empty' : '')});
+        if (paired) position.append(h('span', {class: 'spectator-bracket-connector', 'aria-hidden': 'true'}));
+        if (entry) position.append(entry.card);
+        positions.append(position);
+      }
+      roundEl.append(positions);
+    });
+    bracket.classList.add('has-grounded-slots');
+  }
+  const jump = direction => {
+    const width = bracket.querySelector('.round')?.getBoundingClientRect().width || 260;
+    bracket.scrollBy({left: direction * (width + 28), behavior: 'smooth'});
+  };
+  return h('div', {class: 'spectator-bracket-shell'},
+    h('div', {class: 'spectator-bracket-tools'},
+      h('span', {class: 'spectator-bracket-legend', text: 'Follow the rounds'}),
+      h('div', {class: 'spectator-bracket-controls'},
+        h('button', {type: 'button', class: 'spectator-bracket-arrow',
+          'aria-label': 'Previous ' + kind + ' round', text: '←',
+          on: {click: () => jump(-1)}}),
+        h('button', {type: 'button', class: 'spectator-bracket-arrow',
+          'aria-label': 'Next ' + kind + ' round', text: '→',
+          on: {click: () => jump(1)}}))),
+    bracket);
+}
+
 function viewBracket(ev) {
   return h('div', {},
     h('div', {class: 'card'}, h('h2', {text: 'Championship'}),
       h('p', {class: 'help bracket-hint', text: 'Swipe sideways within the bracket to see later rounds.'}),
-      bracketView(ev.championship, 'championship')),
+      spectatorBracket(ev.championship, 'championship')),
     ev.consolation.length ? h('div', {class: 'card'}, h('h2', {text: 'Consolation'}),
       h('p', {class: 'help bracket-hint', text: 'Swipe sideways within the bracket to see later rounds.'}),
-      bracketView(ev.consolation, 'consolation')) : null);
+      spectatorBracket(ev.consolation, 'consolation')) : null);
 }
 const resultMatch = (m, feedState) => h('li', {class: 'spectator-result'},
   h('span', {class: 'spectator-result-round', text: `Round ${m.round + 1}`}),
