@@ -975,7 +975,7 @@ td.scores-cell{min-width:150px}
 
 /* Spectator-only completed Results: a compact two-column match-card grid.
    Preserve official scores, award markers and the legacy .scores-cell selector. */
-#main.public-wrap .spectator-results-title{font-size:1.12rem;margin:2px 0 14px}
+#main.public-wrap .spectator-results-title{font-size:1.12rem;margin:4px 0 20px;text-align:center}
 #main.public-wrap .spectator-results-group{padding:0;overflow:visible;background:transparent;border:0;box-shadow:none}
 #main.public-wrap .spectator-results-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;
  padding:4px 0 12px;background:transparent;border:0}
@@ -1335,7 +1335,7 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
 #main.public-wrap .spectator-now-card .spectator-player-row+.spectator-player-row{padding-top:6px}
 #main.public-wrap .spectator-now-meta{display:flex;align-items:center;flex-wrap:wrap;gap:3px 12px;
  border-top:1px solid var(--line);padding-top:9px;color:var(--muted);font-size:.78rem;line-height:1.35}
-#main.public-wrap .spectator-now-format{font-weight:600;color:#64727f}
+#main.public-wrap .spectator-now-meta .spectator-now-format{margin-top:0;font-size:inherit;line-height:inherit;letter-spacing:normal;font-weight:600;color:#64727f}
 /* Spectator-only bracket progression. The shared Staff bracket stays untouched. */
 #main.public-wrap .spectator-bracket-shell{min-width:0}
 #main.public-wrap .spectator-bracket-tools{display:flex;align-items:center;justify-content:space-between;
@@ -1413,10 +1413,10 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
 #main.public-wrap .spectator-matchup{display:flex;flex-direction:column;gap:7px;min-width:0}
 #main.public-wrap .spectator-player-row{display:flex;justify-content:space-between;align-items:center;gap:10px;min-width:0}
 #main.public-wrap .spectator-player-name{font-size:1rem;font-weight:750;line-height:1.35;color:#293d50;overflow-wrap:anywhere;min-width:0}
-/* Confirmed best-of-three games: compact teal segments; unearned segments are unfilled dashed outlines. */
+/* Confirmed best-of-three games: compact teal segments; unearned segments are quiet solid gray. */
 #main.public-wrap .spectator-game-dots{display:inline-flex;flex-shrink:0;align-items:center;gap:4px;min-height:12px}
 #main.public-wrap .spectator-win-dot{display:block;box-sizing:border-box;width:21px;height:7px;flex:none;
- border:1px dashed #92a6b3;border-radius:999px;background:transparent;box-shadow:none}
+ border:0;border-radius:999px;background:#e6eaee;box-shadow:none}
 #main.public-wrap .spectator-win-dot.earned{border:1px solid #299f8e;background:#42b8a7;box-shadow:none}
 #main.public-wrap .board-match .spectator-matchup{margin:9px 0 8px}
 #main.public-wrap .board-match .spectator-player-row+.spectator-player-row{border-top:1px solid #e8edf1;padding-top:7px}
