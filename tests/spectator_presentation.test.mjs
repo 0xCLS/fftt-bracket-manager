@@ -152,7 +152,7 @@ test('Spectator progress indicators are compact teal bars with transparent dashe
 
 test('Result winner checkmark renders as an outlined circle with a drawn check', () => {
   assert.match(css, /#main\.public-wrap \.spectator-result-winner-mark\{display:inline-flex;align-items:center;justify-content:center/);
-  assert.match(css, /border:1\.5px solid #147947;border-radius:50%;color:#137a48/);
-  assert.match(css, /#main\.public-wrap \.spectator-result-winner-mark::after\{content:"";width:5px;height:8px/);
+  assert.match(css, /border:1\.35px solid #147947;border-radius:50%;color:#137a48/);
+  assert.match(css, /#main\.public-wrap \.spectator-result-winner-mark::after\{content:"";width:4px;height:6px/);
   assert.match(spectator, /'aria-label': 'Match winner'/);
 });
