@@ -973,46 +973,52 @@ td.scores-cell{min-width:150px}
 }
 
 
-/* Spectator Results scoreboard: bracket groups and compact per-match summaries.
-   Scoped to the anonymous Spectator Results view; Staff, TV, Now, and Bracket unchanged. */
+/* Spectator-only completed Results: a compact two-column match-card grid.
+   Preserve official scores, award markers and the legacy .scores-cell selector. */
 #main.public-wrap .spectator-results-title{font-size:1.12rem;margin:2px 0 14px}
-#main.public-wrap .spectator-results-group{padding:0;overflow:hidden}
+#main.public-wrap .spectator-results-group{padding:0;overflow:visible;background:transparent;border:0;box-shadow:none}
 #main.public-wrap .spectator-results-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;
- padding:14px 20px;background:var(--surface-soft);border-bottom:1px solid var(--line)}
+ padding:4px 0 12px;background:transparent;border:0}
 #main.public-wrap .spectator-results-heading h3{margin:0;font-size:1rem}
 #main.public-wrap .spectator-results-count{font-size:.73rem;font-weight:700;color:var(--muted);white-space:nowrap}
-#main.public-wrap .spectator-results-list{list-style:none;margin:0;padding:0}
-#main.public-wrap .spectator-result{display:grid;grid-template-columns:76px minmax(0,1fr);
- gap:16px;align-items:center;padding:14px 20px;min-width:0;border-top:1px solid var(--line)}
-#main.public-wrap .spectator-result:first-child{border-top:0}
-#main.public-wrap .spectator-result-round{font-size:.73rem;font-weight:750;letter-spacing:.035em;
- text-transform:uppercase;color:var(--muted);white-space:nowrap;align-self:start;padding-top:9px}
-#main.public-wrap .spectator-result-main{display:grid;grid-template-columns:minmax(175px,1fr) minmax(0,auto);
- gap:20px;align-items:center;min-width:0}
-#main.public-wrap .spectator-result-matchup{gap:5px}
-#main.public-wrap .spectator-result-matchup .spectator-player-row{justify-content:flex-start;gap:9px}
-#main.public-wrap .spectator-result-matchup .spectator-player-name{font-size:.94rem;font-weight:660}
+#main.public-wrap .spectator-results-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:12px;list-style:none;margin:0 0 22px;padding:0}
+#main.public-wrap .spectator-result{display:flex;flex-direction:column;gap:11px;align-items:stretch;min-width:0;
+ padding:14px 16px;border:1px solid #e0e7ed;border-radius:10px;background:#fff;
+ box-shadow:0 3px 12px rgba(35,54,70,.045)}
+#main.public-wrap .spectator-result-round{font-size:.72rem;font-weight:750;letter-spacing:.035em;
+ text-transform:uppercase;color:var(--muted);line-height:1.25}
+#main.public-wrap .spectator-result-main{display:flex;flex-direction:column;align-items:stretch;gap:10px;min-width:0}
+#main.public-wrap .spectator-result-matchup{display:flex;flex-direction:column;gap:8px;min-width:0}
+#main.public-wrap .spectator-result-matchup .spectator-player-row{justify-content:flex-start;gap:8px;min-width:0}
+#main.public-wrap .spectator-result-matchup .spectator-player-name{font-size:.94rem;font-weight:640;min-width:0;overflow-wrap:anywhere}
 #main.public-wrap .spectator-result-matchup .spectator-result-winner .spectator-player-name{font-weight:800}
 #main.public-wrap .spectator-result-matchup .spectator-result-runner-up .spectator-player-name{color:#697783;font-weight:600}
 #main.public-wrap .spectator-result-matchup .spectator-game-dots{margin-left:auto}
-#main.public-wrap .spectator-result-winner-mark{color:var(--positive);font-size:1rem;font-weight:900;line-height:1;flex:none}
-#main.public-wrap .spectator-result-scorebox{display:flex;flex-direction:column;gap:7px;min-width:0;align-items:flex-start}
-#main.public-wrap .spectator-result-scorelabel{color:var(--muted);font-size:.66rem;font-weight:750;
+#main.public-wrap .spectator-result-winner-mark{display:inline-flex;align-items:center;justify-content:center;
+ flex:none;width:19px;height:19px;border:1.5px solid #147947;border-radius:50%;color:#137a48;
+ background:transparent;font-size:0;line-height:1}
+#main.public-wrap .spectator-result-winner-mark::after{content:"";width:5px;height:8px;
+ border-right:1.7px solid currentColor;border-bottom:1.7px solid currentColor;
+ transform:translateY(-1px) rotate(43deg)}
+#main.public-wrap .spectator-result-scorebox{display:flex;align-items:center;justify-content:space-between;
+ flex-wrap:wrap;gap:8px 12px;min-width:0;border-top:1px solid #e8edf1;padding-top:10px}
+#main.public-wrap .spectator-result-scorelabel{color:var(--muted);font-size:.65rem;font-weight:750;
  text-transform:uppercase;letter-spacing:.045em}
+#main.public-wrap .spectator-result-scorebox .score-tiles{min-width:0;max-width:100%}
 #main.public-wrap .spectator-result-scorebox .score-games{gap:5px 0;flex-wrap:wrap}
 #main.public-wrap .spectator-result-scorebox .score-game+.score-game{position:relative;padding-left:13px;margin-left:13px}
 #main.public-wrap .spectator-result-scorebox .score-game+.score-game::before{
  content:"";position:absolute;left:0;top:4px;bottom:4px;width:1px;background:#d3d9e0;pointer-events:none}
 @media(max-width:850px){
- #main.public-wrap .spectator-result-main{grid-template-columns:minmax(0,1fr);gap:10px}
- #main.public-wrap .spectator-result-scorebox{padding-left:0}
+ #main.public-wrap .spectator-results-list{grid-template-columns:minmax(0,1fr);gap:10px}
 }
 @media(max-width:700px){
- #main.public-wrap .spectator-results-heading{padding:13px 15px}
- #main.public-wrap .spectator-result{grid-template-columns:minmax(0,1fr);gap:7px;padding:13px 15px}
- #main.public-wrap .spectator-result-round{padding:0}
+ #main.public-wrap .spectator-results-heading{padding:4px 0 10px}
+ #main.public-wrap .spectator-results-list{gap:10px}
+ #main.public-wrap .spectator-result{gap:10px;padding:13px 14px}
  #main.public-wrap .spectator-result-main{gap:10px}
- #main.public-wrap .spectator-result-scorebox{gap:5px}
+ #main.public-wrap .spectator-result-scorebox{gap:6px 10px}
  #main.public-wrap .spectator-result-matchup .spectator-player-name{font-size:.92rem}
  #main.public-wrap .spectator-results-count{font-size:.7rem}
 }
@@ -1407,9 +1413,11 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
 #main.public-wrap .spectator-matchup{display:flex;flex-direction:column;gap:7px;min-width:0}
 #main.public-wrap .spectator-player-row{display:flex;justify-content:space-between;align-items:center;gap:10px;min-width:0}
 #main.public-wrap .spectator-player-name{font-size:1rem;font-weight:750;line-height:1.35;color:#293d50;overflow-wrap:anywhere;min-width:0}
-#main.public-wrap .spectator-game-dots{display:inline-flex;flex-shrink:0;align-items:center;gap:5px;min-height:14px}
-#main.public-wrap .spectator-win-dot{width:10px;height:10px;border:1.5px solid #7e929f;border-radius:50%;background:transparent;display:block}
-#main.public-wrap .spectator-win-dot.earned{border-color:#267d72;background:#46bba8;box-shadow:0 0 0 1px rgba(46,156,132,.12)}
+/* Confirmed best-of-three games: compact teal segments; unearned segments are unfilled dashed outlines. */
+#main.public-wrap .spectator-game-dots{display:inline-flex;flex-shrink:0;align-items:center;gap:4px;min-height:12px}
+#main.public-wrap .spectator-win-dot{display:block;box-sizing:border-box;width:21px;height:7px;flex:none;
+ border:1px dashed #92a6b3;border-radius:999px;background:transparent;box-shadow:none}
+#main.public-wrap .spectator-win-dot.earned{border:1px solid #299f8e;background:#42b8a7;box-shadow:none}
 #main.public-wrap .board-match .spectator-matchup{margin:9px 0 8px}
 #main.public-wrap .board-match .spectator-player-row+.spectator-player-row{border-top:1px solid #e8edf1;padding-top:7px}
 #main.public-wrap .scores-cell+.spectator-game-dots{margin-top:4px}
@@ -1417,5 +1425,5 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
   #main.public-wrap .spectator-player-row{gap:8px}
   #main.public-wrap .spectator-player-name{font-size:.92rem}
   #main.public-wrap .spectator-game-dots{gap:4px}
-  #main.public-wrap .spectator-win-dot{width:9px;height:9px}
+  #main.public-wrap .spectator-win-dot{width:18px;height:6px}
 }
