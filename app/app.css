@@ -973,6 +973,50 @@ td.scores-cell{min-width:150px}
 }
 
 
+/* Spectator Results scoreboard: bracket groups and compact per-match summaries.
+   Scoped to the anonymous Spectator Results view; Staff, TV, Now, and Bracket unchanged. */
+#main.public-wrap .spectator-results-title{font-size:1.12rem;margin:2px 0 14px}
+#main.public-wrap .spectator-results-group{padding:0;overflow:hidden}
+#main.public-wrap .spectator-results-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;
+ padding:14px 20px;background:var(--surface-soft);border-bottom:1px solid var(--line)}
+#main.public-wrap .spectator-results-heading h3{margin:0;font-size:1rem}
+#main.public-wrap .spectator-results-count{font-size:.73rem;font-weight:700;color:var(--muted);white-space:nowrap}
+#main.public-wrap .spectator-results-list{list-style:none;margin:0;padding:0}
+#main.public-wrap .spectator-result{display:grid;grid-template-columns:76px minmax(0,1fr);
+ gap:16px;align-items:center;padding:14px 20px;min-width:0;border-top:1px solid var(--line)}
+#main.public-wrap .spectator-result:first-child{border-top:0}
+#main.public-wrap .spectator-result-round{font-size:.73rem;font-weight:750;letter-spacing:.035em;
+ text-transform:uppercase;color:var(--muted);white-space:nowrap;align-self:start;padding-top:9px}
+#main.public-wrap .spectator-result-main{display:grid;grid-template-columns:minmax(175px,1fr) minmax(0,auto);
+ gap:20px;align-items:center;min-width:0}
+#main.public-wrap .spectator-result-matchup{gap:5px}
+#main.public-wrap .spectator-result-matchup .spectator-player-row{justify-content:flex-start;gap:9px}
+#main.public-wrap .spectator-result-matchup .spectator-player-name{font-size:.94rem;font-weight:660}
+#main.public-wrap .spectator-result-matchup .spectator-result-winner .spectator-player-name{font-weight:800}
+#main.public-wrap .spectator-result-matchup .spectator-result-runner-up .spectator-player-name{color:#697783;font-weight:600}
+#main.public-wrap .spectator-result-matchup .spectator-game-dots{margin-left:auto}
+#main.public-wrap .spectator-result-winner-mark{color:var(--positive);font-size:1rem;font-weight:900;line-height:1;flex:none}
+#main.public-wrap .spectator-result-scorebox{display:flex;flex-direction:column;gap:7px;min-width:0;align-items:flex-start}
+#main.public-wrap .spectator-result-scorelabel{color:var(--muted);font-size:.66rem;font-weight:750;
+ text-transform:uppercase;letter-spacing:.045em}
+#main.public-wrap .spectator-result-scorebox .score-games{gap:5px 0;flex-wrap:wrap}
+#main.public-wrap .spectator-result-scorebox .score-game+.score-game{position:relative;padding-left:13px;margin-left:13px}
+#main.public-wrap .spectator-result-scorebox .score-game+.score-game::before{
+ content:"";position:absolute;left:0;top:4px;bottom:4px;width:1px;background:#d3d9e0;pointer-events:none}
+@media(max-width:850px){
+ #main.public-wrap .spectator-result-main{grid-template-columns:minmax(0,1fr);gap:10px}
+ #main.public-wrap .spectator-result-scorebox{padding-left:0}
+}
+@media(max-width:700px){
+ #main.public-wrap .spectator-results-heading{padding:13px 15px}
+ #main.public-wrap .spectator-result{grid-template-columns:minmax(0,1fr);gap:7px;padding:13px 15px}
+ #main.public-wrap .spectator-result-round{padding:0}
+ #main.public-wrap .spectator-result-main{gap:10px}
+ #main.public-wrap .spectator-result-scorebox{gap:5px}
+ #main.public-wrap .spectator-result-matchup .spectator-player-name{font-size:.92rem}
+ #main.public-wrap .spectator-results-count{font-size:.7rem}
+}
+
 /* Spectator-only phone layout. Keep the semantic results table and recorded scores,
    but give each match the full card width instead of squeezing four desktop columns. */
 @media(max-width:700px){
