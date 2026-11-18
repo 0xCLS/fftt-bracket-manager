@@ -45,7 +45,31 @@ const gameWinDots = (m, player, feedState) => {
     Array.from({length: 3}, (_, i) => h('span',
       {class: 'spectator-win-dot' + (i < wins ? ' earned' : ''), 'aria-hidden': 'true'})));
 };
-const spectatorMatchup = (m, feedState, showWinner = false) => h('div',
+/* Award icons represent confirmed results, not an assertion about a physical prize.
+ * Use the unframed trophy for Championship first place; every medal is its
+ * own round metallic disc, with NO ribbon or additional circular badge. */
+const awardMark = (kind, place) => {
+  if (kind === 'championship' && place === 1)
+    return h('span', {class: 'spectator-award-trophy', role: 'img',
+      'aria-label': 'Champion, first place', title: 'Champion · 1st place', text: '🏆'});
+  const gold = place === 1;
+  return h('span', {class: 'spectator-award-disc ' + (gold ? 'gold' : 'silver'),
+    role: 'img', 'aria-label': gold ? 'Gold medal, first place' : 'Silver medal, runner-up',
+    title: gold ? 'Gold medal · 1st place' : 'Silver medal · 2nd place',
+    text: gold ? '1' : '2'});
+};
+
+const completedFinal = matches => {
+  if (!matches?.length) return null;
+  const highest = Math.max(...matches.map(m => m.round));
+  const last = matches.filter(m => m.round === highest);
+  if (last.length !== 1 || last[0].slot !== 0) return null;
+  const m = last[0];
+  return m.status === 'complete' && m.name1 && m.name2
+    && (m.winnerName === m.name1 || m.winnerName === m.name2) ? m : null;
+};
+
+const spectatorMatchup = (m, feedState, showWinner = false, finalKind = null) => h('div',
   {class: 'spectator-matchup' + (showWinner ? ' spectator-result-matchup' : '')},
   ...[0, 1].map(player => {
     const name = player === 0 ? m.name1 : m.name2;
@@ -53,8 +77,9 @@ const spectatorMatchup = (m, feedState, showWinner = false) => h('div',
     return h('div', {class: 'spectator-player-row' +
       (showWinner ? (winner ? ' spectator-result-winner' : ' spectator-result-runner-up') : '')},
       h('span', {class: 'spectator-player-name', text: name}),
-      winner ? h('span', {class: 'spectator-result-winner-mark', role: 'img',
+      winner && !finalKind ? h('span', {class: 'spectator-result-winner-mark', role: 'img',
         'aria-label': 'Match winner', text: '✓'}) : null,
+      finalKind ? awardMark(finalKind, winner ? 1 : 2) : null,
       gameWinDots(m, player, feedState));
   }));
 const matchCard = (m, feedState) => {
@@ -164,22 +189,22 @@ function viewBracket(ev) {
       h('p', {class: 'help bracket-hint', text: 'Swipe sideways within the bracket to see later rounds.'}),
       spectatorBracket(ev.consolation, 'consolation')) : null);
 }
-const resultMatch = (m, feedState) => h('li', {class: 'spectator-result'},
-  h('span', {class: 'spectator-result-round', text: `Round ${m.round + 1}`}),
+const resultMatch = (m, feedState, finalId) => h('li', {class: 'spectator-result'},
+  h('span', {class: 'spectator-result-round', text: m.id === finalId ? 'Final' : `Round ${m.round + 1}`}),
   h('div', {class: 'spectator-result-main'},
-    spectatorMatchup(m, feedState, true),
+    spectatorMatchup(m, feedState, true, m.id === finalId ? m.bracket : null),
     h('div', {class: 'spectator-result-scorebox'},
       h('span', {class: 'spectator-result-scorelabel', text: 'Game scores'}),
       scoreTiles(m.scores, {left: m.name1, right: m.name2, caption: false}))));
 
-const resultsGroup = (label, matches, feedState) => matches.length
+const resultsGroup = (label, matches, feedState, finalId) => matches.length
   ? h('section', {class: 'card spectator-results-group', 'aria-label': label},
     h('div', {class: 'spectator-results-heading'},
       h('h3', {text: label}),
       h('span', {class: 'spectator-results-count',
         text: `${matches.length} completed match${matches.length === 1 ? '' : 'es'}` } )),
     h('ol', {class: 'spectator-results-list'},
-      ...matches.map(m => resultMatch(m, feedState))))
+      ...matches.map(m => resultMatch(m, feedState, finalId))))
   : null;
 
 function viewResults(ev, board, feedState) {
@@ -187,14 +212,25 @@ function viewResults(ev, board, feedState) {
   const championship = board.recent.filter(m => m.bracket === 'championship');
   const consolation = board.recent.filter(m => m.bracket === 'consolation');
   return h('div', {class: 'spectator-results'},
-    st.champion ? h('div', {class: 'champion-banner'}, h('h2', {text: `Champion: ${st.champion}`}), h('p', {text: `Runner-up: ${st.runnerUp}`}),
-      st.consolationChampion ? h('p', {text: `Consolation bracket champion: ${st.consolationChampion}`}) : null,
-      st.doubles ? h('p', {text: `Doubles winners: ${st.doubles.winners.join(' + ')}`}) : null) : null,
+    st.champion ? h('div', {class: 'champion-banner spectator-winners-banner'},
+      h('h2', {}, awardMark('championship', 1), h('span', {text: `Champion: ${st.champion}`})),
+      h('p', {}, awardMark('championship', 2), h('span', {text: `Runner-up: ${st.runnerUp}`})),
+      st.consolationChampion ? h('p', {}, awardMark('consolation', 1),
+        h('span', {text: `Consolation bracket champion: ${st.consolationChampion}`})) : null,
+      st.consolationRunnerUp ? h('p', {}, awardMark('consolation', 2),
+        h('span', {text: `Consolation bracket runner-up: ${st.consolationRunnerUp}`})) : null,
+      st.doubles ? h('div', {class: 'spectator-winners-doubles'},
+        h('p', {}, h('span', {text: 'Mixed-Skill Doubles winners: '}),
+          ...st.doubles.winners.map(name => h('span', {class: 'spectator-awarded-name'},
+            h('span', {text: name}), awardMark('doubles', 1)))),
+        h('p', {}, h('span', {text: 'Mixed-Skill Doubles runners-up: '}),
+          ...st.doubles.losers.map(name => h('span', {class: 'spectator-awarded-name'},
+            h('span', {text: name}), awardMark('doubles', 2))))) : null) : null,
     h('h2', {class: 'spectator-results-title', text: 'Completed matches'}),
     board.recent.length
       ? h('div', {},
-        resultsGroup('Championship Bracket', championship, feedState),
-        resultsGroup('Consolation Bracket', consolation, feedState))
+        resultsGroup('Championship Bracket', championship, feedState, completedFinal(ev.championship)?.id),
+        resultsGroup('Consolation Bracket', consolation, feedState, completedFinal(ev.consolation)?.id))
       : h('div', {class: 'empty-state', text: 'No results yet.'}));
 }
 
