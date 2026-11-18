@@ -109,12 +109,19 @@ function viewNow(ev, board, feedState) {
     ev.finale ? finaleCard(ev.finale) : null);
 }
 function finaleCard(f) {
+  const teamCard = (names, number) => h('div', {class: 'stat ' + (number === 1 ? 'ice' : 'lav')},
+    h('b', {text: 'Team ' + (number === 1 ? 'A' : 'B')}),
+    h('div', {class: 'spectator-finale-members'},
+      ...names.map(name => h('span', {class: 'spectator-awarded-name'},
+        h('span', {text: name}),
+        f.winnerTeam ? awardMark('doubles', f.winnerTeam === number ? 1 : 2) : null))));
   return h('div', {class: 'card spectator-finale'}, h('h2', {text: 'Mixed-Skill Doubles finale'}),
-    h('div', {class: 'grid two'}, h('div', {class: 'stat ice'}, h('b', {text: 'Team A'}), h('span', {text: f.team1.join(' + ')})), h('div', {class: 'stat lav'}, h('b', {text: 'Team B'}), h('span', {text: f.team2.join(' + ')}))),
+    h('div', {class: 'grid two'}, teamCard(f.team1, 1), teamCard(f.team2, 2)),
     f.bestOf && f.points ? h('p', {class: 'fmt-line', text: `Best of ${f.bestOf} · to ${f.points}`}) : null,
     f.winnerTeam ? h('div', {class: 'notice good'}, h('p', {text: `Winners: ${(f.winnerTeam === 1 ? f.team1 : f.team2).join(' + ')}`}),
       f.scores ? scoreTiles(f.scores, {left: 'Team A', right: 'Team B'}) : null) : h('p', {class: 'muted', text: 'Coming up after the championship final.'}));
 }
+
 /* Spectator-only bracket layout. Keep the Staff renderer, official match rows and
  * scored results intact; links follow validated round/slot topology only. */
 function spectatorBracket(matches, kind) {
@@ -123,6 +130,24 @@ function spectatorBracket(matches, kind) {
   bracket.classList.add('spectator-bracket');
   const rounds = groupRounds(matches);
   const roundEls = [...bracket.querySelectorAll(':scope > .round')];
+  // Award icons only for officially completed finals, never for byes or
+  // in-progress games. The shared Staff bracket renderer remains unchanged.
+  const final = completedFinal(matches);
+  if (final) {
+    const visible = rounds.at(-1).filter(m => m.status !== 'empty');
+    const finalIndex = visible.findIndex(m => m.slot === final.slot);
+    const finalCard = [...roundEls.at(-1).querySelectorAll(':scope > .match')][finalIndex];
+    const lines = [...(finalCard?.querySelectorAll(':scope > .playerline') || [])];
+    if (lines.length === 2) {
+      const winIndex = final.winnerName === final.name1 ? 0 : 1;
+      lines.forEach((line, i) => {
+        const check = line.querySelector(':scope > span:last-child');
+        if (i === winIndex && check?.textContent === '✓') check.textContent = '';
+        line.append(awardMark(kind, i === winIndex ? 1 : 2));
+      });
+    }
+  }
+
   // Refuse diagram connectors for partial or noncanonical slot layouts. The
   // original official bracket remains readable, without speculative links.
   const canonical = rounds.length === roundEls.length && rounds.length > 0 && rounds.length <= 7
