@@ -80,3 +80,29 @@ test('spectator Results styling remains scoped and responsive', () => {
   assert.match(css, /#main\.public-wrap \.spectator-result-scorebox \.score-games\{/);
   assert.match(css, /@media\(max-width:700px\)\{\s*#main\.public-wrap \.spectator-results-heading/);
 });
+
+test('spectator Now and next visually distinguishes actual playing from queued matches', () => {
+  assert.match(spectator, /const playing = m\.phase === 'playing'/);
+  assert.match(spectator, /class: 'spectator-now-live', text: 'Playing'/);
+  assert.match(spectator, /class: 'spectator-now-playing-grid'/);
+  assert.match(spectator, /class: 'now-grid spectator-now-queue-grid'/);
+  assert.match(spectator, /playing \? h\('div', \{class: 'spectator-now-status'/);
+  assert.match(css, /#main\.public-wrap \.spectator-now-card\.is-playing\{/);
+  assert.match(css, /#main\.public-wrap \.spectator-now-card\.is-up-next\{/);
+  assert.match(css, /#main\.public-wrap \.spectator-now-meta\{/);
+});
+
+test('spectator Bracket preserves shared renderer, compact byes, and accessible navigation', () => {
+  assert.match(spectator, /import \{bracketView, groupRounds\} from '\.\/bracket_view\.mjs'/);
+  assert.match(spectator, /spectatorBracket\(ev\.championship, 'championship'\)/);
+  assert.match(spectator, /spectatorBracket\(ev\.consolation, 'consolation'\)/);
+  assert.match(spectator, /class: 'spectator-bracket-shell'/);
+  assert.match(spectator, /'aria-label': 'Previous ' \+ kind \+ ' round'/);
+  assert.match(spectator, /'aria-label': 'Next ' \+ kind \+ ' round'/);
+  assert.match(spectator, /class: 'spectator-bracket-position span-'/);
+  assert.match(spectator, /children\.has\(2 \* m\.slot\) && children\.has\(2 \* m\.slot \+ 1\)/);
+  assert.match(spectator, /new Set\(slots\)\.size === slots\.length/);
+  assert.match(css, /#main\.public-wrap \.spectator-bracket-position\.is-bye \.playerline\.empty\{display:none\}/);
+  assert.match(css, /#main\.public-wrap \.spectator-bracket\.has-grounded-slots \.spectator-bracket-connector\{/);
+  assert.doesNotMatch(spectator, /\.innerHTML\s*=/);
+});
