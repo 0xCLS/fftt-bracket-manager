@@ -1372,6 +1372,36 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
  #main.public-wrap .spectator-bracket.has-grounded-slots .spectator-bracket-positions{grid-auto-rows:146px}
 }
 
+/* Spectator ribbon-free award discs. The metallic circle IS the medal, not
+   a badge around a ribbon icon; Championship first place retains its trophy. */
+#main.public-wrap .spectator-award-trophy{display:inline-block;flex:none;line-height:1;
+ font-size:1.17rem;vertical-align:middle}
+#main.public-wrap .spectator-award-disc{display:inline-grid;flex:none;place-items:center;
+ width:22px;height:22px;min-width:22px;border-radius:50%;border:1px solid;
+ font-variant-numeric:tabular-nums;font-size:12px;font-weight:900;line-height:1;
+ box-shadow:inset 0 1px 2px #ffffffa0,inset 0 -2px 2px #00000018,0 1px 2px #00000012;
+ vertical-align:middle}
+#main.public-wrap .spectator-award-disc.gold{background:linear-gradient(140deg,#ffeb9c 7%,#efc04f 52%,#c79532 95%);
+ border-color:#ad8133;color:#654910}
+#main.public-wrap .spectator-award-disc.silver{background:linear-gradient(140deg,#fcfdff 5%,#d0d7df 55%,#a6b2c0 98%);
+ border-color:#8996a5;color:#394e60}
+#main.public-wrap .spectator-awarded-name{display:inline-flex;align-items:center;gap:6px;margin-right:12px;max-width:100%}
+#main.public-wrap .spectator-awarded-name>span:first-child{overflow-wrap:anywhere}
+#main.public-wrap .spectator-winners-banner h2,
+#main.public-wrap .spectator-winners-banner>p{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+#main.public-wrap .spectator-winners-banner>p{margin-bottom:8px}
+#main.public-wrap .spectator-winners-doubles p{display:flex;align-items:center;gap:7px 10px;flex-wrap:wrap}
+#main.public-wrap .spectator-finale-members{display:flex;flex-wrap:wrap;gap:8px 0;margin-top:7px}
+#main.public-wrap .spectator-finale-members .spectator-awarded-name{flex-wrap:nowrap}
+#main.public-wrap .spectator-result-matchup .spectator-award-disc,
+#main.public-wrap .spectator-result-matchup .spectator-award-trophy{margin-left:0}
+#main.public-wrap .spectator-bracket .playerline .spectator-award-disc,
+#main.public-wrap .spectator-bracket .playerline .spectator-award-trophy{margin-left:auto}
+@media(max-width:700px){
+ #main.public-wrap .spectator-award-disc{width:20px;height:20px;min-width:20px;font-size:11px}
+ #main.public-wrap .spectator-winners-doubles p{align-items:flex-start}
+}
+
 /* Spectator-only best-of-three game wins. Match the TV's earned/empty three-dot
    vocabulary without copying TV's cinematic sizing or affecting Staff. */
 #main.public-wrap .spectator-matchup{display:flex;flex-direction:column;gap:7px;min-width:0}
