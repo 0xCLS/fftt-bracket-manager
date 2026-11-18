@@ -69,6 +69,8 @@ test('spectator Results groups complete matches into bracket sections without du
   assert.match(spectator, /h\('ol', \{class: 'spectator-results-list'\}/);
   assert.match(spectator, /text: m\.id === finalId \? 'Final' : `Round \$\{m\.round \+ 1\}`/);
   assert.match(spectator, /scoreTiles\(m\.scores, \{left: m\.name1, right: m\.name2, caption: false\}\)/);
+  // Retain V4 comprehensive regression's stable score-tile hook inside the new Results card.
+  assert.match(spectator, /class: 'spectator-result-scorebox scores-cell'/);
   assert.match(spectator, /'aria-label': 'Match winner'/);
   assert.doesNotMatch(spectator, /\$\{m\.winnerName\} won/);
   assert.doesNotMatch(spectator, /board\.recent\.map\(m => h\('tr'/);
