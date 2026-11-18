@@ -996,10 +996,10 @@ td.scores-cell{min-width:150px}
 #main.public-wrap .spectator-result-matchup .spectator-result-runner-up .spectator-player-name{color:#697783;font-weight:600}
 #main.public-wrap .spectator-result-matchup .spectator-game-dots{margin-left:auto}
 #main.public-wrap .spectator-result-winner-mark{display:inline-flex;align-items:center;justify-content:center;
- flex:none;width:19px;height:19px;border:1.5px solid #147947;border-radius:50%;color:#137a48;
+ flex:none;width:16px;height:16px;border:1.35px solid #147947;border-radius:50%;color:#137a48;
  background:transparent;font-size:0;line-height:1}
-#main.public-wrap .spectator-result-winner-mark::after{content:"";width:5px;height:8px;
- border-right:1.7px solid currentColor;border-bottom:1.7px solid currentColor;
+#main.public-wrap .spectator-result-winner-mark::after{content:"";width:4px;height:6px;
+ border-right:1.35px solid currentColor;border-bottom:1.35px solid currentColor;
  transform:translateY(-1px) rotate(43deg)}
 #main.public-wrap .spectator-result-scorebox{display:flex;align-items:center;justify-content:space-between;
  flex-wrap:wrap;gap:8px 12px;min-width:0;border-top:1px solid #e8edf1;padding-top:10px}
