@@ -1,7 +1,8 @@
 /** FFTT game-day tournament engine: PURE functions shared by the staff app, the spectator app and tests.
- * No DOM, network or storage. The seeding and partner logic is ported verbatim from the approved
- * single-file application (index.html) and is checked against it by tests/gameday_engine.test.mjs, so the
- * cloud-connected build seeds exactly like the approved UI. The server remains the authority: it only
+ * No DOM, network or storage. The seeding logic is ported verbatim from the approved
+ * single-file application (index.html) and is checked against it by the approved-engine tests, so the
+ * cloud-connected build seeds exactly like the approved UI. (Doubles partner suggestions deliberately
+ * extend index.html with a mixed-skill tie-break, Nov 2026.) The server remains the authority: it only
  * accepts a seed layout it can validate, builds the bracket itself, and decides every result.
  */
 export const RATING_NAMES = Object.freeze({
@@ -114,15 +115,27 @@ export function normalizeGameScores(raw, best, p1Won, points = 11) {
   return {ok: true, text: out.join(', ')};
 }
 
-/** Consolation candidates in doubles-partner preference order (beginner-to-intermediate first). */
+/** Consolation candidates in doubles-partner preference order (beginner-to-intermediate first).
+ * Name, then id, make equal-level ties fully deterministic. */
 export function partnerCandidates(candidates) {
   return [...candidates].sort((a, b) => {
     const ap = a.rating <= 3 ? 0 : 1, bp = b.rating <= 3 ? 0 : 1;
-    return ap - bp || a.rating - b.rating || a.name.localeCompare(b.name);
+    return ap - bp || a.rating - b.rating || a.name.localeCompare(b.name) || String(a.id ?? '').localeCompare(String(b.id ?? ''));
   });
 }
 
-/** Balanced partner suggestion; verbatim logic from the approved app. finalists: [fa, fb] (with ratings). */
+const lexLess = (x, y) => { for (let k = 0; k < x.length; k++) if (x[k] !== y[k]) return x[k] < y[k]; return false; };
+
+/** Balanced partner suggestion. finalists: [fa, fb] (with ratings). Suggestion only: the Bracket Manager
+ * still chooses and saves the final teams, and the server validates eligibility, never balance.
+ * Strict priority order (lexicographic, never traded off against each other):
+ *   1. Smallest difference between the two teams' combined levels (team strength balance).
+ *   2. Among equally balanced options, the most teams that are genuinely mixed-skill (a finalist paired
+ *      with a partner of a different level): two mixed teams, then one, then none.
+ *   3. Partners from the established beginner-to-intermediate pool (level 3 or below) when it has two players.
+ *   4. Lower partner levels.
+ *   5. Candidate order (level, name, id), so the same input always yields the same suggestion.
+ * If no mixed-skill option is equally balanced, step 2 changes nothing and the balanced option is returned. */
 export function suggestPartners(finalists, candidates) {
   const ordered = partnerCandidates(candidates);
   const low = ordered.filter(p => p.rating <= 3);
@@ -133,10 +146,14 @@ export function suggestPartners(finalists, candidates) {
   for (let i = 0; i < pool.length; i++) for (let j = 0; j < pool.length; j++) {
     if (i === j) continue;
     const a = pool[i], b = pool[j];
-    const diff = Math.abs((fa.rating + a.rating) - (fb.rating + b.rating));
-    const penalty = (a.rating > 3 ? 2 : 0) + (b.rating > 3 ? 2 : 0);
-    const score = diff * 10 + penalty;
-    if (!best || score < best.score) best = {a, b, score};
+    const score = [
+      Math.abs((fa.rating + a.rating) - (fb.rating + b.rating)),
+      (fa.rating === a.rating ? 1 : 0) + (fb.rating === b.rating ? 1 : 0),
+      (a.rating > 3 ? 1 : 0) + (b.rating > 3 ? 1 : 0),
+      a.rating + b.rating,
+    ];
+    // Strictly better only: on a full tie the earlier (level, name, id) candidates stay selected.
+    if (!best || lexLess(score, best.score)) best = {a, b, score};
   }
   return best && {partner1: best.a, partner2: best.b};
 }
