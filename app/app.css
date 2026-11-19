@@ -1391,21 +1391,49 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
  border-color:#ad8133;color:#654910}
 #main.public-wrap .spectator-award-disc.silver{background:linear-gradient(140deg,#fcfdff 5%,#d0d7df 55%,#a6b2c0 98%);
  border-color:#8996a5;color:#394e60}
-#main.public-wrap .spectator-awarded-name{display:inline-flex;align-items:center;gap:6px;margin-right:12px;max-width:100%}
-#main.public-wrap .spectator-awarded-name>span:first-child{overflow-wrap:anywhere}
-#main.public-wrap .spectator-winners-banner h2,
-#main.public-wrap .spectator-winners-banner>p{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-#main.public-wrap .spectator-winners-banner>p{margin-bottom:8px}
-#main.public-wrap .spectator-winners-doubles p{display:flex;align-items:center;gap:7px 10px;flex-wrap:wrap}
-#main.public-wrap .spectator-finale-members{display:flex;flex-wrap:wrap;gap:8px 0;margin-top:7px}
-#main.public-wrap .spectator-finale-members .spectator-awarded-name{flex-wrap:nowrap}
+/* Tournament winners summary (the pale-yellow panel): Championship | Consolation | Mixed-Skill Doubles.
+   Fixed medal column so trophy and discs align in every category; Doubles teams stay grouped. */
+#main.public-wrap .spectator-winners-banner{padding:16px 18px 18px;border:1px solid #e4d27a;border-radius:8px;margin-bottom:var(--space-5)}
+#main.public-wrap .spectator-winners-title{margin:0 0 12px;font-size:.8rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#5c4a08}
+#main.public-wrap .spectator-winners-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:0}
+#main.public-wrap .spectator-award-column{min-width:0;padding:14px 0;border-top:1px solid #d9c565}
+#main.public-wrap .spectator-award-column:first-child{border-top:0;padding-top:0}
+#main.public-wrap .spectator-award-column:last-child{padding-bottom:0}
+#main.public-wrap .spectator-award-heading{margin:0 0 10px;font-size:1.02rem;font-weight:800;line-height:1.25;color:#29313c}
+#main.public-wrap .spectator-award-groups,
+#main.public-wrap .spectator-award-members{list-style:none;margin:0;padding:0}
+#main.public-wrap .spectator-award-groups{display:flex;flex-direction:column;gap:12px}
+#main.public-wrap .spectator-award-role{display:block;margin-bottom:4px;font-size:.72rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#5c4a08}
+#main.public-wrap .spectator-award-members{display:flex;flex-direction:column;gap:5px}
+#main.public-wrap .spectator-award-member{display:grid;grid-template-columns:26px minmax(0,1fr);align-items:center;column-gap:9px;min-width:0}
+#main.public-wrap .spectator-award-member>.spectator-award-trophy,
+#main.public-wrap .spectator-award-member>.spectator-award-disc{justify-self:center}
+#main.public-wrap .spectator-award-person{font-size:1.02rem;font-weight:750;line-height:1.3;color:#29313c;overflow-wrap:anywhere;min-width:0}
+@media(min-width:720px){
+ #main.public-wrap .spectator-winners-banner{padding:18px 22px 20px}
+ #main.public-wrap .spectator-winners-grid[data-columns="2"]{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #main.public-wrap .spectator-winners-grid[data-columns="3"]{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #main.public-wrap .spectator-award-column{padding:0 20px;border-top:0;border-left:1px solid #d9c565}
+ #main.public-wrap .spectator-award-column:first-child{padding-left:0;border-left:0}
+ #main.public-wrap .spectator-award-column:last-child{padding-right:0}
+}
+/* Mixed-Skill Doubles finale card (Spectator "Now & next"): heading with a quiet format note, stacked teams. */
+#main.public-wrap .spectator-finale-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 12px;margin-bottom:var(--space-3)}
+#main.public-wrap .spectator-finale-head h2{margin:0}
+#main.public-wrap .spectator-finale-format{font-size:.82rem;font-weight:600;color:var(--muted)}
+#main.public-wrap .spectator-finale .grid.two{grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}
+#main.public-wrap .spectator-finale>p.muted{margin:12px 0 0}
+#main.public-wrap .spectator-finale-team{min-width:0}
+#main.public-wrap .spectator-finale-team.is-winner{border-color:#c9a742}
+#main.public-wrap .spectator-finale-members{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+#main.public-wrap .spectator-finale-member{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
+#main.public-wrap .spectator-finale-name{font-size:1.02rem;font-weight:700;line-height:1.3;overflow-wrap:anywhere;min-width:0}
 #main.public-wrap .spectator-result-matchup .spectator-award-disc,
 #main.public-wrap .spectator-result-matchup .spectator-award-trophy{margin-left:0}
 #main.public-wrap .spectator-bracket .playerline .spectator-award-disc,
 #main.public-wrap .spectator-bracket .playerline .spectator-award-trophy{margin-left:auto}
 @media(max-width:700px){
  #main.public-wrap .spectator-award-disc{width:20px;height:20px;min-width:20px;font-size:11px}
- #main.public-wrap .spectator-winners-doubles p{align-items:flex-start}
 }
 
 /* Spectator-only best-of-three game wins. Match the TV's earned/empty three-dot
