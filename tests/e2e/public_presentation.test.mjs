@@ -217,7 +217,7 @@ test('Mixed-Skill Doubles finale card: stacked teams, subtle format note until t
   } finally {await long.browser.close();}
 });
 
-test('Doubles finale polish: fill-only panels with clear gaps, original trophy and flat discs, accessible labels', {timeout:120000}, async () => {
+test('Doubles finale polish: gap, original trophy, round engraved medals and accessible labels', {timeout:120000}, async () => {
   for (const [width,height] of [[1440,900],[768,1024],[390,844],[320,700]]) {
     const w=await specWorld(completedFixture({long:width<=390}),{width,height}), {page}=w;
     try {
@@ -260,16 +260,36 @@ test('Doubles finale polish: fill-only panels with clear gaps, original trophy a
       return {
         trophyIsSvg:!!trophy.querySelector('svg'), trophyText:trophy.textContent.trim(),
         trophyLabel:trophy.getAttribute('aria-label'), trophyRole:trophy.getAttribute('role'),
-        discs:[...document.querySelectorAll('.spectator-award-disc')].map(d=>({cls:d.className,label:d.getAttribute('aria-label'),text:d.textContent,bgImage:cs(d).backgroundImage,shadow:cs(d).boxShadow,radius:cs(d).borderTopLeftRadius,w:d.getBoundingClientRect().width,h:d.getBoundingClientRect().height,bg:cs(d).backgroundColor})),
+        discs:[...document.querySelectorAll('.spectator-award-disc')].map(d=>({
+          cls:d.className,label:d.getAttribute('aria-label'),text:d.textContent,
+          shadow:cs(d).boxShadow,radius:cs(d).borderTopLeftRadius,
+          w:d.getBoundingClientRect().width,h:d.getBoundingClientRect().height,
+          hasSvg:!!d.querySelector('svg.spectator-medal-art[aria-hidden="true"]'),
+          hasRim:d.querySelectorAll('svg circle').length>=5,
+          hasGradient:!!d.querySelector('svg radialGradient stop'),
+          hasLaurels:d.querySelectorAll('svg .spectator-medal-laurel').length>=8,
+          hasStars:d.querySelectorAll('svg .spectator-medal-star').length===3,
+          hasRibbon:!!d.querySelector('svg .ribbon,svg .hanging-loop'),
+          numeral:d.querySelector('.spectator-medal-number')?.textContent,
+          numeralHidden:d.querySelector('.spectator-medal-number')?.getAttribute('aria-hidden')
+        })),
       };
     });
     assert.equal(icons.trophyIsSvg,false,'original trophy is not a vector'); assert.equal(icons.trophyText,'🏆','original trophy emoji restored');
     assert.equal(icons.trophyLabel,'Champion, first place'); assert.equal(icons.trophyRole,'img');
     assert.ok(icons.discs.length>=6);
     for (const d of icons.discs) {
-      assert.equal(d.bgImage,'none','flat disc: no gradient'); assert.equal(d.shadow,'none','flat disc: no shadow or inset highlight');
-      assert.equal(d.radius,'50%'); assert.equal(d.w,22); assert.equal(d.h,22);
-      assert.ok(d.cls.includes('gold') ? d.bg==='rgb(241, 191, 46)' && d.label==='Gold medal, first place' && d.text==='1' : d.bg==='rgb(205, 212, 220)' && d.label==='Silver medal, runner-up' && d.text==='2');
+      assert.equal(d.shadow,'none','no raised button shadow around medal');
+      assert.equal(d.radius,'50%'); assert.equal(d.w,24); assert.equal(d.h,24);
+      assert.equal(d.hasSvg,true,'medal face has self-contained SVG');
+      assert.equal(d.hasRim,true,'metallic medal has concentric rims');
+      assert.equal(d.hasGradient,true,'medal has subtle metallic shading');
+      assert.equal(d.hasLaurels,true,'medal has engraved laurel detail');
+      assert.equal(d.hasStars,true,'medal has three small stars');
+      assert.equal(d.hasRibbon,false,'medal contains no ribbon or attachment loop');
+      assert.equal(d.numeralHidden,'true');
+      assert.ok(d.cls.includes('gold') ? d.label==='Gold medal, first place' && d.text==='1' && d.numeral==='1'
+        : d.label==='Silver medal, runner-up' && d.text==='2' && d.numeral==='2');
     }
     // The same icon family appears in the winners summary, the finale, completed results and the bracket.
     await page.getByRole('button',{name:'Now & next',exact:true}).click();
