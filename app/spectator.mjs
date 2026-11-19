@@ -45,9 +45,63 @@ const gameWinDots = (m, player, feedState) => {
     Array.from({length: 3}, (_, i) => h('span',
       {class: 'spectator-win-dot' + (i < wins ? ' earned' : ''), 'aria-hidden': 'true'})));
 };
-/* Award icons represent confirmed results, not an assertion about a physical prize.
- * Championship first place keeps the original unframed trophy emoji; every medal
- * is a round disc carrying the place numeral. Accessible labels stay on the wrapper. */
+/* Award icons describe official placements, not physical prizes. Keep the original
+ * unframed trophy. Round medal faces borrow the reference's raised rim, engraved
+ * laurels and small stars, without ribbons or attachment loops. */
+const MEDAL_NS = 'http://www.w3.org/2000/svg';
+let medalSerial = 0;
+const medalNode = (tag, attrs = {}, children = []) => {
+  const node = document.createElementNS(MEDAL_NS, tag);
+  for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, String(value));
+  node.append(...children);
+  return node;
+};
+const medalFace = gold => {
+  // Each instance needs a distinct paint-server ID; many medals can appear together.
+  const gradientId = 'spectator-medal-' + (gold ? 'gold-' : 'silver-') + (++medalSerial);
+  const palette = gold
+    ? ['#fff5ba', '#f2c756', '#d89c26', '#a77413', '#e2b234', '#fff0a1']
+    : ['#ffffff', '#e1e7eb', '#adb8c2', '#85919e', '#c7d0d9', '#f9fcff'];
+  const svg = medalNode('svg', {class: 'spectator-medal-art', viewBox: '0 0 32 32',
+    'aria-hidden': 'true', focusable: 'false'});
+  svg.append(medalNode('defs', {}, [
+    medalNode('radialGradient', {id: gradientId, cx: '29%', cy: '22%', r: '83%'}, [
+      medalNode('stop', {offset: '0%', 'stop-color': palette[0]}),
+      medalNode('stop', {offset: '53%', 'stop-color': palette[1]}),
+      medalNode('stop', {offset: '100%', 'stop-color': palette[2]})
+    ])
+  ]));
+  svg.append(
+    medalNode('circle', {cx: 16, cy: 16, r: 15.25, fill: palette[3]}),
+    medalNode('circle', {cx: 16, cy: 16, r: 14.5, fill: palette[4],
+      stroke: palette[5], 'stroke-width': '.85'}),
+    medalNode('circle', {cx: 16, cy: 16, r: 13.45, fill: 'none',
+      stroke: palette[3], 'stroke-width': '.62', 'stroke-dasharray': '.65 1.82'}),
+    medalNode('circle', {cx: 16, cy: 16, r: 12.25, fill: 'url(#' + gradientId + ')',
+      stroke: palette[5], 'stroke-width': '.75'}),
+    medalNode('circle', {cx: 16, cy: 16, r: 10.9, fill: 'none',
+      stroke: palette[3], 'stroke-width': '.43', opacity: '.72'}),
+    medalNode('path', {class: 'spectator-medal-laurel',
+      d: 'M10.8 22.9C7.2 20.1 6.8 15 9.8 10.8 M21.2 22.9C24.8 20.1 25.2 15 22.2 10.8',
+      fill: 'none', 'stroke-width': '.8', 'stroke-linecap': 'round'})
+  );
+  const leafPositions = [[9.3, 12.5, -26], [8.3, 15.4, -38],
+    [8.8, 18.6, -52], [10, 21.3, -64]];
+  for (const [x, y, angle] of leafPositions) {
+    for (const side of [-1, 1]) {
+      const cx = side === -1 ? x : 32 - x;
+      const rotation = side === -1 ? angle : -angle;
+      svg.append(medalNode('ellipse', {class: 'spectator-medal-laurel', cx, cy: y,
+        rx: '.85', ry: '1.48', transform: 'rotate(' + rotation + ' ' + cx + ' ' + y + ')'}));
+    }
+  }
+  for (const [i, x] of [12.1, 16, 19.9].entries()) {
+    svg.append(medalNode('path', {class: 'spectator-medal-star',
+      d: 'M0 -1.4L.4 -.43L1.44 -.43L.6 .2L.93 1.3L0 .66L-.93 1.3L-.6 .2L-1.44 -.43L-.4 -.43Z',
+      transform: 'translate(' + x + ' 8.2) scale(' + (i === 1 ? '.85' : '.68') + ')'}));
+  }
+  return svg;
+};
 const awardMark = (kind, place) => {
   if (kind === 'championship' && place === 1)
     return h('span', {class: 'spectator-award-trophy', role: 'img',
@@ -55,8 +109,8 @@ const awardMark = (kind, place) => {
   const gold = place === 1;
   return h('span', {class: 'spectator-award-disc ' + (gold ? 'gold' : 'silver'),
     role: 'img', 'aria-label': gold ? 'Gold medal, first place' : 'Silver medal, runner-up',
-    title: gold ? 'Gold medal · 1st place' : 'Silver medal · 2nd place',
-    text: gold ? '1' : '2'});
+    title: gold ? 'Gold medal · 1st place' : 'Silver medal · 2nd place'},
+    medalFace(gold), h('span', {class: 'spectator-medal-number', 'aria-hidden': 'true', text: gold ? '1' : '2'}));
 };
 
 const completedFinal = matches => {
