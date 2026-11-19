@@ -238,9 +238,14 @@ function spectatorBracket(matches, kind) {
     if (lines.length === 2) {
       const winIndex = final.winnerName === final.name1 ? 0 : 1;
       lines.forEach((line, i) => {
-        const check = line.querySelector(':scope > span:last-child');
-        if (i === winIndex && check?.textContent === '✓') check.textContent = '';
-        line.append(awardMark(kind, i === winIndex ? 1 : 2));
+        // Replace the existing right-hand marker instead of appending a fourth
+        // grid child: final trophies/medals must share the aligned marker slot
+        // with ordinary win checks, even when scores are displayed inline.
+        const check = line.querySelector(':scope > .spectator-bracket-win-check')
+          ?? line.querySelector(':scope > span:last-child');
+        const medal = awardMark(kind, i === winIndex ? 1 : 2);
+        if (check) check.replaceWith(medal);
+        else line.append(medal);
       });
     }
   }
