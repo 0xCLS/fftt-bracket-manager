@@ -91,7 +91,7 @@ test('Spectator displays public matches, brackets and scores at desktop and phon
       assert.equal(visual.fillWidth, viewport.width > 700 ? 21 : 18, 'earned game bar is compact');
       assert.equal(visual.fillHeight, viewport.width > 700 ? 7 : 6);
       assert.equal(visual.emptyWidth, visual.fillWidth);
-      assert.equal(visual.fillColor, 'rgb(193, 216, 151)', 'earned bar uses the approved sage green');
+      assert.equal(visual.fillColor, 'rgb(19, 122, 72)', 'earned bar matches the green winner checkmark');
       assert.equal(visual.emptyBorder, 'none', 'unearned bar has no visible border');
       assert.equal(visual.emptyBackground, 'rgb(230, 234, 238)', 'unearned bar uses a light gray solid fill');
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
@@ -364,6 +364,7 @@ test('Spectator bracket: scores align left of each player, status labels are tex
         return {children:children.length,markerClass:marker.className,
           markerLabel:marker.getAttribute('aria-label'),
           centerOffset:Math.abs((row.top+row.bottom)/2-(med.top+med.bottom)/2),
+          centerX:(med.left+med.right)/2,
           contained:med.right<=row.right+1&&med.left>=row.left-1};
       }));
       assert.equal(awards.length,2);
@@ -371,6 +372,8 @@ test('Spectator bracket: scores align left of each player, status labels are tex
         'final medals occupy the aligned right marker slot: '+JSON.stringify(awards));
       assert.ok(awards.some(a=>a.markerClass==='spectator-award-trophy'&&a.markerLabel==='Champion, first place'));
       assert.ok(awards.some(a=>a.markerClass.includes('spectator-award-disc silver')&&a.markerLabel==='Silver medal, runner-up'));
+      assert.ok(Math.abs(awards[0].centerX-awards[1].centerX)<1,
+        'the trophy and medal centers share one vertical axis: '+JSON.stringify(awards));
       assert.equal(await noHorizontalScroll(page),true,'no document overflow at '+width);
       await shoot(page,card,'compact-bracket-'+width+'.png');
     } finally {await w.browser.close();}
@@ -402,4 +405,43 @@ test('Spectator bracket: BYE only once, no invented scores, non-Bo3 formats reta
     assert.equal(await card.locator('.spectator-bracket-inline-score').count(),0);
     assert.equal(await noHorizontalScroll(t.page),true);
   } finally {await t.browser.close();}
+});
+
+
+test('Spectator bracket W/O has one Walkover status, no score footer; grounded slots tighten without collisions', {timeout:90000}, async () => {
+  for (const [width,height] of [[1440,900],[390,844],[320,700]]) {
+    const data=completedFixture({long:width===320});
+    const walk=data[0].brackets[0].matches[1];
+    walk.game_scores='W/O';
+    const w=await specWorld(data,{width,height}), {page}=w;
+    try {
+      await page.getByRole('button',{name:'Bracket',exact:true}).click();
+      const bracket=page.locator('.spectator-bracket').first();
+      const wo=bracket.locator('.match.spectator-bracket-walkover');
+      assert.equal(await wo.count(),1,'one W/O card at '+width);
+      assert.equal((await wo.locator('.match-head .pill').innerText()).trim(),'Walkover');
+      assert.equal(await wo.locator('.match-head').innerText().then(s=>s.includes('Completed')),false);
+      assert.equal(await wo.locator('.match-foot').count(),0,'no redundant W/O footer');
+      assert.equal(await wo.locator('.spectator-bracket-inline-score').count(),0,'no fabricated game scores');
+      assert.equal(await wo.locator('.playerline.winner').count(),1,'official W/O winner remains highlighted');
+      assert.equal(await wo.locator('.playerline.winner').innerText().then(s=>s.includes('✓')),true);
+      const layout=await bracket.evaluate(node=>{
+        const positions=[...node.querySelectorAll('.round:first-child .spectator-bracket-position')]
+          .map(p=>p.getBoundingClientRect()).sort((a,b)=>a.top-b.top);
+        const rounds=[...node.querySelectorAll('.round')].map(r=>r.getBoundingClientRect());
+        const grid=node.querySelector('.spectator-bracket-positions');
+        return {slotCss:grid?getComputedStyle(grid).gridAutoRows:'',
+          slotHeights:positions.map(p=>p.height),
+          overlapping:positions.some((p,i)=>i>0&&p.top<positions[i-1].bottom-1),
+          roundXs:rounds.map(r=>r.left),
+          scrollWidth:node.scrollWidth,clientWidth:node.clientWidth};
+      });
+      assert.ok(layout.slotCss.includes(width>700?'130px':'134px') && layout.slotCss.includes('max-content'),
+        'responsive slot baseline is reduced but adapts to long names: '+JSON.stringify(layout));
+      assert.equal(layout.overlapping,false,'bracket slots cannot overlap at '+width);
+      assert.ok(layout.roundXs.every((x,i)=>i===0||x>layout.roundXs[i-1]),'rounds still progress left to right');
+      assert.equal(await noHorizontalScroll(page),true,'no page overflow at '+width);
+      await shoot(page,wo,'bracket-walkover-'+width+'.png');
+    } finally {await w.browser.close();}
+  }
 });
