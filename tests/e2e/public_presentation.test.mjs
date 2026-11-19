@@ -313,3 +313,77 @@ test('Doubles finale polish: gap, original trophy, round engraved medals and acc
     assert.doesNotMatch(await page.locator('body').innerText(),/rating|level\s*\d|@/i,'privacy: no ratings or contact data');
   } finally {await w.browser.close();}
 });
+
+
+test('Spectator bracket: scores align left of each player, status labels are text, loser remains neutral', {timeout:90000}, async () => {
+  for (const [width,height] of [[1440,900],[390,844],[320,700]]) {
+    const w=await specWorld(completedFixture({long:width===320}),{width,height}), {page}=w;
+    try {
+      await page.getByRole('button',{name:'Bracket',exact:true}).click();
+      const card=page.locator('.spectator-bracket').first().locator('.match.spectator-bracket-inline').nth(1);
+      const detail=await card.evaluate(card=>{
+        const lines=[...card.querySelectorAll(':scope > .playerline')];
+        const status=card.querySelector('.match-head .pill');
+        const info=lines.map(line=>{
+          const boxes=[...line.querySelectorAll('.spectator-bracket-inline-score .score-tile')];
+          const name=line.querySelector('.spectator-bracket-player-name');
+          return {name:name?.textContent, tiles:boxes.map(x=>x.textContent),
+            kinds:boxes.map(x=>x.classList.contains('win')?'win':'lose'),
+            tileXs:boxes.map(x=>Math.round(x.getBoundingClientRect().left)),
+            groupLabel:line.querySelector('.spectator-bracket-inline-score')?.getAttribute('aria-label'),
+            scoreRight:line.querySelector('.spectator-bracket-inline-score')?.getBoundingClientRect().right,
+            nameLeft:name?.getBoundingClientRect().left,
+            isWinner:line.classList.contains('winner'), bg:getComputedStyle(line).backgroundColor
+          };
+        });
+        const bbox=card.getBoundingClientRect(), position=card.closest('.spectator-bracket-position')?.getBoundingClientRect();
+        return {info,footer:!!card.querySelector('.match-foot'),header:card.querySelector('.match-head').innerText,
+          statusPadding:getComputedStyle(status).padding,statusBorder:getComputedStyle(status).borderTopStyle,
+          statusBg:getComputedStyle(status).backgroundColor,
+          height:bbox.height,positionHeight:position?.height};
+      });
+      assert.equal(detail.footer,false,'ordinary Bo3 scores no longer consume footer space');
+      assert.deepEqual(detail.info.map(x=>x.tiles),[['11','8','11'],['5','11','6']]);
+      assert.deepEqual(detail.info.map(x=>x.kinds),[['win','lose','win'],['lose','win','lose']]);
+      assert.ok(detail.info.every(x=>x.groupLabel?.includes('Game 1:') && x.scoreRight < x.nameLeft),'per-player score group precedes name');
+      assert.deepEqual(detail.info[0].tileXs,detail.info[1].tileXs,'game columns align vertically');
+      assert.equal(detail.info.filter(x=>x.isWinner).length,1);
+      assert.equal(detail.info.find(x=>x.isWinner).bg,'rgb(237, 247, 239)','winner has restrained green fill');
+      assert.equal(detail.info.find(x=>!x.isWinner).bg,'rgb(255, 255, 255)','loser row remains neutral, not red');
+      assert.equal(detail.header.includes('Completed'),true);
+      assert.equal(detail.statusPadding,'0px','status displays as plain text');
+      assert.equal(detail.statusBorder,'none','status has no pill border');
+      assert.equal(detail.statusBg,'rgba(0, 0, 0, 0)','status has no pill fill');
+      assert.ok(detail.height <= detail.positionHeight,'compact match fits grounded bracket slot at '+width);
+      assert.equal(await noHorizontalScroll(page),true,'no document overflow at '+width);
+      await shoot(page,card,'compact-bracket-'+width+'.png');
+    } finally {await w.browser.close();}
+  }
+});
+
+test('Spectator bracket: BYE only once, no invented scores, non-Bo3 formats retain their accessible fallback', {timeout:90000}, async () => {
+  const bye=completedFixture();
+  const first=bye[0].brackets[0].matches[0];
+  first.status='bye'; first.phase='done'; first.player_2_name=null; first.game_scores='';
+  const w=await specWorld(bye,{width:390,height:844});
+  try {
+    await w.page.getByRole('button',{name:'Bracket',exact:true}).click();
+    const card=w.page.locator('.spectator-bracket-bye').first();
+    assert.equal(await card.count(),1);
+    assert.equal((await card.locator('.match-head').innerText()).trim().toUpperCase(),'BYE','no duplicate left-side Bye text');
+    assert.equal(await card.locator('.spectator-bracket-inline-score').count(),0,'BYE never invents scores');
+    assert.equal(await card.locator('.match-head .pill').evaluate(el=>getComputedStyle(el).borderTopStyle),'none');
+  } finally {await w.browser.close();}
+
+  const longMatch=completedFixture();
+  longMatch[0].brackets[0].matches[1].best_of=5;
+  longMatch[0].brackets[0].matches[1].game_scores='11-5, 8-11, 11-6, 11-8';
+  const t=await specWorld(longMatch,{width:390,height:844});
+  try {
+    await t.page.getByRole('button',{name:'Bracket',exact:true}).click();
+    const card=t.page.locator('.spectator-bracket').first().locator('.match').nth(1);
+    assert.equal(await card.locator('.match-foot .score-games').count(),1,'historical Bo5 retains grouped score footer');
+    assert.equal(await card.locator('.spectator-bracket-inline-score').count(),0);
+    assert.equal(await noHorizontalScroll(t.page),true);
+  } finally {await t.browser.close();}
+});
