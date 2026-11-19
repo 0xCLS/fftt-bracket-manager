@@ -12,7 +12,7 @@ const css = read('app/app.css');
 test('spectator uses approved public copy and complete bracket names', () => {
   assert.match(html, /Forging Fellowship Table Tennis · Building community through fellowship/);
   assert.doesNotMatch(html, /Public view · names and results only · FFTT Bracket Manager/);
-  assert.match(spectator, /Consolation bracket champion:/);
+  assert.match(spectator, /awardColumn\('Consolation', 'consolation'/);
   assert.match(spectator, /resultsGroup\('Championship Bracket', championship, feedState, completedFinal/);
   assert.match(spectator, /resultsGroup\('Consolation Bracket', consolation, feedState, completedFinal/);
 });
@@ -126,8 +126,31 @@ test('finished singles finals get correct award icons without ribbons or badges'
 });
 
 test('doubles awards only after official finale and one disc for each player', () => {
-  assert.match(spectator, /f\.winnerTeam \? awardMark\('doubles', f\.winnerTeam === number \? 1 : 2\) : null/);
-  assert.match(spectator, /\.\.\.st\.doubles\.winners\.map\(name/);
-  assert.match(spectator, /\.\.\.st\.doubles\.losers\.map\(name/);
-  assert.match(spectator, /Consolation bracket runner-up:/);
+  assert.match(spectator, /decided \? awardMark\('doubles', f\.winnerTeam === number \? 1 : 2\) : null/);
+  assert.match(spectator, /awardGroup\('doubles', 1, 'Winners', st\.doubles\.winners\)/);
+  assert.match(spectator, /awardGroup\('doubles', 2, 'Runners-up', st\.doubles\.losers\)/);
+  assert.match(spectator, /awardMark\(kind, place\), h\('span', \{class: 'spectator-award-person'/);
+  assert.match(spectator, /awardGroup\('consolation', 2, 'Runner-up'/);
 });
+
+test('winners summary is three labelled categories with a fixed medal column and the existing yellow', () => {
+  assert.match(spectator, /awardColumn\('Championship', 'championship'/);
+  assert.match(spectator, /awardColumn\('Mixed-Skill Doubles', 'doubles'/);
+  assert.match(spectator, /'data-columns': columns\.length/);
+  assert.match(spectator, /class: 'champion-banner spectator-winners-banner'/);
+  assert.match(css, /\.champion-banner\{[^}]*background:var\(--butter\)/);
+  assert.match(css, /@media\(min-width:720px\)\{[^]*spectator-winners-grid\[data-columns="3"\]\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}/);
+  assert.match(css, /\.spectator-award-member\{display:grid;grid-template-columns:26px minmax\(0,1fr\)/);
+  assert.match(css, /\.spectator-award-disc\.gold\{background:linear-gradient/);
+  assert.doesNotMatch(spectator, /Mixed-Skill Doubles winners: |Consolation bracket champion:/);
+});
+
+test('doubles finale format note is subtle, only until the finale is decided, and teams stack', () => {
+  assert.match(spectator, /f\.bestOf === 1 \? `Single game to \$\{f\.points\}`/);
+  assert.match(spectator, /!decided && finaleFormat\(f\) \? h\('span', \{class: 'spectator-finale-format'/);
+  assert.match(spectator, /class: 'spectator-finale-members'/);
+  assert.doesNotMatch(spectator, /h\('p', \{class: 'fmt-line', text: `Best of \$\{f\.bestOf\} · to \$\{f\.points\}`\}\)/);
+  assert.match(css, /\.spectator-finale-members\{[^}]*flex-direction:column/);
+  assert.match(css, /\.spectator-finale \.grid\.two\{grid-template-columns:repeat\(auto-fit,minmax\(min\(100%,240px\),1fr\)\)\}/);
+});
+

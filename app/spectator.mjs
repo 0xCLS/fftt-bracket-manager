@@ -108,17 +108,23 @@ function viewNow(ev, board, feedState) {
         : h('div', {class: 'empty-state', text: 'Nothing queued yet.'})),
     ev.finale ? finaleCard(ev.finale) : null);
 }
+/** "Single game to 21" / "Best of 3 · to 11". Shown only until the finale is officially decided. */
+const finaleFormat = f => !f.bestOf || !f.points ? ''
+  : f.bestOf === 1 ? `Single game to ${f.points}` : `Best of ${f.bestOf} · to ${f.points}`;
 function finaleCard(f) {
-  const teamCard = (names, number) => h('div', {class: 'stat ' + (number === 1 ? 'ice' : 'lav')},
+  const decided = !!f.winnerTeam;
+  const teamCard = (names, number) => h('div', {class: 'stat spectator-finale-team ' + (number === 1 ? 'ice' : 'lav') + (decided && f.winnerTeam === number ? ' is-winner' : '')},
     h('b', {text: 'Team ' + (number === 1 ? 'A' : 'B')}),
-    h('div', {class: 'spectator-finale-members'},
-      ...names.map(name => h('span', {class: 'spectator-awarded-name'},
-        h('span', {text: name}),
-        f.winnerTeam ? awardMark('doubles', f.winnerTeam === number ? 1 : 2) : null))));
-  return h('div', {class: 'card spectator-finale'}, h('h2', {text: 'Mixed-Skill Doubles finale'}),
+    h('ul', {class: 'spectator-finale-members', 'aria-label': 'Team ' + (number === 1 ? 'A' : 'B') + ' players'},
+      ...names.map(name => h('li', {class: 'spectator-finale-member'},
+        h('span', {class: 'spectator-finale-name', text: name}),
+        decided ? awardMark('doubles', f.winnerTeam === number ? 1 : 2) : null))));
+  return h('div', {class: 'card spectator-finale'},
+    h('div', {class: 'spectator-finale-head'},
+      h('h2', {text: 'Mixed-Skill Doubles finale'}),
+      !decided && finaleFormat(f) ? h('span', {class: 'spectator-finale-format', text: finaleFormat(f)}) : null),
     h('div', {class: 'grid two'}, teamCard(f.team1, 1), teamCard(f.team2, 2)),
-    f.bestOf && f.points ? h('p', {class: 'fmt-line', text: `Best of ${f.bestOf} · to ${f.points}`}) : null,
-    f.winnerTeam ? h('div', {class: 'notice good'}, h('p', {text: `Winners: ${(f.winnerTeam === 1 ? f.team1 : f.team2).join(' + ')}`}),
+    decided ? h('div', {class: 'notice good'}, h('p', {text: `Winners: ${(f.winnerTeam === 1 ? f.team1 : f.team2).join(' + ')}`}),
       f.scores ? scoreTiles(f.scores, {left: 'Team A', right: 'Team B'}) : null) : h('p', {class: 'muted', text: 'Coming up after the championship final.'}));
 }
 
@@ -232,25 +238,39 @@ const resultsGroup = (label, matches, feedState, finalId) => matches.length
       ...matches.map(m => resultMatch(m, feedState, finalId))))
   : null;
 
+/** One awarded place: the medal (or trophy) sits in a fixed column so every category aligns, and a Doubles
+ * team's players stay together under one label. */
+const awardGroup = (kind, place, label, names) => h('li', {class: 'spectator-award-group'},
+  h('span', {class: 'spectator-award-role', text: label}),
+  h('ul', {class: 'spectator-award-members'},
+    ...names.map(name => h('li', {class: 'spectator-award-member'},
+      awardMark(kind, place), h('span', {class: 'spectator-award-person', text: name})))));
+const awardColumn = (title, kind, groups) => h('section', {class: 'spectator-award-column ' + kind, 'aria-label': title},
+  h('h3', {class: 'spectator-award-heading', text: title}),
+  h('ul', {class: 'spectator-award-groups'}, ...groups));
+function winnersSummary(st) {
+  const columns = [
+    awardColumn('Championship', 'championship', [
+      awardGroup('championship', 1, 'Champion', [st.champion]),
+      awardGroup('championship', 2, 'Runner-up', [st.runnerUp])]),
+    st.consolationChampion ? awardColumn('Consolation', 'consolation', [
+      awardGroup('consolation', 1, 'Champion', [st.consolationChampion]),
+      st.consolationRunnerUp ? awardGroup('consolation', 2, 'Runner-up', [st.consolationRunnerUp]) : null].filter(Boolean)) : null,
+    st.doubles ? awardColumn('Mixed-Skill Doubles', 'doubles', [
+      awardGroup('doubles', 1, 'Winners', st.doubles.winners),
+      awardGroup('doubles', 2, 'Runners-up', st.doubles.losers)]) : null,
+  ].filter(Boolean);
+  return h('section', {class: 'champion-banner spectator-winners-banner', 'aria-labelledby': 'winnersTitle'},
+    h('h2', {id: 'winnersTitle', class: 'spectator-winners-title', text: 'Tournament winners'}),
+    h('div', {class: 'spectator-winners-grid', 'data-columns': columns.length}, ...columns));
+}
+
 function viewResults(ev, board, feedState) {
   const st = standings(ev);
   const championship = board.recent.filter(m => m.bracket === 'championship');
   const consolation = board.recent.filter(m => m.bracket === 'consolation');
   return h('div', {class: 'spectator-results'},
-    st.champion ? h('div', {class: 'champion-banner spectator-winners-banner'},
-      h('h2', {}, awardMark('championship', 1), h('span', {text: `Champion: ${st.champion}`})),
-      h('p', {}, awardMark('championship', 2), h('span', {text: `Runner-up: ${st.runnerUp}`})),
-      st.consolationChampion ? h('p', {}, awardMark('consolation', 1),
-        h('span', {text: `Consolation bracket champion: ${st.consolationChampion}`})) : null,
-      st.consolationRunnerUp ? h('p', {}, awardMark('consolation', 2),
-        h('span', {text: `Consolation bracket runner-up: ${st.consolationRunnerUp}`})) : null,
-      st.doubles ? h('div', {class: 'spectator-winners-doubles'},
-        h('p', {}, h('span', {text: 'Mixed-Skill Doubles winners: '}),
-          ...st.doubles.winners.map(name => h('span', {class: 'spectator-awarded-name'},
-            h('span', {text: name}), awardMark('doubles', 1)))),
-        h('p', {}, h('span', {text: 'Mixed-Skill Doubles runners-up: '}),
-          ...st.doubles.losers.map(name => h('span', {class: 'spectator-awarded-name'},
-            h('span', {text: name}), awardMark('doubles', 2))))) : null) : null,
+    st.champion ? winnersSummary(st) : null,
     h('h2', {class: 'spectator-results-title', text: 'Completed matches'}),
     board.recent.length
       ? h('div', {},
