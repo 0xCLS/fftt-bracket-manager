@@ -191,6 +191,15 @@ function polishSpectatorBracketCard(card, match) {
     card.classList.add('spectator-bracket-bye');
     head?.querySelector(':scope > span:first-child')?.remove();
   }
+  // A walkover is an administrative result, not completed game play.
+  // The match already has an official winner; show that and one clear status
+  // instead of repeating the encoded "W/O" in an otherwise empty score footer.
+  if (match.status === 'complete' && /^\\s*W\\/O\\s*$/i.test(String(match.scores ?? ''))) {
+    card.classList.add('spectator-bracket-walkover');
+    const status = head?.querySelector(':scope > .pill');
+    if (status) status.textContent = 'Walkover';
+    card.querySelector(':scope > .match-foot')?.remove();
+  }
   const lines = [...card.querySelectorAll(':scope > .playerline')];
   if (lines.length !== 2 || match.status !== 'complete') return;
   const games = parseGames(match.scores);
