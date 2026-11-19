@@ -465,11 +465,7 @@ body.tv footer{position:relative;z-index:3;border-top:1px solid #688ca27d;color:
 .controls{opacity:1;transform:none;position:fixed;left:auto;right:3vw;bottom:1.3vh;background:none;border:0;border-radius:0;gap:.45vw;z-index:9;padding:0}
 .controls:hover,.controls:focus-within{opacity:1;transform:none}
 .controls button{background:transparent;border:1px solid transparent;border-radius:3px;color:#bbcfdb;font-size:clamp(10px,.8vw,15px);font-weight:900;letter-spacing:.04em;padding:.52em .72em;text-transform:uppercase}
-.controls button[data-screen="match"]::before{content:"1  "}
-.controls button[data-screen="results"]::before{content:"2  "}
-.controls button[data-screen="championship"]::before{content:"3  "}
-.controls button[data-screen="consolation"]::before{content:"4  "}
-body[data-broadcast-screen="match"] .controls button[data-screen="match"],body[data-broadcast-screen="results"] .controls button[data-screen="results"],body[data-broadcast-screen="championship"] .controls button[data-screen="championship"],body[data-broadcast-screen="consolation"] .controls button[data-screen="consolation"]{border-color:var(--bc-cyan);color:#fff;background:#08404a}
+body[data-broadcast-screen="match"] .controls button[data-screen="match"],body[data-broadcast-screen="results"] .controls button[data-screen="results"]{border-color:var(--bc-cyan);color:#fff;background:#08404a}
 .controls #prev,.controls #next,.controls #pause{position:absolute;bottom:calc(100% + 6px);display:none;border:1px solid #478e9d;background:#103044}
 .controls #prev{right:116px}.controls #pause{right:57px}.controls #next{right:0}
 .controls:hover #prev,.controls:hover #next,.controls:hover #pause,.controls:focus-within #prev,.controls:focus-within #next,.controls:focus-within #pause{display:block}
@@ -702,8 +698,6 @@ body.tv .controls #pause {grid-column:3}
 body.tv .controls #next {grid-column:4}
 body.tv .controls button[data-screen="match"] {grid-column:1;grid-row:2}
 body.tv .controls button[data-screen="results"] {grid-column:2;grid-row:2}
-body.tv .controls button[data-screen="championship"] {grid-column:3;grid-row:2}
-body.tv .controls button[data-screen="consolation"] {grid-column:4;grid-row:2}
 
 /* Premium TV finishing pass — screenshot review, Nov 7.
    Keep the existing navy / teal / yellow broadcast language. */
@@ -1471,3 +1465,112 @@ body.tv .broadcast-match-center .progress-next{font-size:clamp(10px,.7vw,13px);c
   body.tv .broadcast-match-center .live-game-progress{gap:3px 7px;font-size:11px}
   body.tv .broadcast-match-center .progress-tally{font-size:18px}
 }
+
+/* ------------------------------------------------------------------
+   Three or more tables (FFTT 3 runs three). Every configured table is shown at once as an equal
+   column, label above its card, players stacked so names keep their full broadcast size on 16:9.
+   One and two tables keep the approved layouts above; nothing here applies to them.
+   ------------------------------------------------------------------ */
+:root{--bc-violet:#b9a8ff}
+body.tv .broadcast-match-center[data-tables="1"] .table-grid{grid-template-columns:minmax(0,1fr)}
+body.tv .multi-table .table-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-rows:none;
+  grid-auto-rows:minmax(0,1fr);
+  gap:clamp(14px,1.7vw,36px);
+  align-items:stretch;
+}
+body.tv .multi-table[data-tables="4"] .table-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+body.tv .multi-table[data-tables="7"] .table-grid,
+body.tv .multi-table[data-tables="8"] .table-grid,
+body.tv .multi-table[data-tables="10"] .table-grid,
+body.tv .multi-table[data-tables="11"] .table-grid,
+body.tv .multi-table[data-tables="12"] .table-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+body.tv .multi-table .table-stage{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:auto minmax(0,1fr);
+  row-gap:clamp(8px,1.2vh,16px);
+  height:100%;
+  max-height:none;
+  --match-edge:var(--bc-cyan);
+}
+body.tv .multi-table .table-stage.accent-1,
+body.tv .multi-table .table-stage.accent-1 .table-card.broadcast-match{--match-edge:var(--bc-yellow)}
+body.tv .multi-table .table-stage.accent-2,
+body.tv .multi-table .table-stage.accent-2 .table-card.broadcast-match{--match-edge:var(--bc-violet)}
+/* The legacy two-table rules colour the card itself; restate the column's own accent on it. */
+body.tv .multi-table .table-stage.accent-0 .table-card.broadcast-match{--match-edge:var(--bc-cyan)}
+body.tv .multi-table .table-outside-label,
+body.tv .multi-table .table-stage-2 .table-outside-label{
+  flex-direction:row;
+  justify-content:center;
+  align-items:baseline;
+  gap:clamp(10px,.9vw,18px);
+  color:var(--match-edge);
+}
+body.tv .multi-table .table-outside-number{font-size:clamp(34px,3.5vw,66px);line-height:.9}
+body.tv .multi-table .table-outside-word{
+  max-width:none;
+  font-size:clamp(14px,1.25vw,24px);
+  letter-spacing:.16em;
+  white-space:nowrap;
+  color:#e3f0f7;
+}
+body.tv .multi-table .table-card.broadcast-match,
+body.tv .multi-table .table-stage-2 .table-card.broadcast-match{
+  border-color:var(--match-edge);
+  border-radius:clamp(16px,1.5vw,28px);
+  padding:clamp(12px,1.3vw,26px) clamp(12px,1.2vw,24px);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 12px 34px rgba(0,0,0,.22),0 0 26px color-mix(in srgb,var(--match-edge) 13%,transparent);
+}
+body.tv .multi-table .table-card.broadcast-match.active{border-top:3px solid var(--match-edge)}
+body.tv .multi-table .card-top{gap:clamp(5px,.7vh,10px);padding-inline:0}
+body.tv .multi-table .match-round{font-size:clamp(11px,.88vw,17px);letter-spacing:.06em}
+body.tv .multi-table .status-label{font-size:clamp(11px,.82vw,15px);color:var(--match-edge)}
+/* Fixed rows keep every card's names and VS on the same lines, with or without confirmed-game progress. */
+body.tv .multi-table .match-content{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr) minmax(clamp(26px,3.4vh,40px),auto) auto;
+  gap:clamp(6px,.9vh,14px);
+  align-items:center;
+  margin-top:clamp(4px,.8vh,12px);
+}
+body.tv .multi-table .match-content>.players{grid-row:1;grid-column:1}
+body.tv .multi-table .match-content>.live-game-progress{grid-row:2;grid-column:1}
+body.tv .multi-table .match-content>.match-meta{grid-row:3;grid-column:1}
+body.tv .multi-table .match-player:not(:has(.game-win-dots))::after{content:"";display:block;min-height:clamp(7px,.8vh,12px)}
+body.tv .multi-table .players{
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr) auto minmax(0,1fr);
+  align-content:center;
+  row-gap:clamp(6px,1vh,14px);
+}
+body.tv .multi-table .match-player{justify-content:center}
+body.tv .multi-table .player-name{font-size:clamp(20px,1.95vw,38px);line-height:1.04}
+body.tv .multi-table .player-name .player-first{font-size:.74em}
+body.tv .multi-table .versus-line{width:100%;gap:clamp(8px,.7vw,14px)}
+body.tv .multi-table .versus-line:before,
+body.tv .multi-table .versus-line:after{width:auto;flex:1;min-width:12px}
+body.tv .multi-table .versus{
+  --vs-diameter:clamp(40px,3.4vw,64px);
+  font-size:clamp(18px,1.7vw,32px);
+  border-color:var(--match-edge);color:var(--match-edge);
+}
+body.tv .multi-table .live-game-progress{gap:clamp(3px,.45vh,8px) clamp(6px,.6vw,12px);padding:0}
+body.tv .multi-table .match-meta{font-size:clamp(11px,.85vw,16px);letter-spacing:.14em;padding-top:clamp(5px,.6vh,10px)}
+body.tv .multi-table .empty-table strong{font-size:clamp(22px,2vw,40px)}
+/* Four or more tables: rows get short, so players sit side by side again and type steps down. */
+body.tv .multi-table:not([data-tables="3"]) .players{
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  grid-template-rows:none;
+  column-gap:clamp(6px,.7vw,14px);
+}
+body.tv .multi-table:not([data-tables="3"]) .versus-line{width:auto}
+body.tv .multi-table:not([data-tables="3"]) .versus-line:before,
+body.tv .multi-table:not([data-tables="3"]) .versus-line:after{display:none}
+body.tv .multi-table:not([data-tables="3"]) .player-name{font-size:clamp(15px,1.35vw,26px)}
+body.tv .multi-table:not([data-tables="3"]) .versus{--vs-diameter:clamp(30px,2.4vw,44px);font-size:clamp(13px,1.1vw,20px)}
+body.tv .multi-table:not([data-tables="3"]) .table-outside-number{font-size:clamp(24px,2.3vw,42px)}
+body.tv .multi-table:not([data-tables="3"]) .table-outside-word{font-size:clamp(11px,.95vw,17px)}
