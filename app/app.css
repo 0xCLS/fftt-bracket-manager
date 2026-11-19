@@ -1485,11 +1485,11 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
 #main.public-wrap .spectator-matchup{display:flex;flex-direction:column;gap:7px;min-width:0}
 #main.public-wrap .spectator-player-row{display:flex;justify-content:space-between;align-items:center;gap:10px;min-width:0}
 #main.public-wrap .spectator-player-name{font-size:1rem;font-weight:750;line-height:1.35;color:#293d50;overflow-wrap:anywhere;min-width:0}
-/* Confirmed best-of-three games: compact teal segments; unearned segments are quiet solid gray. */
+/* Confirmed best-of-three games: organizer-approved soft sage green (#c1d897) for earned bars; unearned segments remain light gray. */
 #main.public-wrap .spectator-game-dots{display:inline-flex;flex-shrink:0;align-items:center;gap:4px;min-height:12px}
 #main.public-wrap .spectator-win-dot{display:block;box-sizing:border-box;width:21px;height:7px;flex:none;
  border:0;border-radius:999px;background:#e6eaee;box-shadow:none}
-#main.public-wrap .spectator-win-dot.earned{border:1px solid #299f8e;background:#42b8a7;box-shadow:none}
+#main.public-wrap .spectator-win-dot.earned{border:1px solid #98b96e;background:#c1d897;box-shadow:none}
 #main.public-wrap .board-match .spectator-matchup{margin:9px 0 8px}
 #main.public-wrap .board-match .spectator-player-row+.spectator-player-row{border-top:1px solid #e8edf1;padding-top:7px}
 #main.public-wrap .scores-cell+.spectator-game-dots{margin-top:4px}
