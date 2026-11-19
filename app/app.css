@@ -1380,13 +1380,8 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
 
 /* Spectator ribbon-free award discs. The metallic circle IS the medal, not
    a badge around a ribbon icon; Championship first place retains its trophy. */
-#main.public-wrap .spectator-award-trophy{display:inline-grid;flex:none;place-items:center;width:24px;height:24px;
- line-height:0;vertical-align:middle}
-#main.public-wrap .spectator-award-trophy svg{display:block;width:24px;height:24px;overflow:visible}
-#main.public-wrap .spectator-award-trophy .trophy-cup,
-#main.public-wrap .spectator-award-trophy .trophy-stem,
-#main.public-wrap .spectator-award-trophy .trophy-base{fill:#f1bf2e;stroke:#b98a0a;stroke-width:.9;stroke-linejoin:round}
-#main.public-wrap .spectator-award-trophy .trophy-handle{stroke:#b98a0a;stroke-width:1.9}
+#main.public-wrap .spectator-award-trophy{display:inline-block;flex:none;line-height:1;
+ font-size:1.17rem;vertical-align:middle}
 /* Flat medals: solid fills, a thin same-family outline for contrast, no gradient, gloss or shadow. */
 #main.public-wrap .spectator-award-disc{display:inline-grid;flex:none;place-items:center;
  width:22px;height:22px;min-width:22px;border-radius:50%;border:1px solid;box-sizing:border-box;
