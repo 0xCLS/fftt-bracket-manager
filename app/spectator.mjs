@@ -46,27 +46,12 @@ const gameWinDots = (m, player, feedState) => {
       {class: 'spectator-win-dot' + (i < wins ? ' earned' : ''), 'aria-hidden': 'true'})));
 };
 /* Award icons represent confirmed results, not an assertion about a physical prize.
- * Championship first place uses a flat, self-contained vector trophy (no emoji, ribbon or badge); every
- * medal is its own flat round disc carrying the place numeral. Labels stay on the wrapper element. */
-const SVG_NS = 'http://www.w3.org/2000/svg';
-const svgEl = (tag, attrs) => {
-  const el = document.createElementNS(SVG_NS, tag);
-  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
-  return el;
-};
-const trophyIcon = () => {
-  const svg = svgEl('svg', {viewBox: '0 0 24 24', width: '24', height: '24', 'aria-hidden': 'true', focusable: 'false'});
-  svg.append(
-    svgEl('path', {class: 'trophy-cup', d: 'M6.8 3h10.4v6.1a5.2 5.2 0 0 1-10.4 0z'}),
-    svgEl('path', {class: 'trophy-handle', d: 'M6.8 5H4.4v1.5A3.6 3.6 0 0 0 7.2 10M17.2 5h2.4v1.5A3.6 3.6 0 0 1 16.8 10', fill: 'none', 'stroke-width': '1.7', 'stroke-linecap': 'round', 'stroke-linejoin': 'round'}),
-    svgEl('rect', {class: 'trophy-stem', x: '10.8', y: '13.6', width: '2.4', height: '3.6'}),
-    svgEl('rect', {class: 'trophy-base', x: '7.4', y: '17.2', width: '9.2', height: '3', rx: '1.1'}));
-  return svg;
-};
+ * Championship first place keeps the original unframed trophy emoji; every medal
+ * is a round disc carrying the place numeral. Accessible labels stay on the wrapper. */
 const awardMark = (kind, place) => {
   if (kind === 'championship' && place === 1)
     return h('span', {class: 'spectator-award-trophy', role: 'img',
-      'aria-label': 'Champion, first place', title: 'Champion · 1st place'}, trophyIcon());
+      'aria-label': 'Champion, first place', title: 'Champion · 1st place', text: '🏆'});
   const gold = place === 1;
   return h('span', {class: 'spectator-award-disc ' + (gold ? 'gold' : 'silver'),
     role: 'img', 'aria-label': gold ? 'Gold medal, first place' : 'Silver medal, runner-up',
