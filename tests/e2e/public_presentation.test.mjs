@@ -355,6 +355,22 @@ test('Spectator bracket: scores align left of each player, status labels are tex
       assert.equal(detail.statusBorder,'none','status has no pill border');
       assert.equal(detail.statusBg,'rgba(0, 0, 0, 0)','status has no pill fill');
       assert.ok(detail.height <= detail.positionHeight,'compact match fits grounded bracket slot at '+width);
+      // Championship finals use the same inline-score grid; trophy and runner-up
+      // medal replace the old right-hand markers, never create a fourth grid cell.
+      const finalCard=page.locator('.spectator-bracket').first().locator('.round').last().locator('.match').first();
+      const awards=await finalCard.evaluate(card=>[...card.querySelectorAll(':scope > .playerline')].map(line=>{
+        const children=[...line.children], marker=children.at(-1);
+        const row=line.getBoundingClientRect(), med=marker.getBoundingClientRect();
+        return {children:children.length,markerClass:marker.className,
+          markerLabel:marker.getAttribute('aria-label'),
+          centerOffset:Math.abs((row.top+row.bottom)/2-(med.top+med.bottom)/2),
+          contained:med.right<=row.right+1&&med.left>=row.left-1};
+      }));
+      assert.equal(awards.length,2);
+      assert.ok(awards.every(a=>a.children===3&&a.centerOffset<5&&a.contained),
+        'final medals occupy the aligned right marker slot: '+JSON.stringify(awards));
+      assert.ok(awards.some(a=>a.markerClass==='spectator-award-trophy'&&a.markerLabel==='Champion, first place'));
+      assert.ok(awards.some(a=>a.markerClass.includes('spectator-award-disc silver')&&a.markerLabel==='Silver medal, runner-up'));
       assert.equal(await noHorizontalScroll(page),true,'no document overflow at '+width);
       await shoot(page,card,'compact-bracket-'+width+'.png');
     } finally {await w.browser.close();}
