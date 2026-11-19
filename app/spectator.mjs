@@ -204,7 +204,7 @@ function polishSpectatorBracketCard(card, match) {
   if (lines.length !== 2 || match.status !== 'complete') return;
   const games = parseGames(match.scores);
   // Best-of-three games fit the narrow bracket columns. Keep the shared
-  // accessible score footer for historical Bo5, walkovers and irregular scores.
+  // accessible score footer for historical Bo5 and irregular recorded scores.
   if (!match.name1 || !match.name2 || !games?.length || games.length > 3) return;
   lines.forEach((line, player) => {
     const name = player === 0 ? match.name1 : match.name2;
