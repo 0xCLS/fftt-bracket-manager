@@ -3,7 +3,7 @@ import {h, clear, fill, $} from './dom.mjs';
 import {startPublicFeed, pickEvent, isShowcase} from './public_core.mjs';
 import {deriveBoard} from '../contracts/gameday_public.mjs';
 import {bracketView, groupRounds} from './bracket_view.mjs';
-import {scoreTiles} from './game_tiles.mjs';
+import {parseGames, scoreTiles} from './game_tiles.mjs';
 import {spectatorGameWins} from './spectator_game_dots.mjs';
 import {computeStandings} from '../contracts/gameday_engine.mjs';
 import {formatEventDate} from './date_format.mjs';
@@ -184,12 +184,49 @@ function finaleCard(f) {
 
 /* Spectator-only bracket layout. Keep the Staff renderer, official match rows and
  * scored results intact; links follow validated round/slot topology only. */
+function polishSpectatorBracketCard(card, match) {
+  const head = card.querySelector(':scope > .match-head');
+  // Staff still uses the original pills. Spectator keeps the one meaningful BYE label.
+  if (match.status === 'bye') {
+    card.classList.add('spectator-bracket-bye');
+    head?.querySelector(':scope > span:first-child')?.remove();
+  }
+  const lines = [...card.querySelectorAll(':scope > .playerline')];
+  if (lines.length !== 2 || match.status !== 'complete') return;
+  const games = parseGames(match.scores);
+  // Best-of-three games fit the narrow bracket columns. Keep the shared
+  // accessible score footer for historical Bo5, walkovers and irregular scores.
+  if (!match.name1 || !match.name2 || !games?.length || games.length > 3) return;
+  lines.forEach((line, player) => {
+    const name = player === 0 ? match.name1 : match.name2;
+    const values = games.map(g => player === 0 ? g.a : g.b);
+    const scores = h('span', {class: 'spectator-bracket-inline-score', role: 'group',
+      'aria-label': `${name || 'Player ' + (player + 1)} game scores: ${values.map((n, i) => 'Game ' + (i + 1) + ': ' + n).join(', ')}`},
+      games.map((g, i) => h('span', {class: 'score-tile ' +
+        ((player === 0 ? g.a > g.b : g.b > g.a) ? 'win' : 'lose'),
+        'aria-hidden': 'true', text: String(values[i])})));
+    line.classList.add('spectator-bracket-player-scored');
+    line.querySelector(':scope > span:first-child')?.classList.add('spectator-bracket-player-name');
+    line.querySelector(':scope > span:last-child')?.classList.add('spectator-bracket-win-check');
+    line.prepend(scores);
+  });
+  card.classList.add('spectator-bracket-inline');
+  card.querySelector(':scope > .match-foot')?.remove();
+}
 function spectatorBracket(matches, kind) {
   const bracket = bracketView(matches, kind);
   if (!bracket.classList.contains('bracket')) return bracket;
   bracket.classList.add('spectator-bracket');
   const rounds = groupRounds(matches);
   const roundEls = [...bracket.querySelectorAll(':scope > .round')];
+  // Match cards are paired by sorted round/slot, exactly as the shared renderer
+  // builds them. Only the anonymous Spectator nodes are polished.
+  rounds.forEach((round, r) => {
+    const cards = [...roundEls[r].querySelectorAll(':scope > .match')];
+    round.filter(m => m.status !== 'empty').forEach((m, i) => {
+      if (cards[i]) polishSpectatorBracketCard(cards[i], m);
+    });
+  });
   // Award icons only for officially completed finals, never for byes or
   // in-progress games. The shared Staff bracket renderer remains unchanged.
   const final = completedFinal(matches);
@@ -201,9 +238,14 @@ function spectatorBracket(matches, kind) {
     if (lines.length === 2) {
       const winIndex = final.winnerName === final.name1 ? 0 : 1;
       lines.forEach((line, i) => {
-        const check = line.querySelector(':scope > span:last-child');
-        if (i === winIndex && check?.textContent === '✓') check.textContent = '';
-        line.append(awardMark(kind, i === winIndex ? 1 : 2));
+        // Replace the existing right-hand marker instead of appending a fourth
+        // grid child: final trophies/medals must share the aligned marker slot
+        // with ordinary win checks, even when scores are displayed inline.
+        const check = line.querySelector(':scope > .spectator-bracket-win-check')
+          ?? line.querySelector(':scope > span:last-child');
+        const medal = awardMark(kind, i === winIndex ? 1 : 2);
+        if (check) check.replaceWith(medal);
+        else line.append(medal);
       });
     }
   }
