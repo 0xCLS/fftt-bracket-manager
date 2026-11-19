@@ -1382,13 +1382,23 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
    a badge around a ribbon icon; Championship first place retains its trophy. */
 #main.public-wrap .spectator-award-trophy{display:inline-block;flex:none;line-height:1;
  font-size:1.17rem;vertical-align:middle}
-/* Flat medals: solid fills, a thin same-family outline for contrast, no gradient, gloss or shadow. */
+/* Circular medal faces: modest metallic depth, engraved laurel/rim/stars,
+   no ribbon, hanging loop, outer badge, or button shadow. The SVG is decorative. */
 #main.public-wrap .spectator-award-disc{display:inline-grid;flex:none;place-items:center;
- width:22px;height:22px;min-width:22px;border-radius:50%;border:1px solid;box-sizing:border-box;
- font-variant-numeric:tabular-nums;font-size:12px;font-weight:800;line-height:1;text-indent:0;
- vertical-align:middle}
-#main.public-wrap .spectator-award-disc.gold{background:#f1bf2e;border-color:#c99710;color:#4f3a00}
-#main.public-wrap .spectator-award-disc.silver{background:#cdd4dc;border-color:#98a3af;color:#2f3d4a}
+ grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);
+ width:24px;height:24px;min-width:24px;padding:0;border:0;border-radius:50%;
+ box-sizing:border-box;background:transparent;box-shadow:none;overflow:visible;
+ font-variant-numeric:tabular-nums;line-height:1;vertical-align:middle}
+#main.public-wrap .spectator-award-disc.gold{--medal-engrave:#9c6b16;color:#543608}
+#main.public-wrap .spectator-award-disc.silver{--medal-engrave:#73818d;color:#2c3945}
+#main.public-wrap .spectator-award-disc .spectator-medal-art{display:block;grid-area:1/1;
+ width:100%;height:100%;overflow:visible}
+#main.public-wrap .spectator-award-disc .spectator-medal-number{display:grid;grid-area:1/1;
+ place-items:center;z-index:1;font-size:12px;font-weight:900;letter-spacing:-.02em;
+ text-shadow:0 1px 0 #ffffff52}
+#main.public-wrap .spectator-award-disc .spectator-medal-laurel{stroke:var(--medal-engrave);opacity:.46}
+#main.public-wrap .spectator-award-disc ellipse.spectator-medal-laurel{fill:var(--medal-engrave);stroke:none}
+#main.public-wrap .spectator-award-disc .spectator-medal-star{fill:var(--medal-engrave);opacity:.42}
 /* Tournament winners summary (the pale-yellow panel): Championship | Consolation | Mixed-Skill Doubles.
    Fixed medal column so trophy and discs align in every category; Doubles teams stay grouped. */
 #main.public-wrap .spectator-winners-banner{padding:16px 18px 18px;border:1px solid #e4d27a;border-radius:8px;margin-bottom:var(--space-5)}
@@ -1438,7 +1448,8 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
 #main.public-wrap .spectator-bracket .playerline .spectator-award-disc,
 #main.public-wrap .spectator-bracket .playerline .spectator-award-trophy{margin-left:auto}
 @media(max-width:700px){
- #main.public-wrap .spectator-award-disc{width:20px;height:20px;min-width:20px;font-size:11px}
+ #main.public-wrap .spectator-award-disc{width:22px;height:22px;min-width:22px}
+ #main.public-wrap .spectator-award-disc .spectator-medal-number{font-size:11px}
 }
 
 /* Spectator-only best-of-three game wins. Match the TV's earned/empty three-dot
