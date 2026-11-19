@@ -148,16 +148,23 @@ for (const scenario of scenarios) {
       await checkin.waitFor({state:'detached',timeout:T});
       let snapshot = await db.rpc(w.ids.org, 'fftt_organizer_snapshot_v3', {p_event_id:w.eventId});
       assert.equal(snapshot.players.filter(p => p.checked_in).length, scenario.players);
+      // A third independent fictional scorer validates all three table stations.
+      w.accounts.c = ['scorekeeper-c@fftt-staging.invalid', 'TestScorerC-2026-Aa1!'];
+      w.ids.c = await w.fake.addAccount(w.accounts.c[0], w.accounts.c[1]);
+      await db.rpc(w.ids.org, 'fftt_set_staff_v3', {
+        p_event_id:w.eventId, p_email:w.accounts.c[0], p_action:'grant', p_role:'scorekeeper',
+      });
       const bm = await w.device('bm');
       await bm.signIn('bm');
       await tab(bm.page, 'championship');
       await bm.page.getByRole('button', {name:'Build championship bracket'}).click();
       await toast(bm.page, 'Championship bracket built.');
-      const a = await w.device('scorer-a', PHONE), b = await w.device('scorer-b', PHONE);
-      await a.signIn('a'); await b.signIn('b');
+      const a = await w.device('scorer-a', PHONE), b = await w.device('scorer-b', PHONE),
+        c = await w.device('scorer-c', PHONE);
+      await a.signIn('a'); await b.signIn('b'); await c.signIn('c');
       await prepareThreeTables(w, bm);
       const saveEveryGame = process.env.FFTT_SIM_SAVE_EVERY_GAME === '1';
-      report.championship = await runBracket(w, [a,b], 'championship', saveEveryGame);
+      report.championship = await runBracket(w, [a,b,c], 'championship', saveEveryGame);
       snapshot = await db.rpc(w.ids.org, 'fftt_organizer_snapshot_v3', {p_event_id:w.eventId});
       assert.equal(snapshot.brackets.find(b => b.kind === 'championship')?.status, 'complete');
       assert.equal(report.championship.played, scenario.players - 1, 'Every Championship match played');
@@ -170,7 +177,7 @@ for (const scenario of scenarios) {
       assert.equal(await build.isEnabled(), true);
       await build.click();
       await toast(bm.page, 'Consolation bracket built.');
-      report.consolation = await runBracket(w, [a,b], 'consolation', saveEveryGame);
+      report.consolation = await runBracket(w, [a,b,c], 'consolation', saveEveryGame);
       snapshot = await db.rpc(w.ids.org, 'fftt_organizer_snapshot_v3', {p_event_id:w.eventId});
       assert.equal(snapshot.brackets.length, 2);
       assert.ok(snapshot.brackets.every(b => b.status === 'complete'), 'Both brackets complete');
