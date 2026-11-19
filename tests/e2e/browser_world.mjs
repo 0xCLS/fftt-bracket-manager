@@ -17,9 +17,14 @@ const TYPES = {'.html': 'text/html', '.mjs': 'text/javascript', '.js': 'text/jav
 const SEC = {'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'cache-control': 'no-store'};
 
 export async function launch() {
+  if (process.env.FFTT_CHROME_STRICT === '1' && process.env.FFTT_CHROME_CHANNEL === 'none') throw new Error('FFTT_CHROME_STRICT=1 requires an installed Chrome channel');
   const opts = process.env.FFTT_CHROME_CHANNEL === 'none' ? {} : {channel: process.env.FFTT_CHROME_CHANNEL ?? 'chrome'};
   try { return await chromium.launch({...opts, args: ['--disable-features=PrivateNetworkAccessChecks']}); }
-  catch { return chromium.launch(); }
+  catch (error) {
+    // FFTT_CHROME_STRICT=1: never fall back to Playwright's downloaded Chromium; surface the launch failure instead.
+    if (process.env.FFTT_CHROME_STRICT === '1') throw new Error('Google Chrome could not be launched and fallback is disabled: ' + error.message);
+    return chromium.launch();
+  }
 }
 
 /** `real: true` runs on the UPGRADED single-project schema with a real-mode (synthetic_only = false) event; FFTT_UPGRADED=1 does the same for every world. */

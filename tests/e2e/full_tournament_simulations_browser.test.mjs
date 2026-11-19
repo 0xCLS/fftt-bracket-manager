@@ -2,9 +2,13 @@
  * The actual Staff/Spectator HTML, roles, RPCs and scoring UI are exercised.
  * No production host, live event, registration source, or hosted Showcase is contacted.
  *
- * Run: FFTT_CHROME_CHANNEL=none node --test tests/e2e/full_tournament_simulations_browser.test.mjs
+ * Run: node --test tests/e2e/full_tournament_simulations_browser.test.mjs
+ * Uses the installed Google Chrome only. FFTT_CHROME_STRICT=1 (set below) makes the launcher fail instead of
+ * silently falling back to Playwright's bundled Chromium.
  * Set FFTT_SIM_SAVE_EVERY_GAME=1 to save each game separately (slower).
  */
+process.env.FFTT_CHROME_CHANNEL = 'chrome';
+process.env.FFTT_CHROME_STRICT = '1';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createBrowserWorld, SPECT} from './browser_world.mjs';
@@ -35,7 +39,11 @@ async function playMatch(device, db, m, i, saveEveryGame) {
   // Reload the signed-in real UI to consume another scorer's latest results.
   await device.page.reload({waitUntil: 'domcontentloaded'});
   const card = device.page.locator('.queue-card', {hasText: m.player_1_name}).first();
-  await card.waitFor({timeout: T});
+  try { await card.waitFor({timeout: T}); }
+  catch (error) {
+    const text = (await device.page.locator('body').innerText()).replace(/\s+/g, ' ').slice(0, 1500);
+    throw new Error('[' + device.name + '] no queue card for "' + m.player_1_name + '" (table ' + m.table_number + '). Page: ' + text + ' | ' + error.message);
+  }
   assert.match(await card.getAttribute('aria-label'), /versus/);
   await card.getByRole('button', {name: 'Record result'}).click();
   const dialog = device.page.locator('dialog[open]');
@@ -129,23 +137,27 @@ for (const scenario of scenarios) {
       await db.rpc(w.ids.org, 'fftt_upsert_players_v3',
         {p_event_id:w.eventId, p_players:fictional(scenario.players)});
       const org = await w.device('org');
-      await org.signIn('org');
+      await org.signIn('org', {keep:true});
       await org.page.locator('#fmt-champ-bo').waitFor({timeout:T});
       assert.equal(await org.page.locator('#evTables').inputValue(), '3');
-      if (scenario.consBo === 3) {
-        for (const suffix of ['cons', 'cons_final']) {
-          await org.page.locator('#fmt-' + suffix + '-bo').selectOption('3');
-          await org.page.locator('#fmt-' + suffix + '-pts').selectOption('11');
-        }
-        await org.page.getByRole('button', {name:'Save match formats'}).click();
-        await org.page.locator('dialog[open]').getByRole('button', {name:'Save formats'}).click();
-        await toast(org.page, /formats saved/i);
+      // Mixed-Skill Doubles is always Best of 1 game to 21 (the schema default is Best of 3 to 11).
+      const formatCategories = [['doubles', 1, 21]];
+      if (scenario.consBo === 3) formatCategories.push(['cons', 3, 11], ['cons_final', 3, 11]);
+      for (const [suffix, bo, pts] of formatCategories) {
+        await org.page.locator('#fmt-' + suffix + '-bo').selectOption(String(bo));
+        await org.page.locator('#fmt-' + suffix + '-pts').selectOption(String(pts));
       }
+      await org.page.getByRole('button', {name:'Save match formats'}).click();
+      await org.page.locator('dialog[open]').getByRole('button', {name:'Save formats'}).click();
+      await toast(org.page, /formats saved/i);
+      const [fmt] = await db.admin('select doubles_best_of,doubles_points from fftt_private.events where id=$1', [w.eventId]);
+      assert.deepEqual([fmt.doubles_best_of, fmt.doubles_points], [1, 21], 'Doubles must be Best of 1 to 21');
       await tab(org.page, 'players');
       await org.page.getByRole('button', {name:'Check in all', exact:true}).click();
       const checkin = org.page.locator('dialog[open]');
       await checkin.getByRole('button', {name:'Check in all players', exact:true}).click();
       await checkin.waitFor({state:'detached',timeout:T});
+      await toast(org.page, 'All roster players checked in.'); // the dialog closes before the RPC returns
       let snapshot = await db.rpc(w.ids.org, 'fftt_organizer_snapshot_v3', {p_event_id:w.eventId});
       assert.equal(snapshot.players.filter(p => p.checked_in).length, scenario.players);
       // A third independent fictional scorer validates all three table stations.
@@ -155,13 +167,13 @@ for (const scenario of scenarios) {
         p_event_id:w.eventId, p_email:w.accounts.c[0], p_action:'grant', p_role:'scorekeeper',
       });
       const bm = await w.device('bm');
-      await bm.signIn('bm');
+      await bm.signIn('bm', {keep:true});
       await tab(bm.page, 'championship');
       await bm.page.getByRole('button', {name:'Build championship bracket'}).click();
       await toast(bm.page, 'Championship bracket built.');
       const a = await w.device('scorer-a', PHONE), b = await w.device('scorer-b', PHONE),
         c = await w.device('scorer-c', PHONE);
-      await a.signIn('a'); await b.signIn('b'); await c.signIn('c');
+      for (const [d, k] of [[a,'a'],[b,'b'],[c,'c']]) await d.signIn(k, {keep:true}); // every device reloads to see others' results
       await prepareThreeTables(w, bm);
       const saveEveryGame = process.env.FFTT_SIM_SAVE_EVERY_GAME === '1';
       report.championship = await runBracket(w, [a,b,c], 'championship', saveEveryGame);
@@ -170,6 +182,10 @@ for (const scenario of scenarios) {
       assert.equal(report.championship.played, scenario.players - 1, 'Every Championship match played');
       assert.equal(report.championship.finals, 1, 'One Championship final');
       assert.ok(snapshot.consolation_candidates.length >= 2);
+      const byes = snapshot.matches.filter(m => m.bracket === 'championship' && m.status === 'bye').length;
+      const slots = 2 ** Math.ceil(Math.log2(scenario.players));
+      assert.equal(byes, slots - scenario.players, 'Championship byes fill the bracket to a power of two');
+      report.byes = byes;
       await bm.page.reload({waitUntil:'domcontentloaded'});
       await tab(bm.page, 'consolation');
       const build = bm.page.getByRole('button', {name:'Build consolation bracket'});
@@ -207,7 +223,13 @@ for (const scenario of scenarios) {
       assert.doesNotMatch(JSON.stringify(pub), /@|phone|rating_status|actor_id|submission_id/);
       const spectator = await w.device('spectator');
       await spectator.open(SPECT + '/');
-      await spectator.page.locator('.board-match').first().waitFor({timeout:T});
+      // Every match is finished, so no live .board-match exists; the finale and results are what spectators see.
+      await spectator.page.locator('.spectator-finale').waitFor({timeout:T});
+      assert.match(await spectator.page.locator('#evMeta').innerText(), /In progress/, 'Not complete until the Manager marks it');
+      const finale = await spectator.page.locator('.spectator-finale').innerText();
+      assert.match(finale, /Mixed-Skill Doubles finale/);
+      assert.match(finale, /Best of 1 · to 21/);
+      assert.match(finale, /Winners:/);
       await bm.page.reload({waitUntil:'domcontentloaded'});
       await tab(bm.page, 'wrap');
       const finish = bm.page.getByRole('button', {name:'Mark event complete'});
@@ -218,6 +240,9 @@ for (const scenario of scenarios) {
       const [event] = await db.admin('select lifecycle,table_count from fftt_private.events where id=$1', [w.eventId]);
       assert.equal(event.lifecycle, 'complete');
       assert.equal(event.table_count, 3);
+      await spectator.page.reload({waitUntil:'domcontentloaded'});
+      await spectator.page.locator('.spectator-finale').waitFor({timeout:T});
+      assert.match(await spectator.page.locator('#evMeta').innerText(), /Final results/, 'Spectators see the completed-event state');
       assert.deepEqual(w.pageErrors, []);
       report.doubles = {winnerTeam:team, score:pub.finale.game_scores};
       report.status = 'PASS';
