@@ -1345,6 +1345,7 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
  border:0;border-radius:0;padding:0;box-shadow:none;background:transparent;
  font-size:.72rem;font-weight:700;white-space:nowrap;color:#62717c}
 #main.public-wrap .spectator-bracket .match-head .pill.mini.good{color:#25784f}
+#main.public-wrap .spectator-bracket .spectator-bracket-walkover .match-head .pill.mini{color:#326c80}
 #main.public-wrap .spectator-bracket .match-head .pill.mini.blue{color:#326c80}
 #main.public-wrap .spectator-bracket .match.playing .match-head .pill.mini{color:#168279}
 #main.public-wrap .spectator-bracket .spectator-bracket-bye .match-head{justify-content:flex-end}
@@ -1353,7 +1354,7 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
 #main.public-wrap .spectator-bracket .playerline.winner{background:#edf7ef;font-weight:750}
 #main.public-wrap .spectator-bracket .playerline:not(.winner){background:#fff}
 #main.public-wrap .spectator-bracket .spectator-bracket-player-scored{display:grid;
- grid-template-columns:max-content minmax(0,1fr) auto;gap:7px}
+ grid-template-columns:max-content minmax(0,1fr) 24px;gap:7px}
 #main.public-wrap .spectator-bracket .spectator-bracket-player-name{min-width:0;
  overflow-wrap:anywhere;word-break:normal}
 #main.public-wrap .spectator-bracket .spectator-bracket-inline-score{display:inline-grid;
@@ -1377,7 +1378,7 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
 #main.public-wrap .spectator-bracket .round{width:245px;display:flex;flex-direction:column;justify-content:flex-start;gap:0}
 #main.public-wrap .spectator-bracket .round-title{display:flex;align-items:center;min-height:36px;margin:0;line-height:1.2}
 #main.public-wrap .spectator-bracket.has-grounded-slots .spectator-bracket-positions{
- display:grid;grid-auto-rows:154px;grid-auto-flow:row;min-width:0}
+ display:grid;grid-auto-rows:minmax(130px,max-content);grid-auto-flow:row;min-width:0}
 #main.public-wrap .spectator-bracket-position{display:flex;align-items:center;position:relative;min-width:0}
 #main.public-wrap .spectator-bracket-position.span-1{grid-row:span 1}
 #main.public-wrap .spectator-bracket-position.span-2{grid-row:span 2}
@@ -1403,7 +1404,7 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
  #main.public-wrap .spectator-now-playing-grid,#main.public-wrap .spectator-now-queue-grid{grid-template-columns:minmax(0,1fr)}
  #main.public-wrap .spectator-now-card{padding:13px 14px}
  #main.public-wrap .spectator-bracket .round{width:min(260px,calc(100vw - 80px))}
- #main.public-wrap .spectator-bracket.has-grounded-slots .spectator-bracket-positions{grid-auto-rows:146px}
+ #main.public-wrap .spectator-bracket.has-grounded-slots .spectator-bracket-positions{grid-auto-rows:minmax(134px,max-content)}
 }
 
 /* Spectator ribbon-free award discs. The metallic circle IS the medal, not
@@ -1475,6 +1476,17 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
 #main.public-wrap .spectator-result-matchup .spectator-award-trophy{margin-left:0}
 #main.public-wrap .spectator-bracket .playerline .spectator-award-disc,
 #main.public-wrap .spectator-bracket .playerline .spectator-award-trophy{margin-left:auto}
+/* The final-round trophy and medals share the same optically centered marker
+   position as ordinary win checks. Keep the 24px track even when the row
+   has no award; do not push SVGs out of the score/name grid. */
+#main.public-wrap .spectator-bracket .playerline > .spectator-award-disc,
+#main.public-wrap .spectator-bracket .playerline > .spectator-award-trophy{
+ display:inline-grid;place-items:center;align-self:center;min-width:24px;
+ width:24px;height:24px;min-height:24px;line-height:1}
+#main.public-wrap .spectator-bracket .spectator-bracket-player-scored > :is(
+ .spectator-bracket-win-check,.spectator-award-disc,.spectator-award-trophy){
+ display:inline-grid;place-items:center;justify-self:center;align-self:center;
+ width:24px;min-width:24px;min-height:24px;margin-left:0;line-height:1}
 @media(max-width:700px){
  #main.public-wrap .spectator-award-disc{width:22px;height:22px;min-width:22px}
  #main.public-wrap .spectator-award-disc .spectator-medal-number{font-size:11px}
@@ -1485,11 +1497,11 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
 #main.public-wrap .spectator-matchup{display:flex;flex-direction:column;gap:7px;min-width:0}
 #main.public-wrap .spectator-player-row{display:flex;justify-content:space-between;align-items:center;gap:10px;min-width:0}
 #main.public-wrap .spectator-player-name{font-size:1rem;font-weight:750;line-height:1.35;color:#293d50;overflow-wrap:anywhere;min-width:0}
-/* Confirmed best-of-three games: organizer-approved soft sage green (#c1d897) for earned bars; unearned segments remain light gray. */
+/* Confirmed best-of-three games: earned bars match the Spectator Results checkmark (#137a48); unearned segments stay light gray. */
 #main.public-wrap .spectator-game-dots{display:inline-flex;flex-shrink:0;align-items:center;gap:4px;min-height:12px}
 #main.public-wrap .spectator-win-dot{display:block;box-sizing:border-box;width:21px;height:7px;flex:none;
  border:0;border-radius:999px;background:#e6eaee;box-shadow:none}
-#main.public-wrap .spectator-win-dot.earned{border:1px solid #98b96e;background:#c1d897;box-shadow:none}
+#main.public-wrap .spectator-win-dot.earned{border:1px solid #147947;background:#137a48;box-shadow:none}
 #main.public-wrap .board-match .spectator-matchup{margin:9px 0 8px}
 #main.public-wrap .board-match .spectator-player-row+.spectator-player-row{border-top:1px solid #e8edf1;padding-top:7px}
 #main.public-wrap .scores-cell+.spectator-game-dots{margin-top:4px}
