@@ -141,7 +141,8 @@ test('winners summary is three labelled categories with a fixed medal column and
   assert.match(css, /\.champion-banner\{[^}]*background:var\(--butter\)/);
   assert.match(css, /@media\(min-width:720px\)\{[^]*spectator-winners-grid\[data-columns="3"\]\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}/);
   assert.match(css, /\.spectator-award-member\{display:grid;grid-template-columns:26px minmax\(0,1fr\)/);
-  assert.match(css, /\.spectator-award-disc\.gold\{background:linear-gradient/);
+  assert.match(css, /\.spectator-award-disc\.gold\{background:#f1bf2e/);
+  assert.doesNotMatch(css, /\.spectator-award-disc[^}]*(?:linear-gradient|box-shadow)/);
   assert.doesNotMatch(spectator, /Mixed-Skill Doubles winners: |Consolation bracket champion:/);
 });
 

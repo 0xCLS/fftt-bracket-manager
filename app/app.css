@@ -1380,17 +1380,20 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
 
 /* Spectator ribbon-free award discs. The metallic circle IS the medal, not
    a badge around a ribbon icon; Championship first place retains its trophy. */
-#main.public-wrap .spectator-award-trophy{display:inline-block;flex:none;line-height:1;
- font-size:1.17rem;vertical-align:middle}
+#main.public-wrap .spectator-award-trophy{display:inline-grid;flex:none;place-items:center;width:24px;height:24px;
+ line-height:0;vertical-align:middle}
+#main.public-wrap .spectator-award-trophy svg{display:block;width:24px;height:24px;overflow:visible}
+#main.public-wrap .spectator-award-trophy .trophy-cup,
+#main.public-wrap .spectator-award-trophy .trophy-stem,
+#main.public-wrap .spectator-award-trophy .trophy-base{fill:#f1bf2e;stroke:#b98a0a;stroke-width:.9;stroke-linejoin:round}
+#main.public-wrap .spectator-award-trophy .trophy-handle{stroke:#b98a0a;stroke-width:1.9}
+/* Flat medals: solid fills, a thin same-family outline for contrast, no gradient, gloss or shadow. */
 #main.public-wrap .spectator-award-disc{display:inline-grid;flex:none;place-items:center;
- width:22px;height:22px;min-width:22px;border-radius:50%;border:1px solid;
- font-variant-numeric:tabular-nums;font-size:12px;font-weight:900;line-height:1;
- box-shadow:inset 0 1px 2px #ffffffa0,inset 0 -2px 2px #00000018,0 1px 2px #00000012;
+ width:22px;height:22px;min-width:22px;border-radius:50%;border:1px solid;box-sizing:border-box;
+ font-variant-numeric:tabular-nums;font-size:12px;font-weight:800;line-height:1;text-indent:0;
  vertical-align:middle}
-#main.public-wrap .spectator-award-disc.gold{background:linear-gradient(140deg,#ffeb9c 7%,#efc04f 52%,#c79532 95%);
- border-color:#ad8133;color:#654910}
-#main.public-wrap .spectator-award-disc.silver{background:linear-gradient(140deg,#fcfdff 5%,#d0d7df 55%,#a6b2c0 98%);
- border-color:#8996a5;color:#394e60}
+#main.public-wrap .spectator-award-disc.gold{background:#f1bf2e;border-color:#c99710;color:#4f3a00}
+#main.public-wrap .spectator-award-disc.silver{background:#cdd4dc;border-color:#98a3af;color:#2f3d4a}
 /* Tournament winners summary (the pale-yellow panel): Championship | Consolation | Mixed-Skill Doubles.
    Fixed medal column so trophy and discs align in every category; Doubles teams stay grouped. */
 #main.public-wrap .spectator-winners-banner{padding:16px 18px 18px;border:1px solid #e4d27a;border-radius:8px;margin-bottom:var(--space-5)}
@@ -1422,12 +1425,19 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
 #main.public-wrap .spectator-finale-head h2{margin:0}
 #main.public-wrap .spectator-finale-format{font-size:.82rem;font-weight:600;color:var(--muted)}
 #main.public-wrap .spectator-finale .grid.two{grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}
+#main.public-wrap .spectator-finale .grid{gap:12px}
 #main.public-wrap .spectator-finale>p.muted{margin:12px 0 0}
-#main.public-wrap .spectator-finale-team{min-width:0}
-#main.public-wrap .spectator-finale-team.is-winner{border-color:#c9a742}
-#main.public-wrap .spectator-finale-members{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
-#main.public-wrap .spectator-finale-member{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
+/* Team panels are defined by fill alone: no outline (including the winner), rounded corners, even padding. */
+#main.public-wrap .spectator-finale-team{min-width:0;border:0;border-radius:10px;padding:16px 18px 18px}
+#main.public-wrap .spectator-finale-team.is-winner{border:0}
+#main.public-wrap .spectator-finale-team b{margin:0;line-height:1.15}
+#main.public-wrap .spectator-finale-members{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+#main.public-wrap .spectator-finale-member{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;min-height:26px}
 #main.public-wrap .spectator-finale-name{font-size:1.02rem;font-weight:700;line-height:1.3;overflow-wrap:anywhere;min-width:0}
+/* Result panel: separated from the team panels by a clear gap, fill only, compact and evenly padded. */
+#main.public-wrap .spectator-finale>.notice{border:0;border-radius:10px;margin:12px 0 0;padding:14px 18px 14px}
+#main.public-wrap .spectator-finale>.notice>p{margin:0;line-height:1.4}
+#main.public-wrap .spectator-finale>.notice .score-tiles{margin-top:10px;gap:6px}
 #main.public-wrap .spectator-result-matchup .spectator-award-disc,
 #main.public-wrap .spectator-result-matchup .spectator-award-trophy{margin-left:0}
 #main.public-wrap .spectator-bracket .playerline .spectator-award-disc,

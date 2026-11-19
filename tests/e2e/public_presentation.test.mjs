@@ -216,3 +216,82 @@ test('Mixed-Skill Doubles finale card: stacked teams, subtle format note until t
     assert.equal(out,0);
   } finally {await long.browser.close();}
 });
+
+test('Doubles finale polish: fill-only panels with clear gaps, flat vector trophy and flat discs, accessible labels', {timeout:120000}, async () => {
+  for (const [width,height] of [[1440,900],[768,1024],[390,844],[320,700]]) {
+    const w=await specWorld(completedFixture({long:width<=390}),{width,height}), {page}=w;
+    try {
+      const m=await page.evaluate(() => {
+        const box = e => { const r=e.getBoundingClientRect(); return {t:r.top,b:r.bottom,l:r.left,r:r.right,h:r.height}; };
+        const teams=[...document.querySelectorAll('.spectator-finale-team')], notice=document.querySelector('.spectator-finale > .notice');
+        const bw = e => ['Top','Right','Bottom','Left'].map(s=>parseFloat(getComputedStyle(e)['border'+s+'Width']));
+        const tb=teams.map(box), nb=box(notice);
+        return {teamBorders:teams.map(bw), noticeBorder:bw(notice), radii:teams.concat([notice]).map(e=>parseFloat(getComputedStyle(e).borderTopLeftRadius)),
+          bgs:teams.map(e=>getComputedStyle(e).backgroundColor), noticeBg:getComputedStyle(notice).backgroundColor,
+          sideBySide:Math.abs(tb[0].t-tb[1].t)<2, heightDelta:Math.abs(tb[0].h-tb[1].h), colGap: tb[0].t===tb[1].t ? tb[1].l-tb[0].r : null,
+          rowGap:nb.t-Math.max(...tb.map(x=>x.b)), padding:teams.map(e=>[getComputedStyle(e).paddingTop,getComputedStyle(e).paddingLeft]),
+          memberRows:[...document.querySelectorAll('.spectator-finale-member')].map(r=>{const n=r.querySelector('.spectator-finale-name').getBoundingClientRect(), d=r.querySelector('.spectator-award-disc').getBoundingClientRect(); return {centerDelta:Math.abs((n.top+n.bottom)/2-(d.top+d.bottom)/2)<=14, right:d.right, rowRight:r.getBoundingClientRect().right};}),
+          overflow:document.documentElement.scrollWidth-innerWidth};
+      });
+      assert.ok(m.teamBorders.every(b=>b.every(x=>x===0)),'no border on either team panel (including the winner): '+JSON.stringify(m.teamBorders));
+      assert.deepEqual(m.noticeBorder,[0,0,0,0],'no border on the result panel');
+      assert.ok(m.radii.every(r=>r>=8),'rounded corners kept');
+      assert.deepEqual(m.bgs,['rgb(209, 239, 245)','rgb(233, 215, 243)'],'existing pastel blue and purple fills'); assert.notEqual(m.noticeBg,'rgba(0, 0, 0, 0)');
+      assert.ok(m.rowGap>=10,`clear gap between team panels and result panel (${m.rowGap}px)`);
+      if (width>=768) { assert.equal(m.sideBySide,true,'two-column desktop/tablet'); assert.ok(m.colGap>=10,'gap between team panels'); assert.ok(m.heightDelta<=1,'balanced panel heights'); }
+      else assert.equal(m.sideBySide,false,'stacked on mobile');
+      assert.ok(m.padding.every(p=>parseFloat(p[0])>=14 && parseFloat(p[1])>=14),'consistent internal padding');
+      assert.ok(m.memberRows.every(r=>r.centerDelta && Math.abs(r.right-r.rowRight)<=1),'award icons align at the right edge of each player row');
+      assert.equal(m.overflow,0,`no horizontal overflow at ${width}px`);
+    } finally {await w.browser.close();}
+  }
+  // Before the result: panels remain borderless and the green panel is absent.
+  const before=await specWorld(completedFixture({doubles:'pending'}),{width:1440,height:900});
+  try {
+    assert.equal(await before.page.locator('.spectator-finale > .notice').count(),0);
+    assert.deepEqual(await before.page.locator('.spectator-finale-team').evaluateAll(t=>t.map(e=>getComputedStyle(e).borderTopWidth)),['0px','0px']);
+  } finally {await before.browser.close();}
+  // Flat award icons, same family everywhere, with accessible labels.
+  const w=await specWorld(completedFixture(),{width:1440,height:900}), {page}=w;
+  try {
+    await page.getByRole('button',{name:'Results',exact:true}).click();
+    const icons=await page.evaluate(() => {
+      const cs=e=>getComputedStyle(e), trophy=document.querySelector('.spectator-award-trophy');
+      return {
+        trophyIsSvg:!!trophy.querySelector('svg'), trophyText:trophy.textContent.trim(), emoji:/\p{Extended_Pictographic}/u.test(document.body.innerText),
+        trophyLabel:trophy.getAttribute('aria-label'), trophyRole:trophy.getAttribute('role'), svgHidden:trophy.querySelector('svg').getAttribute('aria-hidden'),
+        trophyBox:[trophy.getBoundingClientRect().width,trophy.getBoundingClientRect().height],
+        discs:[...document.querySelectorAll('.spectator-award-disc')].map(d=>({cls:d.className,label:d.getAttribute('aria-label'),text:d.textContent,bgImage:cs(d).backgroundImage,shadow:cs(d).boxShadow,radius:cs(d).borderTopLeftRadius,w:d.getBoundingClientRect().width,h:d.getBoundingClientRect().height,bg:cs(d).backgroundColor})),
+        gradientsInTrophy:[...trophy.querySelectorAll('*')].some(e=>/url\(|gradient/.test(cs(e).fill+cs(e).filter)), };
+    });
+    assert.equal(icons.trophyIsSvg,true,'trophy is an inline vector'); assert.equal(icons.trophyText,''); assert.equal(icons.emoji,false,'no platform emoji is rendered');
+    assert.equal(icons.trophyLabel,'Champion, first place'); assert.equal(icons.trophyRole,'img'); assert.equal(icons.svgHidden,'true');
+    assert.deepEqual(icons.trophyBox,[24,24]); assert.equal(icons.gradientsInTrophy,false);
+    assert.ok(icons.discs.length>=6);
+    for (const d of icons.discs) {
+      assert.equal(d.bgImage,'none','flat disc: no gradient'); assert.equal(d.shadow,'none','flat disc: no shadow or inset highlight');
+      assert.equal(d.radius,'50%'); assert.equal(d.w,22); assert.equal(d.h,22);
+      assert.ok(d.cls.includes('gold') ? d.bg==='rgb(241, 191, 46)' && d.label==='Gold medal, first place' && d.text==='1' : d.bg==='rgb(205, 212, 220)' && d.label==='Silver medal, runner-up' && d.text==='2');
+    }
+    // The same icon family appears in the winners summary, the finale, completed results and the bracket.
+    await page.getByRole('button',{name:'Now & next',exact:true}).click();
+    assert.equal(await page.locator('.spectator-finale .spectator-award-disc').count(),4);
+    assert.equal(await page.locator('.spectator-finale .spectator-award-disc[aria-label]').count(),4);
+    await page.getByRole('button',{name:'Bracket',exact:true}).click();
+    assert.ok(await page.locator('.spectator-bracket .spectator-award-trophy svg').count()>=1,'bracket champion uses the vector trophy');
+    assert.ok(await page.locator('.spectator-bracket .spectator-award-disc').count()>=1);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    await page.getByRole('button',{name:'Results',exact:true}).click();
+    assert.ok(await page.locator('.spectator-result .spectator-award-trophy svg').count()>=1,'completed-match results use the vector trophy');
+    await page.addScriptTag({url:`${specHost}/app/__test_axe.min.js`});
+    for (const sel of ['.spectator-winners-banner','.spectator-results-list']) {
+      const report=await page.evaluate(async s=>window.axe.run(document.querySelector(s),{runOnly:{type:'tag',values:['wcag2a','wcag2aa']}}),sel);
+      assert.deepEqual(report.violations.map(v=>({id:v.id,targets:v.nodes.map(n=>n.target)})),[],`no WCAG A/AA violations in ${sel}`);
+    }
+    await page.getByRole('button',{name:'Now & next',exact:true}).click();
+    const finale=await page.evaluate(async()=>window.axe.run(document.querySelector('.spectator-finale'),{runOnly:{type:'tag',values:['wcag2a','wcag2aa']}}));
+    assert.deepEqual(finale.violations.map(v=>({id:v.id,targets:v.nodes.map(n=>n.target)})),[],'finale card has no WCAG A/AA violations');
+    assert.ok(w.requests.length && w.requests.every(r=>r.method()==='GET' && !r.headers().authorization && !r.headers().cookie));
+    assert.doesNotMatch(await page.locator('body').innerText(),/rating|level\s*\d|@/i,'privacy: no ratings or contact data');
+  } finally {await w.browser.close();}
+});
