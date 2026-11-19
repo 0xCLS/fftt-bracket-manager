@@ -91,7 +91,7 @@ test('Spectator displays public matches, brackets and scores at desktop and phon
       assert.equal(visual.fillWidth, viewport.width > 700 ? 21 : 18, 'earned game bar is compact');
       assert.equal(visual.fillHeight, viewport.width > 700 ? 7 : 6);
       assert.equal(visual.emptyWidth, visual.fillWidth);
-      assert.equal(visual.fillColor, 'rgb(66, 184, 167)', 'earned bar uses approved teal');
+      assert.equal(visual.fillColor, 'rgb(193, 216, 151)', 'earned bar uses the approved sage green');
       assert.equal(visual.emptyBorder, 'none', 'unearned bar has no visible border');
       assert.equal(visual.emptyBackground, 'rgb(230, 234, 238)', 'unearned bar uses a light gray solid fill');
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
