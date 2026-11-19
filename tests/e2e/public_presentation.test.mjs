@@ -436,7 +436,7 @@ test('Spectator bracket W/O has one Walkover status, no score footer; grounded s
           roundXs:rounds.map(r=>r.left),
           scrollWidth:node.scrollWidth,clientWidth:node.clientWidth};
       });
-      assert.match(layout.slotCss,/minmax\\(1(?:30|34)px, max-content\\)/,
+      assert.ok(layout.slotCss.includes(width>700?'130px':'134px') && layout.slotCss.includes('max-content'),
         'responsive slot baseline is reduced but adapts to long names: '+JSON.stringify(layout));
       assert.equal(layout.overlapping,false,'bracket slots cannot overlap at '+width);
       assert.ok(layout.roundXs.every((x,i)=>i===0||x>layout.roundXs[i-1]),'rounds still progress left to right');
