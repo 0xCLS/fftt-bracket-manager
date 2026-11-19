@@ -141,7 +141,11 @@ test('winners summary is three labelled categories with a fixed medal column and
   assert.match(css, /\.champion-banner\{[^}]*background:var\(--butter\)/);
   assert.match(css, /@media\(min-width:720px\)\{[^]*spectator-winners-grid\[data-columns="3"\]\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}/);
   assert.match(css, /\.spectator-award-member\{display:grid;grid-template-columns:26px minmax\(0,1fr\)/);
-  assert.match(css, /\.spectator-award-disc\.gold\{background:linear-gradient/);
+  assert.match(spectator, /const medalFace = gold =>/);
+  assert.match(spectator, /medalFace\(gold\), h\('span', \{class: 'spectator-medal-number'/);
+  assert.match(css, /\.spectator-award-disc\.gold\{--medal-engrave:#9c6b16/);
+  assert.match(css, /\.spectator-award-disc \.spectator-medal-art\{/);
+  assert.match(css, /\.spectator-award-disc \.spectator-medal-number\{/);
   assert.doesNotMatch(spectator, /Mixed-Skill Doubles winners: |Consolation bracket champion:/);
 });
 
