@@ -217,7 +217,7 @@ test('Mixed-Skill Doubles finale card: stacked teams, subtle format note until t
   } finally {await long.browser.close();}
 });
 
-test('Doubles finale polish: fill-only panels with clear gaps, flat vector trophy and flat discs, accessible labels', {timeout:120000}, async () => {
+test('Doubles finale polish: fill-only panels with clear gaps, original trophy and flat discs, accessible labels', {timeout:120000}, async () => {
   for (const [width,height] of [[1440,900],[768,1024],[390,844],[320,700]]) {
     const w=await specWorld(completedFixture({long:width<=390}),{width,height}), {page}=w;
     try {
@@ -258,15 +258,13 @@ test('Doubles finale polish: fill-only panels with clear gaps, flat vector troph
     const icons=await page.evaluate(() => {
       const cs=e=>getComputedStyle(e), trophy=document.querySelector('.spectator-award-trophy');
       return {
-        trophyIsSvg:!!trophy.querySelector('svg'), trophyText:trophy.textContent.trim(), emoji:/\p{Extended_Pictographic}/u.test(document.body.innerText),
-        trophyLabel:trophy.getAttribute('aria-label'), trophyRole:trophy.getAttribute('role'), svgHidden:trophy.querySelector('svg').getAttribute('aria-hidden'),
-        trophyBox:[trophy.getBoundingClientRect().width,trophy.getBoundingClientRect().height],
+        trophyIsSvg:!!trophy.querySelector('svg'), trophyText:trophy.textContent.trim(),
+        trophyLabel:trophy.getAttribute('aria-label'), trophyRole:trophy.getAttribute('role'),
         discs:[...document.querySelectorAll('.spectator-award-disc')].map(d=>({cls:d.className,label:d.getAttribute('aria-label'),text:d.textContent,bgImage:cs(d).backgroundImage,shadow:cs(d).boxShadow,radius:cs(d).borderTopLeftRadius,w:d.getBoundingClientRect().width,h:d.getBoundingClientRect().height,bg:cs(d).backgroundColor})),
-        gradientsInTrophy:[...trophy.querySelectorAll('*')].some(e=>/url\(|gradient/.test(cs(e).fill+cs(e).filter)), };
+      };
     });
-    assert.equal(icons.trophyIsSvg,true,'trophy is an inline vector'); assert.equal(icons.trophyText,''); assert.equal(icons.emoji,false,'no platform emoji is rendered');
-    assert.equal(icons.trophyLabel,'Champion, first place'); assert.equal(icons.trophyRole,'img'); assert.equal(icons.svgHidden,'true');
-    assert.deepEqual(icons.trophyBox,[24,24]); assert.equal(icons.gradientsInTrophy,false);
+    assert.equal(icons.trophyIsSvg,false,'original trophy is not a vector'); assert.equal(icons.trophyText,'🏆','original trophy emoji restored');
+    assert.equal(icons.trophyLabel,'Champion, first place'); assert.equal(icons.trophyRole,'img');
     assert.ok(icons.discs.length>=6);
     for (const d of icons.discs) {
       assert.equal(d.bgImage,'none','flat disc: no gradient'); assert.equal(d.shadow,'none','flat disc: no shadow or inset highlight');
@@ -278,11 +276,11 @@ test('Doubles finale polish: fill-only panels with clear gaps, flat vector troph
     assert.equal(await page.locator('.spectator-finale .spectator-award-disc').count(),4);
     assert.equal(await page.locator('.spectator-finale .spectator-award-disc[aria-label]').count(),4);
     await page.getByRole('button',{name:'Bracket',exact:true}).click();
-    assert.ok(await page.locator('.spectator-bracket .spectator-award-trophy svg').count()>=1,'bracket champion uses the vector trophy');
+    assert.ok(await page.locator('.spectator-bracket .spectator-award-trophy').count()>=1,'bracket champion uses the original trophy');
     assert.ok(await page.locator('.spectator-bracket .spectator-award-disc').count()>=1);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
     await page.getByRole('button',{name:'Results',exact:true}).click();
-    assert.ok(await page.locator('.spectator-result .spectator-award-trophy svg').count()>=1,'completed-match results use the vector trophy');
+    assert.ok(await page.locator('.spectator-result .spectator-award-trophy').count()>=1,'completed-match results use the original trophy');
     await page.addScriptTag({url:`${specHost}/app/__test_axe.min.js`});
     for (const sel of ['.spectator-winners-banner','.spectator-results-list']) {
       const report=await page.evaluate(async s=>window.axe.run(document.querySelector(s),{runOnly:{type:'tag',values:['wcag2a','wcag2aa']}}),sel);
