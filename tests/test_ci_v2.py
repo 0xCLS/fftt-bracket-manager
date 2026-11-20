@@ -4,6 +4,9 @@ from pathlib import Path
 import unittest
 import tempfile
 import subprocess
+import shutil
+import struct
+import zlib
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,6 +28,51 @@ class RoutingTests(unittest.TestCase):
                      '.github/workflows/fast-ci.yml', 'tools/ci_v2.py',
                      'tests/test_ci_v2.py', 'unexpected.js'):
             self.assertTrue(ci.select([path])['manual'], path)
+
+    def test_approved_static_png_webp_assets_take_focused_public_lane(self):
+        def chunk(tag, data):
+            body = tag + data
+            return struct.pack('>I', len(data)) + body + struct.pack('>I', zlib.crc32(body) & 0xffffffff)
+        def png(w=1, h=1):
+            ihdr = struct.pack('>IIBBBBB', w, h, 8, 6, 0, 0, 0)
+            return (b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', ihdr) +
+                    chunk(b'IDAT', zlib.compress(b'\x00\x00\x00\x00\x00')) + chunk(b'IEND', b''))
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            assets = root / 'app/assets'
+            assets.mkdir(parents=True)
+            target = assets / 'trophy-exact.png'
+            target.write_bytes(png())
+            self.assertEqual(ci.select(['app/assets/trophy-exact.png'], root)['lanes'], ['public'])
+            self.assertFalse(ci.select(['app/assets/trophy-exact.png'], root)['manual'])
+            # Actual repository WebP exercises the lossless/lossy media header path.
+            shutil.copyfile(ROOT / 'app/assets/emblem.webp', assets / 'trophy-exact.webp')
+            self.assertFalse(ci.select(['app/assets/trophy-exact.webp'], root)['manual'])
+            self.assertTrue(ci.select(['app/assets/trophy-exact.webp'])['manual'],
+                            'without a verified checkout, fail closed')
+            # Runtime changes still require proof even alongside a valid image.
+            combo = ci.select(['app/assets/trophy-exact.webp', 'server/auth.mjs'], root)
+            self.assertTrue(combo['manual'])
+            self.assertIn('public', combo['lanes'])
+            self.assertIn('auth', combo['lanes'])
+
+            # A file's extension alone never grants the exception.
+            target.write_bytes(b'<script>alert(1)</script>')
+            self.assertTrue(ci.select(['app/assets/trophy-exact.png'], root)['manual'])
+            target.write_bytes(png(8192, 8192))
+            self.assertTrue(ci.select(['app/assets/trophy-exact.png'], root)['manual'])
+            target.write_bytes(png() + b'extra-data')
+            self.assertTrue(ci.select(['app/assets/trophy-exact.png'], root)['manual'])
+            target.write_bytes(b'x' * (ci.MAX_PUBLIC_IMAGE_BYTES + 1))
+            self.assertTrue(ci.select(['app/assets/trophy-exact.png'], root)['manual'])
+            target.unlink()
+            target.symlink_to(ROOT / 'app/assets/emblem.webp')
+            self.assertTrue(ci.select(['app/assets/trophy-exact.png'], root)['manual'])
+            self.assertTrue(ci.select(['app/assets/unavailable.png'], root)['manual'])
+            for unsafe in ('app/assets/active.svg', 'app/assets/module.js',
+                           'app/assets/icon.gif', 'app/assets/icon.webp.mjs',
+                           'app/assets/../server/evil.webp'):
+                self.assertTrue(ci.select([unsafe], root)['manual'], unsafe)
 
     def test_cumulative_scope_cannot_be_escaped_by_later_cosmetic_edits(self):
         p = ci.select(['contracts/gameday_engine.mjs', 'app/tv.css'])
