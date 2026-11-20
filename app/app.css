@@ -1407,10 +1407,12 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
  #main.public-wrap .spectator-bracket.has-grounded-slots .spectator-bracket-positions{grid-auto-rows:minmax(134px,max-content)}
 }
 
-/* Spectator ribbon-free award discs. The metallic circle IS the medal, not
-   a badge around a ribbon icon; Championship first place retains its trophy. */
-#main.public-wrap .spectator-award-trophy{display:inline-block;flex:none;line-height:1;
- font-size:1.17rem;vertical-align:middle}
+/* Use the actual user-supplied trophy pixels, not an emoji or traced SVG.
+   The original gold artwork has transparent edges for any panel background. */
+#main.public-wrap .spectator-award-trophy{display:inline-grid;flex:none;place-items:center;
+ width:24px;height:24px;min-width:24px;line-height:1;vertical-align:middle}
+#main.public-wrap .spectator-award-trophy .spectator-trophy-image{
+ display:block;width:100%;height:100%;object-fit:contain}
 /* Circular medal faces: modest metallic depth, engraved laurel/rim/stars,
    no ribbon, hanging loop, outer badge, or button shadow. The SVG is decorative. */
 #main.public-wrap .spectator-award-disc{display:inline-grid;flex:none;place-items:center;
@@ -1428,19 +1430,21 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
 #main.public-wrap .spectator-award-disc .spectator-medal-laurel{stroke:var(--medal-engrave);opacity:.46}
 #main.public-wrap .spectator-award-disc ellipse.spectator-medal-laurel{fill:var(--medal-engrave);stroke:none}
 #main.public-wrap .spectator-award-disc .spectator-medal-star{fill:var(--medal-engrave);opacity:.42}
-/* Tournament winners summary (the pale-yellow panel): Championship | Consolation | Mixed-Skill Doubles.
-   Fixed medal column so trophy and discs align in every category; Doubles teams stay grouped. */
-#main.public-wrap .spectator-winners-banner{padding:16px 18px 18px;border:1px solid #e4d27a;border-radius:8px;margin-bottom:var(--space-5)}
-#main.public-wrap .spectator-winners-title{margin:0 0 12px;font-size:.8rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#5c4a08}
+/* Tournament winners summary: the supplied light green (#e6f2e1) replaces
+   yellow ONLY on the Spectator winners panel; medal and category layout stays. */
+#main.public-wrap .spectator-winners-banner{padding:16px 18px 18px;border:1px solid #bfd8b9;
+ border-radius:8px;margin-bottom:var(--space-5);background:#e6f2e1}
+#main.public-wrap .spectator-winners-title{margin:0 0 12px;font-size:.8rem;font-weight:800;
+ letter-spacing:.12em;text-transform:uppercase;color:#365b43}
 #main.public-wrap .spectator-winners-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:0}
-#main.public-wrap .spectator-award-column{min-width:0;padding:14px 0;border-top:1px solid #d9c565}
+#main.public-wrap .spectator-award-column{min-width:0;padding:14px 0;border-top:1px solid #c4d9bf}
 #main.public-wrap .spectator-award-column:first-child{border-top:0;padding-top:0}
 #main.public-wrap .spectator-award-column:last-child{padding-bottom:0}
 #main.public-wrap .spectator-award-heading{margin:0 0 10px;font-size:1.02rem;font-weight:800;line-height:1.25;color:#29313c}
 #main.public-wrap .spectator-award-groups,
 #main.public-wrap .spectator-award-members{list-style:none;margin:0;padding:0}
 #main.public-wrap .spectator-award-groups{display:flex;flex-direction:column;gap:12px}
-#main.public-wrap .spectator-award-role{display:block;margin-bottom:4px;font-size:.72rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#5c4a08}
+#main.public-wrap .spectator-award-role{display:block;margin-bottom:4px;font-size:.72rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#365b43}
 #main.public-wrap .spectator-award-members{display:flex;flex-direction:column;gap:5px}
 #main.public-wrap .spectator-award-member{display:grid;grid-template-columns:26px minmax(0,1fr);align-items:center;column-gap:9px;min-width:0}
 #main.public-wrap .spectator-award-member>.spectator-award-trophy,
@@ -1450,7 +1454,7 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
  #main.public-wrap .spectator-winners-banner{padding:18px 22px 20px}
  #main.public-wrap .spectator-winners-grid[data-columns="2"]{grid-template-columns:repeat(2,minmax(0,1fr))}
  #main.public-wrap .spectator-winners-grid[data-columns="3"]{grid-template-columns:repeat(3,minmax(0,1fr))}
- #main.public-wrap .spectator-award-column{padding:0 20px;border-top:0;border-left:1px solid #d9c565}
+ #main.public-wrap .spectator-award-column{padding:0 20px;border-top:0;border-left:1px solid #c4d9bf}
  #main.public-wrap .spectator-award-column:first-child{padding-left:0;border-left:0}
  #main.public-wrap .spectator-award-column:last-child{padding-right:0}
 }

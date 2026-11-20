@@ -45,9 +45,9 @@ const gameWinDots = (m, player, feedState) => {
     Array.from({length: 3}, (_, i) => h('span',
       {class: 'spectator-win-dot' + (i < wins ? ' earned' : ''), 'aria-hidden': 'true'})));
 };
-/* Award icons describe official placements, not physical prizes. Keep the original
- * unframed trophy. Round medal faces borrow the reference's raised rim, engraved
- * laurels and small stars, without ribbons or attachment loops. */
+/* Award icons describe official placements, not physical prizes. A self-contained,
+ * richly shaded golden trophy replaces the platform-dependent emoji. Round medal
+ * faces retain their engraved rims, laurels and stars without ribbons. */
 const MEDAL_NS = 'http://www.w3.org/2000/svg';
 let medalSerial = 0;
 const medalNode = (tag, attrs = {}, children = []) => {
@@ -102,10 +102,15 @@ const medalFace = gold => {
   }
   return svg;
 };
+// The user's supplied trophy is a lossless image: opaque pixels are taken
+// directly from the original artwork, never redrawn as a vector or emoji.
+const TROPHY_IMAGE = '/app/assets/trophy-exact.webp';
 const awardMark = (kind, place) => {
   if (kind === 'championship' && place === 1)
     return h('span', {class: 'spectator-award-trophy', role: 'img',
-      'aria-label': 'Champion, first place', title: 'Champion · 1st place', text: '🏆'});
+      'aria-label': 'Champion, first place', title: 'Champion · 1st place'},
+      h('img', {class: 'spectator-trophy-image', src: TROPHY_IMAGE,
+        alt: '', width: '24', height: '24', decoding: 'async', 'aria-hidden': 'true'}));
   const gold = place === 1;
   return h('span', {class: 'spectator-award-disc ' + (gold ? 'gold' : 'silver'),
     role: 'img', 'aria-label': gold ? 'Gold medal, first place' : 'Silver medal, runner-up',
