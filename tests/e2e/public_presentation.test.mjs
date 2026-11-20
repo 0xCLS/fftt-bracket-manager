@@ -282,7 +282,7 @@ test('Doubles finale polish: gap, consistent SVG trophy, round engraved medals a
     });
     assert.equal(icons.trophyIsImage,true,'trophy is an actual image, not a traced vector');
     assert.equal(icons.trophyText,'','no operating-system-dependent emoji glyph');
-    assert.equal(icons.trophySrc,'/app/assets/trophy-exact.png','always use the exact supplied asset');
+    assert.equal(icons.trophySrc,'/app/assets/trophy-exact.webp','always use the exact supplied asset');
     assert.equal(icons.trophyAlt,'','decorative child has empty alt because wrapper provides label');
     assert.equal(icons.trophyHidden,'true','decorative image is hidden behind labelled wrapper');
     assert.equal(icons.trophyComplete,true,'trophy image loaded');
