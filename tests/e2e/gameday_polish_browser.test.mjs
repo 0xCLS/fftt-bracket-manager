@@ -415,7 +415,8 @@ test('SCORE TILES: equal squares, tabular numerals, green winner / red loser per
       await axe(org.page, `Doubles result tiles @ ${vp}`);
       await shot(org.page, `${vp}-doubles-result`);
       await spacing(org.page, `Doubles result @ ${vp}`);
-      // spectator results and bracket use the same component
+      // Spectator Results keeps paired score tiles. Spectator Bracket uses
+      // compact, player-aligned score columns instead of the old score footer.
       const spec = await w.device('spec-tiles-' + vp, opts);
       await spec.open(SPECT + '/');
       await spec.page.locator('#evName', {hasText: 'Synthetic'}).waitFor({timeout: T});
@@ -426,19 +427,54 @@ test('SCORE TILES: equal squares, tabular numerals, green winner / red loser per
       await axe(spec.page, `spectator results tiles @ ${vp}`);
       await shot(spec.page, `${vp}-spectator-results`);
       await spec.page.locator('nav.tabs button', {hasText: 'Bracket'}).click();
-      await spec.page.locator('.match-foot .score-tile').first().waitFor({timeout: T});
-      const cdims = await spec.page.evaluate(() => [...document.querySelectorAll('.match-foot .score-tile')].map(t => { const r = t.getBoundingClientRect(); return [r.width, r.height]; }));
-      assert.ok(cdims.every(([a, b]) => Math.abs(a - b) < 0.5 && Math.abs(a - cdims[0][0]) < 0.5), 'bracket cards use equal compact squares');
-      const rules = await spec.page.evaluate(() => [...document.querySelectorAll('.bracket .match-foot .score-game+.score-game')].map(g => {
-        const line = getComputedStyle(g, '::before'), style = getComputedStyle(g);
-        return {height: parseFloat(line.height), width: parseFloat(line.width), content: line.content,
-          left: parseFloat(style.marginLeft), right: parseFloat(style.paddingLeft),
-          gap: parseFloat(getComputedStyle(g.parentElement).columnGap)};
+      await spec.page.locator('.spectator-bracket .match.spectator-bracket-inline .spectator-bracket-inline-score .score-tile')
+        .first().waitFor({timeout: T});
+      const cards = await spec.page.evaluate(() => [...document.querySelectorAll(
+        '.spectator-bracket .match.spectator-bracket-inline')].map(card => {
+        const lines = [...card.querySelectorAll(':scope > .playerline')];
+        return {
+          players: lines.map(line => ({
+            name: line.querySelector('.spectator-bracket-player-name')?.textContent.trim(),
+            groupLabel: line.querySelector('.spectator-bracket-inline-score')?.getAttribute('aria-label'),
+            games: [...line.querySelectorAll('.spectator-bracket-inline-score .score-tile')].map(tile => {
+              const box = tile.getBoundingClientRect();
+              return {n: Number(tile.textContent), win: tile.classList.contains('win'),
+                lose: tile.classList.contains('lose'), x: box.left,
+                width: box.width, height: box.height};
+            })
+          })),
+          footer: !!card.querySelector(':scope > .match-foot'),
+          overflow: card.scrollWidth > card.clientWidth + 1
+        };
       }));
-      assert.ok(rules.length > 0 && rules.every(x => x.height === 14 && x.width === 1 && x.content !== 'none'),
-        'championship and consolation game separators are shorter than their score squares');
-      assert.ok(rules.every(x => x.left === x.right && x.left === 10 && x.gap === 0),
-        'each divider has an equal 10px gap on both sides, with no inherited column gap');
+      assert.ok(cards.length > 0, 'completed bracket cards render game scores beside each player');
+      for (const card of cards) {
+        assert.equal(card.footer, false, 'inline-scored brackets no longer repeat a score footer');
+        assert.equal(card.overflow, false, 'score tiles and player names fit the compact card');
+        assert.equal(card.players.length, 2, 'one score row per named player');
+        const [first, second] = card.players;
+        assert.ok(first.name && second.name, 'both player names accompany their scores');
+        assert.ok(first.groupLabel?.startsWith(first.name + ' game scores: Game 1:'),
+          'first player's score group is labelled for assistive technology');
+        assert.ok(second.groupLabel?.startsWith(second.name + ' game scores: Game 1:'),
+          'second player's score group is labelled for assistive technology');
+        assert.ok(first.games.length >= 1 && first.games.length <= 3,
+          'inline layout covers completed matches with up to three games');
+        assert.equal(first.games.length, second.games.length, 'aligned game columns');
+        for (let i = 0; i < first.games.length; i++) {
+          const a = first.games[i], b = second.games[i];
+          assert.ok(Math.abs(a.x - b.x) < 0.5, 'game ' + (i + 1) + ' columns align');
+          assert.ok([a, b].every(g => Math.abs(g.width - 19) < 0.5 &&
+            Math.abs(g.height - 21) < 0.5), 'Spectator bracket tiles are compact 19×21 rectangles');
+          assert.ok(a.n !== b.n && (a.n > b.n ? a.win && b.lose : b.win && a.lose),
+            'green/red score tiles identify each individual game winner');
+        }
+        const rec = stored.find(m => names.get(m.player_1_id) === first.name &&
+          names.get(m.player_2_id) === second.name);
+        assert.ok(rec, 'the bracket players match an official synthetic stored result');
+        assert.equal(first.games.map((g, i) => g.n + '-' + second.games[i].n).join(', '),
+          rec.game_scores, 'inline bracket score columns preserve the recorded player order');
+      }
       const ov = await spec.page.evaluate(() => [...document.querySelectorAll('.match')].filter(m => m.scrollWidth > m.clientWidth + 1).length);
       assert.equal(ov, 0, 'tiles never overflow a bracket card');
     }
