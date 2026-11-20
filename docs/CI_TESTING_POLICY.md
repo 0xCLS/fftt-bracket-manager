@@ -16,12 +16,20 @@
 | Markdown documentation only | Selection/reporting | No |
 | TV layout, TV logic, TV presentation test | TV presentation plus public isolation/privacy | No |
 | Spectator or public-site presentation | Public UI, selection and privacy | No |
+| Verified passive public images in `app/assets/` (PNG/WebP, at most 1 MiB and 2048px per dimension) | Public UI, selection and privacy | No |
+| Missing, oversized, animated, misleading, symlinked or unknown image/media files (including SVG/GIF) | Applicable focused checks; release blocked until authorized full proof | **Yes** |
 | Allowlisted Staff visual UI | Focused Staff browser/unit | No |
 | Registration model/UI/test | Registration unit/browser | Depends on protected changes |
 | Scoring and tournament authority | Scoring plus public presentation | **Yes** |
 | Authentication, SQL, server, deployment, CI code, unknown files | Applicable focused checks (if known) | **Yes** |
 
 Targets, pending measurement in actual GitHub runs: under 30 seconds for static selection, and 1–3 minutes for focused browser checks. These are design budgets, not promises.
+
+## Verified public image rules
+
+The **trusted base-branch selector**, not the PR's proposed policy code, validates each image before treating it as presentation-only. Only a single-level `app/assets/<safe-filename>.png` or `.webp` qualifies. Validation requires the actual checked-out regular file (not a symlink), the expected PNG/WebP file signature and structure, safe reported dimensions (1–2048 pixels each), and a size of at most 1 MiB. Animation is disallowed (animated WebP, and APNG via `acTL`/`fcTL`/`fdAT` chunks); PNG chunks must have valid CRCs, an IDAT, and end exactly at IEND. Invalid/missing bytes and executable formats fail closed to manual proof. Git and the sanitized Cloudflare export independently preserve file hashes; focused browser tests must verify the referenced public image actually loads, is accessible and doesn't alter security/privacy behavior.
+
+The CI policy implementation and policy tests themselves remain **protected changes**. A change to `tools/ci_v2.py`, `tests/test_ci_v2.py`, or CI workflows still triggers the manual-proof gate under the existing trusted policy. Do not reinterpret a clean visual asset as authorization to merge a protected CI policy change without its mandatory review/approval.
 
 ## Manual full verification
 

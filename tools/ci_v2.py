@@ -12,6 +12,7 @@ import re
 import subprocess
 import sys
 import urllib.request
+import zlib
 
 ROOT = Path(os.environ.get('FFTT_CI_ROOT', Path(__file__).resolve().parents[1]))
 SHA = re.compile(r'^[0-9a-f]{40}$')
@@ -59,7 +60,89 @@ SUITES = {
 }
 
 
-def select(paths):
+# Passive images are an allowlisted public UI change only after on-disk
+# validation. No SVG/HTML, animation, external fonts, or arbitrary binary files.
+SAFE_IMAGE_PATH = re.compile(r'^app/assets/[A-Za-z0-9][A-Za-z0-9._-]*\.(?:png|webp)$')
+MAX_PUBLIC_IMAGE_BYTES = 1024 * 1024
+MAX_PUBLIC_IMAGE_DIM = 2048
+
+def image_dimensions(path, data):
+    if path.endswith('.png'):
+        if (len(data) < 45 or data[:8] != b'\x89PNG\r\n\x1a\n'
+                or data[8:12] != (13).to_bytes(4, 'big') or data[12:16] != b'IHDR'):
+            return None
+        # Walk every chunk: verify CRCs, reject APNG animation, require IDAT..IEND
+        # with no trailing bytes.
+        offset, seen_idat, ended = 8, False, False
+        while offset + 12 <= len(data):
+            size = int.from_bytes(data[offset:offset + 4], 'big')
+            end = offset + 12 + size
+            if end > len(data):
+                return None
+            kind = data[offset + 4:offset + 8]
+            if (zlib.crc32(data[offset + 4:end - 4]) & 0xffffffff) != int.from_bytes(data[end - 4:end], 'big'):
+                return None
+            if kind in (b'acTL', b'fcTL', b'fdAT'):
+                return None
+            seen_idat = seen_idat or kind == b'IDAT'
+            offset = end
+            if kind == b'IEND':
+                ended = size == 0
+                break
+        if not (ended and seen_idat and offset == len(data)):
+            return None
+        return int.from_bytes(data[16:20], 'big'), int.from_bytes(data[20:24], 'big')
+    if not (path.endswith('.webp') and len(data) >= 30
+            and data[:4] == b'RIFF' and data[8:12] == b'WEBP'
+            and int.from_bytes(data[4:8], 'little') == len(data) - 8):
+        return None
+    offset, dimensions = 12, None
+    while offset + 8 <= len(data):
+        kind = data[offset:offset + 4]
+        size = int.from_bytes(data[offset + 4:offset + 8], 'little')
+        end = offset + 8 + size
+        if end > len(data):
+            return None
+        chunk = data[offset + 8:end]
+        if kind == b'VP8L' and size >= 5 and chunk[:1] == b'\x2f':
+            dimensions = (1 + (chunk[1] | ((chunk[2] & 0x3f) << 8)),
+                          1 + ((chunk[2] >> 6) | (chunk[3] << 2) | ((chunk[4] & 15) << 10)))
+        elif kind == b'VP8 ' and size >= 10 and chunk[3:6] == b'\x9d\x01\x2a':
+            dimensions = (int.from_bytes(chunk[6:8], 'little') & 0x3fff,
+                          int.from_bytes(chunk[8:10], 'little') & 0x3fff)
+        elif kind == b'VP8X' and size >= 10:
+            if chunk[0] & 0x02:  # animated WebP is not a static visual asset
+                return None
+            dimensions = (1 + int.from_bytes(chunk[4:7], 'little'),
+                          1 + int.from_bytes(chunk[7:10], 'little'))
+        elif kind in (b'ANIM', b'ANMF'):
+            return None
+        offset = end + (size & 1)
+    return dimensions if offset == len(data) else None
+
+def verified_public_image(path, checkout_root):
+    """Fail closed; inspect media bytes in the checked-out PR, never execute it."""
+    if checkout_root is None or not SAFE_IMAGE_PATH.fullmatch(path):
+        return False
+    try:
+        root = Path(checkout_root).resolve()
+        image = root / path
+        if image.is_symlink() or not image.is_file() or not image.resolve().is_relative_to(root):
+            return False
+        size = image.stat().st_size
+        if not 45 <= size <= MAX_PUBLIC_IMAGE_BYTES:
+            return False
+        data = image.read_bytes()
+        if len(data) != size:
+            return False
+        dims = image_dimensions(path, data)
+        return (dims is not None and 0 < dims[0] <= MAX_PUBLIC_IMAGE_DIM
+                and 0 < dims[1] <= MAX_PUBLIC_IMAGE_DIM)
+    except (OSError, ValueError):
+        return False
+
+
+def select(paths, checkout_root=None):
     """Return immutable lanes, authorization requirement and rationale.
 
     If any path is unrecognized, don't guess that it is UI. Guarded changes may
@@ -77,6 +160,12 @@ def select(paths):
         elif path in {'app/spectator.html', 'app/spectator.mjs', 'app/public_core.mjs',
                       'app/date_format.mjs', 'contracts/gameday_public.mjs'} or path.startswith('public-site/'):
             lanes.add('public')
+        elif path.startswith('app/assets/'):
+            if verified_public_image(path, checkout_root):
+                lanes.add('public')
+            else:
+                manual = True
+                reasons.add('unverified or active-content image asset')
         elif path in {'app/app.css', 'app/view_players.mjs', 'app/view_registration.mjs',
                       'app/view_desk_registration.mjs', 'tests/e2e/gameday_fast_ui_browser.test.mjs'}:
             lanes.add('staff')
@@ -185,7 +274,7 @@ def cli():
     a = p.parse_args()
     if a.cmd == 'plan':
         try:
-            result = select(changed_paths(a.base, a.head))
+            result = select(changed_paths(a.base, a.head), checkout_root=Path.cwd())
         except (ValueError, subprocess.CalledProcessError) as e:
             result = select([])
             result['reasons'] = [type(e).__name__ + ': unverified range']
