@@ -426,19 +426,37 @@ test('SCORE TILES: equal squares, tabular numerals, green winner / red loser per
       await axe(spec.page, `spectator results tiles @ ${vp}`);
       await shot(spec.page, `${vp}-spectator-results`);
       await spec.page.locator('nav.tabs button', {hasText: 'Bracket'}).click();
-      await spec.page.locator('.match-foot .score-tile').first().waitFor({timeout: T});
-      const cdims = await spec.page.evaluate(() => [...document.querySelectorAll('.match-foot .score-tile')].map(t => { const r = t.getBoundingClientRect(); return [r.width, r.height]; }));
-      assert.ok(cdims.every(([a, b]) => Math.abs(a - b) < 0.5 && Math.abs(a - cdims[0][0]) < 0.5), 'bracket cards use equal compact squares');
-      const rules = await spec.page.evaluate(() => [...document.querySelectorAll('.bracket .match-foot .score-game+.score-game')].map(g => {
-        const line = getComputedStyle(g, '::before'), style = getComputedStyle(g);
-        return {height: parseFloat(line.height), width: parseFloat(line.width), content: line.content,
-          left: parseFloat(style.marginLeft), right: parseFloat(style.paddingLeft),
-          gap: parseFloat(getComputedStyle(g.parentElement).columnGap)};
-      }));
-      assert.ok(rules.length > 0 && rules.every(x => x.height === 14 && x.width === 1 && x.content !== 'none'),
-        'championship and consolation game separators are shorter than their score squares');
-      assert.ok(rules.every(x => x.left === x.right && x.left === 10 && x.gap === 0),
-        'each divider has an equal 10px gap on both sides, with no inherited column gap');
+      // Current Spectator brackets render 1-3 game scores inline with each player,
+      // not in the historical .match-foot score group (retained for longer Bo5 scores).
+      await spec.page.locator('.spectator-bracket-inline .spectator-bracket-inline-score .score-tile').first().waitFor({timeout: T});
+      const cards = await spec.page.evaluate(() => [...document.querySelectorAll('.spectator-bracket-inline')].map(card => ({
+        footer: !!card.querySelector(':scope > .match-foot'),
+        players: [...card.querySelectorAll(':scope > .playerline')].map(line => {
+          const group = line.querySelector('.spectator-bracket-inline-score');
+          return { label: group?.getAttribute('aria-label'), tiles: [...(group?.querySelectorAll('.score-tile') || [])].map(t => {
+            const r = t.getBoundingClientRect();
+            return { value: Number(t.textContent), width: r.width, height: r.height, win: t.classList.contains('win'), lose: t.classList.contains('lose') };
+          }) };
+        })
+      })));
+      assert.ok(cards.length > 0, 'completed Spectator bracket cards have inline game-score tiles');
+      for (const card of cards) {
+        assert.equal(card.footer, false, 'short scored matches have no redundant score footer');
+        assert.equal(card.players.length, 2);
+        const [first, second] = card.players;
+        assert.ok(first.tiles.length >= 1 && first.tiles.length <= 3, 'inline score groups support Bo1 and Bo3 games');
+        assert.equal(second.tiles.length, first.tiles.length, 'both players show every recorded game');
+        assert.match(first.label, /game scores: Game 1:/i, 'first player scores are accessible');
+        assert.match(second.label, /game scores: Game 1:/i, 'second player scores are accessible');
+        for (let i = 0; i < first.tiles.length; i++) {
+          const one = first.tiles[i], two = second.tiles[i];
+          assert.ok([one, two].every(t => Math.abs(t.width - 19) < 0.5 && Math.abs(t.height - 21) < 0.5),
+            'inline tiles preserve the current 19×21 compact Spectator layout');
+          assert.notEqual(one.value, two.value, 'a recorded game has a winner');
+          assert.ok(one.value > two.value ? one.win && two.lose : two.win && one.lose,
+            'game winner is marked green and loser red in each player row');
+        }
+      }
       const ov = await spec.page.evaluate(() => [...document.querySelectorAll('.match')].filter(m => m.scrollWidth > m.clientWidth + 1).length);
       assert.equal(ov, 0, 'tiles never overflow a bracket card');
     }
