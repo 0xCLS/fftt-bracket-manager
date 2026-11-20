@@ -123,7 +123,7 @@ test('Spectator winners summary: three balanced desktop columns, stacked mobile,
       await page.getByRole('button',{name:'Results',exact:true}).click();
       const banner=page.locator('.spectator-winners-banner');
       assert.equal(await banner.count(),1);
-      assert.equal(await banner.evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(247, 233, 155)','existing pale-yellow palette retained');
+      assert.equal(await banner.evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(230, 242, 225)','supplied light green replaces yellow in winners panel');
       assert.deepEqual(await page.locator('.spectator-award-heading').allInnerTexts(),['Championship','Consolation','Mixed-Skill Doubles']);
       const labels=await page.locator('.spectator-award-column').evaluateAll(cs=>cs.map(c=>[...c.querySelectorAll('.spectator-award-role')].map(r=>r.textContent)));
       assert.deepEqual(labels,[['Champion','Runner-up'],['Champion','Runner-up'],['Winners','Runners-up']]);
@@ -217,7 +217,7 @@ test('Mixed-Skill Doubles finale card: stacked teams, subtle format note until t
   } finally {await long.browser.close();}
 });
 
-test('Doubles finale polish: gap, original trophy, round engraved medals and accessible labels', {timeout:120000}, async () => {
+test('Doubles finale polish: gap, consistent SVG trophy, round engraved medals and accessible labels', {timeout:120000}, async () => {
   for (const [width,height] of [[1440,900],[768,1024],[390,844],[320,700]]) {
     const w=await specWorld(completedFixture({long:width<=390}),{width,height}), {page}=w;
     try {
@@ -256,9 +256,15 @@ test('Doubles finale polish: gap, original trophy, round engraved medals and acc
   try {
     await page.getByRole('button',{name:'Results',exact:true}).click();
     const icons=await page.evaluate(() => {
-      const cs=e=>getComputedStyle(e), trophy=document.querySelector('.spectator-award-trophy');
+      const cs=e=>getComputedStyle(e), trophy=document.querySelector('.spectator-award-trophy'),
+        trophySvg=trophy?.querySelector('svg.spectator-trophy-art');
       return {
-        trophyIsSvg:!!trophy.querySelector('svg'), trophyText:trophy.textContent.trim(),
+        trophyIsSvg:!!trophySvg, trophyText:trophy.textContent.trim(),
+        trophySvgHidden:trophySvg?.getAttribute('aria-hidden'),
+        trophyGradientCount:trophySvg?.querySelectorAll('linearGradient').length,
+        trophyPathCount:trophySvg?.querySelectorAll('path').length,
+        trophyUniqueIds:[...document.querySelectorAll('.spectator-award-trophy svg linearGradient')]
+          .map(g=>g.id).every((id,i,a)=>id&&a.indexOf(id)===i),
         trophyLabel:trophy.getAttribute('aria-label'), trophyRole:trophy.getAttribute('role'),
         discs:[...document.querySelectorAll('.spectator-award-disc')].map(d=>({
           cls:d.className,label:d.getAttribute('aria-label'),text:d.textContent,
@@ -275,7 +281,12 @@ test('Doubles finale polish: gap, original trophy, round engraved medals and acc
         })),
       };
     });
-    assert.equal(icons.trophyIsSvg,false,'original trophy is not a vector'); assert.equal(icons.trophyText,'🏆','original trophy emoji restored');
+    assert.equal(icons.trophyIsSvg,true,'cross-platform trophy uses one consistent SVG');
+    assert.equal(icons.trophyText,'','no operating-system-dependent emoji glyph');
+    assert.equal(icons.trophySvgHidden,'true','decorative art hidden behind labelled wrapper');
+    assert.ok(icons.trophyGradientCount>=3&&icons.trophyPathCount>=10,
+      'gold highlights, shaped handles, stem and plaque are present');
+    assert.equal(icons.trophyUniqueIds,true,'all instances use independent SVG paint IDs');
     assert.equal(icons.trophyLabel,'Champion, first place'); assert.equal(icons.trophyRole,'img');
     assert.ok(icons.discs.length>=6);
     for (const d of icons.discs) {
@@ -296,11 +307,11 @@ test('Doubles finale polish: gap, original trophy, round engraved medals and acc
     assert.equal(await page.locator('.spectator-finale .spectator-award-disc').count(),4);
     assert.equal(await page.locator('.spectator-finale .spectator-award-disc[aria-label]').count(),4);
     await page.getByRole('button',{name:'Bracket',exact:true}).click();
-    assert.ok(await page.locator('.spectator-bracket .spectator-award-trophy').count()>=1,'bracket champion uses the original trophy');
+    assert.ok(await page.locator('.spectator-bracket .spectator-award-trophy .spectator-trophy-art').count()>=1,'bracket champion uses the standard golden trophy');
     assert.ok(await page.locator('.spectator-bracket .spectator-award-disc').count()>=1);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
     await page.getByRole('button',{name:'Results',exact:true}).click();
-    assert.ok(await page.locator('.spectator-result .spectator-award-trophy').count()>=1,'completed-match results use the original trophy');
+    assert.ok(await page.locator('.spectator-result .spectator-award-trophy .spectator-trophy-art').count()>=1,'completed-match results use the standard golden trophy');
     await page.addScriptTag({url:`${specHost}/app/__test_axe.min.js`});
     for (const sel of ['.spectator-winners-banner','.spectator-results-list']) {
       const report=await page.evaluate(async s=>window.axe.run(document.querySelector(s),{runOnly:{type:'tag',values:['wcag2a','wcag2aa']}}),sel);
