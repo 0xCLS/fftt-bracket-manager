@@ -3,11 +3,21 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import {createHash} from 'node:crypto';
 import {chromium} from 'playwright-core';
 import {fixture} from '../fixtures/tv-fixture.mjs';
 import {completedFixture} from './public_presentation_fixtures.mjs';
 const root=path.resolve(import.meta.dirname,'../..');
 const types={'.html':'text/html','.mjs':'text/javascript','.css':'text/css','.webp':'image/webp'};
+test('Exact Championship trophy is byte-verified lossless artwork, not an approximation', () => {
+  const bytes=fs.readFileSync(path.join(root,'app/assets/trophy-exact.webp'));
+  assert.equal(createHash('sha256').update(bytes).digest('hex'),
+    'f55d09a6d6204796a408365a0a76b7e126e890f5caeb56b200506056308dc6ab',
+    'do not alter the organizer-approved pixel-identical trophy asset');
+  assert.equal(bytes.toString('ascii',0,4),'RIFF');
+  assert.equal(bytes.toString('ascii',8,12),'WEBP');
+});
+
 test('Spectator displays public matches, brackets and scores at desktop and phone widths', {timeout:60000}, async () => {
   const browser=await chromium.launch(process.env.FFTT_CHROME_CHANNEL==='none'?{}:{channel:process.env.FFTT_CHROME_CHANNEL || 'chrome'});
   try {
