@@ -45,9 +45,9 @@ const gameWinDots = (m, player, feedState) => {
     Array.from({length: 3}, (_, i) => h('span',
       {class: 'spectator-win-dot' + (i < wins ? ' earned' : ''), 'aria-hidden': 'true'})));
 };
-/* Award icons describe official placements, not physical prizes. Keep the original
- * unframed trophy. Round medal faces borrow the reference's raised rim, engraved
- * laurels and small stars, without ribbons or attachment loops. */
+/* Award icons describe official placements, not physical prizes. A self-contained,
+ * richly shaded golden trophy replaces the platform-dependent emoji. Round medal
+ * faces retain their engraved rims, laurels and stars without ribbons. */
 const MEDAL_NS = 'http://www.w3.org/2000/svg';
 let medalSerial = 0;
 const medalNode = (tag, attrs = {}, children = []) => {
@@ -102,10 +102,66 @@ const medalFace = gold => {
   }
   return svg;
 };
+// SVG avoids the operating-system-specific artwork of the trophy emoji. Unlike
+// the rejected flat icon, this version has a gold-metal cup, curved handles,
+// highlights, raised stem and wooden/plaque base similar to the Mac reference.
+let trophySerial = 0;
+const trophyFace = () => {
+  const serial = ++trophySerial;
+  const ids = {
+    cup: 'spectator-trophy-cup-' + serial,
+    rim: 'spectator-trophy-rim-' + serial,
+    stand: 'spectator-trophy-stand-' + serial
+  };
+  const gradient = (id, coords, stops) => medalNode('linearGradient', {id, ...coords},
+    stops.map(([offset, color]) => medalNode('stop', {offset, 'stop-color': color})));
+  const art = medalNode('svg', {class: 'spectator-trophy-art', viewBox: '0 0 48 48',
+    'aria-hidden': 'true', focusable: 'false'});
+  art.append(medalNode('defs', {}, [
+    gradient(ids.cup, {x1: '0%', y1: '0%', x2: '100%', y2: '0%'}, [
+      ['0%', '#99520b'], ['12%', '#d1840b'], ['28%', '#fbbf21'],
+      ['43%', '#ffdf62'], ['60%', '#eaa718'], ['82%', '#ffd54b'], ['100%', '#a55b08']]),
+    gradient(ids.rim, {x1: '0%', y1: '0%', x2: '0%', y2: '100%'}, [
+      ['0%', '#fff1a1'], ['50%', '#e9a01b'], ['100%', '#965100']]),
+    gradient(ids.stand, {x1: '0%', y1: '0%', x2: '100%', y2: '0%'}, [
+      ['0%', '#5f270d'], ['25%', '#aa5b1b'], ['75%', '#994910'], ['100%', '#5c220e']])
+  ]));
+  const handles = [
+    'M13.5 10.6 C4.5 6.5 3 11.5 5.2 17.4 C6.6 21.6 10.3 23.8 14.5 23.6',
+    'M34.5 10.6 C43.5 6.5 45 11.5 42.8 17.4 C41.4 21.6 37.7 23.8 33.5 23.6'
+  ];
+  for (const d of handles) art.append(
+    medalNode('path', {d, fill: 'none', stroke: '#975307', 'stroke-width': 5, 'stroke-linecap': 'round'}),
+    medalNode('path', {d, fill: 'none', stroke: '#f7c342', 'stroke-width': 2.8, 'stroke-linecap': 'round'}));
+  art.append(
+    medalNode('path', {d: 'M11.6 7 C15.5 5.1 32.5 5.1 36.4 7 L34.6 18.8 C33 26.4 28.1 29.6 24 30.4 C19.9 29.6 15 26.4 13.4 18.8Z',
+      fill: 'url(#' + ids.cup + ')', stroke: '#874006', 'stroke-width': 1.2}),
+    medalNode('path', {d: 'M16.8 8.6 C16.9 17.8 19.4 25.3 22 27.5', fill: 'none',
+      stroke: '#fff3a7', 'stroke-opacity': '.65', 'stroke-width': 2.5, 'stroke-linecap': 'round'}),
+    medalNode('path', {d: 'M31.8 8.6 C31.7 19 30 25 27.2 27.5', fill: 'none',
+      stroke: '#995000', 'stroke-opacity': '.48', 'stroke-width': 1.5}),
+    medalNode('ellipse', {cx: 24, cy: 7.4, rx: 13.1, ry: 2.1,
+      fill: 'url(#' + ids.rim + ')', stroke: '#a8670b', 'stroke-width': '.7'}),
+    medalNode('ellipse', {cx: 24, cy: 7.3, rx: 10.1, ry: '.7', fill: '#d1840a', opacity: '.55'}),
+    medalNode('path', {d: 'M21.1 29.5 L26.9 29.5 L26.4 33.5 L29.5 36.2 L18.5 36.2 L21.6 33.5Z',
+      fill: 'url(#' + ids.cup + ')', stroke: '#874609', 'stroke-width': '.8'}),
+    medalNode('rect', {x: 18.4, y: 35.1, width: 11.2, height: 2.1, rx: '.5',
+      fill: '#e6a11c', stroke: '#98540b', 'stroke-width': '.6'}),
+    medalNode('path', {d: 'M13.4 37.2 Q13.4 36.2 14.7 36.2 H33.3 Q34.6 36.2 34.6 37.2 V42 H13.4Z',
+      fill: 'url(#' + ids.stand + ')', stroke: '#66300f', 'stroke-width': '.9'}),
+    medalNode('rect', {x: 17.7, y: 38.3, width: 12.6, height: 3.2, rx: '.6',
+      fill: '#f1b529', stroke: '#d58a16', 'stroke-width': '.5'}),
+    medalNode('path', {d: 'M12.6 42 H35.4 Q36.3 42 36.3 43 V44 H11.7 V43 Q11.7 42 12.6 42Z',
+      fill: '#71350e', stroke: '#51260a', 'stroke-width': '.7'}),
+    medalNode('path', {d: 'M13.4 42.6 H34.6', fill: 'none', stroke: '#d8871f',
+      'stroke-width': 1, opacity: '.8'})
+  );
+  return art;
+};
 const awardMark = (kind, place) => {
   if (kind === 'championship' && place === 1)
     return h('span', {class: 'spectator-award-trophy', role: 'img',
-      'aria-label': 'Champion, first place', title: 'Champion · 1st place', text: '🏆'});
+      'aria-label': 'Champion, first place', title: 'Champion · 1st place'}, trophyFace());
   const gold = place === 1;
   return h('span', {class: 'spectator-award-disc ' + (gold ? 'gold' : 'silver'),
     role: 'img', 'aria-label': gold ? 'Gold medal, first place' : 'Silver medal, runner-up',
