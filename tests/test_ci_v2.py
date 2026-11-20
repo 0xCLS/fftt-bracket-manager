@@ -61,6 +61,19 @@ class RoutingTests(unittest.TestCase):
             self.assertTrue(ci.select(['app/assets/trophy-exact.png'], root)['manual'])
             target.write_bytes(png(8192, 8192))
             self.assertTrue(ci.select(['app/assets/trophy-exact.png'], root)['manual'])
+            # APNG animation chunks make an otherwise valid PNG non-static.
+            animated = png().replace(chunk(b'IDAT', zlib.compress(b'\x00\x00\x00\x00\x00')),
+                                     chunk(b'acTL', struct.pack('>II', 2, 0)) +
+                                     chunk(b'IDAT', zlib.compress(b'\x00\x00\x00\x00\x00')))
+            self.assertNotEqual(animated, png())
+            target.write_bytes(animated)
+            self.assertTrue(ci.select(['app/assets/trophy-exact.png'], root)['manual'])
+            # Corrupt chunk CRC and a missing IDAT are malformed.
+            corrupt = bytearray(png()); corrupt[41] ^= 0xff
+            target.write_bytes(bytes(corrupt))
+            self.assertTrue(ci.select(['app/assets/trophy-exact.png'], root)['manual'])
+            target.write_bytes(png()[:33] + chunk(b'IEND', b'') + b'\x00' * 20)
+            self.assertTrue(ci.select(['app/assets/trophy-exact.png'], root)['manual'])
             target.write_bytes(png() + b'extra-data')
             self.assertTrue(ci.select(['app/assets/trophy-exact.png'], root)['manual'])
             target.write_bytes(b'x' * (ci.MAX_PUBLIC_IMAGE_BYTES + 1))

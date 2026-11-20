@@ -69,10 +69,27 @@ MAX_PUBLIC_IMAGE_DIM = 2048
 def image_dimensions(path, data):
     if path.endswith('.png'):
         if (len(data) < 45 or data[:8] != b'\x89PNG\r\n\x1a\n'
-                or data[8:12] != (13).to_bytes(4, 'big')
-                or data[12:16] != b'IHDR' or data[-8:-4] != b'IEND'):
+                or data[8:12] != (13).to_bytes(4, 'big') or data[12:16] != b'IHDR'):
             return None
-        if (zlib.crc32(data[12:29]) & 0xffffffff) != int.from_bytes(data[29:33], 'big'):
+        # Walk every chunk: verify CRCs, reject APNG animation, require IDAT..IEND
+        # with no trailing bytes.
+        offset, seen_idat, ended = 8, False, False
+        while offset + 12 <= len(data):
+            size = int.from_bytes(data[offset:offset + 4], 'big')
+            end = offset + 12 + size
+            if end > len(data):
+                return None
+            kind = data[offset + 4:offset + 8]
+            if (zlib.crc32(data[offset + 4:end - 4]) & 0xffffffff) != int.from_bytes(data[end - 4:end], 'big'):
+                return None
+            if kind in (b'acTL', b'fcTL', b'fdAT'):
+                return None
+            seen_idat = seen_idat or kind == b'IDAT'
+            offset = end
+            if kind == b'IEND':
+                ended = size == 0
+                break
+        if not (ended and seen_idat and offset == len(data)):
             return None
         return int.from_bytes(data[16:20], 'big'), int.from_bytes(data[20:24], 'big')
     if not (path.endswith('.webp') and len(data) >= 30
