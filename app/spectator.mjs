@@ -104,7 +104,7 @@ const medalFace = gold => {
 };
 // The user's supplied trophy is a lossless image: opaque pixels are taken
 // directly from the original artwork, never redrawn as a vector or emoji.
-const TROPHY_IMAGE = '/app/assets/trophy-exact.png';
+const TROPHY_IMAGE = '/app/assets/trophy-exact.webp';
 const awardMark = (kind, place) => {
   if (kind === 'championship' && place === 1)
     return h('span', {class: 'spectator-award-trophy', role: 'img',
