@@ -455,9 +455,9 @@ test('SCORE TILES: equal squares, tabular numerals, green winner / red loser per
         const [first, second] = card.players;
         assert.ok(first.name && second.name, 'both player names accompany their scores');
         assert.ok(first.groupLabel?.startsWith(first.name + ' game scores: Game 1:'),
-          'first player's score group is labelled for assistive technology');
+          "first player's score group is labelled for assistive technology");
         assert.ok(second.groupLabel?.startsWith(second.name + ' game scores: Game 1:'),
-          'second player's score group is labelled for assistive technology');
+          "second player's score group is labelled for assistive technology");
         assert.ok(first.games.length >= 1 && first.games.length <= 3,
           'inline layout covers completed matches with up to three games');
         assert.equal(first.games.length, second.games.length, 'aligned game columns');
