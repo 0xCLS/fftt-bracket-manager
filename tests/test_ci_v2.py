@@ -65,6 +65,19 @@ class RoutingTests(unittest.TestCase):
             self.assertTrue(ci.select(['app/assets/trophy-exact.png'], root)['manual'])
             target.write_bytes(b'x' * (ci.MAX_PUBLIC_IMAGE_BYTES + 1))
             self.assertTrue(ci.select(['app/assets/trophy-exact.png'], root)['manual'])
+            webp = assets / 'trophy-exact.webp'
+            webp.write_bytes(b'<svg><script>bad()</script></svg>')
+            self.assertTrue(ci.select(['app/assets/trophy-exact.webp'], root)['manual'])
+            # An extended WebP flagged as animated is not a static icon.
+            chunk = b'\x02' + b'\x00' * 9
+            webp.write_bytes(b'RIFF' + (22).to_bytes(4, 'little') +
+                             b'WEBP' + b'VP8X' + (10).to_bytes(4, 'little') + chunk)
+            self.assertTrue(ci.select(['app/assets/trophy-exact.webp'], root)['manual'])
+            # Valid container bytes must still meet the conservative dimension cap.
+            chunk = b'\x00' * 4 + (5000 - 1).to_bytes(3, 'little') + (50 - 1).to_bytes(3, 'little')
+            webp.write_bytes(b'RIFF' + (22).to_bytes(4, 'little') +
+                             b'WEBP' + b'VP8X' + (10).to_bytes(4, 'little') + chunk)
+            self.assertTrue(ci.select(['app/assets/trophy-exact.webp'], root)['manual'])
             target.unlink()
             target.symlink_to(ROOT / 'app/assets/emblem.webp')
             self.assertTrue(ci.select(['app/assets/trophy-exact.png'], root)['manual'])
