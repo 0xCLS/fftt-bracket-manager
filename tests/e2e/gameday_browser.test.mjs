@@ -330,6 +330,13 @@ test('browser rehearsal: organizer, two scorekeepers, spectator, TV and an outsi
 
     // ---------------------------------------------------------------- no browser-side problems anywhere
     assert.deepEqual(w.pageErrors, []);
-    assert.deepEqual(w.consoleErrors.filter(e => !/net::ERR|Failed to load resource/.test(e)), [], 'no CSP violations or console errors');
+    // Chromium may warn when this trusted, passive Spectator trophy preload is not
+    // displayed immediately during a fictional tournament. Keep rejecting every
+    // other warning/error, especially CSP, JavaScript and unexpected asset failures.
+    const passiveSpectatorTrophyPreload = e => e.startsWith(
+      '[spec] warning: The resource https://fftt-spectator-test.pages.dev/app/assets/trophy-exact.webp was preloaded using link preload but not used within a few seconds');
+    assert.deepEqual(w.consoleErrors.filter(e =>
+      !/net::ERR|Failed to load resource/.test(e) && !passiveSpectatorTrophyPreload(e)),
+      [], 'no CSP violations or unexpected console errors');
   } finally { await w.close(); }
 });
