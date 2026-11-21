@@ -4,6 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createBrowserWorld} from './browser_world.mjs';
+import {buildChampionship} from './helpers.mjs';
 import {SYNTHETIC_FORM_CSV} from '../../server/registration/synthetic_fixture.mjs';
 import {parseCsv} from '../../contracts/registration_model.mjs';
 
@@ -288,6 +289,46 @@ test('Staff switcher hides archived events while Overview can open and restore t
     await page.locator('.events-card .chip', {hasText: /^Archived \(1\)$/}).click();
     await row.locator('button', {hasText: 'Restore'}).click();
     await archivedOption.waitFor({state: 'attached'});
+    assert.deepEqual(w.pageErrors, []);
+  } finally { await w.close(); }
+});
+
+
+test('shared compact Staff bracket preserves connected rounds, bye labels and mobile scrolling for both roles', {timeout: 180000}, async () => {
+  const w = await createBrowserWorld({players: 7, staffRoles: true});
+  try {
+    const db = w.fake.local, E = w.eventId, orgId = w.ids.org;
+    await db.rpc(orgId, 'fftt_set_checkin_bulk_v3', {p_event_id: E, p_player_ids: null, p_checked_in: true});
+    await buildChampionship({db, E, org: orgId, snap: () => db.rpc(orgId, 'fftt_organizer_snapshot_v3', {p_event_id: E})});
+    for (const who of ['org', 'bm']) {
+      const device = await w.device('bracket-' + who, {viewport: {width: 390, height: 844}, mobile: true});
+      await device.signIn(who);
+      const page = device.page;
+      await page.locator('nav.tabs button', {hasText: /^Championship$/}).click();
+      const bracket = page.locator('#app .spectator-bracket.has-grounded-slots');
+      await bracket.waitFor({timeout: 30000});
+      assert.equal(await bracket.locator(':scope > .round').count(), 3);
+      assert.equal(await bracket.locator('.round').first().locator('.spectator-bracket-position').count(), 4);
+      assert.equal(await bracket.locator('.spectator-bracket-position.is-bye').count(), 1);
+      assert.equal(await page.getByRole('button', {name: 'Next championship round'}).count(), 1);
+      assert.equal(await page.getByRole('button', {name: 'Previous championship round'}).count(), 1);
+      const metrics = await bracket.evaluate(el => {
+        const bye = el.querySelector('.spectator-bracket-position.is-bye');
+        const left = el.querySelector('.spectator-bracket-position.feeds-next');
+        return {
+          horizontalScroll: el.scrollWidth > el.clientWidth,
+          documentOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          byeEmptyHidden: getComputedStyle(bye.querySelector('.playerline.empty')).display === 'none',
+          connector: getComputedStyle(left, '::after').width !== 'auto',
+          rounds: [...el.querySelectorAll(':scope > .round')].map(r => r.getBoundingClientRect().width),
+        };
+      });
+      assert.equal(metrics.horizontalScroll, true, who + ' can swipe across rounds');
+      assert.equal(metrics.byeEmptyHidden, true, 'bye has one compact participant line');
+      assert.equal(metrics.connector, true, 'validated path connector renders');
+      assert.ok(metrics.rounds.every(width => width > 200), 'rounds remain readable');
+      assert.ok(metrics.documentOverflow <= 1, who + ' page has no horizontal overflow');
+    }
     assert.deepEqual(w.pageErrors, []);
   } finally { await w.close(); }
 });
