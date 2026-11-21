@@ -8,6 +8,8 @@ const read = p => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 const spectator = read('app/spectator.mjs');
 const html = read('app/spectator.html');
 const css = read('app/app.css');
+const sharedBracket = read('app/bracket_view.mjs');
+const staffUi = read('app/staff_ui.mjs');
 
 test('spectator uses approved public copy and complete bracket names', () => {
   assert.match(html, /Forging Fellowship Table Tennis · Building community through fellowship/);
@@ -95,19 +97,26 @@ test('spectator Now and next visually distinguishes actual playing from queued m
   assert.match(css, /#main\.public-wrap \.spectator-now-meta\{/);
 });
 
-test('spectator Bracket preserves shared renderer, compact byes, and accessible navigation', () => {
-  assert.match(spectator, /import \{bracketView, groupRounds\} from '\.\/bracket_view\.mjs'/);
+test('Staff and Spectator use the same compact, grounded bracket renderer', () => {
+  assert.match(spectator, /import \{polishedBracketView\} from '\.\/bracket_view\.mjs'/);
   assert.match(spectator, /spectatorBracket\(ev\.championship, 'championship'\)/);
   assert.match(spectator, /spectatorBracket\(ev\.consolation, 'consolation'\)/);
-  assert.match(spectator, /class: 'spectator-bracket-shell'/);
-  assert.match(spectator, /'aria-label': 'Previous ' \+ kind \+ ' round'/);
-  assert.match(spectator, /'aria-label': 'Next ' \+ kind \+ ' round'/);
-  assert.match(spectator, /class: 'spectator-bracket-position span-'/);
-  assert.match(spectator, /children\.has\(2 \* m\.slot\) && children\.has\(2 \* m\.slot \+ 1\)/);
-  assert.match(spectator, /new Set\(slots\)\.size === slots\.length/);
-  assert.match(css, /#main\.public-wrap \.spectator-bracket-position\.is-bye \.playerline\.empty\{display:none\}/);
-  assert.match(css, /#main\.public-wrap \.spectator-bracket\.has-grounded-slots \.spectator-bracket-connector\{/);
+  assert.match(staffUi, /polishedBracketView\(normalized\('championship'\), 'championship'\)/);
+  assert.match(staffUi, /polishedBracketView\(normalized\('consolation'\), 'consolation'\)/);
+  assert.match(sharedBracket, /export function polishedBracketView\(matches, kind/);
+  assert.match(sharedBracket, /class: 'spectator-bracket-shell'/);
+  assert.match(sharedBracket, /'aria-label': 'Previous ' \+ kind \+ ' round'/);
+  assert.match(sharedBracket, /'aria-label': 'Next ' \+ kind \+ ' round'/);
+  assert.match(sharedBracket, /class: 'spectator-bracket-position span-'/);
+  assert.match(sharedBracket, /children\.has\(2 \* m\.slot\) && children\.has\(2 \* m\.slot \+ 1\)/);
+  assert.match(sharedBracket, /new Set\(slots\)\.size === slots\.length/);
+  assert.match(sharedBracket, /parseGames\(match\.scores\)/);
+  assert.match(sharedBracket, /match\.status === 'bye'/);
+  assert.match(sharedBracket, /spectator-bracket-walkover/);
+  assert.match(css, /:is\(#main\.public-wrap,#app\) \.spectator-bracket-position\.is-bye \.playerline\.empty\{display:none\}/);
+  assert.match(css, /:is\(#main\.public-wrap,#app\) \.spectator-bracket\.has-grounded-slots \.spectator-bracket-connector\{/);
   assert.doesNotMatch(spectator, /\.innerHTML\s*=/);
+  assert.doesNotMatch(staffUi, /\.innerHTML\s*=/);
 });
 
 test('finished singles finals get correct award icons without ribbons or badges', () => {
@@ -119,7 +128,7 @@ test('finished singles finals get correct award icons without ribbons or badges'
   assert.match(spectator, /class: 'spectator-award-disc ' \+ \(gold \? 'gold' : 'silver'\)/);
   assert.match(spectator, /text: gold \? '1' : '2'/);
   assert.match(spectator, /finalKind \? awardMark\(finalKind, winner \? 1 : 2\) : null/);
-  assert.match(spectator, /final = completedFinal\(matches\)/);
+  assert.match(spectator, /final: completedFinal\(matches\)/);
   assert.match(css, /#main\.public-wrap \.spectator-award-disc\{/);
   assert.match(css, /border-radius:50%;border:1px solid/);
   assert.doesNotMatch(css, /spectator-award-ribbon/);
