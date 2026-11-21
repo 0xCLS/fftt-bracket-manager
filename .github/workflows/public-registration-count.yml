@@ -1,9 +1,5 @@
 name: Refresh FFTT public player count
 on:
-  schedule:
-    - cron: '17 * * * *'
-    # A second opportunity mitigates missed GitHub schedule events; the publisher remains idempotent.
-    - cron: '47 * * * *'
   workflow_dispatch:
   pull_request:
     paths:
