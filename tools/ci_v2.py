@@ -46,6 +46,7 @@ SUITES = {
                      'tests/registration_handler.test.mjs',
                      'tests/e2e/gameday_registration_browser.test.mjs'),
     'scoring': ('tests/gameday_formats.test.mjs',
+                 'tests/gameday_partner_suggestions.test.mjs',
                 'tests/milestone1_score_coordinator.test.mjs',
                 'tests/e2e/gameday_core.test.mjs',
                  'tests/e2e/gameday_rehearsal_walkovers.test.mjs'),
