@@ -291,3 +291,44 @@ test('Staff switcher hides archived events while Overview can open and restore t
     assert.deepEqual(w.pageErrors, []);
   } finally { await w.close(); }
 });
+
+
+test('event chooser remains bounded and searchable with many authorized events on phone', {timeout: 150000}, async () => {
+  const w = await createBrowserWorld();
+  try {
+    // All events are fictional, created in disposable local SQL; never connected to production.
+    for (let i = 1; i <= 13; i++) {
+      await w.fake.local.rpc(w.ids.org, 'fftt_create_event_v3', {
+        p_name: 'Long history rehearsal ' + String(i).padStart(2, '0'),
+        p_date: '2027-03-' + String(i).padStart(2, '0'),
+        p_table_count: 3,
+      });
+    }
+    const dev = await w.device('chooser-phone', {viewport: {width: 390, height: 844}, mobile: true});
+    await dev.signIn('org'); // Leave selection at the chooser rather than opening an event.
+    const page = dev.page;
+    await page.locator('#eventChooser:not([hidden])').waitFor();
+    assert.ok(await page.locator('.chooser-option').count() >= 14);
+    const measurements = await page.evaluate(() => {
+      const list = document.querySelector('#chooserList'), actions = document.querySelector('.chooser-actions');
+      return {
+        canScroll: list.scrollHeight > list.clientHeight,
+        actionsBelow: actions.getBoundingClientRect().top >= list.getBoundingClientRect().bottom - 2,
+        actionsVisible: actions.getBoundingClientRect().bottom <= window.innerHeight + 2,
+        pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      };
+    });
+    assert.equal(measurements.canScroll, true, 'only the event list scrolls');
+    assert.equal(measurements.actionsBelow, true, 'Continue and Cancel are outside the scroller');
+    assert.equal(measurements.actionsVisible, true, 'actions fit on a phone without scrolling the page');
+    assert.ok(measurements.pageOverflow <= 1, 'no page-level horizontal overflow');
+    await page.locator('#chooserSearch').fill('rehearsal 13');
+    assert.equal(await page.locator('.chooser-option').count(), 1);
+    assert.match(await page.locator('#chooserCount').innerText(), /1 of 14 assigned events shown/);
+    assert.equal(await page.locator('.chooser-option input:checked').count(), 1, 'search yields a keyboard-selectable radio');
+    await page.locator('#chooserGo').click();
+    await page.locator('#evName').waitFor();
+    assert.equal(await page.locator('#evName').inputValue(), 'Long history rehearsal 13');
+    assert.deepEqual(w.pageErrors, []);
+  } finally { await w.close(); }
+});
