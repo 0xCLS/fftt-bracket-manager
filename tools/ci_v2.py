@@ -32,6 +32,7 @@ SUITES = {
                'tests/milestone1_public_results.test.mjs',
                'tests/e2e/public_presentation.test.mjs'),
     'staff': ('tests/e2e/gameday_fast_ui_browser.test.mjs',
+               'tests/event_chooser.test.mjs',
               'tests/fftt3_bracket_manager_role.test.mjs',
               'tests/e2e/staff_dialog_x_null_rename_browser.test.mjs',
               'tests/e2e/completed_event_rename.test.mjs',
