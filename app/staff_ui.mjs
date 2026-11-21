@@ -2,7 +2,7 @@
  * Everything is built with createElement/textContent from validated models; the server decides every
  * outcome, this file only shows state and sends deliberate, confirmed requests through the core. */
 import {h, clear, fill, toast, download, pill} from './dom.mjs';
-import {bracketView} from './bracket_view.mjs';
+import {polishedBracketView} from './bracket_view.mjs';
 import {suggestPartners, enginePlayers, seedSlots, roundName, partnerCandidates, normalizeGameScores, formatLabel, ALLOWED_BEST_OF, ALLOWED_POINTS} from '../contracts/gameday_engine.mjs';
 import {normalizeSnapshotMatches, standingsFromSnapshot, resultsText, matchesCsv} from './exports.mjs';
 import {createPlayersView, levelShield, playerLevelSelector} from './view_players.mjs';
@@ -439,7 +439,7 @@ export function createStaffUi({core, els, config, signOut}) {
         }}})) : null,
       champ && sn.event.lifecycle === 'active' && s.departures?.eventId === s.eventId
         && s.departures.revision === sn.event.revision ? viewPlayerDepartures(sn) : null,
-      champ ? h('section', {class: 'card', 'aria-label': 'Championship bracket'}, bracketView(normalized('championship'), 'championship')) : null);
+      champ ? h('section', {class: 'card', 'aria-label': 'Championship bracket'}, polishedBracketView(normalized('championship'), 'championship')) : null);
   }
   /** Administrative departure state NEVER changes saved games or accepted results. */
   function viewPlayerDepartures(sn) {
@@ -570,7 +570,7 @@ export function createStaffUi({core, els, config, signOut}) {
             : isOrganizer() ? h('button', {type: 'button', disabled: !core.canWrite() || normalized('consolation').some(m => m.status === 'complete'), text: 'Rebuild (no results yet)', on: {click: async () => {
               const ids = cands.map(c => c.playerId);
               if (await confirmDialog('Rebuild consolation?', 'This replaces the consolation bracket. It has no results yet.', 'Rebuild')) result(await core.actions.buildConsolation({entrantIds: ids, confirm: true}), 'Rebuilt.'); }}}) : null)),
-      cons ? h('section', {class: 'card', 'aria-label': 'Consolation bracket'}, bracketView(normalized('consolation'), 'consolation')) : null);
+      cons ? h('section', {class: 'card', 'aria-label': 'Consolation bracket'}, polishedBracketView(normalized('consolation'), 'consolation')) : null);
   }
 
   // ------------------------------------------------------------ Match Desk
