@@ -241,6 +241,10 @@ if (networkAllowed) {
   $('eventSelect').addEventListener('change', async ev => {
     const r = await core.selectEvent(ev.target.value);
     if (!r.ok) { toast(r.message, 'bad'); return; }
+    // The most recent event is the last successfully opened one, including switches after sign-in.
+    // Store only the opaque event id, never roster details, grants or credentials.
+    lastEvent = ev.target.value;
+    try { localStorage.setItem('fftt.staff.lastEvent', lastEvent); } catch { /* optional */ }
     ui.openTab(core.state.role === 'organizer' ? 'overview' : core.state.role === 'bracket_manager' ? 'championship' : 'desk');
     // An older mobile tab-strip offset can leave the first label half hidden.
     // Event changes return to the chosen event's starting workspace.
