@@ -10,28 +10,38 @@ const INVITE_NOTES={
 export function createStaffPeopleView({core,s,h,pill,result,confirmDialog,openDialog,rerender}) {
   let layout='people', query='';
   const edits=new Map();
-  // Native role selects manage their own popup. Close assignment disclosures before
-  // another control takes focus or receives a pointer, without rebuilding the rows.
+  // Keep exactly one assignment disclosure open without rebuilding rows or
+  // changing any grants. Touch browsers can dispatch delayed label/checkbox
+  // clicks and focus after pointerup; dismissing on those events can swallow a
+  // selection on iOS before its change handler runs.
   const closeAssignments = except => {
     for (const menu of document.querySelectorAll('.people-event-dropdown[open]')) {
       if (menu !== except) menu.open = false;
     }
   };
-  // Browser pointer focus can temporarily leave the menu before a label activates
-  // its checkbox. Defer dismissal until the click has reached its intended target;
-  // keyboard focus changes still dismiss immediately.
-  let pointerActive = false;
-  document.addEventListener('pointerdown', () => { pointerActive = true; });
-  document.addEventListener('pointerup', () => { setTimeout(() => { pointerActive = false; }, 0); });
-  document.addEventListener('pointercancel', () => { pointerActive = false; });
+  const assignmentFor = target => target instanceof Element
+    ? target.closest('.people-event-dropdown') : null;
+  let ignoreDelayedTouchClickUntil = 0;
+  const touchStart = ev => {
+    ignoreDelayedTouchClickUntil = Date.now() + 750;
+    closeAssignments(assignmentFor(ev.target));
+  };
+  // Outside touches close immediately. Subsequent synthetic click/focus
+  // dispatches must not close the menu while a checkbox is being activated.
+  document.addEventListener('pointerdown', ev => {
+    if (ev.pointerType === 'touch') ignoreDelayedTouchClickUntil = Date.now() + 750;
+    closeAssignments(assignmentFor(ev.target));
+  }, true);
+  document.addEventListener('touchstart', touchStart, {capture: true, passive: true});
   document.addEventListener('click', ev => {
-    closeAssignments(ev.target.closest?.('.people-event-dropdown'));
-    pointerActive = false;
+    if (Date.now() >= ignoreDelayedTouchClickUntil) closeAssignments(assignmentFor(ev.target));
   });
   document.addEventListener('focusin', ev => {
-    if (!pointerActive) closeAssignments(ev.target.closest?.('.people-event-dropdown'));
+    if (Date.now() >= ignoreDelayedTouchClickUntil) closeAssignments(assignmentFor(ev.target));
   });
-  document.addEventListener('keydown', ev => { pointerActive = false; if (ev.key === 'Escape') closeAssignments(); });
+  document.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape') closeAssignments();
+  });
   const events=()=>s.events.filter(e=>e.role==='organizer'&&e.lifecycle!=='archived');
   function pending(p) {
     // Start from the server's actual grants only. An unassigned person has no events and no role until someone chooses them.
