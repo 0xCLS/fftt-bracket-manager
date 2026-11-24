@@ -229,6 +229,38 @@ test('assignment labels, explicit saves and failure recovery use server truth on
         await p.getByText('Event access updated.',{exact:true}).last().waitFor({timeout:T});
         await p.waitForFunction(() => !document.querySelector('dialog[open]'),null,{timeout:T});
       };
+      // A phone tap must not be converted into an outside click while Safari
+      // focuses/activates the checkbox. Keep the menu and draft stable for Save.
+      if (width === 390) {
+        const selectedRow = person(w.accounts.a[0]);
+        const selectedMenu = selectedRow.locator('.people-event-dropdown');
+        const selectedOption = selectedMenu.locator('.people-event-option', {hasText: 'Synthetic Rehearsal Games'});
+        await selectedMenu.locator('summary').tap();
+        await selectedOption.locator('strong').tap();
+        await p.waitForTimeout(800); // allow delayed mobile label/click/focus dispatch
+        assert.equal(await selectedOption.locator('input').isChecked(), false, 'phone tap unchecks an assigned event');
+        assert.equal(await selectedMenu.evaluate(el => el.open), true, 'phone selection does not dismiss the menu');
+        assert.equal(await save(w.accounts.a[0]).isEnabled(), true, 'removal is ready for explicit Save');
+        await selectedOption.locator('input').tap();
+        await p.waitForTimeout(800);
+        assert.equal(await selectedOption.locator('input').isChecked(), true, 'phone tap restores an event');
+        assert.equal(await save(w.accounts.a[0]).isDisabled(), true, 'restored selection has no draft change');
+
+        const newRow = person(email), newMenu = newRow.locator('.people-event-dropdown');
+        const newOption = newMenu.locator('.people-event-option', {hasText: 'Synthetic Rehearsal Games'});
+        await newMenu.locator('summary').tap();
+        await newOption.locator('strong').tap();
+        await p.waitForTimeout(800);
+        assert.equal(await newOption.locator('input').isChecked(), true, 'phone tap selects a new event');
+        assert.equal(await newMenu.evaluate(el => el.open), true, 'new event selection stays visible');
+        assert.equal(await save(email).isDisabled(), true, 'an unassigned person still requires a role');
+        await newOption.locator('input').tap();
+        await p.waitForTimeout(800);
+        assert.equal(await newOption.locator('input').isChecked(), false, 'phone tap removes the unsaved selection');
+        await p.getByRole('searchbox', {name: 'Search staff members'}).tap();
+        assert.equal(await newMenu.evaluate(el => el.open), false, 'outside phone tap closes the menu');
+      }
+
       // Label click selects visibly and survives closing, but no role means no grant.
       await toggle(email,'Synthetic Rehearsal Games');
       assert.equal(await person(email).locator('input:checked').count(),1, 'one event-name click checks immediately');
