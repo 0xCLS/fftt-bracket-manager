@@ -39,7 +39,10 @@
   <section id="eventChooser" class="event-chooser" hidden aria-labelledby="chooserTitle">
    <h2 id="chooserTitle">Choose your event</h2>
    <p class="help">You can switch events later from the top of the page.</p>
-   <div id="chooserList" class="chooser-list" role="radiogroup" aria-labelledby="chooserTitle"></div>
+    <label for="chooserSearch">Find an event</label>
+    <input id="chooserSearch" type="search" autocomplete="off" placeholder="Search name, date or role" aria-controls="chooserList">
+    <p id="chooserCount" class="chooser-count" role="status" aria-live="polite"></p>
+    <div id="chooserList" class="chooser-list" role="radiogroup" aria-label="Assigned events"></div>
    <p class="chooser-actions actions"><button id="chooserGo" class="primary wide-button" type="button">Continue</button> <button id="chooserCancel" type="button">Cancel</button></p>
    <p id="chooserStatus" class="status" role="status" aria-live="polite"></p>
   </section>

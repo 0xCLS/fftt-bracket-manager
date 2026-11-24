@@ -1515,3 +1515,13 @@ dialog .score-game-actions textarea{width:100%;max-width:100%;box-sizing:border-
   #main.public-wrap .spectator-game-dots{gap:4px}
   #main.public-wrap .spectator-win-dot{width:18px;height:6px}
 }
+
+/* Authenticated staff event choice: bounded independent scroll, stable action row. */
+.event-chooser .chooser-list{display:block;max-height:min(43dvh,390px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:4px 5px 6px 2px;margin:7px 0 12px;border-bottom:1px solid var(--line)}
+.event-chooser .chooser-section{margin:0 0 15px;display:grid;gap:8px}
+.event-chooser .chooser-group-title{font-size:12px;letter-spacing:.055em;text-transform:uppercase;color:var(--muted);font-weight:800;margin:7px 0 0}
+.event-chooser #chooserSearch{width:100%;min-height:44px}
+.event-chooser .chooser-count{font-size:12px;color:var(--muted);margin:6px 0}
+.event-chooser .chooser-empty{padding:20px 8px;color:var(--muted);text-align:center}
+.event-chooser .chooser-actions{position:sticky;bottom:0;z-index:2;background:#fff;padding:10px 0 max(6px,env(safe-area-inset-bottom));border-top:1px solid var(--line);margin:0}
+@media(max-width:520px){.event-chooser .chooser-list{max-height:min(36dvh,320px);scrollbar-gutter:auto}.event-chooser .chooser-actions button{min-height:46px}}

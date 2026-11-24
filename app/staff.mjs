@@ -14,6 +14,7 @@ import {createRegistrationClient} from '../contracts/registration_client.mjs';
 import {createStaffDirectoryClient} from '../contracts/staff_directory_client.mjs';
 import {createStaffCore, createPendingLedger, createGamePendingLedger, POLL_MS} from './staff_core.mjs';
 import {createStaffUi} from './staff_ui.mjs';
+import {organizeEventChoices, searchEventChoices} from './event_chooser.mjs';
 import {PUBLISHABLE_KEY} from './config.mjs';
 import {$, toast, h, clear, attachPasswordToggle} from './dom.mjs';
 
@@ -240,6 +241,10 @@ if (networkAllowed) {
   $('eventSelect').addEventListener('change', async ev => {
     const r = await core.selectEvent(ev.target.value);
     if (!r.ok) { toast(r.message, 'bad'); return; }
+    // The most recent event is the last successfully opened one, including switches after sign-in.
+    // Store only the opaque event id, never roster details, grants or credentials.
+    lastEvent = ev.target.value;
+    try { localStorage.setItem('fftt.staff.lastEvent', lastEvent); } catch { /* optional */ }
     ui.openTab(core.state.role === 'organizer' ? 'overview' : core.state.role === 'bracket_manager' ? 'championship' : 'desk');
     // An older mobile tab-strip offset can leave the first label half hidden.
     // Event changes return to the chosen event's starting workspace.
@@ -263,22 +268,40 @@ for (const ev of ['pointerdown', 'keydown', 'touchstart']) document.addEventList
 attachPasswordToggle($('password'), $('togglePassword'));
 // ---- choosing an event by NAME (after the password / code proof, when no event id was given)
 let choice = null;
-function hideChooser() { $('eventChooser').hidden = true; clear($('chooserList')); $('chooserStatus').textContent = ''; choice = null; }
+function hideChooser() {
+  $('eventChooser').hidden=true; clear($('chooserList')); $('chooserSearch').value='';
+  $('chooserCount').textContent=''; $('chooserStatus').textContent=''; choice=null;
+}
 function showChooser(c) {
-  choice = c;
-  $('loginForm').hidden = true; $('recoveryBox').hidden = true; $('eventChooser').hidden = false;
-  const list = $('chooserList'); clear(list);
-  const preselect = c.choose.events.some(e => e.eventId === lastEvent) ? lastEvent : c.choose.events[0].eventId;
-  for (const e of c.choose.events) {
-    list.append(h('label', {class: 'chooser-option'},
-      h('input', {type: 'radio', name: 'chooseEvent', value: e.eventId, checked: e.eventId === preselect}),
-      h('span', {class: 'chooser-card'},
-        h('strong', {text: e.name}),
-        h('span', {class: 'chooser-meta'}, h('span', {text: e.date}),
-          h('span', {class: 'pill ' + (e.lifecycle === 'archived' ? 'warn' : e.lifecycle === 'active' ? 'good' : 'blue'), text: e.lifecycle === 'complete' ? 'Completed' : e.lifecycle[0].toUpperCase() + e.lifecycle.slice(1)}),
-          h('span', {class: 'pill', text: e.role === 'organizer' ? 'Organizer' : e.role === 'bracket_manager' ? 'Bracket Manager' : 'Scorekeeper'})))));
-  }
-  say('signInStatus', ''); $('chooserList').querySelector('input:checked')?.focus();
+  choice=c; $('loginForm').hidden=true; $('recoveryBox').hidden=true; $('eventChooser').hidden=false;
+  const list=$('chooserList'),search=$('chooserSearch'),count=$('chooserCount'),go=$('chooserGo');
+  const groups=organizeEventChoices(c.choose.events,lastEvent);
+  let selected=groups.flatMap(g=>g.events)[0]?.eventId??null;
+  search.value='';
+  const render=()=>{
+    clear(list);
+    const shown=searchEventChoices(groups,search.value),visible=shown.flatMap(g=>g.events);
+    if(!visible.some(e=>e.eventId===selected))selected=visible[0]?.eventId??null;
+    for(const group of shown){
+      const section=h('section',{class:'chooser-section','aria-label':group.label},
+        h('h3',{class:'chooser-group-title',text:group.label}));
+      for(const e of group.events)section.append(h('label',{class:'chooser-option'},
+        h('input',{type:'radio',name:'chooseEvent',value:e.eventId,checked:e.eventId===selected,
+          on:{change:()=>{selected=e.eventId;say('chooserStatus','');}}}),
+        h('span',{class:'chooser-card'},h('strong',{text:e.name}),
+          h('span',{class:'chooser-meta'},h('span',{text:e.date}),
+            h('span',{class:'pill '+(e.lifecycle==='archived'?'warn':e.lifecycle==='active'?'good':'blue'),
+              text:e.lifecycle==='complete'?'Completed':e.lifecycle[0].toUpperCase()+e.lifecycle.slice(1)}),
+            h('span',{class:'pill',text:e.role==='organizer'?'Organizer':e.role==='bracket_manager'?'Bracket Manager':'Scorekeeper'})))));
+      list.append(section);
+    }
+    if(!visible.length)list.append(h('p',{class:'chooser-empty',text:'No matching events. Try another search.'}));
+    go.disabled=!visible.length;
+    count.textContent=visible.length+' of '+c.choose.events.length+' assigned events shown';
+  };
+  search.oninput=render;render();say('signInStatus','');
+  if(c.choose.events.length>6)search.focus();
+  else list.querySelector('input:checked')?.focus();
 }
 function leaveChooser(message = '', cls = '') {
   hideChooser(); $('loginForm').hidden = false; $('recoveryBox').hidden = false;
